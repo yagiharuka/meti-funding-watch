@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { unzipSync } from "fflate";
 
 const dataPath = new URL("../data/funding-data.json", import.meta.url);
 const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
@@ -23,9 +24,30 @@ const configured = new Map(
 );
 const results = [];
 
+next.reviewPrograms ??= [];
+next.reviewPayments ??= [];
+for (const source of configured.values()) {
+  if (!next.sources.some((candidate) => candidate.id === source.id)) {
+    next.sources.push({
+      id: source.id,
+      name: source.name,
+      recordCount: 0,
+      method: source.method || "公式公開データ",
+      frequency: source.frequency || "日次確認",
+      lastChecked: "未取得",
+      status: "watch",
+    });
+  }
+}
+
+await refreshReviewSheets();
 await refreshGbiz();
 await refreshNedo();
 await refreshGbizBulk();
+
+for (const record of next.records) {
+  record.flowLevel = classifyCommitmentFlow(record);
+}
 
 next.generatedAt = new Date().toISOString();
 next.records.sort((a, b) => {
@@ -35,13 +57,268 @@ next.records.sort((a, b) => {
 validate(next);
 await Promise.all([
   writeFile(dataPath, `${JSON.stringify(next)}\n`),
-  writeFile(summaryPath, `${JSON.stringify({ ...next, records: [] }, null, 2)}\n`),
+  writeFile(summaryPath, `${JSON.stringify({
+    ...next,
+    records: [],
+    reviewPrograms: [],
+    reviewPayments: [],
+  }, null, 2)}\n`),
 ]);
 
 for (const result of results) {
   console.log(`${result.ok ? "OK" : "STALE"} ${result.name}: ${result.message}`);
 }
 console.log(`Wrote ${next.records.length.toLocaleString("en-US")} records to ${dataPath.pathname}`);
+
+async function refreshReviewSheets() {
+  const source = configured.get("review-sheets");
+  if (!source) return;
+
+  try {
+    const fiscalYearsResponse = await fetchWithTimeout(source.fiscalYearsUrl);
+    const fiscalYearsPayload = await fiscalYearsResponse.json();
+    const fiscalYears = collectFiscalYears(fiscalYearsPayload).filter((year) => year >= 2024);
+    const reviewSheetYear = Math.max(...fiscalYears);
+    if (!Number.isInteger(reviewSheetYear)) {
+      throw new Error("公開中のレビューシート年度を判定できません");
+    }
+
+    const specifications = {
+      organizations: `1-1_RS_${reviewSheetYear}_基本情報_組織情報.zip`,
+      budgets: `2-1_RS_${reviewSheetYear}_予算・執行_サマリ.zip`,
+      payments: `5-1_RS_${reviewSheetYear}_支出先_支出情報.zip`,
+      flows: `5-2_RS_${reviewSheetYear}_支出先_支出ブロックのつながり.zip`,
+    };
+
+    const programById = new Map();
+    for (const row of csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.organizations))) {
+      if (!isMetiReviewRow(row)) continue;
+      const projectNumber = cleanCell(row["予算事業ID"]);
+      if (!projectNumber || programById.has(projectNumber)) continue;
+      const organization = [row["局・庁"], row["部"], row["課"], row["室"]]
+        .map(cleanCell)
+        .filter(Boolean)
+        .join(" / ");
+      programById.set(projectNumber, {
+        id: `rs-${reviewSheetYear}-${projectNumber}`,
+        reviewSheetYear,
+        projectNumber,
+        name: cleanCell(row["事業名"]),
+        organization: organization || "経済産業省",
+        budgetFiscalYear: reviewSheetYear,
+        initialBudget: null,
+        availableBudget: null,
+        executionFiscalYear: null,
+        execution: null,
+        executionRate: null,
+        sourceUrl: source.indexUrl,
+      });
+    }
+
+    for (const row of csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.budgets))) {
+      if (!isMetiReviewRow(row)) continue;
+      const project = programById.get(cleanCell(row["予算事業ID"]));
+      if (!project) continue;
+      const budgetYear = Number(cleanCell(row["予算年度"]));
+      const initialBudget = parseNullableInteger(row["当初予算（合計）"]);
+      const availableBudget = parseNullableInteger(row["計（歳出予算現額合計）"]);
+      const execution = parseNullableInteger(row["執行額（合計）"]);
+      const executionRate = parseNullableNumber(row["執行率"]);
+      const isSummaryRow = initialBudget !== null || availableBudget !== null || execution !== null;
+      if (!isSummaryRow) continue;
+
+      if (budgetYear === reviewSheetYear) {
+        project.initialBudget = initialBudget;
+        project.availableBudget = availableBudget;
+      }
+      if (
+        budgetYear < reviewSheetYear &&
+        execution !== null &&
+        (project.executionFiscalYear === null || budgetYear > project.executionFiscalYear)
+      ) {
+        project.executionFiscalYear = budgetYear;
+        project.execution = execution;
+        project.executionRate = executionRate;
+      }
+    }
+
+    const graphByProject = buildReviewGraphs(
+      csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.flows)),
+    );
+    const paymentById = new Map();
+    for (const row of csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.payments))) {
+      if (!isMetiReviewRow(row)) continue;
+      const projectNumber = cleanCell(row["予算事業ID"]);
+      const project = programById.get(projectNumber);
+      const organization = cleanCell(row["支出先名"]);
+      const amount = parseNullableInteger(row["支出先の合計支出額"]);
+      const block = cleanCell(row["支出先ブロック番号"]);
+      if (!project || !organization || !block || amount === null || amount <= 0) continue;
+
+      const corporateNumberCandidate = cleanCell(row["法人番号"]).replace(/\D/g, "");
+      const corporateNumber = /^\d{13}$/.test(corporateNumberCandidate)
+        ? corporateNumberCandidate
+        : "";
+      const graph = graphByProject.get(projectNumber);
+      const route = graph ? routeForReviewBlock(graph, block) : ["経済産業省", organization];
+      route[route.length - 1] = organization;
+      const flowDepth = graph?.depth.get(block) ?? null;
+      const isIntermediary = isKnownImplementingBody(organization, corporateNumber)
+        || Boolean(graph?.outgoing.has(block));
+      const flowLevel = isIntermediary
+        ? "intermediary"
+        : !graph || flowDepth === null
+          ? "unclassified"
+          : "recipient";
+      const id = `rs-payment-${stableId([
+        reviewSheetYear,
+        projectNumber,
+        block,
+        corporateNumber || organization,
+        amount,
+      ])}`;
+      paymentById.set(id, {
+        id,
+        fiscalYear: reviewSheetYear - 1,
+        reviewSheetYear,
+        reviewProjectId: project.id,
+        organization,
+        corporateNumber,
+        organizationType: cleanCell(row["法人種別"]),
+        sourceAgency: route.at(-2) || "経済産業省",
+        program: project.name,
+        amount,
+        flowLevel,
+        flowDepth,
+        block,
+        route,
+        sourceName: `行政事業レビュー ${reviewSheetYear}年度シート（支出先）`,
+        sourceUrl: source.indexUrl,
+        quality: "primary",
+      });
+    }
+
+    next.reviewPrograms = [...programById.values()].sort((a, b) => a.projectNumber.localeCompare(b.projectNumber, "ja"));
+    next.reviewPayments = [...paymentById.values()].sort((a, b) => {
+      return b.amount - a.amount || a.organization.localeCompare(b.organization, "ja");
+    });
+    updateSource("review-sheets", {
+      recordCount: next.reviewPayments.length,
+      method: "公式CSV（事業・予算執行・支出先・支出経路）",
+      lastChecked: today,
+      status: "healthy",
+    });
+    results.push({
+      ok: true,
+      name: source.name,
+      message: `${reviewSheetYear}年度の経産省 ${next.reviewPrograms.length.toLocaleString("ja-JP")}事業・支出先 ${next.reviewPayments.length.toLocaleString("ja-JP")}件`,
+    });
+  } catch (error) {
+    markStale("review-sheets", source, error);
+  }
+}
+
+function collectFiscalYears(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(collectFiscalYears);
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).flatMap(collectFiscalYears);
+  }
+  const year = Number(value);
+  return Number.isInteger(year) ? [year] : [];
+}
+
+async function downloadReviewCsv(source, reviewSheetYear, filename) {
+  const url = new URL(`${reviewSheetYear}/rs/${filename}`, source.filesBaseUrl).href;
+  const response = await fetch(url, {
+    headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)" },
+    signal: AbortSignal.timeout(3 * 60_000),
+  });
+  if (!response.ok) throw new Error(`行政事業レビューCSV: ${response.status} ${filename}`);
+  const archive = unzipSync(new Uint8Array(await response.arrayBuffer()));
+  const csvName = Object.keys(archive).find((name) => name.endsWith(".csv"));
+  if (!csvName) throw new Error(`行政事業レビューCSV: ZIP内にCSVがありません（${filename}）`);
+  return new TextDecoder("utf-8").decode(archive[csvName]).replace(/^\uFEFF/, "");
+}
+
+function* csvObjectRows(csvText) {
+  const iterator = parseCsvRows(csvText);
+  const first = iterator.next();
+  if (first.done) return;
+  const headers = first.value.map(cleanCell);
+  for (const row of iterator) {
+    yield Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""]));
+  }
+}
+
+function isMetiReviewRow(row) {
+  return cleanCell(row["所管府省庁"] || row["府省庁"]) === "経済産業省";
+}
+
+function buildReviewGraphs(rows) {
+  const graphByProject = new Map();
+  for (const row of rows) {
+    if (!isMetiReviewRow(row)) continue;
+    const projectNumber = cleanCell(row["予算事業ID"]);
+    const target = cleanCell(row["支出先の支出先ブロック"]);
+    if (!projectNumber || !target) continue;
+    const graph = graphByProject.get(projectNumber) || {
+      edges: [],
+      depth: new Map(),
+      parent: new Map(),
+      names: new Map(),
+      outgoing: new Set(),
+    };
+    const from = cleanCell(row["支出元の支出先ブロック"]);
+    const fromName = cleanCell(row["支出元の支出先ブロック名"]);
+    const targetName = cleanCell(row["支出先の支出先ブロック名"]);
+    const government = cleanCell(row["担当組織からの支出"]).toUpperCase() === "TRUE";
+    graph.edges.push({ from, target, government });
+    if (from) {
+      graph.outgoing.add(from);
+      if (fromName) graph.names.set(from, fromName);
+    }
+    if (targetName) graph.names.set(target, targetName);
+    graphByProject.set(projectNumber, graph);
+  }
+
+  for (const graph of graphByProject.values()) {
+    for (const edge of graph.edges) {
+      if (edge.government) {
+        graph.depth.set(edge.target, 1);
+        graph.parent.set(edge.target, null);
+      }
+    }
+    for (let pass = 0; pass < graph.edges.length; pass += 1) {
+      let changed = false;
+      for (const edge of graph.edges) {
+        if (edge.government || !edge.from || !graph.depth.has(edge.from)) continue;
+        const depth = graph.depth.get(edge.from) + 1;
+        if (!graph.depth.has(edge.target) || depth < graph.depth.get(edge.target)) {
+          graph.depth.set(edge.target, depth);
+          graph.parent.set(edge.target, edge.from);
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+  }
+  return graphByProject;
+}
+
+function routeForReviewBlock(graph, block) {
+  const route = [];
+  const visited = new Set();
+  let current = block;
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    route.unshift(graph.names.get(current) || current);
+    current = graph.parent.get(current) || null;
+  }
+  route.unshift("経済産業省");
+  return route;
+}
 
 async function refreshGbiz() {
   const source = configured.get("gbiz");
@@ -488,12 +765,42 @@ function stableId(parts) {
 }
 
 function parseAmount(value) {
-  if (typeof value === "number") {
-    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  const amount = parseNullableInteger(value);
+  return amount !== null && amount > 0 ? amount : null;
+}
+
+function parseNullableInteger(value) {
+  if (value === null || value === undefined || cleanCell(String(value)) === "") return null;
+  const normalized = cleanCell(String(value))
+    .replaceAll(",", "")
+    .replace(/[円￥]/g, "");
+  const amount = Number(normalized);
+  return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
+}
+
+function parseNullableNumber(value) {
+  if (value === null || value === undefined || cleanCell(String(value)) === "") return null;
+  const amount = Number(cleanCell(String(value)).replaceAll(",", ""));
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function classifyCommitmentFlow(record) {
+  if (["recipient", "intermediary", "unclassified"].includes(record.flowLevel)) {
+    return record.flowLevel;
   }
-  const digits = String(value ?? "").replace(/[^\d]/g, "");
-  const amount = Number(digits);
-  return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
+  const centralMetiPayers = /経済産業省|経済産業局|資源エネルギー庁|中小企業庁|特許庁/;
+  if (centralMetiPayers.test(record.sourceAgency) && isKnownImplementingBody(record.organization, record.corporateNumber)) {
+    return "intermediary";
+  }
+  return "recipient";
+}
+
+function isKnownImplementingBody(organization, corporateNumber = "") {
+  const corporateNumbers = new Set([
+    "2020005008480", // NEDO
+  ]);
+  const names = /新エネルギー・産業技術総合開発機構|\bNEDO\b|情報処理推進機構|\bIPA\b|中小企業基盤整備機構|中小機構|石油天然ガス・金属鉱物資源機構|エネルギー・金属鉱物資源機構|\bJOGMEC\b|日本貿易振興機構|\bJETRO\b/;
+  return corporateNumbers.has(corporateNumber) || names.test(organization);
 }
 
 function fundingIdentity(record) {
@@ -540,7 +847,12 @@ async function fetchWithTimeout(url, extraHeaders = {}) {
 }
 
 function validate(data) {
-  if (!Array.isArray(data.records) || !Array.isArray(data.sources)) {
+  if (
+    !Array.isArray(data.records) ||
+    !Array.isArray(data.sources) ||
+    !Array.isArray(data.reviewPrograms) ||
+    !Array.isArray(data.reviewPayments)
+  ) {
     throw new Error("funding-data.json の構造が不正です");
   }
   const ids = new Set();
@@ -555,6 +867,23 @@ function validate(data) {
     }
     if (!/^https:\/\//.test(record.sourceUrl)) {
       throw new Error(`原典URLが不正です: ${record.id}`);
+    }
+    if (!["recipient", "intermediary", "unclassified"].includes(record.flowLevel)) {
+      throw new Error(`資金レイヤーが不正です: ${record.id}`);
+    }
+  }
+  const reviewPaymentIds = new Set();
+  for (const payment of data.reviewPayments) {
+    if (reviewPaymentIds.has(payment.id)) throw new Error(`レビュー支出先の重複ID: ${payment.id}`);
+    reviewPaymentIds.add(payment.id);
+    if (payment.corporateNumber && !/^\d{13}$/.test(payment.corporateNumber)) {
+      throw new Error(`レビュー支出先の法人番号が不正です: ${payment.id}`);
+    }
+    if (!Number.isSafeInteger(payment.amount) || payment.amount <= 0) {
+      throw new Error(`レビュー支出先の金額が不正です: ${payment.id}`);
+    }
+    if (!["recipient", "intermediary", "unclassified"].includes(payment.flowLevel)) {
+      throw new Error(`レビュー支出先の資金レイヤーが不正です: ${payment.id}`);
     }
   }
 }

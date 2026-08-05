@@ -1,6 +1,17 @@
 {
   "sources": [
     {
+      "id": "review-sheets",
+      "name": "行政事業レビュー",
+      "kind": "official-review-sheet-csv",
+      "indexUrl": "https://rssystem.go.jp/download-csv",
+      "fiscalYearsUrl": "https://rssystem.go.jp/api/projects/fiscal-years/",
+      "filesBaseUrl": "https://rssystem.go.jp/files/",
+      "method": "公式CSV（事業・予算執行・支出先・支出経路）",
+      "frequency": "日次確認",
+      "enabled": true
+    },
+    {
       "id": "gbiz",
       "name": "GビズINFO",
       "kind": "dashboard-summary",

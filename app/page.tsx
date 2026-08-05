@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 
 type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
+type FlowLevel = "recipient" | "intermediary" | "unclassified";
+type View = "payments" | "commitments" | "programs";
 
 type FundingRecord = {
   id: string;
@@ -15,10 +17,46 @@ type FundingRecord = {
   program: string;
   amount: number | null;
   stage: Stage;
+  flowLevel?: FlowLevel;
   route: string[];
   sourceName: string;
   sourceUrl: string;
   quality: "primary" | "aggregated";
+};
+
+type ReviewPayment = {
+  id: string;
+  fiscalYear: number;
+  reviewSheetYear: number;
+  reviewProjectId: string;
+  organization: string;
+  corporateNumber: string;
+  organizationType: string;
+  sourceAgency: string;
+  program: string;
+  amount: number;
+  flowLevel: FlowLevel;
+  flowDepth: number | null;
+  block: string;
+  route: string[];
+  sourceName: string;
+  sourceUrl: string;
+  quality: "primary";
+};
+
+type ReviewProgram = {
+  id: string;
+  reviewSheetYear: number;
+  projectNumber: string;
+  name: string;
+  organization: string;
+  budgetFiscalYear: number;
+  initialBudget: number | null;
+  availableBudget: number | null;
+  executionFiscalYear: number | null;
+  execution: number | null;
+  executionRate: number | null;
+  sourceUrl: string;
 };
 
 type FundingSource = {
@@ -35,12 +73,16 @@ type FundingDataset = {
   generatedAt: string;
   sources: FundingSource[];
   records: FundingRecord[];
+  reviewPayments?: ReviewPayment[];
+  reviewPrograms?: ReviewProgram[];
 };
 
 const bundledFundingData = fundingSummary as FundingDataset;
 const liveDataUrl =
   "https://raw.githubusercontent.com/yagiharuka/meti-funding-watch/main/data/funding-data.json";
 const pageSize = 100;
+const emptyReviewPayments: ReviewPayment[] = [];
+const emptyReviewPrograms: ReviewProgram[] = [];
 
 const stageLabels: Record<Stage, string> = {
   contracted: "契約額",
@@ -50,6 +92,12 @@ const stageLabels: Record<Stage, string> = {
   paid: "支払済額",
 };
 
+const flowLabels: Record<FlowLevel, string> = {
+  recipient: "公表経路上の受取先",
+  intermediary: "実施機関・中間受取先",
+  unclassified: "経路未分類",
+};
+
 const yen = new Intl.NumberFormat("ja-JP", {
   style: "currency",
   currency: "JPY",
@@ -57,7 +105,7 @@ const yen = new Intl.NumberFormat("ja-JP", {
 });
 
 function compactYen(value: number) {
-  if (value >= 100_000_000_000) return `${(value / 100_000_000_000).toFixed(2)}千億円`;
+  if (value >= 1_000_000_000_000) return `${(value / 1_000_000_000_000).toFixed(2)}兆円`;
   if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}億円`;
   if (value >= 10_000) return `${(value / 10_000).toFixed(1)}万円`;
   return yen.format(value);
@@ -74,15 +122,25 @@ function formatUpdated(value: string) {
   }).format(new Date(value));
 }
 
+function includesQuery(values: Array<string | number | null>, query: string) {
+  if (!query) return true;
+  return values.join(" ").toLocaleLowerCase("ja-JP").includes(query);
+}
+
+function sumAmounts<T extends { amount: number | null }>(rows: T[]) {
+  return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+}
+
 export default function Home() {
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
+  const [view, setView] = useState<View>("payments");
   const [query, setQuery] = useState("");
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
   const [year, setYear] = useState("all");
+  const [flowLevel, setFlowLevel] = useState<FlowLevel>("recipient");
   const [page, setPage] = useState(0);
-  const records = dataset.records;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -108,47 +166,101 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
-  const agencies = useMemo(
-    () => Array.from(new Set(records.map((record) => record.sourceAgency))).sort(),
-    [records],
+  const commitments = dataset.records;
+  const payments = dataset.reviewPayments ?? emptyReviewPayments;
+  const programs = dataset.reviewPrograms ?? emptyReviewPrograms;
+
+  const agencies = useMemo(() => {
+    const values = view === "payments"
+      ? payments.map((row) => row.sourceAgency)
+      : view === "commitments"
+        ? commitments.map((row) => row.sourceAgency)
+        : programs.map((row) => row.organization);
+    return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "ja"));
+  }, [commitments, payments, programs, view]);
+
+  const fiscalYears = useMemo(() => {
+    const values = view === "payments"
+      ? payments.map((row) => row.fiscalYear)
+      : view === "commitments"
+        ? commitments.map((row) => row.fiscalYear)
+        : programs.map((row) => row.budgetFiscalYear);
+    return Array.from(new Set(values)).sort((a, b) => b - a);
+  }, [commitments, payments, programs, view]);
+
+  const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
+  const filteredPayments = useMemo(() => payments
+    .filter((row) =>
+      includesQuery([row.organization, row.corporateNumber, row.program, row.sourceAgency], normalizedQuery) &&
+      row.flowLevel === flowLevel &&
+      (agency === "all" || row.sourceAgency === agency) &&
+      (year === "all" || String(row.fiscalYear) === year))
+    .sort((a, b) => b.amount - a.amount),
+  [agency, flowLevel, normalizedQuery, payments, year]);
+
+  const filteredCommitments = useMemo(() => commitments
+    .filter((row) =>
+      includesQuery([row.organization, row.corporateNumber, row.program, row.sourceAgency], normalizedQuery) &&
+      (row.flowLevel ?? "recipient") === flowLevel &&
+      (agency === "all" || row.sourceAgency === agency) &&
+      (stage === "all" || row.stage === stage) &&
+      (year === "all" || String(row.fiscalYear) === year))
+    .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1)),
+  [agency, commitments, flowLevel, normalizedQuery, stage, year]);
+
+  const filteredPrograms = useMemo(() => programs
+    .filter((row) =>
+      includesQuery([row.projectNumber, row.name, row.organization], normalizedQuery) &&
+      (agency === "all" || row.organization === agency) &&
+      (year === "all" || String(row.budgetFiscalYear) === year))
+    .sort((a, b) => (b.execution ?? -1) - (a.execution ?? -1)),
+  [agency, normalizedQuery, programs, year]);
+
+  const activeRows = view === "payments"
+    ? filteredPayments
+    : view === "commitments"
+      ? filteredCommitments
+      : filteredPrograms;
+  const totalPages = Math.max(1, Math.ceil(activeRows.length / pageSize));
+  const visibleRows = activeRows.slice(page * pageSize, (page + 1) * pageSize);
+  const visibleStart = activeRows.length ? page * pageSize + 1 : 0;
+  const visibleEnd = Math.min((page + 1) * pageSize, activeRows.length);
+  const filteredAmount = view === "programs" ? null : sumAmounts(activeRows as Array<{ amount: number | null }>);
+
+  const recipientPayments = payments.filter((row) => row.flowLevel === "recipient");
+  const intermediaryPayments = payments.filter((row) => row.flowLevel === "intermediary");
+  const recipientCommitments = commitments.filter((row) => (row.flowLevel ?? "recipient") === "recipient");
+  const recipientPaymentTotal = sumAmounts(recipientPayments);
+  const intermediaryPaymentTotal = sumAmounts(intermediaryPayments);
+  const recipientCommitmentTotal = sumAmounts(recipientCommitments);
+  const executionTotal = programs.reduce((sum, row) => sum + (row.execution ?? 0), 0);
+  const executionYear = Math.max(...programs.map((row) => row.executionFiscalYear ?? 0));
+  const paymentYear = Math.max(...payments.map((row) => row.fiscalYear), 0);
+  const nedoRecipients = recipientPayments.filter((row) =>
+    row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
   );
+  const nedoRecipientTotal = sumAmounts(nedoRecipients);
+  const showMetric = (value: number) => dataMode === "loading" && !value ? "読込中" : compactYen(value);
 
-  const fiscalYears = useMemo(
-    () => Array.from(new Set(records.map((record) => record.fiscalYear))).sort((a, b) => b - a),
-    [records],
-  );
+  function changeView(nextView: View) {
+    setView(nextView);
+    setAgency("all");
+    setStage("all");
+    setYear("all");
+    setFlowLevel("recipient");
+    setPage(0);
+  }
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("ja-JP");
-    return records
-      .filter((record) => {
-        const haystack = [
-          record.organization,
-          record.corporateNumber,
-          record.program,
-          record.sourceAgency,
-        ]
-          .join(" ")
-          .toLocaleLowerCase("ja-JP");
-        return (
-          (!normalized || haystack.includes(normalized)) &&
-          (agency === "all" || record.sourceAgency === agency) &&
-          (stage === "all" || record.stage === stage) &&
-          (year === "all" || String(record.fiscalYear) === year)
-        );
-      })
-      .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1));
-  }, [agency, query, records, stage, year]);
+  function clearFilters() {
+    setQuery("");
+    setAgency("all");
+    setStage("all");
+    setYear("all");
+    setFlowLevel("recipient");
+    setPage(0);
+  }
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visibleRecords = filtered.slice(page * pageSize, (page + 1) * pageSize);
-  const visibleStart = filtered.length ? page * pageSize + 1 : 0;
-  const visibleEnd = Math.min((page + 1) * pageSize, filtered.length);
-  const visibleTotal = filtered.reduce((sum, record) => sum + (record.amount ?? 0), 0);
-  const visibleRecipients = new Set(filtered.map((record) => record.corporateNumber)).size;
-  const paidTotal = filtered
-    .filter((record) => record.stage === "paid")
-    .reduce((sum, record) => sum + (record.amount ?? 0), 0);
+  const hasFilters = query || agency !== "all" || stage !== "all" || year !== "all" || flowLevel !== "recipient";
 
   return (
     <main>
@@ -160,9 +272,9 @@ export default function Home() {
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">受取先と金額</a>
           <a href="#sources">データソース</a>
-          <a href="#about">このサイトについて</a>
+          <a href="#about">集計上の注意</a>
         </nav>
-        <span className="update-chip"><i /> {
+        <span className="update-chip"><i />{
           dataMode === "github" ? "GitHub日次更新" : dataMode === "loading" ? "全件データ読込中" : "データ取得要確認"
         }</span>
       </header>
@@ -170,10 +282,10 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
-          <h1>経産省の資金は、<br /><em>どの受取先へ。</em></h1>
+          <h1>予算から、<br /><em>実際の受取先まで。</em></h1>
           <p className="hero-lead">
-            経産省とNEDO等の所管法人から企業・大学・一般法人・自治体等に流れた資金を、法人番号でつなぎ、
-            契約・交付決定・確定・支払の段階を分けて可視化します。
+            行政事業レビューを事業・予算・執行の土台にし、GビズINFOとNEDOの一次データを接続。
+            経産省から実施機関への上流資金と、その先の受取先への資金を分けて表示します。
           </p>
           <div className="hero-note">
             <span>最終データ取得</span>
@@ -182,46 +294,46 @@ export default function Home() {
           </div>
         </div>
 
-        <aside className="flow-card" aria-label="資金経路の例">
+        <aside className="flow-card" aria-label="NEDO経由の資金経路">
           <div className="flow-card-head">
-            <span>資金経路の例</span>
-            <span className="live-dot">LIVE</span>
+            <span>レビューシート上の資金経路</span>
+            <span className="live-dot">SEPARATED</span>
           </div>
           <div className="flow-path">
-            <div className="flow-node ministry"><span>支出元</span><strong>経済産業省</strong></div>
-            <div className="flow-line"><span>基金・委託</span></div>
+            <div className="flow-node ministry"><span>上流</span><strong>経済産業省</strong></div>
+            <div className="flow-line"><span>運営費交付・基金等</span></div>
             <div className="flow-node agency"><span>実施機関</span><strong>NEDO</strong></div>
-            <div className="flow-line"><span>契約</span></div>
-            <div className="flow-node company"><span>受取先</span><strong>Rapidus株式会社</strong></div>
+            <div className="flow-line"><span>委託・助成等</span></div>
+            <div className="flow-node company"><span>公表経路上の受取先</span><strong>{nedoRecipients.length.toLocaleString("ja-JP")}件</strong></div>
           </div>
           <div className="flow-total">
-            <span>公開契約額</span>
-            <strong>1,230.7億円</strong>
+            <span>{paymentYear || "—"}年度 支出先額</span>
+            <strong>{showMetric(nedoRecipientTotal)}</strong>
           </div>
-          <p>同じ資金を上流と下流で二重計上しない構造で集計します。</p>
+          <p>NEDOへの上流額はこの金額に足していません。経路が公表されている範囲の集計です。</p>
         </aside>
       </section>
 
-      <section className="metrics" aria-label="検索対象の集計">
+      <section className="metrics" aria-label="データ全体の集計">
         <article>
-          <span>表示中の金額</span>
-          <strong>{compactYen(visibleTotal)}</strong>
-          <small>契約・交付・確定を段階別に収録</small>
+          <span>{paymentYear || "—"}年度 公表経路上の支出先額</span>
+          <strong>{showMetric(recipientPaymentTotal)}</strong>
+          <small>行政事業レビュー・終端ブロック</small>
+        </article>
+        <article className="metric-upstream">
+          <span>{paymentYear || "—"}年度 実施機関・中間受取先額</span>
+          <strong>{showMetric(intermediaryPaymentTotal)}</strong>
+          <small>上の支出先額とは合算しません</small>
         </article>
         <article>
-          <span>受取先数</span>
-          <strong>{visibleRecipients}<b>者</b></strong>
-          <small>法人番号で名寄せ</small>
-        </article>
-        <article>
-          <span>公開レコード</span>
-          <strong>{filtered.length}<b>件</b></strong>
-          <small>原典リンク付き</small>
+          <span>{executionYear || "—"}年度 事業執行額</span>
+          <strong>{showMetric(executionTotal)}</strong>
+          <small>レビューシート単純合計・重複可能性あり</small>
         </article>
         <article className="metric-warning">
-          <span>支払済額</span>
-          <strong>{paidTotal ? compactYen(paidTotal) : "未公表"}</strong>
-          <small>0円とは扱いません</small>
+          <span>契約・補助金掲載額</span>
+          <strong>{showMetric(recipientCommitmentTotal)}</strong>
+          <small>実支出とは別系列です</small>
         </article>
       </section>
 
@@ -231,36 +343,56 @@ export default function Home() {
             <p className="eyebrow">RECIPIENTS & FUNDING</p>
             <h2>受取先と資金を検索</h2>
           </div>
-          <p>GビズINFOの経産省系補助金・調達から、法人番号のある全受取先を取得し、NEDOの一次データで補完します。</p>
+          <p>実支出、契約・補助金、予算事業を切り替えて確認できます。異なる系列の金額は合算しません。</p>
         </div>
 
-        <div className="filters" aria-label="検索条件">
+        <div className="view-tabs" role="tablist" aria-label="表示するデータ">
+          <button role="tab" aria-selected={view === "payments"} onClick={() => changeView("payments")}>
+            実支出先 <small>行政事業レビュー</small>
+          </button>
+          <button role="tab" aria-selected={view === "commitments"} onClick={() => changeView("commitments")}>
+            契約・補助金 <small>GビズINFO / NEDO</small>
+          </button>
+          <button role="tab" aria-selected={view === "programs"} onClick={() => changeView("programs")}>
+            予算・執行 <small>レビューシート事業</small>
+          </button>
+        </div>
+
+        <div className={`filters ${view === "programs" ? "program-filters" : ""}`} aria-label="検索条件">
           <label className="search-field">
             <span className="sr-only">受取先名、法人番号または制度名で検索</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
-              placeholder="受取先名・法人番号・制度名で検索"
+              placeholder={view === "programs" ? "事業名・事業ID・担当組織で検索" : "受取先名・法人番号・制度名で検索"}
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(0); }}
             />
           </label>
           <label>
-            <span className="sr-only">実施機関</span>
+            <span className="sr-only">{view === "programs" ? "担当組織" : "支出元・実施機関"}</span>
             <select value={agency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
-              <option value="all">すべての実施機関</option>
+              <option value="all">{view === "programs" ? "すべての担当組織" : "すべての支出元"}</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
-          <label>
-            <span className="sr-only">金額段階</span>
-            <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); }}>
-              <option value="all">すべての金額段階</option>
-              {Object.entries(stageLabels).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-          </label>
+          {view !== "programs" && (
+            <label>
+              <span className="sr-only">資金レイヤー</span>
+              <select value={flowLevel} onChange={(event) => { setFlowLevel(event.target.value as FlowLevel); setPage(0); }}>
+                {Object.entries(flowLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </select>
+            </label>
+          )}
+          {view === "commitments" && (
+            <label>
+              <span className="sr-only">金額段階</span>
+              <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); }}>
+                <option value="all">すべての金額段階</option>
+                {Object.entries(stageLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </select>
+            </label>
+          )}
           <label>
             <span className="sr-only">年度</span>
             <select value={year} onChange={(event) => { setYear(event.target.value); setPage(0); }}>
@@ -272,61 +404,70 @@ export default function Home() {
 
         <div className="result-bar">
           <span>
-            <strong>{filtered.length.toLocaleString("ja-JP")}</strong>件中
-            {filtered.length > pageSize && ` ${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示`}
+            <strong>{activeRows.length.toLocaleString("ja-JP")}</strong>件
+            {activeRows.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
+            {filteredAmount !== null && <b>・選択系列 {compactYen(filteredAmount)}</b>}
           </span>
-          {(query || agency !== "all" || stage !== "all" || year !== "all") && (
-            <button onClick={() => { setQuery(""); setAgency("all"); setStage("all"); setYear("all"); setPage(0); }}>
-              条件をクリア
-            </button>
-          )}
+          {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
         <div className="records-table" role="region" aria-label="資金レコード一覧" tabIndex={0}>
-          <table>
-            <thead>
-              <tr>
-                <th>受取先</th>
-                <th>制度・事業</th>
-                <th>実施機関</th>
-                <th>段階</th>
-                <th>金額</th>
-                <th>年度</th>
-                <th>根拠</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRecords.map((record) => (
-                <tr key={record.id}>
-                  <td>
-                    <strong>{record.organization}</strong>
-                    <small>{record.corporateNumber}</small>
-                  </td>
-                  <td>
-                    <span className="program-name">{record.program}</span>
-                    <small className="route">{record.route.join(" → ")}</small>
-                  </td>
-                  <td>{record.sourceAgency}</td>
-                  <td><span className={`stage-badge ${record.stage}`}>{stageLabels[record.stage]}</span></td>
-                  <td className="amount">{record.amount === null ? "金額未公表" : yen.format(record.amount)}</td>
-                  <td>{record.fiscalYear}</td>
-                  <td>
-                    <a className="source-link" href={record.sourceUrl} target="_blank" rel="noreferrer">
-                      原典 ↗
-                    </a>
-                  </td>
+          {view === "payments" && (
+            <table>
+              <thead><tr><th>受取先</th><th>レビューシート事業</th><th>支出元・経路</th><th>分類</th><th>支出先額</th><th>年度</th><th>根拠</th></tr></thead>
+              <tbody>{(visibleRows as ReviewPayment[]).map((row) => (
+                <tr key={row.id}>
+                  <td><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
+                  <td><span className="program-name">{row.program}</span><small>事業ID {row.reviewProjectId.replace(`rs-${row.reviewSheetYear}-`, "")}</small></td>
+                  <td><span>{row.sourceAgency}</span><small className="route">{row.route.join(" → ")}</small></td>
+                  <td><span className={`flow-badge ${row.flowLevel}`}>{flowLabels[row.flowLevel]}</span></td>
+                  <td className="amount">{yen.format(row.amount)}</td>
+                  <td>{row.fiscalYear}<small>{row.reviewSheetYear}年度シート</small></td>
+                  <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">公式CSV ↗</a></td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {!filtered.length && (
+              ))}</tbody>
+            </table>
+          )}
+          {view === "commitments" && (
+            <table>
+              <thead><tr><th>受取先</th><th>制度・事業</th><th>実施機関</th><th>段階</th><th>金額</th><th>年度</th><th>根拠</th></tr></thead>
+              <tbody>{(visibleRows as FundingRecord[]).map((row) => (
+                <tr key={row.id}>
+                  <td><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
+                  <td><span className="program-name">{row.program}</span><small className="route">{row.route.join(" → ")}</small></td>
+                  <td>{row.sourceAgency}<small><span className={`flow-badge ${row.flowLevel ?? "recipient"}`}>{flowLabels[row.flowLevel ?? "recipient"]}</span></small></td>
+                  <td><span className={`stage-badge ${row.stage}`}>{stageLabels[row.stage]}</span></td>
+                  <td className="amount">{row.amount === null ? "金額未公表" : yen.format(row.amount)}</td>
+                  <td>{row.fiscalYear}</td>
+                  <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">原典 ↗</a></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+          {view === "programs" && (
+            <table>
+              <thead><tr><th>事業</th><th>担当組織</th><th>当初予算</th><th>歳出予算現額</th><th>執行額</th><th>執行率</th><th>根拠</th></tr></thead>
+              <tbody>{(visibleRows as ReviewProgram[]).map((row) => (
+                <tr key={row.id}>
+                  <td><strong>{row.name}</strong><small>事業ID {row.projectNumber}・{row.reviewSheetYear}年度シート</small></td>
+                  <td>{row.organization}</td>
+                  <td className="amount">{row.initialBudget === null ? "未記載" : yen.format(row.initialBudget)}<small>{row.budgetFiscalYear}年度</small></td>
+                  <td className="amount">{row.availableBudget === null ? "未記載" : yen.format(row.availableBudget)}<small>{row.budgetFiscalYear}年度</small></td>
+                  <td className="amount">{row.execution === null ? "未記載" : yen.format(row.execution)}<small>{row.executionFiscalYear ?? "—"}年度</small></td>
+                  <td>{row.executionRate === null ? "—" : `${(row.executionRate * 100).toFixed(1)}%`}</td>
+                  <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">公式CSV ↗</a></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+          {!activeRows.length && (
             <div className="empty-state">
               <strong>{dataMode === "loading" ? "全件データを読み込んでいます" : "該当するレコードがありません"}</strong>
               <span>{dataMode === "loading" ? "しばらくお待ちください。" : "検索語や条件を変えてください。"}</span>
             </div>
           )}
         </div>
-        {filtered.length > pageSize && (
+        {activeRows.length > pageSize && (
           <nav className="pagination" aria-label="検索結果のページ送り">
             <button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>← 前へ</button>
             <span>{page + 1} / {totalPages}</span>
@@ -338,7 +479,7 @@ export default function Home() {
       <section className="source-section" id="sources">
         <div className="section-heading light">
           <div><p className="eyebrow">DATA PIPELINE</p><h2>データソースの更新状況</h2></div>
-          <p>取得失敗時は古いデータを消さず、更新状態を明示します。</p>
+          <p>毎日自動確認し、取得失敗時は前回データを保持したまま状態を明示します。</p>
         </div>
         <div className="source-grid">
           {dataset.sources.map((source) => (
@@ -358,18 +499,23 @@ export default function Home() {
       <section className="about-section" id="about">
         <div>
           <p className="eyebrow">TRANSPARENCY BY DESIGN</p>
-          <h2>「分からない」を、0円にしない。</h2>
+          <h2>違う段階の金額を、足さない。</h2>
         </div>
         <div className="about-copy">
           <p>
-            このサイトは公開情報をもとにした検証版です。採択、交付決定、契約、額の確定、
-            支払済を区別し、実支出が公開されていない場合は「未公表」と表示します。
+            行政事業レビューの支出先額、事業執行額、GビズINFO等の契約・補助金掲載額は別系列です。
+            また、経産省からNEDO等への金額と、そこから先の受取先への金額も分けています。
           </p>
           <ul>
-            <li>すべての金額に原典URLと取得日を保持</li>
-            <li>法人番号と表記ゆれ辞書による受取先の名寄せ</li>
-            <li>経産省→所管法人→受取先の二重計上を防止</li>
+            <li>2025年度レビューシートの支出先情報は、画面上では原則2024年度の支出として表示</li>
+            <li>「公表経路上の受取先」は、レビューシートでその先の経路が確認できない終端を意味する</li>
+            <li>レビューシートの予算・執行額はシート単純合計で、同一予算事業の重複を含む可能性がある</li>
+            <li>法人番号がない団体もレビューシート掲載名のまま収録し、欠損を0円に置き換えない</li>
           </ul>
+          <p className="attribution">
+            出典：<a href="https://rssystem.go.jp/download-csv" target="_blank" rel="noreferrer">行政事業レビュー見える化サイト</a>。
+            当サイトでデータを編集・加工して作成。
+          </p>
         </div>
       </section>
 

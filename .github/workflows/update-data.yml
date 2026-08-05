@@ -41,8 +41,8 @@ jobs:
       - name: Refresh official data
         run: npm run update:data
 
-      - name: Verify production build
-        run: npm run build
+      - name: Verify data and production build
+        run: npm test
 
       - name: Commit changed data
         run: |
