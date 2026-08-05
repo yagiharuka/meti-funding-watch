@@ -93,15 +93,17 @@ async function refreshGbizBulk() {
   }
 
   try {
-    const subsidies = toGbizBulkRecords(
+    const subsidyResult = toGbizBulkRecords(
       await downloadGbizCsv(source.downloadUrl, "Hojokinjoho", token),
       "subsidy",
     );
-    const procurements = toGbizBulkRecords(
+    const procurementResult = toGbizBulkRecords(
       await downloadGbizCsv(source.downloadUrl, "Chotatsujoho", token),
       "procurement",
     );
-    const loadedRecords = deduplicate([...subsidies, ...procurements]);
+    logGbizScan("補助金", subsidyResult.stats);
+    logGbizScan("調達", procurementResult.stats);
+    const loadedRecords = deduplicate([...subsidyResult.records, ...procurementResult.records]);
     const retainedRecords = next.records.filter((record) => {
       const isGbizImport = record.ingestSource === "gbiz-api" || record.ingestSource === "gbiz-bulk-csv";
       const isLegacyPrototype = !record.ingestSource && /GビズINFO|ものづくり補助金/.test(record.sourceName);
@@ -189,17 +191,29 @@ function toGbizBulkRecords(csvText, kind) {
   }
 
   const records = [];
+  const unmatchedAgencies = new Map();
+  let totalRows = 0;
+  let companyRows = 0;
+  let metiCompanyRows = 0;
   for (const row of iterator) {
+    totalRows += 1;
     const corporateNumber = cleanCell(row[column["法人番号"]]).replace(/\D/g, "");
     const organization = cleanCell(row[column["商号または名称"]]);
     const date = parseJapaneseDate(cleanCell(row[column[fields.date]]));
     const program = cleanCell(row[column[fields.program]]);
     const amount = parseAmount(row[column[fields.amount]]);
-    const agency = normalizeGbizAgency(cleanCell(row[column[fields.agency]]));
+    const rawAgency = cleanCell(row[column[fields.agency]]);
+    const agency = normalizeGbizAgency(rawAgency);
     const sourceKey = "キー情報" in column ? cleanCell(row[column["キー情報"]]) : "";
-    if (!/^\d{13}$/.test(corporateNumber) || !isCompanyName(organization) || !date || !program || !agency) {
+    const isCompany = /^\d{13}$/.test(corporateNumber) && isCompanyName(organization);
+    if (isCompany) companyRows += 1;
+    if (isCompany && !agency) {
+      unmatchedAgencies.set(rawAgency || "（発行元なし）", (unmatchedAgencies.get(rawAgency || "（発行元なし）") || 0) + 1);
+    }
+    if (!isCompany || !date || !program || !agency) {
       continue;
     }
+    metiCompanyRows += 1;
 
     const stage = kind === "procurement" ? "contracted" : "subsidy_published";
     records.push({
@@ -221,7 +235,22 @@ function toGbizBulkRecords(csvText, kind) {
       ingestSource: "gbiz-bulk-csv",
     });
   }
-  return records;
+  return {
+    records,
+    stats: {
+      totalRows,
+      companyRows,
+      metiCompanyRows,
+      importedRows: records.length,
+      unmatchedAgencies: [...unmatchedAgencies.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20),
+    },
+  };
+}
+
+function logGbizScan(kind, stats) {
+  console.log(`SCAN GビズINFO ${kind}: ${JSON.stringify(stats)}`);
 }
 
 function normalizeGbizAgency(value) {
