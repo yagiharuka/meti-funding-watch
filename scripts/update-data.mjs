@@ -75,13 +75,7 @@ async function refreshReviewSheets() {
   if (!source) return;
 
   try {
-    const fiscalYearsResponse = await fetchWithTimeout(source.fiscalYearsUrl);
-    const fiscalYearsPayload = await fiscalYearsResponse.json();
-    const fiscalYears = collectFiscalYears(fiscalYearsPayload).filter((year) => year >= 2024);
-    const reviewSheetYear = Math.max(...fiscalYears);
-    if (!Number.isInteger(reviewSheetYear)) {
-      throw new Error("公開中のレビューシート年度を判定できません");
-    }
+    const reviewSheetYear = await discoverLatestReviewSheetYear(source);
 
     const specifications = {
       organizations: `1-1_RS_${reviewSheetYear}_基本情報_組織情報.zip`,
@@ -216,6 +210,37 @@ async function refreshReviewSheets() {
   } catch (error) {
     markStale("review-sheets", source, error);
   }
+}
+
+async function discoverLatestReviewSheetYear(source) {
+  try {
+    const response = await fetchWithTimeout(source.fiscalYearsUrl, { accept: "application/json" });
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("json")) {
+      const fiscalYears = collectFiscalYears(await response.json()).filter((year) => year >= 2024);
+      const latest = Math.max(...fiscalYears);
+      if (Number.isInteger(latest)) return latest;
+    }
+  } catch {
+    // The public frontend API is convenient but not guaranteed; static official files are authoritative.
+  }
+
+  const currentYear = Number(new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+  }).format(new Date()));
+  for (let candidate = currentYear; candidate >= 2024; candidate -= 1) {
+    const filename = `1-1_RS_${candidate}_基本情報_組織情報.zip`;
+    const url = new URL(`${candidate}/rs/${filename}`, source.filesBaseUrl).href;
+    const response = await fetch(url, {
+      method: "HEAD",
+      headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    const contentType = response.headers.get("content-type") || "";
+    if (response.ok && !contentType.includes("text/html")) return candidate;
+  }
+  throw new Error("公開中のレビューシート年度を判定できません");
 }
 
 function collectFiscalYears(value) {
