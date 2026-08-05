@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import fundingData from "@/data/funding-data.json";
+import fundingSummary from "@/data/funding-summary.json";
 
 type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
 
@@ -13,7 +13,7 @@ type FundingRecord = {
   corporateNumber: string;
   sourceAgency: string;
   program: string;
-  amount: number;
+  amount: number | null;
   stage: Stage;
   route: string[];
   sourceName: string;
@@ -37,9 +37,10 @@ type FundingDataset = {
   records: FundingRecord[];
 };
 
-const bundledFundingData = fundingData as FundingDataset;
+const bundledFundingData = fundingSummary as FundingDataset;
 const liveDataUrl =
   "https://raw.githubusercontent.com/yagiharuka/meti-funding-watch/main/data/funding-data.json";
+const pageSize = 100;
 
 const stageLabels: Record<Stage, string> = {
   contracted: "契約額",
@@ -75,11 +76,12 @@ function formatUpdated(value: string) {
 
 export default function Home() {
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
-  const [dataMode, setDataMode] = useState<"bundled" | "github">("bundled");
+  const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
   const [query, setQuery] = useState("");
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
   const [year, setYear] = useState("all");
+  const [page, setPage] = useState(0);
   const records = dataset.records;
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function Home() {
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setDataMode("bundled");
+        setDataMode("unavailable");
       });
     return () => controller.abort();
   }, []);
@@ -135,14 +137,18 @@ export default function Home() {
           (year === "all" || String(record.fiscalYear) === year)
         );
       })
-      .sort((a, b) => b.amount - a.amount);
+      .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1));
   }, [agency, query, records, stage, year]);
 
-  const visibleTotal = filtered.reduce((sum, record) => sum + record.amount, 0);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visibleRecords = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  const visibleStart = filtered.length ? page * pageSize + 1 : 0;
+  const visibleEnd = Math.min((page + 1) * pageSize, filtered.length);
+  const visibleTotal = filtered.reduce((sum, record) => sum + (record.amount ?? 0), 0);
   const visibleCompanies = new Set(filtered.map((record) => record.corporateNumber)).size;
   const paidTotal = filtered
     .filter((record) => record.stage === "paid")
-    .reduce((sum, record) => sum + record.amount, 0);
+    .reduce((sum, record) => sum + (record.amount ?? 0), 0);
 
   return (
     <main>
@@ -156,7 +162,9 @@ export default function Home() {
           <a href="#sources">データソース</a>
           <a href="#about">このサイトについて</a>
         </nav>
-        <span className="update-chip"><i /> {dataMode === "github" ? "GitHub日次更新" : "自動更新MVP"}</span>
+        <span className="update-chip"><i /> {
+          dataMode === "github" ? "GitHub日次更新" : dataMode === "loading" ? "全件データ読込中" : "データ取得要確認"
+        }</span>
       </header>
 
       <section className="hero" id="top">
@@ -223,7 +231,7 @@ export default function Home() {
             <p className="eyebrow">COMPANIES & FUNDING</p>
             <h2>企業と資金を検索</h2>
           </div>
-          <p>現在はNEDO契約とものづくり補助金の検証データを掲載しています。</p>
+          <p>GビズINFOの経産省系補助金・調達を全件取得し、NEDOの一次データで補完します。</p>
         </div>
 
         <div className="filters" aria-label="検索条件">
@@ -234,19 +242,19 @@ export default function Home() {
               type="search"
               placeholder="企業名・法人番号・制度名で検索"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(0); }}
             />
           </label>
           <label>
             <span className="sr-only">実施機関</span>
-            <select value={agency} onChange={(event) => setAgency(event.target.value)}>
+            <select value={agency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
               <option value="all">すべての実施機関</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
             <span className="sr-only">金額段階</span>
-            <select value={stage} onChange={(event) => setStage(event.target.value)}>
+            <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); }}>
               <option value="all">すべての金額段階</option>
               {Object.entries(stageLabels).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -255,7 +263,7 @@ export default function Home() {
           </label>
           <label>
             <span className="sr-only">年度</span>
-            <select value={year} onChange={(event) => setYear(event.target.value)}>
+            <select value={year} onChange={(event) => { setYear(event.target.value); setPage(0); }}>
               <option value="all">すべての年度</option>
               {fiscalYears.map((item) => <option key={item} value={item}>{item}年度</option>)}
             </select>
@@ -263,9 +271,12 @@ export default function Home() {
         </div>
 
         <div className="result-bar">
-          <span><strong>{filtered.length}</strong>件を金額順に表示</span>
+          <span>
+            <strong>{filtered.length.toLocaleString("ja-JP")}</strong>件中
+            {filtered.length > pageSize && ` ${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示`}
+          </span>
           {(query || agency !== "all" || stage !== "all" || year !== "all") && (
-            <button onClick={() => { setQuery(""); setAgency("all"); setStage("all"); setYear("all"); }}>
+            <button onClick={() => { setQuery(""); setAgency("all"); setStage("all"); setYear("all"); setPage(0); }}>
               条件をクリア
             </button>
           )}
@@ -285,7 +296,7 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((record) => (
+              {visibleRecords.map((record) => (
                 <tr key={record.id}>
                   <td>
                     <strong>{record.organization}</strong>
@@ -297,7 +308,7 @@ export default function Home() {
                   </td>
                   <td>{record.sourceAgency}</td>
                   <td><span className={`stage-badge ${record.stage}`}>{stageLabels[record.stage]}</span></td>
-                  <td className="amount">{yen.format(record.amount)}</td>
+                  <td className="amount">{record.amount === null ? "金額未公表" : yen.format(record.amount)}</td>
                   <td>{record.fiscalYear}</td>
                   <td>
                     <a className="source-link" href={record.sourceUrl} target="_blank" rel="noreferrer">
@@ -310,11 +321,18 @@ export default function Home() {
           </table>
           {!filtered.length && (
             <div className="empty-state">
-              <strong>該当するレコードがありません</strong>
-              <span>検索語や条件を変えてください。</span>
+              <strong>{dataMode === "loading" ? "全件データを読み込んでいます" : "該当するレコードがありません"}</strong>
+              <span>{dataMode === "loading" ? "しばらくお待ちください。" : "検索語や条件を変えてください。"}</span>
             </div>
           )}
         </div>
+        {filtered.length > pageSize && (
+          <nav className="pagination" aria-label="検索結果のページ送り">
+            <button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>← 前へ</button>
+            <span>{page + 1} / {totalPages}</span>
+            <button disabled={page + 1 >= totalPages} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>次へ →</button>
+          </nav>
+        )}
       </section>
 
       <section className="source-section" id="sources">

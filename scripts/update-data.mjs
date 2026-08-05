@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
 const dataPath = new URL("../data/funding-data.json", import.meta.url);
+const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
 
 const [current, registry] = await Promise.all([
@@ -24,15 +25,18 @@ const results = [];
 
 await refreshGbiz();
 await refreshNedo();
-await refreshGbizApi();
+await refreshGbizBulk();
 
 next.generatedAt = new Date().toISOString();
 next.records.sort((a, b) => {
-  return b.amount - a.amount || b.date.localeCompare(a.date) || a.id.localeCompare(b.id);
+  return (b.amount ?? -1) - (a.amount ?? -1) || b.date.localeCompare(a.date) || a.id.localeCompare(b.id);
 });
 
 validate(next);
-await writeFile(dataPath, `${JSON.stringify(next, null, 2)}\n`);
+await Promise.all([
+  writeFile(dataPath, `${JSON.stringify(next)}\n`),
+  writeFile(summaryPath, `${JSON.stringify({ ...next, records: [] }, null, 2)}\n`),
+]);
 
 for (const result of results) {
   console.log(`${result.ok ? "OK" : "STALE"} ${result.name}: ${result.message}`);
@@ -73,128 +77,159 @@ async function refreshGbiz() {
   }
 }
 
-async function refreshGbizApi() {
+async function refreshGbizBulk() {
   const source = configured.get("gbiz");
-  if (!source?.apiBaseUrl) return;
+  if (!source?.downloadUrl) return;
 
   const tokenName = source.apiTokenEnv || "GBIZINFO_API_TOKEN";
   const token = process.env[tokenName]?.trim();
   if (!token) {
     results.push({
       ok: true,
-      name: "GビズINFO API v2",
-      message: `${tokenName}未設定のため明細取得をスキップ`,
+      name: "GビズINFO 全件CSV",
+      message: `${tokenName}未設定のため全件取得をスキップ`,
     });
     return;
   }
 
-  const corporateNumbers = [...new Set(
-    next.records
-      .map((record) => record.corporateNumber)
-      .filter((number) => /^\d{13}$/.test(number)),
-  )];
-
   try {
-    const batches = await mapWithConcurrency(corporateNumbers, 6, async (corporateNumber) => {
-      const [procurements, subsidies] = await Promise.all([
-        fetchGbizActivities(source.apiBaseUrl, corporateNumber, "procurement", token),
-        fetchGbizActivities(source.apiBaseUrl, corporateNumber, "subsidy", token),
-      ]);
-      return [
-        ...toGbizRecords(procurements, "procurement"),
-        ...toGbizRecords(subsidies, "subsidy"),
-      ];
+    const subsidies = toGbizBulkRecords(
+      await downloadGbizCsv(source.downloadUrl, "Hojokinjoho", token),
+      "subsidy",
+    );
+    const procurements = toGbizBulkRecords(
+      await downloadGbizCsv(source.downloadUrl, "Chotatsujoho", token),
+      "procurement",
+    );
+    const loadedRecords = deduplicate([...subsidies, ...procurements]);
+    const retainedRecords = next.records.filter((record) => {
+      const isGbizImport = record.ingestSource === "gbiz-api" || record.ingestSource === "gbiz-bulk-csv";
+      const isLegacyPrototype = !record.ingestSource && /GビズINFO|ものづくり補助金/.test(record.sourceName);
+      return !isGbizImport && !isLegacyPrototype;
     });
-
-    const loadedRecords = deduplicate(batches.flat());
-    const retainedRecords = next.records.filter((record) => record.ingestSource !== "gbiz-api");
     const occupiedKeys = new Set(retainedRecords.map(fundingIdentity));
     const newRecords = loadedRecords.filter((record) => !occupiedKeys.has(fundingIdentity(record)));
 
     next.records = [...retainedRecords, ...newRecords];
     updateSource("gbiz", {
-      method: "API v2 / dashboard",
+      recordCount: newRecords.length,
+      method: "全件CSV / dashboard",
       lastChecked: today,
       status: "healthy",
     });
     results.push({
       ok: true,
-      name: "GビズINFO API v2",
-      message: `${corporateNumbers.length.toLocaleString("ja-JP")}法人から経産省系明細 ${newRecords.length.toLocaleString("ja-JP")}件`,
+      name: "GビズINFO 全件CSV",
+      message: `経産省系の企業向け補助金・調達 ${newRecords.length.toLocaleString("ja-JP")}件`,
     });
   } catch (error) {
     updateSource("gbiz", { status: "watch" });
     results.push({
       ok: false,
-      name: "GビズINFO API v2",
+      name: "GビズINFO 全件CSV",
       message: `${error instanceof Error ? error.message : String(error)}（前回データを保持）`,
     });
   }
 }
 
-async function fetchGbizActivities(baseUrl, corporateNumber, kind, token) {
-  const url = `${baseUrl}/${corporateNumber}/${kind}?metadata_flg=true`;
-  let response;
-  try {
-    response = await fetchWithTimeout(url, {
-      "X-hojinInfo-api-token": token,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith("404 ")) return [];
-    throw error;
+async function downloadGbizCsv(downloadPageUrl, downfile, token) {
+  const pageResponse = await fetch(downloadPageUrl, {
+    headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)" },
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!pageResponse.ok) throw new Error(`GビズINFOダウンロード画面: ${pageResponse.status}`);
+  const html = await pageResponse.text();
+  const action = html.match(/<form[^>]+action=["']([^"']*\/Download(?:;jsessionid=[^"']+)?)['"][^>]+id=["']down["']/i)?.[1]
+    || html.match(/<form[^>]+id=["']down["'][^>]+action=["']([^"']*\/Download(?:;jsessionid=[^"']+)?)['"]/i)?.[1];
+  if (!action) throw new Error("GビズINFOの全件ダウンロード先が見つかりません");
+
+  const cookies = typeof pageResponse.headers.getSetCookie === "function"
+    ? pageResponse.headers.getSetCookie()
+    : [pageResponse.headers.get("set-cookie")].filter(Boolean);
+  const cookieHeader = cookies.map((cookie) => cookie.split(";", 1)[0]).join("; ");
+  const body = new URLSearchParams({
+    downfile,
+    meta: "META",
+    downenc: "UTF-8",
+    apiToken: token,
+    downtype: "csv",
+  });
+  const response = await fetch(new URL(action.replaceAll("&amp;", "&"), downloadPageUrl), {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      cookie: cookieHeader,
+      referer: downloadPageUrl,
+      "user-agent": "meti-funding-watch/0.1 (+public-data-research)",
+    },
+    body,
+    signal: AbortSignal.timeout(5 * 60_000),
+  });
+  if (!response.ok) throw new Error(`GビズINFO ${downfile}: ${response.status}`);
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  if (contentType.includes("text/html") || /^\s*<!doctype html/i.test(text)) {
+    const error = text.match(/class=["']alert-title-txt["'][^>]*>([\s\S]*?)<\/p>/i)?.[1];
+    throw new Error(`GビズINFO ${downfile}: ${error ? stripHtml(error) : "CSVを取得できませんでした"}`);
   }
-  const payload = await response.json();
-  if (Array.isArray(payload.errors) && payload.errors.length) {
-    throw new Error(`GビズINFO ${kind}: ${JSON.stringify(payload.errors)}`);
-  }
-  return Array.isArray(payload["hojin-infos"]) ? payload["hojin-infos"] : [];
+  return text.replace(/^\uFEFF/, "");
 }
 
-function toGbizRecords(organizations, kind) {
-  return organizations.flatMap((organization) => {
-    const corporateNumber = cleanCell(organization.corporate_number);
-    const name = cleanCell(organization.name);
-    const activities = Array.isArray(organization[kind]) ? organization[kind] : [];
+function toGbizBulkRecords(csvText, kind) {
+  const iterator = parseCsvRows(csvText);
+  const first = iterator.next();
+  if (first.done) throw new Error(`GビズINFO ${kind}: CSVが空です`);
+  const headers = first.value.map(cleanCell);
+  const column = Object.fromEntries(headers.map((header, index) => [header, index]));
+  const fields = kind === "procurement"
+    ? { date: "受注日", program: "件名", amount: "落札価格", agency: "組織名" }
+    : { date: "証明日", program: "名称", amount: "金額", agency: "発行元" };
+  for (const header of ["法人番号", "商号または名称", ...Object.values(fields)]) {
+    if (!(header in column)) throw new Error(`GビズINFO ${kind}: ${header}列がありません`);
+  }
 
-    if (!/^\d{13}$/.test(corporateNumber) || !isCompanyName(name)) return [];
+  const records = [];
+  for (const row of iterator) {
+    const corporateNumber = cleanCell(row[column["法人番号"]]).replace(/\D/g, "");
+    const organization = cleanCell(row[column["商号または名称"]]);
+    const date = parseJapaneseDate(cleanCell(row[column[fields.date]]));
+    const program = cleanCell(row[column[fields.program]]);
+    const amount = parseAmount(row[column[fields.amount]]);
+    const agency = normalizeGbizAgency(cleanCell(row[column[fields.agency]]));
+    const sourceKey = "キー情報" in column ? cleanCell(row[column["キー情報"]]) : "";
+    if (!/^\d{13}$/.test(corporateNumber) || !isCompanyName(organization) || !date || !program || !agency) {
+      continue;
+    }
 
-    return activities.flatMap((activity) => {
-      const agency = normalizeGbizAgency(cleanCell(activity.government_departments));
-      const amount = parseAmount(activity.amount);
-      const date = parseJapaneseDate(
-        cleanCell(kind === "procurement" ? activity.date_of_order : activity.date_of_approval),
-      );
-      const program = cleanCell(activity.title);
-      const metadataKey = cleanCell(activity["meta-data"]?.key_field);
-
-      if (!agency || !amount || !date || !program) return [];
-
-      const stage = kind === "procurement" ? "contracted" : "subsidy_published";
-      return [{
-        id: `gbiz-${stableId([kind, metadataKey, date, corporateNumber, amount, program])}`,
-        fiscalYear: fiscalYear(date),
-        date,
-        organization: name,
-        corporateNumber,
-        sourceAgency: agency,
-        program,
-        amount,
-        stage,
-        route: agency === "経済産業省"
-          ? ["経済産業省", name]
-          : ["経済産業省", agency, name],
-        sourceName: "GビズINFO REST API v2",
-        sourceUrl: `https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${corporateNumber}`,
-        quality: "aggregated",
-        ingestSource: "gbiz-api",
-      }];
+    const stage = kind === "procurement" ? "contracted" : "subsidy_published";
+    records.push({
+      id: `gbiz-${stableId([kind, sourceKey || [date, corporateNumber, amount ?? "unknown", program, agency].join("|")])}`,
+      fiscalYear: fiscalYear(date),
+      date,
+      organization,
+      corporateNumber,
+      sourceAgency: agency,
+      program,
+      amount,
+      stage,
+      route: agency === "経済産業省"
+        ? ["経済産業省", organization]
+        : ["経済産業省", agency, organization],
+      sourceName: `GビズINFO 全件CSV（${kind === "procurement" ? "調達" : "補助金"}）`,
+      sourceUrl: `https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${corporateNumber}`,
+      quality: "aggregated",
+      ingestSource: "gbiz-bulk-csv",
     });
-  });
+  }
+  return records;
 }
 
 function normalizeGbizAgency(value) {
   const agencies = [
     ["新エネルギー・産業技術総合開発機構", "NEDO"],
+    ["産業技術総合研究所", "AIST"],
+    ["経済産業研究所", "RIETI"],
+    ["日本原子力研究開発機構", "JAEA"],
     ["情報処理推進機構", "IPA"],
     ["製品評価技術基盤機構", "NITE"],
     ["工業所有権情報・研修館", "INPIT"],
@@ -202,6 +237,37 @@ function normalizeGbizAgency(value) {
     ["石油天然ガス・金属鉱物資源機構", "JOGMEC"],
     ["エネルギー・金属鉱物資源機構", "JOGMEC"],
     ["日本貿易振興機構", "JETRO"],
+    ["原子力損害賠償・廃炉等支援機構", "NDF"],
+    ["電力広域的運営推進機関", "OCCTO"],
+    ["使用済燃料再処理機構", "NuRO"],
+    ["原子力発電環境整備機構", "NUMO"],
+    ["日本貿易保険", "NEXI"],
+    ["日本アルコール産業", "日本アルコール産業"],
+    ["商工組合中央金庫", "商工中金"],
+    ["産業革新投資機構", "JIC"],
+    ["海外需要開拓支援機構", "クールジャパン機構"],
+    ["ＧＸ推進機構", "GX推進機構"],
+    ["GX推進機構", "GX推進機構"],
+    ["高圧ガス保安協会", "KHK"],
+    ["日本電気計器検定所", "JEMIC"],
+    ["日本商品先物取引協会", "日本商品先物取引協会"],
+    ["日本商工会議所", "日本商工会議所"],
+    ["全国商工会連合会", "全国商工会連合会"],
+    ["全国中小企業団体中央会", "全国中小企業団体中央会"],
+    ["全国商店街振興組合連合会", "全国商店街振興組合連合会"],
+    ["全国石油商業組合連合会", "全国石油商業組合連合会"],
+    ["日本弁理士会", "日本弁理士会"],
+    ["東京中小企業投資育成", "東京中小企業投資育成"],
+    ["名古屋中小企業投資育成", "名古屋中小企業投資育成"],
+    ["大阪中小企業投資育成", "大阪中小企業投資育成"],
+    ["北海道経済産業局", "北海道経済産業局"],
+    ["東北経済産業局", "東北経済産業局"],
+    ["関東経済産業局", "関東経済産業局"],
+    ["中部経済産業局", "中部経済産業局"],
+    ["近畿経済産業局", "近畿経済産業局"],
+    ["中国経済産業局", "中国経済産業局"],
+    ["四国経済産業局", "四国経済産業局"],
+    ["九州経済産業局", "九州経済産業局"],
     ["資源エネルギー庁", "資源エネルギー庁"],
     ["中小企業庁", "中小企業庁"],
     ["特許庁", "特許庁"],
@@ -319,7 +385,10 @@ function discoverCsvLinks(html, indexUrl) {
 }
 
 function parseCsv(text) {
-  const rows = [];
+  return [...parseCsvRows(text)];
+}
+
+function* parseCsvRows(text) {
   let row = [];
   let field = "";
   let quoted = false;
@@ -342,7 +411,7 @@ function parseCsv(text) {
       field = "";
     } else if (character === "\n") {
       row.push(field);
-      rows.push(row);
+      yield row;
       row = [];
       field = "";
     } else if (character !== "\r") {
@@ -351,9 +420,8 @@ function parseCsv(text) {
   }
   if (field || row.length) {
     row.push(field);
-    rows.push(row);
+    yield row;
   }
-  return rows;
 }
 
 function cleanCell(value = "") {
@@ -404,21 +472,8 @@ function parseAmount(value) {
 }
 
 function fundingIdentity(record) {
-  return [record.corporateNumber, record.date, record.amount].join("\u001f");
-}
-
-async function mapWithConcurrency(items, limit, worker) {
-  const results = new Array(items.length);
-  let cursor = 0;
-  async function run() {
-    while (cursor < items.length) {
-      const index = cursor;
-      cursor += 1;
-      results[index] = await worker(items[index], index);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
-  return results;
+  const program = record.program.replace(/[\s\p{P}\p{S}]+/gu, "").toLocaleLowerCase("ja-JP");
+  return [record.corporateNumber, record.date, record.amount ?? "unknown", program].join("\u001f");
 }
 
 function deduplicate(records) {
@@ -470,7 +525,7 @@ function validate(data) {
     if (!/^\d{13}$/.test(record.corporateNumber)) {
       throw new Error(`法人番号が不正です: ${record.id}`);
     }
-    if (!Number.isSafeInteger(record.amount) || record.amount <= 0) {
+    if (record.amount !== null && (!Number.isSafeInteger(record.amount) || record.amount <= 0)) {
       throw new Error(`金額が不正です: ${record.id}`);
     }
     if (!/^https:\/\//.test(record.sourceUrl)) {

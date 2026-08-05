@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-08-05T13:59:52.243Z",
+  "sources": [
+    {
+      "id": "gbiz",
+      "name": "GビズINFO",
+      "recordCount": 68280,
+      "method": "API / CSV",
+      "frequency": "日次確認",
+      "lastChecked": "2026-08-05",
+      "status": "healthy"
+    },
+    {
+      "id": "nedo",
+      "name": "NEDO 契約公表",
+      "recordCount": 324,
+      "method": "月次CSV",
+      "frequency": "月次",
+      "lastChecked": "2026-08-05",
+      "status": "healthy"
+    },
+    {
+      "id": "meti",
+      "name": "経産省 契約公表",
+      "recordCount": 9576,
+      "method": "XLSX",
+      "frequency": "日次確認",
+      "lastChecked": "2026-08-05",
+      "status": "healthy"
+    },
+    {
+      "id": "subsidy",
+      "name": "補助金 採択・交付情報",
+      "recordCount": 42783,
+      "method": "HTML / PDF",
+      "frequency": "日次確認",
+      "lastChecked": "2026-08-05",
+      "status": "watch"
+    }
+  ],
+  "records": []
+}

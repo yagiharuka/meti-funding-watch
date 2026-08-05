@@ -111,6 +111,10 @@ td small { display: block; margin-top: 5px; color: #8b9994; font-size: 9px; }
 .source-link:hover { text-decoration: underline; }
 .empty-state { display: grid; place-items: center; gap: 7px; min-height: 220px; color: var(--muted); font-size: 12px; }
 .empty-state strong { color: var(--ink); font-size: 16px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 1440px; margin: 20px auto 0; }
+.pagination button { min-width: 92px; padding: 10px 15px; border: 1px solid #cad5cc; border-radius: 10px; background: #fff; color: var(--green); font-size: 11px; font-weight: 800; cursor: pointer; }
+.pagination button:disabled { color: #9aa7a1; cursor: default; opacity: .55; }
+.pagination span { color: var(--muted); font-size: 11px; font-weight: 700; }
 
 .source-section { padding-top: 94px; background: var(--ink); color: #fff; }
 .section-heading.light .eyebrow { color: var(--lime); }

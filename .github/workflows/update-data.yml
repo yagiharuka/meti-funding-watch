@@ -1,6 +1,13 @@
 name: Update public funding data
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/update-data.yml"
+      - "scripts/update-data.mjs"
+      - "data/source-registry.json"
   workflow_dispatch:
   schedule:
     - cron: "30 21 * * *"
@@ -15,7 +22,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
     steps:
@@ -39,12 +46,12 @@ jobs:
 
       - name: Commit changed data
         run: |
-          if git diff --quiet -- data/funding-data.json; then
+          if git diff --quiet -- data/funding-data.json data/funding-summary.json; then
             echo "No data changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/funding-data.json
+          git add data/funding-data.json data/funding-summary.json
           git commit -m "chore(data): refresh official funding data"
           git push
