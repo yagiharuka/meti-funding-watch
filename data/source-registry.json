@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "id": "gbiz",
+      "name": "GビズINFO",
+      "kind": "dashboard-summary",
+      "indexUrl": "https://info.gbiz.go.jp/hojin/dashboard",
+      "enabled": true
+    },
+    {
+      "id": "nedo",
+      "name": "NEDO 契約公表",
+      "kind": "monthly-csv-index",
+      "indexUrl": "https://www.nedo.go.jp/nyusatsu/itaku_keiyaku.html",
+      "enabled": true
+    }
+  ]
+}
