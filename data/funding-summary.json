@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-08-05T13:59:52.243Z",
+  "generatedAt": "2026-08-05T14:05:35.339Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 68280,
-      "method": "API / CSV",
+      "recordCount": 17603,
+      "method": "全件CSV / dashboard",
       "frequency": "日次確認",
       "lastChecked": "2026-08-05",
       "status": "healthy"
