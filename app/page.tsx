@@ -145,7 +145,7 @@ export default function Home() {
   const visibleStart = filtered.length ? page * pageSize + 1 : 0;
   const visibleEnd = Math.min((page + 1) * pageSize, filtered.length);
   const visibleTotal = filtered.reduce((sum, record) => sum + (record.amount ?? 0), 0);
-  const visibleCompanies = new Set(filtered.map((record) => record.corporateNumber)).size;
+  const visibleRecipients = new Set(filtered.map((record) => record.corporateNumber)).size;
   const paidTotal = filtered
     .filter((record) => record.stage === "paid")
     .reduce((sum, record) => sum + (record.amount ?? 0), 0);
@@ -158,7 +158,7 @@ export default function Home() {
           <span>経産省資金フロー</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
-          <a href="#records">企業と金額</a>
+          <a href="#records">受取先と金額</a>
           <a href="#sources">データソース</a>
           <a href="#about">このサイトについて</a>
         </nav>
@@ -170,9 +170,9 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
-          <h1>経産省の資金は、<br /><em>どの企業へ。</em></h1>
+          <h1>経産省の資金は、<br /><em>どの受取先へ。</em></h1>
           <p className="hero-lead">
-            経産省とNEDO等の所管法人から企業に流れた資金を、法人番号でつなぎ、
+            経産省とNEDO等の所管法人から企業・大学・一般法人・自治体等に流れた資金を、法人番号でつなぎ、
             契約・交付決定・確定・支払の段階を分けて可視化します。
           </p>
           <div className="hero-note">
@@ -209,8 +209,8 @@ export default function Home() {
           <small>契約・交付・確定を段階別に収録</small>
         </article>
         <article>
-          <span>企業数</span>
-          <strong>{visibleCompanies}<b>社</b></strong>
+          <span>受取先数</span>
+          <strong>{visibleRecipients}<b>者</b></strong>
           <small>法人番号で名寄せ</small>
         </article>
         <article>
@@ -228,19 +228,19 @@ export default function Home() {
       <section className="records-section" id="records">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">COMPANIES & FUNDING</p>
-            <h2>企業と資金を検索</h2>
+            <p className="eyebrow">RECIPIENTS & FUNDING</p>
+            <h2>受取先と資金を検索</h2>
           </div>
-          <p>GビズINFOの経産省系補助金・調達を全件取得し、NEDOの一次データで補完します。</p>
+          <p>GビズINFOの経産省系補助金・調達から、法人番号のある全受取先を取得し、NEDOの一次データで補完します。</p>
         </div>
 
         <div className="filters" aria-label="検索条件">
           <label className="search-field">
-            <span className="sr-only">企業名、法人番号または制度名で検索</span>
+            <span className="sr-only">受取先名、法人番号または制度名で検索</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
-              placeholder="企業名・法人番号・制度名で検索"
+              placeholder="受取先名・法人番号・制度名で検索"
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(0); }}
             />
@@ -286,7 +286,7 @@ export default function Home() {
           <table>
             <thead>
               <tr>
-                <th>受取企業</th>
+                <th>受取先</th>
                 <th>制度・事業</th>
                 <th>実施機関</th>
                 <th>段階</th>
@@ -367,8 +367,8 @@ export default function Home() {
           </p>
           <ul>
             <li>すべての金額に原典URLと取得日を保持</li>
-            <li>法人番号と表記ゆれ辞書による企業名寄せ</li>
-            <li>経産省→所管法人→企業の二重計上を防止</li>
+            <li>法人番号と表記ゆれ辞書による受取先の名寄せ</li>
+            <li>経産省→所管法人→受取先の二重計上を防止</li>
           </ul>
         </div>
       </section>

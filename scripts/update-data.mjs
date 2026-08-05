@@ -122,7 +122,7 @@ async function refreshGbizBulk() {
     results.push({
       ok: true,
       name: "GビズINFO 全件CSV",
-      message: `経産省系の企業向け補助金・調達 ${newRecords.length.toLocaleString("ja-JP")}件`,
+      message: `経産省系の全受取先への補助金・調達 ${newRecords.length.toLocaleString("ja-JP")}件`,
     });
   } catch (error) {
     updateSource("gbiz", { status: "watch" });
@@ -193,8 +193,8 @@ function toGbizBulkRecords(csvText, kind) {
   const records = [];
   const unmatchedAgencies = new Map();
   let totalRows = 0;
-  let companyRows = 0;
-  let metiCompanyRows = 0;
+  let recipientRows = 0;
+  let metiRecipientRows = 0;
   for (const row of iterator) {
     totalRows += 1;
     const corporateNumber = cleanCell(row[column["法人番号"]]).replace(/\D/g, "");
@@ -205,15 +205,15 @@ function toGbizBulkRecords(csvText, kind) {
     const rawAgency = cleanCell(row[column[fields.agency]]);
     const agency = normalizeGbizAgency(rawAgency);
     const sourceKey = "キー情報" in column ? cleanCell(row[column["キー情報"]]) : "";
-    const isCompany = /^\d{13}$/.test(corporateNumber) && isCompanyName(organization);
-    if (isCompany) companyRows += 1;
-    if (isCompany && !agency) {
+    const isRecipient = /^\d{13}$/.test(corporateNumber) && Boolean(organization);
+    if (isRecipient) recipientRows += 1;
+    if (isRecipient && !agency) {
       unmatchedAgencies.set(rawAgency || "（発行元なし）", (unmatchedAgencies.get(rawAgency || "（発行元なし）") || 0) + 1);
     }
-    if (!isCompany || !date || !program || !agency) {
+    if (!isRecipient || !date || !program || !agency) {
       continue;
     }
-    metiCompanyRows += 1;
+    metiRecipientRows += 1;
 
     const stage = kind === "procurement" ? "contracted" : "subsidy_published";
     records.push({
@@ -239,8 +239,8 @@ function toGbizBulkRecords(csvText, kind) {
     records,
     stats: {
       totalRows,
-      companyRows,
-      metiCompanyRows,
+      recipientRows,
+      metiRecipientRows,
       importedRows: records.length,
       unmatchedAgencies: [...unmatchedAgencies.entries()]
         .sort((a, b) => b[1] - a[1])
@@ -317,7 +317,7 @@ async function refreshNedo() {
     const batches = await Promise.all(csvLinks.map(loadNedoCsv));
     const loadedRecords = deduplicate(batches.flat());
 
-    if (!loadedRecords.length) throw new Error("有効な企業契約を抽出できません");
+    if (!loadedRecords.length) throw new Error("有効な受取先契約を抽出できません");
 
     next.records = [
       ...next.records.filter((record) => {
@@ -336,7 +336,7 @@ async function refreshNedo() {
     results.push({
       ok: true,
       name: source.name,
-      message: `${csvLinks.length}か月分から企業契約 ${loadedRecords.length.toLocaleString("ja-JP")}件`,
+      message: `${csvLinks.length}か月分から受取先契約 ${loadedRecords.length.toLocaleString("ja-JP")}件`,
     });
   } catch (error) {
     markStale("nedo", source, error);
@@ -372,7 +372,7 @@ async function loadNedoCsv(link) {
     const program = cleanCell(row[column["契約件名及び品名"]]);
 
     if (
-      !isCompanyName(organization) ||
+      !organization ||
       !/^\d{13}$/.test(corporateNumber) ||
       !Number.isSafeInteger(amount) ||
       amount <= 0 ||
@@ -481,10 +481,6 @@ function parseJapaneseDate(value) {
 function fiscalYear(date) {
   const [year, month] = date.split("-").map(Number);
   return month <= 3 ? year - 1 : year;
-}
-
-function isCompanyName(name) {
-  return /(株式会社|有限会社|合同会社|合名会社|合資会社|相互会社)/.test(name);
 }
 
 function stableId(parts) {
