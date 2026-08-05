@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { unzipSync } from "fflate";
 
 const dataPath = new URL("../data/funding-data.json", import.meta.url);
 const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
+const reviewCachePath = new URL("../data/review-cache/", import.meta.url);
 
 const [current, registry] = await Promise.all([
   readJson(dataPath),
@@ -196,6 +197,7 @@ async function refreshReviewSheets() {
     next.reviewPayments = [...paymentById.values()].sort((a, b) => {
       return b.amount - a.amount || a.organization.localeCompare(b.organization, "ja");
     });
+    await writeReviewCache(reviewSheetYear, next.reviewPrograms, next.reviewPayments);
     updateSource("review-sheets", {
       recordCount: next.reviewPayments.length,
       method: "公式CSV（事業・予算執行・支出先・支出経路）",
@@ -208,8 +210,60 @@ async function refreshReviewSheets() {
       message: `${reviewSheetYear}年度の経産省 ${next.reviewPrograms.length.toLocaleString("ja-JP")}事業・支出先 ${next.reviewPayments.length.toLocaleString("ja-JP")}件`,
     });
   } catch (error) {
-    markStale("review-sheets", source, error);
+    try {
+      const cached = await loadReviewCache();
+      next.reviewPrograms = cached.programs;
+      next.reviewPayments = cached.payments;
+      updateSource("review-sheets", {
+        recordCount: next.reviewPayments.length,
+        method: "公式CSV（前回取得キャッシュ）",
+        status: "watch",
+      });
+      results.push({
+        ok: false,
+        name: source.name,
+        message: `${error instanceof Error ? error.message : String(error)}（${cached.reviewSheetYear}年度の前回取得キャッシュを保持）`,
+      });
+    } catch {
+      markStale("review-sheets", source, error);
+    }
   }
+}
+
+async function writeReviewCache(reviewSheetYear, programs, payments) {
+  await mkdir(reviewCachePath, { recursive: true });
+  const paymentGroups = new Map();
+  for (const payment of payments) {
+    const bucket = payment.id.at(-1) || "0";
+    if (!paymentGroups.has(bucket)) paymentGroups.set(bucket, []);
+    paymentGroups.get(bucket).push(payment);
+  }
+  const paymentFiles = [...paymentGroups.keys()]
+    .sort()
+    .map((bucket) => `payments-${bucket}.json`);
+  await Promise.all([
+    writeFile(new URL("programs.json", reviewCachePath), `${JSON.stringify(programs)}\n`),
+    ...paymentFiles.map((filename) => {
+      const bucket = filename.slice("payments-".length, -".json".length);
+      return writeFile(new URL(filename, reviewCachePath), `${JSON.stringify(paymentGroups.get(bucket))}\n`);
+    }),
+  ]);
+  await writeFile(new URL("manifest.json", reviewCachePath), `${JSON.stringify({
+    reviewSheetYear,
+    programsFile: "programs.json",
+    paymentFiles,
+  }, null, 2)}\n`);
+}
+
+async function loadReviewCache() {
+  const manifest = await readJson(new URL("manifest.json", reviewCachePath));
+  const [programs, ...paymentGroups] = await Promise.all([
+    readJson(new URL(manifest.programsFile, reviewCachePath)),
+    ...manifest.paymentFiles.map((filename) => readJson(new URL(filename, reviewCachePath))),
+  ]);
+  const payments = paymentGroups.flat();
+  if (!Array.isArray(programs) || !payments.length) throw new Error("レビューシートキャッシュが空です");
+  return { reviewSheetYear: manifest.reviewSheetYear, programs, payments };
 }
 
 async function discoverLatestReviewSheetYear(source) {

@@ -8,6 +8,7 @@ on:
       - ".github/workflows/update-data.yml"
       - "scripts/update-data.mjs"
       - "data/source-registry.json"
+      - "data/review-cache/**"
   workflow_dispatch:
   schedule:
     - cron: "30 21 * * *"
@@ -46,12 +47,12 @@ jobs:
 
       - name: Commit changed data
         run: |
-          if git diff --quiet -- data/funding-data.json data/funding-summary.json; then
+          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/review-cache; then
             echo "No data changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/funding-data.json data/funding-summary.json
+          git add data/funding-data.json data/funding-summary.json data/review-cache
           git commit -m "chore(data): refresh official funding data"
           git push
