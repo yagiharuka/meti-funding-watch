@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-05T14:22:00.006Z",
+  "generatedAt": "2026-08-05T22:36:49.068Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 29825,
+      "recordCount": 29826,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
-      "lastChecked": "2026-08-05",
+      "lastChecked": "2026-08-06",
       "status": "healthy"
     },
     {
@@ -16,7 +16,7 @@
       "recordCount": 644,
       "method": "月次CSV",
       "frequency": "月次",
-      "lastChecked": "2026-08-05",
+      "lastChecked": "2026-08-06",
       "status": "healthy"
     },
     {
@@ -36,7 +36,18 @@
       "frequency": "日次確認",
       "lastChecked": "2026-08-05",
       "status": "watch"
+    },
+    {
+      "id": "review-sheets",
+      "name": "行政事業レビュー",
+      "recordCount": 6940,
+      "method": "公式CSV（前回取得キャッシュ）",
+      "frequency": "日次確認",
+      "lastChecked": "未取得",
+      "status": "watch"
     }
   ],
-  "records": []
+  "records": [],
+  "reviewPrograms": [],
+  "reviewPayments": []
 }
