@@ -240,6 +240,9 @@ async function discoverLatestReviewSheetYear(source) {
     const contentType = response.headers.get("content-type") || "";
     if (response.ok && !contentType.includes("text/html")) return candidate;
   }
+  if (Number.isInteger(source.fallbackReviewSheetYear)) {
+    return source.fallbackReviewSheetYear;
+  }
   throw new Error("公開中のレビューシート年度を判定できません");
 }
 
