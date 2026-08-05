@@ -5,6 +5,8 @@
       "name": "GビズINFO",
       "kind": "dashboard-summary",
       "indexUrl": "https://info.gbiz.go.jp/hojin/dashboard",
+      "apiBaseUrl": "https://api.info.gbiz.go.jp/hojin/v2/hojin",
+      "apiTokenEnv": "GBIZINFO_API_TOKEN",
       "enabled": true
     },
     {

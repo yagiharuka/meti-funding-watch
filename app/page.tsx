@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import fundingData from "@/data/funding-data.json";
 
-type Stage = "contracted" | "award_decision" | "finalized" | "paid";
+type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
 
 type FundingRecord = {
   id: string;
@@ -44,6 +44,7 @@ const liveDataUrl =
 const stageLabels: Record<Stage, string> = {
   contracted: "契約額",
   award_decision: "交付決定額",
+  subsidy_published: "補助金掲載額",
   finalized: "確定額",
   paid: "支払済額",
 };

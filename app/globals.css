@@ -103,6 +103,7 @@ td small { display: block; margin-top: 5px; color: #8b9994; font-size: 9px; }
 .stage-badge { display: inline-block; padding: 6px 8px; border-radius: 7px; font-size: 9px; font-weight: 800; white-space: nowrap; }
 .stage-badge.contracted { background: #e8efff; color: #2858ba; }
 .stage-badge.award_decision { background: #fff2d9; color: #965c00; }
+.stage-badge.subsidy_published { background: #fff2d9; color: #965c00; }
 .stage-badge.finalized { background: #e4f7ed; color: #08704d; }
 .stage-badge.paid { background: #efe9ff; color: #6544b0; }
 .amount { color: var(--ink); font-family: Georgia, serif; font-size: 14px; font-weight: 700; white-space: nowrap; text-align: right; }
