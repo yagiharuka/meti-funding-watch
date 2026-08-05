@@ -273,7 +273,10 @@ export default function Home() {
       row.flowLevel === flowLevel &&
       (agency === "all" || row.sourceAgency === agency) &&
       (year === "all" || String(row.fiscalYear) === year))
-    .sort((a, b) => b.amount - a.amount),
+    .sort((a, b) =>
+      b.fiscalYear - a.fiscalYear ||
+      a.organization.localeCompare(b.organization, "ja") ||
+      a.program.localeCompare(b.program, "ja")),
   [agency, flowLevel, normalizedQuery, payments, year]);
 
   const filteredCommitments = useMemo(() => commitments
@@ -283,7 +286,10 @@ export default function Home() {
       (agency === "all" || row.sourceAgency === agency) &&
       (stage === "all" || row.stage === stage) &&
       (year === "all" || String(row.fiscalYear) === year))
-    .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1)),
+    .sort((a, b) =>
+      b.fiscalYear - a.fiscalYear ||
+      b.date.localeCompare(a.date) ||
+      a.organization.localeCompare(b.organization, "ja")),
   [agency, commitments, flowLevel, normalizedQuery, stage, year]);
 
   const filteredPrograms = useMemo(() => programs
@@ -291,7 +297,9 @@ export default function Home() {
       includesQuery([row.projectNumber, row.name, row.organization], normalizedQuery) &&
       (agency === "all" || row.organization === agency) &&
       (year === "all" || String(row.executionFiscalYear) === year))
-    .sort((a, b) => (b.execution ?? -1) - (a.execution ?? -1)),
+    .sort((a, b) =>
+      (b.executionFiscalYear ?? 0) - (a.executionFiscalYear ?? 0) ||
+      a.projectNumber.localeCompare(b.projectNumber, "ja")),
   [agency, normalizedQuery, programs, year]);
 
   const activeRows = view === "payments"
@@ -358,9 +366,9 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="経産省資金フロー トップ">
+        <a className="brand" href="#top" aria-label="事業者等への交付金額(経産省) トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省資金フロー</span>
+          <span>事業者等への交付金額(経産省)</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">受取先と金額</a>
@@ -375,7 +383,7 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
-          <h1>予算から、<br /><em>実際の受取先まで。</em></h1>
+          <h1>事業者等への<br /><em>交付金額(経産省)</em></h1>
           <p className="hero-lead">
             行政事業レビューを事業・予算・執行の土台にし、GビズINFOとNEDOの一次データを接続。
             経産省から実施機関への上流資金と、その先の受取先への資金を分けて表示します。
@@ -473,7 +481,7 @@ export default function Home() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">RECIPIENTS & FUNDING</p>
-            <h2>受取先と資金を検索</h2>
+            <h2>受取先と金額を検索</h2>
           </div>
           <p>実支出、契約・補助金、予算事業を切り替えて確認できます。異なる系列の金額は合算しません。</p>
         </div>
@@ -655,7 +663,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省資金フロー</span></div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>事業者等への交付金額(経産省)</span></div>
         <p>公開情報ベースの非公式プロトタイプ</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>

@@ -1,4 +1,4 @@
-# 経産省資金フロー
+# 事業者等への交付金額(経産省)
 
 公開サイト: https://yagiharuka.github.io/meti-funding-watch/
 

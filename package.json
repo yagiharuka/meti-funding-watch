@@ -1,6 +1,6 @@
 {
   "name": "meti-funding-watch",
-  "displayName": "経産省資金フロー",
+  "displayName": "事業者等への交付金額(経産省)",
   "version": "0.1.0",
   "private": true,
   "engines": {
