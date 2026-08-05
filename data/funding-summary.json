@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T22:36:49.068Z",
+  "generatedAt": "2026-08-05T22:39:51.145Z",
   "sources": [
     {
       "id": "gbiz",
@@ -43,7 +43,7 @@
       "recordCount": 6940,
       "method": "公式CSV（前回取得キャッシュ）",
       "frequency": "日次確認",
-      "lastChecked": "未取得",
+      "lastChecked": "2026-08-06",
       "status": "watch"
     }
   ],
