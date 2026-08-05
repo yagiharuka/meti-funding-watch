@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-05T14:09:49.369Z",
+  "generatedAt": "2026-08-05T14:22:00.006Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 17603,
+      "recordCount": 29825,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
       "lastChecked": "2026-08-05",
@@ -13,7 +13,7 @@
     {
       "id": "nedo",
       "name": "NEDO 契約公表",
-      "recordCount": 324,
+      "recordCount": 644,
       "method": "月次CSV",
       "frequency": "月次",
       "lastChecked": "2026-08-05",
