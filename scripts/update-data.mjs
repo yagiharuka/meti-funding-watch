@@ -217,6 +217,7 @@ async function refreshReviewSheets() {
       updateSource("review-sheets", {
         recordCount: next.reviewPayments.length,
         method: "公式CSV（前回取得キャッシュ）",
+        lastChecked: today,
         status: "watch",
       });
       results.push({
