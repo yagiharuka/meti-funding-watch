@@ -1,5 +1,9 @@
 {
-  "reviewSheetYear": 2025,
+  "schemaVersion": 2,
+  "reviewSheetYears": [
+    2024,
+    2025
+  ],
   "programsFile": "programs.json",
   "paymentFiles": [
     "payments-0.json",

@@ -50,6 +50,7 @@ for (const record of next.records) {
   record.flowLevel = classifyCommitmentFlow(record);
 }
 
+next.coverage = buildCoverage(next);
 next.generatedAt = new Date().toISOString();
 next.records.sort((a, b) => {
   return (b.amount ?? -1) - (a.amount ?? -1) || b.date.localeCompare(a.date) || a.id.localeCompare(b.id);
@@ -76,128 +77,19 @@ async function refreshReviewSheets() {
   if (!source) return;
 
   try {
-    const reviewSheetYear = await discoverLatestReviewSheetYear(source);
-
-    const specifications = {
-      organizations: `1-1_RS_${reviewSheetYear}_基本情報_組織情報.zip`,
-      budgets: `2-1_RS_${reviewSheetYear}_予算・執行_サマリ.zip`,
-      payments: `5-1_RS_${reviewSheetYear}_支出先_支出情報.zip`,
-      flows: `5-2_RS_${reviewSheetYear}_支出先_支出ブロックのつながり.zip`,
-    };
-
-    const programById = new Map();
-    for (const row of csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.organizations))) {
-      if (!isMetiReviewRow(row)) continue;
-      const projectNumber = cleanCell(row["予算事業ID"]);
-      if (!projectNumber || programById.has(projectNumber)) continue;
-      const organization = [row["局・庁"], row["部"], row["課"], row["室"]]
-        .map(cleanCell)
-        .filter(Boolean)
-        .join(" / ");
-      programById.set(projectNumber, {
-        id: `rs-${reviewSheetYear}-${projectNumber}`,
-        reviewSheetYear,
-        projectNumber,
-        name: cleanCell(row["事業名"]),
-        organization: organization || "経済産業省",
-        budgetFiscalYear: reviewSheetYear,
-        initialBudget: null,
-        availableBudget: null,
-        executionFiscalYear: null,
-        execution: null,
-        executionRate: null,
-        sourceUrl: source.indexUrl,
-      });
+    const reviewSheetYears = await discoverReviewSheetYears(source);
+    const yearly = [];
+    for (const reviewSheetYear of reviewSheetYears) {
+      yearly.push(await loadReviewSheetYear(source, reviewSheetYear));
     }
 
-    for (const row of csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.budgets))) {
-      if (!isMetiReviewRow(row)) continue;
-      const project = programById.get(cleanCell(row["予算事業ID"]));
-      if (!project) continue;
-      const budgetYear = Number(cleanCell(row["予算年度"]));
-      const initialBudget = parseNullableInteger(row["当初予算（合計）"]);
-      const availableBudget = parseNullableInteger(row["計（歳出予算現額合計）"]);
-      const execution = parseNullableInteger(row["執行額（合計）"]);
-      const executionRate = parseNullableNumber(row["執行率"]);
-      const isSummaryRow = initialBudget !== null || availableBudget !== null || execution !== null;
-      if (!isSummaryRow) continue;
-
-      if (budgetYear === reviewSheetYear) {
-        project.initialBudget = initialBudget;
-        project.availableBudget = availableBudget;
-      }
-      if (
-        budgetYear < reviewSheetYear &&
-        execution !== null &&
-        (project.executionFiscalYear === null || budgetYear > project.executionFiscalYear)
-      ) {
-        project.executionFiscalYear = budgetYear;
-        project.execution = execution;
-        project.executionRate = executionRate;
-      }
-    }
-
-    const graphByProject = buildReviewGraphs(
-      csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.flows)),
-    );
-    const paymentById = new Map();
-    for (const row of csvObjectRows(await downloadReviewCsv(source, reviewSheetYear, specifications.payments))) {
-      if (!isMetiReviewRow(row)) continue;
-      const projectNumber = cleanCell(row["予算事業ID"]);
-      const project = programById.get(projectNumber);
-      const organization = cleanCell(row["支出先名"]);
-      const amount = parseNullableInteger(row["支出先の合計支出額"]);
-      const block = cleanCell(row["支出先ブロック番号"]);
-      if (!project || !organization || !block || amount === null || amount <= 0) continue;
-
-      const corporateNumberCandidate = cleanCell(row["法人番号"]).replace(/\D/g, "");
-      const corporateNumber = /^\d{13}$/.test(corporateNumberCandidate)
-        ? corporateNumberCandidate
-        : "";
-      const graph = graphByProject.get(projectNumber);
-      const route = graph ? routeForReviewBlock(graph, block) : ["経済産業省", organization];
-      route[route.length - 1] = organization;
-      const flowDepth = graph?.depth.get(block) ?? null;
-      const isIntermediary = isKnownImplementingBody(organization, corporateNumber)
-        || Boolean(graph?.outgoing.has(block));
-      const flowLevel = isIntermediary
-        ? "intermediary"
-        : !graph || flowDepth === null
-          ? "unclassified"
-          : "recipient";
-      const id = `rs-payment-${stableId([
-        reviewSheetYear,
-        projectNumber,
-        block,
-        corporateNumber || organization,
-        amount,
-      ])}`;
-      paymentById.set(id, {
-        id,
-        fiscalYear: reviewSheetYear - 1,
-        reviewSheetYear,
-        reviewProjectId: project.id,
-        organization,
-        corporateNumber,
-        organizationType: cleanCell(row["法人種別"]),
-        sourceAgency: route.at(-2) || "経済産業省",
-        program: project.name,
-        amount,
-        flowLevel,
-        flowDepth,
-        block,
-        route,
-        sourceName: `行政事業レビュー ${reviewSheetYear}年度シート（支出先）`,
-        sourceUrl: source.indexUrl,
-        quality: "primary",
-      });
-    }
-
-    next.reviewPrograms = [...programById.values()].sort((a, b) => a.projectNumber.localeCompare(b.projectNumber, "ja"));
-    next.reviewPayments = [...paymentById.values()].sort((a, b) => {
+    next.reviewPrograms = yearly.flatMap((item) => item.programs).sort((a, b) => {
+      return b.reviewSheetYear - a.reviewSheetYear || a.projectNumber.localeCompare(b.projectNumber, "ja");
+    });
+    next.reviewPayments = yearly.flatMap((item) => item.payments).sort((a, b) => {
       return b.amount - a.amount || a.organization.localeCompare(b.organization, "ja");
     });
-    await writeReviewCache(reviewSheetYear, next.reviewPrograms, next.reviewPayments);
+    await writeReviewCache(reviewSheetYears, next.reviewPrograms, next.reviewPayments);
     updateSource("review-sheets", {
       recordCount: next.reviewPayments.length,
       method: "公式CSV（事業・予算執行・支出先・支出経路）",
@@ -207,7 +99,7 @@ async function refreshReviewSheets() {
     results.push({
       ok: true,
       name: source.name,
-      message: `${reviewSheetYear}年度の経産省 ${next.reviewPrograms.length.toLocaleString("ja-JP")}事業・支出先 ${next.reviewPayments.length.toLocaleString("ja-JP")}件`,
+      message: `${reviewSheetYears.join("・")}年度シートの経産省 ${next.reviewPrograms.length.toLocaleString("ja-JP")}事業・支出先 ${next.reviewPayments.length.toLocaleString("ja-JP")}件`,
     });
   } catch (error) {
     try {
@@ -223,7 +115,7 @@ async function refreshReviewSheets() {
       results.push({
         ok: false,
         name: source.name,
-        message: `${error instanceof Error ? error.message : String(error)}（${cached.reviewSheetYear}年度の前回取得キャッシュを保持）`,
+        message: `${error instanceof Error ? error.message : String(error)}（${cached.reviewSheetYears.join("・")}年度の前回取得キャッシュを保持）`,
       });
     } catch {
       markStale("review-sheets", source, error);
@@ -231,7 +123,133 @@ async function refreshReviewSheets() {
   }
 }
 
-async function writeReviewCache(reviewSheetYear, programs, payments) {
+async function loadReviewSheetYear(source, reviewSheetYear) {
+  const specifications = {
+    organizations: `1-1_RS_${reviewSheetYear}_基本情報_組織情報.zip`,
+    budgets: `2-1_RS_${reviewSheetYear}_予算・執行_サマリ.zip`,
+    payments: `5-1_RS_${reviewSheetYear}_支出先_支出情報.zip`,
+    flows: `5-2_RS_${reviewSheetYear}_支出先_支出ブロックのつながり.zip`,
+  };
+
+  const [organizationCsv, budgetCsv, paymentCsv, flowCsv] = await Promise.all([
+    downloadReviewCsv(source, reviewSheetYear, specifications.organizations),
+    downloadReviewCsv(source, reviewSheetYear, specifications.budgets),
+    downloadReviewCsv(source, reviewSheetYear, specifications.payments),
+    downloadReviewCsv(source, reviewSheetYear, specifications.flows),
+  ]);
+  const programById = new Map();
+  for (const row of csvObjectRows(organizationCsv)) {
+    if (!isMetiReviewRow(row)) continue;
+    const projectNumber = cleanCell(row["予算事業ID"]);
+    if (!projectNumber || programById.has(projectNumber)) continue;
+    const organization = [row["局・庁"], row["部"], row["課"], row["室"]]
+      .map(cleanCell)
+      .filter(Boolean)
+      .join(" / ");
+    programById.set(projectNumber, {
+      id: `rs-${reviewSheetYear}-${projectNumber}`,
+      reviewSheetYear,
+      projectNumber,
+      name: cleanCell(row["事業名"]),
+      organization: organization || "経済産業省",
+      budgetFiscalYear: reviewSheetYear,
+      initialBudget: null,
+      availableBudget: null,
+      executionFiscalYear: null,
+      execution: null,
+      executionRate: null,
+      sourceUrl: source.indexUrl,
+    });
+  }
+
+  for (const row of csvObjectRows(budgetCsv)) {
+    if (!isMetiReviewRow(row)) continue;
+    const project = programById.get(cleanCell(row["予算事業ID"]));
+    if (!project) continue;
+    const budgetYear = Number(cleanCell(row["予算年度"]));
+    const initialBudget = parseNullableInteger(row["当初予算（合計）"]);
+    const availableBudget = parseNullableInteger(row["計（歳出予算現額合計）"]);
+    const execution = parseNullableInteger(row["執行額（合計）"]);
+    const executionRate = parseNullableNumber(row["執行率"]);
+    if (initialBudget === null && availableBudget === null && execution === null) continue;
+
+    if (budgetYear === reviewSheetYear) {
+      project.initialBudget = initialBudget;
+      project.availableBudget = availableBudget;
+    }
+    if (
+      budgetYear < reviewSheetYear &&
+      execution !== null &&
+      (project.executionFiscalYear === null || budgetYear > project.executionFiscalYear)
+    ) {
+      project.executionFiscalYear = budgetYear;
+      project.execution = execution;
+      project.executionRate = executionRate;
+    }
+  }
+
+  const graphByProject = buildReviewGraphs(csvObjectRows(flowCsv));
+  const paymentById = new Map();
+  for (const row of csvObjectRows(paymentCsv)) {
+    if (!isMetiReviewRow(row)) continue;
+    const projectNumber = cleanCell(row["予算事業ID"]);
+    const project = programById.get(projectNumber);
+    const organization = cleanCell(row["支出先名"]);
+    const amount = parseNullableInteger(row["支出先の合計支出額"]);
+    const block = cleanCell(row["支出先ブロック番号"]);
+    if (!project || !organization || !block || amount === null || amount <= 0) continue;
+
+    const corporateNumberCandidate = cleanCell(row["法人番号"]).replace(/\D/g, "");
+    const corporateNumber = /^\d{13}$/.test(corporateNumberCandidate)
+      ? corporateNumberCandidate
+      : "";
+    const graph = graphByProject.get(projectNumber);
+    const route = graph ? routeForReviewBlock(graph, block) : ["経済産業省", organization];
+    route[route.length - 1] = organization;
+    const flowDepth = graph?.depth.get(block) ?? null;
+    const isIntermediary = isKnownImplementingBody(organization, corporateNumber)
+      || Boolean(graph?.outgoing.has(block));
+    const flowLevel = isIntermediary
+      ? "intermediary"
+      : !graph || flowDepth === null
+        ? "unclassified"
+        : "recipient";
+    const id = `rs-payment-${stableId([
+      reviewSheetYear,
+      projectNumber,
+      block,
+      corporateNumber || organization,
+      amount,
+    ])}`;
+    paymentById.set(id, {
+      id,
+      fiscalYear: reviewSheetYear - 1,
+      reviewSheetYear,
+      reviewProjectId: project.id,
+      organization,
+      corporateNumber,
+      organizationType: cleanCell(row["法人種別"]),
+      sourceAgency: route.at(-2) || "経済産業省",
+      program: project.name,
+      amount,
+      flowLevel,
+      flowDepth,
+      block,
+      route,
+      sourceName: `行政事業レビュー ${reviewSheetYear}年度シート（支出先）`,
+      sourceUrl: source.indexUrl,
+      quality: "primary",
+    });
+  }
+
+  return {
+    reviewSheetYear,
+    programs: [...programById.values()],
+    payments: [...paymentById.values()],
+  };
+}
+
+async function writeReviewCache(reviewSheetYears, programs, payments) {
   await mkdir(reviewCachePath, { recursive: true });
   const paymentGroups = new Map();
   for (const payment of payments) {
@@ -250,7 +268,8 @@ async function writeReviewCache(reviewSheetYear, programs, payments) {
     }),
   ]);
   await writeFile(new URL("manifest.json", reviewCachePath), `${JSON.stringify({
-    reviewSheetYear,
+    schemaVersion: 2,
+    reviewSheetYears,
     programsFile: "programs.json",
     paymentFiles,
   }, null, 2)}\n`);
@@ -264,17 +283,21 @@ async function loadReviewCache() {
   ]);
   const payments = paymentGroups.flat();
   if (!Array.isArray(programs) || !payments.length) throw new Error("レビューシートキャッシュが空です");
-  return { reviewSheetYear: manifest.reviewSheetYear, programs, payments };
+  const reviewSheetYears = Array.isArray(manifest.reviewSheetYears)
+    ? manifest.reviewSheetYears
+    : [manifest.reviewSheetYear].filter(Number.isInteger);
+  return { reviewSheetYears, programs, payments };
 }
 
-async function discoverLatestReviewSheetYear(source) {
+async function discoverReviewSheetYears(source) {
   try {
     const response = await fetchWithTimeout(source.fiscalYearsUrl, { accept: "application/json" });
     const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("json")) {
-      const fiscalYears = collectFiscalYears(await response.json()).filter((year) => year >= 2024);
-      const latest = Math.max(...fiscalYears);
-      if (Number.isInteger(latest)) return latest;
+      const fiscalYears = [...new Set(collectFiscalYears(await response.json()))]
+        .filter((year) => year >= 2024)
+        .sort((a, b) => a - b);
+      if (fiscalYears.length) return fiscalYears;
     }
   } catch {
     // The public frontend API is convenient but not guaranteed; static official files are authoritative.
@@ -293,10 +316,15 @@ async function discoverLatestReviewSheetYear(source) {
       signal: AbortSignal.timeout(30_000),
     });
     const contentType = response.headers.get("content-type") || "";
-    if (response.ok && !contentType.includes("text/html")) return candidate;
+    if (response.ok && !contentType.includes("text/html")) {
+      return Array.from({ length: candidate - 2024 + 1 }, (_, index) => 2024 + index);
+    }
   }
   if (Number.isInteger(source.fallbackReviewSheetYear)) {
-    return source.fallbackReviewSheetYear;
+    return Array.from(
+      { length: source.fallbackReviewSheetYear - 2024 + 1 },
+      (_, index) => 2024 + index,
+    );
   }
   throw new Error("公開中のレビューシート年度を判定できません");
 }
@@ -895,6 +923,44 @@ function deduplicate(records) {
   const unique = new Map();
   for (const record of records) unique.set(record.id, record);
   return [...unique.values()];
+}
+
+function buildCoverage(data) {
+  const reviewFiscalYears = distinctYears(data.reviewPayments.map((row) => row.fiscalYear));
+  const reviewSheetYears = distinctYears(data.reviewPayments.map((row) => row.reviewSheetYear));
+  const gbizFiscalYears = distinctYears(data.records
+    .filter((row) => row.ingestSource === "gbiz-bulk-csv" || /GビズINFO/.test(row.sourceName))
+    .map((row) => row.fiscalYear));
+  const nedoFiscalYears = distinctYears(data.records
+    .filter((row) => row.ingestSource === "nedo-monthly-csv" || /^NEDO .+契約CSV/.test(row.sourceName))
+    .map((row) => row.fiscalYear));
+  const commonFiscalYears = reviewFiscalYears.filter((year) => gbizFiscalYears.includes(year));
+
+  return {
+    reviewPayments: {
+      fiscalYears: reviewFiscalYears,
+      reviewSheetYears,
+      completeness: "official-csv",
+      note: "行政事業レビュー公式CSVで支出先・支出経路を確認できる年度",
+    },
+    gbiz: {
+      fiscalYears: gbizFiscalYears,
+      completeness: "source-records",
+      note: "GビズINFO全件CSVに収録された経産省系の補助金・調達",
+    },
+    nedo: {
+      fiscalYears: nedoFiscalYears,
+      completeness: "published-monthly-csv",
+      note: "NEDOが公開中の月次契約CSV",
+    },
+    commonFiscalYears,
+    migratedReviewSheetYears: [2021, 2022, 2023],
+    migratedDataNote: "RSシステムでは検索可能だが、移行年度は支出先詳細・支出経路が欠けるため全件集計に含めない",
+  };
+}
+
+function distinctYears(values) {
+  return [...new Set(values.filter(Number.isInteger))].sort((a, b) => a - b);
 }
 
 function updateSource(id, patch) {

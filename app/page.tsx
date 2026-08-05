@@ -22,6 +22,7 @@ type FundingRecord = {
   sourceName: string;
   sourceUrl: string;
   quality: "primary" | "aggregated";
+  ingestSource?: "gbiz-api" | "gbiz-bulk-csv" | "nedo-monthly-csv";
 };
 
 type ReviewPayment = {
@@ -69,12 +70,29 @@ type FundingSource = {
   status: "healthy" | "watch";
 };
 
+type CoverageSeries = {
+  fiscalYears: number[];
+  completeness: string;
+  note: string;
+  reviewSheetYears?: number[];
+};
+
+type DatasetCoverage = {
+  reviewPayments: CoverageSeries;
+  gbiz: CoverageSeries;
+  nedo: CoverageSeries;
+  commonFiscalYears: number[];
+  migratedReviewSheetYears: number[];
+  migratedDataNote: string;
+};
+
 type FundingDataset = {
   generatedAt: string;
   sources: FundingSource[];
   records: FundingRecord[];
   reviewPayments?: ReviewPayment[];
   reviewPrograms?: ReviewProgram[];
+  coverage?: DatasetCoverage;
 };
 
 const bundledFundingData = fundingSummary as FundingDataset;
@@ -131,6 +149,16 @@ function sumAmounts<T extends { amount: number | null }>(rows: T[]) {
   return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
 }
 
+function distinctYears(values: number[]) {
+  return Array.from(new Set(values.filter(Number.isInteger))).sort((a, b) => a - b);
+}
+
+function formatCoverageYears(years: number[]) {
+  if (!years.length) return "収録なし";
+  if (years.length === 1) return `${years[0]}年度`;
+  return `${years[0]}–${years.at(-1)}年度（${years.length}年度）`;
+}
+
 export default function Home() {
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
@@ -139,6 +167,7 @@ export default function Home() {
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
   const [year, setYear] = useState("all");
+  const [comparisonYear, setComparisonYear] = useState("");
   const [flowLevel, setFlowLevel] = useState<FlowLevel>("recipient");
   const [page, setPage] = useState(0);
 
@@ -156,6 +185,19 @@ export default function Home() {
           Array.isArray(candidate.sources)
         ) {
           setDataset(candidate);
+          const reviewYears = candidate.coverage?.reviewPayments.fiscalYears
+            ?? distinctYears((candidate.reviewPayments ?? []).map((row) => row.fiscalYear));
+          const gbizYears = candidate.coverage?.gbiz.fiscalYears
+            ?? distinctYears(candidate.records
+              .filter((row) => row.ingestSource === "gbiz-bulk-csv" || /GビズINFO/.test(row.sourceName))
+              .map((row) => row.fiscalYear));
+          const commonYears = candidate.coverage?.commonFiscalYears
+            ?? reviewYears.filter((item) => gbizYears.includes(item));
+          const latestCommonYear = commonYears.at(-1);
+          if (latestCommonYear) {
+            setComparisonYear(String(latestCommonYear));
+            setYear(String(latestCommonYear));
+          }
           setDataMode("github");
         }
       })
@@ -169,6 +211,42 @@ export default function Home() {
   const commitments = dataset.records;
   const payments = dataset.reviewPayments ?? emptyReviewPayments;
   const programs = dataset.reviewPrograms ?? emptyReviewPrograms;
+
+  const coverage = useMemo<DatasetCoverage>(() => {
+    const reviewFiscalYears = distinctYears(payments.map((row) => row.fiscalYear));
+    const reviewSheetYears = distinctYears(payments.map((row) => row.reviewSheetYear));
+    const gbizFiscalYears = distinctYears(commitments
+      .filter((row) => row.ingestSource === "gbiz-bulk-csv" || /GビズINFO/.test(row.sourceName))
+      .map((row) => row.fiscalYear));
+    const nedoFiscalYears = distinctYears(commitments
+      .filter((row) => row.ingestSource === "nedo-monthly-csv" || /^NEDO .+契約CSV/.test(row.sourceName))
+      .map((row) => row.fiscalYear));
+    return dataset.coverage ?? {
+      reviewPayments: {
+        fiscalYears: reviewFiscalYears,
+        reviewSheetYears,
+        completeness: "official-csv",
+        note: "行政事業レビュー公式CSVの支出先・支出経路",
+      },
+      gbiz: {
+        fiscalYears: gbizFiscalYears,
+        completeness: "source-records",
+        note: "GビズINFO全件CSVの補助金・調達",
+      },
+      nedo: {
+        fiscalYears: nedoFiscalYears,
+        completeness: "published-monthly-csv",
+        note: "NEDO月次契約CSV",
+      },
+      commonFiscalYears: reviewFiscalYears.filter((item) => gbizFiscalYears.includes(item)),
+      migratedReviewSheetYears: [2021, 2022, 2023],
+      migratedDataNote: "移行年度は支出先詳細・支出経路が不足するため全件集計に含めない",
+    };
+  }, [commitments, dataset.coverage, payments]);
+
+  const comparisonFiscalYear = Number(
+    comparisonYear || coverage.commonFiscalYears.at(-1) || coverage.reviewPayments.fiscalYears.at(-1) || 0,
+  );
 
   const agencies = useMemo(() => {
     const values = view === "payments"
@@ -184,7 +262,7 @@ export default function Home() {
       ? payments.map((row) => row.fiscalYear)
       : view === "commitments"
         ? commitments.map((row) => row.fiscalYear)
-        : programs.map((row) => row.budgetFiscalYear);
+        : programs.flatMap((row) => row.executionFiscalYear === null ? [] : [row.executionFiscalYear]);
     return Array.from(new Set(values)).sort((a, b) => b - a);
   }, [commitments, payments, programs, view]);
 
@@ -212,7 +290,7 @@ export default function Home() {
     .filter((row) =>
       includesQuery([row.projectNumber, row.name, row.organization], normalizedQuery) &&
       (agency === "all" || row.organization === agency) &&
-      (year === "all" || String(row.budgetFiscalYear) === year))
+      (year === "all" || String(row.executionFiscalYear) === year))
     .sort((a, b) => (b.execution ?? -1) - (a.execution ?? -1)),
   [agency, normalizedQuery, programs, year]);
 
@@ -227,26 +305,35 @@ export default function Home() {
   const visibleEnd = Math.min((page + 1) * pageSize, activeRows.length);
   const filteredAmount = view === "programs" ? null : sumAmounts(activeRows as Array<{ amount: number | null }>);
 
-  const recipientPayments = payments.filter((row) => row.flowLevel === "recipient");
-  const intermediaryPayments = payments.filter((row) => row.flowLevel === "intermediary");
-  const recipientCommitments = commitments.filter((row) => (row.flowLevel ?? "recipient") === "recipient");
+  const comparisonPayments = payments.filter((row) => row.fiscalYear === comparisonFiscalYear);
+  const comparisonCommitments = commitments.filter((row) => row.fiscalYear === comparisonFiscalYear);
+  const recipientPayments = comparisonPayments.filter((row) => row.flowLevel === "recipient");
+  const intermediaryPayments = comparisonPayments.filter((row) => row.flowLevel === "intermediary");
+  const recipientCommitments = comparisonCommitments.filter((row) => (row.flowLevel ?? "recipient") === "recipient");
   const recipientPaymentTotal = sumAmounts(recipientPayments);
   const intermediaryPaymentTotal = sumAmounts(intermediaryPayments);
   const recipientCommitmentTotal = sumAmounts(recipientCommitments);
-  const executionTotal = programs.reduce((sum, row) => sum + (row.execution ?? 0), 0);
-  const executionYear = Math.max(...programs.map((row) => row.executionFiscalYear ?? 0));
-  const paymentYear = Math.max(...payments.map((row) => row.fiscalYear), 0);
+  const executionTotal = programs
+    .filter((row) => row.executionFiscalYear === comparisonFiscalYear)
+    .reduce((sum, row) => sum + (row.execution ?? 0), 0);
+  const executionYear = comparisonFiscalYear;
+  const paymentYear = comparisonFiscalYear;
   const nedoRecipients = recipientPayments.filter((row) =>
     row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
   );
   const nedoRecipientTotal = sumAmounts(nedoRecipients);
   const showMetric = (value: number) => dataMode === "loading" && !value ? "読込中" : compactYen(value);
+  const sourceCoverage: Record<string, string> = {
+    "review-sheets": formatCoverageYears(coverage.reviewPayments.fiscalYears),
+    gbiz: formatCoverageYears(coverage.gbiz.fiscalYears),
+    nedo: formatCoverageYears(coverage.nedo.fiscalYears),
+  };
 
   function changeView(nextView: View) {
     setView(nextView);
     setAgency("all");
     setStage("all");
-    setYear("all");
+    setYear(comparisonYear || "all");
     setFlowLevel("recipient");
     setPage(0);
   }
@@ -255,12 +342,18 @@ export default function Home() {
     setQuery("");
     setAgency("all");
     setStage("all");
-    setYear("all");
+    setYear(comparisonYear || "all");
     setFlowLevel("recipient");
     setPage(0);
   }
 
-  const hasFilters = query || agency !== "all" || stage !== "all" || year !== "all" || flowLevel !== "recipient";
+  function changeComparisonYear(nextYear: string) {
+    setComparisonYear(nextYear);
+    setYear(nextYear);
+    setPage(0);
+  }
+
+  const hasFilters = query || agency !== "all" || stage !== "all" || year !== (comparisonYear || "all") || flowLevel !== "recipient";
 
   return (
     <main>
@@ -314,6 +407,45 @@ export default function Home() {
         </aside>
       </section>
 
+      <section className="coverage-panel" aria-label="データ収録期間と比較年度">
+        <div className="coverage-copy">
+          <p className="eyebrow">PERIOD-ALIGNED VIEW</p>
+          <h2>同じ年度だけで比べる</h2>
+          <p>データ源ごとに公開期間が違うため、主要な金額は共通して収録されている年度にそろえています。</p>
+        </div>
+        <label className="comparison-year">
+          <span>現在の比較年度</span>
+          <select value={String(comparisonFiscalYear || "")} onChange={(event) => changeComparisonYear(event.target.value)}>
+            {coverage.commonFiscalYears.slice().reverse().map((item) => (
+              <option key={item} value={item}>{item}年度</option>
+            ))}
+          </select>
+          <small>実支出とGビズINFOの共通年度</small>
+        </label>
+        <div className="coverage-grid">
+          <article>
+            <span>実支出先</span>
+            <strong>{formatCoverageYears(coverage.reviewPayments.fiscalYears)}</strong>
+            <small>行政事業レビュー公式CSV</small>
+          </article>
+          <article>
+            <span>契約・補助金</span>
+            <strong>{formatCoverageYears(coverage.gbiz.fiscalYears)}</strong>
+            <small>GビズINFO収録レコード</small>
+          </article>
+          <article>
+            <span>NEDO契約</span>
+            <strong>{formatCoverageYears(coverage.nedo.fiscalYears)}</strong>
+            <small>公開中の月次CSVのみ</small>
+          </article>
+          <article className="coverage-caution">
+            <span>移行レビューシート</span>
+            <strong>{coverage.migratedReviewSheetYears[0]}–{coverage.migratedReviewSheetYears.at(-1)}年度</strong>
+            <small>支出先詳細不足のため全件集計外</small>
+          </article>
+        </div>
+      </section>
+
       <section className="metrics" aria-label="データ全体の集計">
         <article>
           <span>{paymentYear || "—"}年度 公表経路上の支出先額</span>
@@ -331,9 +463,9 @@ export default function Home() {
           <small>レビューシート単純合計・重複可能性あり</small>
         </article>
         <article className="metric-warning">
-          <span>契約・補助金掲載額</span>
+          <span>{comparisonFiscalYear || "—"}年度 契約・補助金掲載額</span>
           <strong>{showMetric(recipientCommitmentTotal)}</strong>
-          <small>実支出とは別系列です</small>
+          <small>同年度に限定・実支出とは別系列</small>
         </article>
       </section>
 
@@ -396,7 +528,7 @@ export default function Home() {
           <label>
             <span className="sr-only">年度</span>
             <select value={year} onChange={(event) => { setYear(event.target.value); setPage(0); }}>
-              <option value="all">すべての年度</option>
+              <option value="all">全期間（収録範囲が異なります）</option>
               {fiscalYears.map((item) => <option key={item} value={item}>{item}年度</option>)}
             </select>
           </label>
@@ -489,6 +621,7 @@ export default function Home() {
               <dl>
                 <div><dt>取得方式</dt><dd>{source.method}</dd></div>
                 <div><dt>更新周期</dt><dd>{source.frequency}</dd></div>
+                <div><dt>収録期間</dt><dd>{sourceCoverage[source.id] ?? "確認中"}</dd></div>
                 <div><dt>最終確認</dt><dd>{source.lastChecked}</dd></div>
               </dl>
             </article>
@@ -507,7 +640,9 @@ export default function Home() {
             また、経産省からNEDO等への金額と、そこから先の受取先への金額も分けています。
           </p>
           <ul>
-            <li>2025年度レビューシートの支出先情報は、画面上では原則2024年度の支出として表示</li>
+            <li>2024・2025年度レビューシートの支出先情報を、原則2023・2024年度の支出として表示</li>
+            <li>GビズINFOとの比較は共通して収録されている同一年度に限定し、全期間総額を横並びにしない</li>
+            <li>2021〜2023年度の移行レビューシートは支出先詳細・支出経路が不足するため、全件集計には含めない</li>
             <li>「公表経路上の受取先」は、レビューシートでその先の経路が確認できない終端を意味する</li>
             <li>レビューシートの予算・執行額はシート単純合計で、同一予算事業の重複を含む可能性がある</li>
             <li>法人番号がない団体もレビューシート掲載名のまま収録し、欠損を0円に置き換えない</li>

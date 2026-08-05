@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-05T22:39:51.145Z",
+  "generatedAt": "2026-08-05T23:15:17.361Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 29826,
+      "recordCount": 68281,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
       "lastChecked": "2026-08-06",
@@ -40,14 +40,64 @@
     {
       "id": "review-sheets",
       "name": "行政事業レビュー",
-      "recordCount": 6940,
-      "method": "公式CSV（前回取得キャッシュ）",
+      "recordCount": 13944,
+      "method": "公式CSV（事業・予算執行・支出先・支出経路）",
       "frequency": "日次確認",
       "lastChecked": "2026-08-06",
-      "status": "watch"
+      "status": "healthy"
     }
   ],
   "records": [],
   "reviewPrograms": [],
-  "reviewPayments": []
+  "reviewPayments": [],
+  "coverage": {
+    "reviewPayments": {
+      "fiscalYears": [
+        2023,
+        2024
+      ],
+      "reviewSheetYears": [
+        2024,
+        2025
+      ],
+      "completeness": "official-csv",
+      "note": "行政事業レビュー公式CSVで支出先・支出経路を確認できる年度"
+    },
+    "gbiz": {
+      "fiscalYears": [
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "completeness": "source-records",
+      "note": "GビズINFO全件CSVに収録された経産省系の補助金・調達"
+    },
+    "nedo": {
+      "fiscalYears": [
+        2025,
+        2026
+      ],
+      "completeness": "published-monthly-csv",
+      "note": "NEDOが公開中の月次契約CSV"
+    },
+    "commonFiscalYears": [
+      2023,
+      2024
+    ],
+    "migratedReviewSheetYears": [
+      2021,
+      2022,
+      2023
+    ],
+    "migratedDataNote": "RSシステムでは検索可能だが、移行年度は支出先詳細・支出経路が欠けるため全件集計に含めない"
+  }
 }
