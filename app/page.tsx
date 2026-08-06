@@ -396,11 +396,6 @@ export default function Home() {
         }</span>
       </header>
 
-      <div className="prototype-banner" role="note">
-        <strong>庁内版 画面イメージ</strong>
-        <span>公開データを検索・比較する画面の完成イメージです。</span>
-      </div>
-
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
@@ -420,21 +415,6 @@ export default function Home() {
           </div>
         </div>
 
-        <aside className="flow-card" aria-label="この画面で確認できる2つのデータ表示">
-          <div className="flow-card-head">
-            <span>この画面で確認できること</span>
-            <span className="live-dot">2 VIEWS</span>
-          </div>
-          <div className="flow-path">
-            <div className="flow-node review"><span>GビズINFO</span><strong>受取先別の契約・補助金</strong></div>
-            <div className="flow-node ministry"><span>行政事業レビューシート</span><strong>受取先別の実支出</strong></div>
-          </div>
-          <div className="flow-total">
-            <span>表示する金額系列</span>
-            <strong>2つ</strong>
-          </div>
-          <p>受取先名・法人番号・制度名・年度で検索できます。</p>
-        </aside>
       </section>
 
       <section className="records-section" id="records">
