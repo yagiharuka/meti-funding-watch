@@ -5,7 +5,7 @@ import fundingSummary from "@/data/funding-summary.json";
 
 type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
 type FlowLevel = "recipient" | "intermediary" | "unclassified";
-type View = "payments" | "commitments";
+type View = "payments" | "commitments" | "programs";
 
 type FundingRecord = {
   id: string;
@@ -43,6 +43,21 @@ type ReviewPayment = {
   sourceName: string;
   sourceUrl: string;
   quality: "primary";
+};
+
+type ReviewProgram = {
+  id: string;
+  reviewSheetYear: number;
+  projectNumber: string;
+  name: string;
+  organization: string;
+  budgetFiscalYear: number;
+  initialBudget: number | null;
+  availableBudget: number | null;
+  executionFiscalYear: number | null;
+  execution: number | null;
+  executionRate: number | null;
+  sourceUrl: string;
 };
 
 type FundingSource = {
@@ -85,6 +100,7 @@ type FundingDataset = {
   sources: FundingSource[];
   records: FundingRecord[];
   reviewPayments?: ReviewPayment[];
+  reviewPrograms?: ReviewProgram[];
   coverage?: DatasetCoverage;
   aggregates?: {
     byFiscalYear: Record<string, FiscalYearAggregate>;
@@ -95,12 +111,14 @@ type DataChunkManifest = {
   generatedAt: string;
   payments: Record<string, string>;
   commitments: Record<string, string>;
+  programs: Record<string, string>;
 };
 
 const bundledFundingData = fundingSummary as FundingDataset;
 const dataBaseUrl = "data/";
 const pageSize = 100;
 const emptyReviewPayments: ReviewPayment[] = [];
+const emptyReviewPrograms: ReviewProgram[] = [];
 
 const stageLabels: Record<Stage, string> = {
   contracted: "契約額",
@@ -196,7 +214,8 @@ export default function Home() {
         if (
           typeof candidate.generatedAt === "string" &&
           candidate.payments &&
-          candidate.commitments
+          candidate.commitments &&
+          candidate.programs
         ) {
           setManifest(candidate);
           setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
@@ -237,6 +256,7 @@ export default function Home() {
           generatedAt: manifest.generatedAt,
           records: view === "commitments" ? rows as FundingRecord[] : current.records,
           reviewPayments: view === "payments" ? rows as ReviewPayment[] : current.reviewPayments,
+          reviewPrograms: view === "programs" ? rows as ReviewProgram[] : current.reviewPrograms,
         }));
         setDataMode("github");
         setDetailLoading(false);
@@ -254,6 +274,7 @@ export default function Home() {
     [dataset.records],
   );
   const payments = dataset.reviewPayments ?? emptyReviewPayments;
+  const programs = dataset.reviewPrograms ?? emptyReviewPrograms;
   const targetSources = useMemo(
     () => dataset.sources.filter((source) => source.id === "gbiz" || source.id === "review-sheets"),
     [dataset.sources],
@@ -296,26 +317,30 @@ export default function Home() {
   const agencies = useMemo(() => {
     const values = view === "payments"
       ? payments.map((row) => row.sourceAgency)
-      : commitments.map((row) => row.sourceAgency);
+      : view === "commitments"
+        ? commitments.map((row) => row.sourceAgency)
+        : programs.map((row) => row.organization);
     return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "ja"));
-  }, [commitments, payments, view]);
+  }, [commitments, payments, programs, view]);
 
   const fiscalYears = useMemo(() => {
     const rowValues = view === "payments"
       ? payments.map((row) => row.fiscalYear)
-      : commitments.map((row) => row.fiscalYear);
+      : view === "commitments"
+        ? commitments.map((row) => row.fiscalYear)
+        : programs.flatMap((row) => row.executionFiscalYear === null ? [] : [row.executionFiscalYear]);
     const values = rowValues.length
       ? rowValues
       : view === "commitments"
         ? coverage.gbiz.fiscalYears
         : coverage.reviewPayments.fiscalYears;
     return Array.from(new Set(values)).sort((a, b) => b - a);
-  }, [commitments, coverage.gbiz.fiscalYears, coverage.reviewPayments.fiscalYears, payments, view]);
+  }, [commitments, coverage.gbiz.fiscalYears, coverage.reviewPayments.fiscalYears, payments, programs, view]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
   const filteredPayments = useMemo(() => payments
     .filter((row) =>
-      includesQuery([row.organization, row.corporateNumber, row.program, row.sourceAgency], normalizedQuery) &&
+      includesQuery([row.organization, row.corporateNumber], normalizedQuery) &&
       row.flowLevel === flowLevel &&
       (agency === "all" || row.sourceAgency === agency) &&
       (year === "all" || String(row.fiscalYear) === year))
@@ -327,7 +352,7 @@ export default function Home() {
 
   const filteredCommitments = useMemo(() => commitments
     .filter((row) =>
-      includesQuery([row.organization, row.corporateNumber, row.program, row.sourceAgency], normalizedQuery) &&
+      includesQuery([row.organization, row.corporateNumber], normalizedQuery) &&
       (row.flowLevel ?? "recipient") === flowLevel &&
       (agency === "all" || row.sourceAgency === agency) &&
       (stage === "all" || row.stage === stage) &&
@@ -338,14 +363,26 @@ export default function Home() {
       a.organization.localeCompare(b.organization, "ja")),
   [agency, commitments, flowLevel, normalizedQuery, stage, year]);
 
+  const filteredPrograms = useMemo(() => programs
+    .filter((row) =>
+      includesQuery([row.projectNumber, row.name, row.organization], normalizedQuery) &&
+      (agency === "all" || row.organization === agency) &&
+      (year === "all" || String(row.executionFiscalYear) === year))
+    .sort((a, b) =>
+      (b.executionFiscalYear ?? 0) - (a.executionFiscalYear ?? 0) ||
+      a.projectNumber.localeCompare(b.projectNumber, "ja")),
+  [agency, normalizedQuery, programs, year]);
+
   const activeRows = view === "payments"
     ? filteredPayments
-    : filteredCommitments;
+    : view === "commitments"
+      ? filteredCommitments
+      : filteredPrograms;
   const totalPages = Math.max(1, Math.ceil(activeRows.length / pageSize));
   const visibleRows = activeRows.slice(page * pageSize, (page + 1) * pageSize);
   const visibleStart = activeRows.length ? page * pageSize + 1 : 0;
   const visibleEnd = Math.min((page + 1) * pageSize, activeRows.length);
-  const filteredAmount = sumAmounts(activeRows as Array<{ amount: number | null }>);
+  const filteredAmount = view === "programs" ? null : sumAmounts(activeRows as Array<{ amount: number | null }>);
 
   const sourceCoverage: Record<string, string> = {
     "review-sheets": formatCoverageYears(coverage.reviewPayments.fiscalYears),
@@ -389,7 +426,6 @@ export default function Home() {
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">データ検索</a>
           <a href="#sources">データ更新</a>
-          <a href="#about">集計上の注意</a>
         </nav>
         <span className="update-chip"><i />{
           dataMode === "github" ? "明細準備完了" : dataMode === "loading" ? "明細読込中" : "明細取得要確認"
@@ -401,7 +437,7 @@ export default function Home() {
           <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
           <h1>事業者等への<br /><em>交付金額(経産省)</em></h1>
           <p className="hero-lead">
-            GビズINFOの契約・補助金と、行政事業レビューシートの支出先別実支出を
+            GビズINFOの契約・補助金と、行政事業レビューシートの支出先別実支出・事業別予算／執行を
             1画面で検索します。意味の異なる金額は分けて表示します。
           </p>
           <div className="hero-note">
@@ -423,7 +459,7 @@ export default function Home() {
             <p className="eyebrow">RECIPIENTS & FUNDING</p>
             <h2>受取先と金額を検索</h2>
           </div>
-          <p>GビズINFOの契約・補助金と、行政事業レビューシートの支出先別実支出を切り替えて確認できます。異なる系列の金額は合算しません。</p>
+          <p>GビズINFOの契約・補助金、行政事業レビューシートの支出先別実支出、事業別の予算・執行額を切り替えて確認できます。異なる系列の金額は合算しません。</p>
         </div>
 
         <div className="view-tabs" role="tablist" aria-label="表示するデータ">
@@ -433,32 +469,37 @@ export default function Home() {
           <button role="tab" aria-selected={view === "payments"} onClick={() => changeView("payments")}>
             受取先別の実支出 <small>行政事業レビューシート</small>
           </button>
+          <button role="tab" aria-selected={view === "programs"} onClick={() => changeView("programs")}>
+            事業別の予算・執行額 <small>行政事業レビューシート</small>
+          </button>
         </div>
 
-        <div className="filters" aria-label="検索条件">
+        <div className={`filters ${view === "programs" ? "program-filters" : ""}`} aria-label="検索条件">
           <label className="search-field">
-            <span className="sr-only">受取先名、法人番号または制度名で検索</span>
+            <span className="sr-only">{view === "programs" ? "事業名、事業IDまたは担当組織で検索" : "受取先名または法人番号で検索"}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
-              placeholder="受取先名・法人番号・制度名で検索"
+              placeholder={view === "programs" ? "事業名・事業ID・担当組織で検索" : "受取先名・法人番号で検索"}
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(0); }}
             />
           </label>
           <label>
-            <span className="sr-only">支出元・実施機関</span>
+            <span className="sr-only">{view === "programs" ? "担当組織" : "支出元・実施機関"}</span>
             <select value={agency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
-              <option value="all">すべての支出元</option>
+              <option value="all">{view === "programs" ? "すべての担当組織" : "すべての支出元"}</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
-          <label>
-            <span className="sr-only">資金レイヤー</span>
-            <select value={flowLevel} onChange={(event) => { setFlowLevel(event.target.value as FlowLevel); setPage(0); }}>
-              {Object.entries(flowLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-            </select>
-          </label>
+          {view !== "programs" && (
+            <label>
+              <span className="sr-only">資金レイヤー</span>
+              <select value={flowLevel} onChange={(event) => { setFlowLevel(event.target.value as FlowLevel); setPage(0); }}>
+                {Object.entries(flowLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </select>
+            </label>
+          )}
           {view === "commitments" && (
             <label>
               <span className="sr-only">金額段階</span>
@@ -484,7 +525,7 @@ export default function Home() {
             <span>
               <strong>{activeRows.length.toLocaleString("ja-JP")}</strong>件
               {activeRows.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
-              <b>・選択系列 {compactYen(filteredAmount)}</b>
+              {filteredAmount !== null && <b>・選択系列 {compactYen(filteredAmount)}</b>}
             </span>
           )}
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
@@ -493,7 +534,7 @@ export default function Home() {
         <div className="records-table" role="region" aria-label="資金レコード一覧" tabIndex={0}>
           {view === "payments" && (
             <table>
-              <thead><tr><th>受取先</th><th>レビューシート事業</th><th>支出元・経路</th><th>分類</th><th>支出先額</th><th>年度</th><th>根拠</th></tr></thead>
+              <thead><tr><th>受取先</th><th>レビューシート事業</th><th>支出元・経路</th><th>分類</th><th>支出先額</th><th>年度</th></tr></thead>
               <tbody>{(visibleRows as ReviewPayment[]).map((row) => (
                 <tr key={row.id}>
                   <td><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
@@ -502,7 +543,6 @@ export default function Home() {
                   <td><span className={`flow-badge ${row.flowLevel}`}>{flowLabels[row.flowLevel]}</span></td>
                   <td className="amount">{yen.format(row.amount)}</td>
                   <td>{row.fiscalYear}<small>{row.reviewSheetYear}年度シート</small></td>
-                  <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">公式CSV ↗</a></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -519,6 +559,21 @@ export default function Home() {
                   <td className="amount">{row.amount === null ? "金額未公表" : yen.format(row.amount)}</td>
                   <td>{row.fiscalYear}</td>
                   <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">原典 ↗</a></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+          {view === "programs" && (
+            <table>
+              <thead><tr><th>事業</th><th>担当組織</th><th>当初予算</th><th>歳出予算現額</th><th>執行額</th><th>執行率</th></tr></thead>
+              <tbody>{(visibleRows as ReviewProgram[]).map((row) => (
+                <tr key={row.id}>
+                  <td><strong>{row.name}</strong><small>事業ID {row.projectNumber}・{row.reviewSheetYear}年度シート</small></td>
+                  <td>{row.organization}</td>
+                  <td className="amount">{row.initialBudget === null ? "未記載" : yen.format(row.initialBudget)}<small>{row.budgetFiscalYear}年度</small></td>
+                  <td className="amount">{row.availableBudget === null ? "未記載" : yen.format(row.availableBudget)}<small>{row.budgetFiscalYear}年度</small></td>
+                  <td className="amount">{row.execution === null ? "未記載" : yen.format(row.execution)}<small>{row.executionFiscalYear ?? "—"}年度</small></td>
+                  <td>{row.executionRate === null ? "—" : `${(row.executionRate * 100).toFixed(1)}%`}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -557,30 +612,6 @@ export default function Home() {
               </dl>
             </article>
           ))}
-        </div>
-      </section>
-
-      <section className="about-section" id="about">
-        <div>
-          <p className="eyebrow">TRANSPARENCY BY DESIGN</p>
-          <h2>違う段階の金額を、足さない。</h2>
-        </div>
-        <div className="about-copy">
-          <p>
-            行政事業レビューシートの支出先額と、GビズINFOの契約・補助金掲載額は別系列です。
-            この画面では、段階の違う金額を合算せずに表示します。
-          </p>
-          <ul>
-            <li>2024・2025年度レビューシートの支出先情報を、原則2023・2024年度の支出として表示</li>
-            <li>GビズINFOとの比較は共通して収録されている同一年度に限定し、全期間総額を横並びにしない</li>
-            <li>2021〜2023年度レビューシートは支出先詳細・支出経路が不足するため、全件集計には含めない</li>
-            <li>「公表経路上の受取先」は、レビューシートでその先の経路が確認できない終端を意味する</li>
-            <li>法人番号がない団体もレビューシート掲載名のまま収録し、欠損を0円に置き換えない</li>
-          </ul>
-          <p className="attribution">
-            出典：<a href="https://rssystem.go.jp/download-csv" target="_blank" rel="noreferrer">行政事業レビュー見える化サイト</a>。
-            当サイトでデータを編集・加工して作成。
-          </p>
         </div>
       </section>
 
