@@ -80,4 +80,6 @@ test("presents the finished internal app view without migration instructions", (
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure|GitHub|METI内への移植イメージ|移植後の構成|移植構成を見る|移植手順書/);
   assert.doesNotMatch(pageSource, /METI_POWER_APPS_MIGRATION_GUIDE/);
   assert.doesNotMatch(pageSource, /データごとの更新状況|className="metrics"/);
+  assert.doesNotMatch(pageSource, /この画面で確認できること|className="flow-card"|2 VIEWS/);
+  assert.doesNotMatch(pageSource, /庁内版 画面イメージ|className="prototype-banner"/);
 });
