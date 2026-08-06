@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-06T00:00:41.731Z",
+  "generatedAt": "2026-08-06T00:03:21.178Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 68281,
+      "recordCount": 29826,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
       "lastChecked": "2026-08-06",
@@ -41,10 +41,10 @@
       "id": "review-sheets",
       "name": "行政事業レビュー",
       "recordCount": 13944,
-      "method": "公式CSV（事業・予算執行・支出先・支出経路）",
+      "method": "公式CSV（前回取得キャッシュ）",
       "frequency": "日次確認",
       "lastChecked": "2026-08-06",
-      "status": "healthy"
+      "status": "watch"
     }
   ],
   "records": [],
