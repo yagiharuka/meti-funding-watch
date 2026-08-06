@@ -134,6 +134,17 @@ const flowLabels: Record<FlowLevel, string> = {
   unclassified: "経路未分類",
 };
 
+const targetSourceMeta: Record<string, Pick<FundingSource, "method" | "frequency">> = {
+  gbiz: {
+    method: "期間指定API（差分取得）",
+    frequency: "毎日",
+  },
+  "review-sheets": {
+    method: "公式CSV（年度単位）",
+    frequency: "年1回",
+  },
+};
+
 const yen = new Intl.NumberFormat("ja-JP", {
   style: "currency",
   currency: "JPY",
@@ -259,9 +270,16 @@ export default function Home() {
     return () => controller.abort();
   }, [manifest, view, year]);
 
-  const commitments = dataset.records;
+  const commitments = useMemo(
+    () => dataset.records.filter((row) => row.ingestSource !== "nedo-monthly-csv"),
+    [dataset.records],
+  );
   const payments = dataset.reviewPayments ?? emptyReviewPayments;
   const programs = dataset.reviewPrograms ?? emptyReviewPrograms;
+  const targetSources = useMemo(
+    () => dataset.sources.filter((source) => source.id === "gbiz" || source.id === "review-sheets"),
+    [dataset.sources],
+  );
 
   const coverage = useMemo<DatasetCoverage>(() => {
     const reviewFiscalYears = distinctYears(payments.map((row) => row.fiscalYear));
@@ -390,20 +408,10 @@ export default function Home() {
     : summaryAggregate?.executionAmount ?? 0;
   const executionYear = comparisonFiscalYear;
   const paymentYear = comparisonFiscalYear;
-  const nedoRecipients = recipientPayments.filter((row) =>
-    row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
-  );
-  const nedoRecipientTotal = comparisonPayments.length
-    ? sumAmounts(nedoRecipients)
-    : summaryAggregate?.nedoRecipientAmount ?? 0;
-  const nedoRecipientCount = comparisonPayments.length
-    ? nedoRecipients.length
-    : summaryAggregate?.nedoRecipientCount ?? 0;
   const showMetric = (value: number) => dataMode === "loading" && !value && !summaryAggregate ? "明細読込中" : compactYen(value);
   const sourceCoverage: Record<string, string> = {
     "review-sheets": formatCoverageYears(coverage.reviewPayments.fiscalYears),
     gbiz: formatCoverageYears(coverage.gbiz.fiscalYears),
-    nedo: formatCoverageYears(coverage.nedo.fiscalYears),
   };
 
   function changeView(nextView: View) {
@@ -449,8 +457,9 @@ export default function Home() {
           <span>事業者等への交付金額(経産省)</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
-          <a href="#records">受取先と金額</a>
-          <a href="#sources">データソース</a>
+          <a href="#records">データ検索</a>
+          <a href="#migration">移植後の構成</a>
+          <a href="#sources">更新運用</a>
           <a href="#about">集計上の注意</a>
         </nav>
         <span className="update-chip"><i />{
@@ -458,46 +467,56 @@ export default function Home() {
         }</span>
       </header>
 
+      <div className="prototype-banner" role="note">
+        <strong>庁内移植後の完成イメージ</strong>
+        <span>SharePoint OnlineにPower Appsを埋め込み、Dataverseのデータを検索する想定です。</span>
+      </div>
+
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
+          <p className="eyebrow">SHAREPOINT / POWER APPS CONCEPT</p>
           <h1>事業者等への<br /><em>交付金額(経産省)</em></h1>
           <p className="hero-lead">
-            行政事業レビューを事業・予算・執行の土台にし、GビズINFOとNEDOの一次データを接続。
-            経産省から実施機関への上流資金と、その先の受取先への資金を分けて表示します。
+            GビズINFOの契約・補助金と、行政事業レビューシートの実支出先・事業別予算を、
+            庁内の1画面から検索します。データの更新頻度に合わせ、日次更新と年次更新を分けて運用します。
           </p>
           <div className="hero-note">
-            <span>最終データ取得</span>
+            <span>表示データ更新</span>
             <strong>{formatUpdated(dataset.generatedAt)}</strong>
-            <span className="source-count">{dataset.sources.length}ソース監視中</span>
+            <span className="source-count">庁内版ではDataverseから読込み</span>
+          </div>
+          <div className="hero-actions">
+            <a className="primary-action" href="#records">画面イメージを見る</a>
+            <a className="secondary-action" href="#migration">移植構成を見る</a>
           </div>
         </div>
 
-        <aside className="flow-card" aria-label="NEDO経由の資金経路">
+        <aside className="flow-card" aria-label="庁内移植後のデータ構成">
           <div className="flow-card-head">
-            <span>レビューシート上の資金経路</span>
-            <span className="live-dot">SEPARATED</span>
+            <span>庁内版のデータ構成</span>
+            <span className="live-dot">TARGET</span>
           </div>
           <div className="flow-path">
-            <div className="flow-node ministry"><span>上流</span><strong>経済産業省</strong></div>
-            <div className="flow-line"><span>運営費交付・基金等</span></div>
-            <div className="flow-node agency"><span>実施機関</span><strong>NEDO</strong></div>
-            <div className="flow-line"><span>委託・助成等</span></div>
-            <div className="flow-node company"><span>公表経路上の受取先</span><strong>{nedoRecipientCount.toLocaleString("ja-JP")}件</strong></div>
+            <div className="flow-node ministry"><span>毎日</span><strong>GビズINFO 差分API</strong></div>
+            <div className="flow-node review"><span>年1回</span><strong>行政事業レビューCSV</strong></div>
+            <div className="flow-line"><span>Power Automate / データフロー</span></div>
+            <div className="flow-node agency"><span>データベース</span><strong>Dataverse</strong></div>
+            <div className="flow-line"><span>検索・絞り込み</span></div>
+            <div className="flow-node company"><span>SharePointに埋込み</span><strong>Power Apps</strong></div>
           </div>
           <div className="flow-total">
-            <span>{paymentYear || "—"}年度 支出先額</span>
-            <strong>{showMetric(nedoRecipientTotal)}</strong>
+            <span>GitHubとの自動接続</span>
+            <strong>不要</strong>
           </div>
-          <p>NEDOへの上流額はこの金額に足していません。経路が公表されている範囲の集計です。</p>
+          <p>SPFx、Entra IDアプリ、Azure Functionsを使わない最小構成です。</p>
         </aside>
       </section>
 
-      <section className="coverage-panel" aria-label="データ収録期間と比較年度">
+      <section className="coverage-panel" aria-label="移植後の更新頻度と比較年度">
         <div className="coverage-copy">
-          <p className="eyebrow">PERIOD-ALIGNED VIEW</p>
-          <h2>同じ年度だけで比べる</h2>
-          <p>データ源ごとに公開期間が違うため、主要な金額は共通して収録されている年度にそろえています。</p>
+          <p className="eyebrow">UPDATE POLICY</p>
+          <h2>更新頻度を分けて、無理なく続ける</h2>
+          <p>85万行規模の全件CSVを毎日処理せず、GビズINFOは差分だけ、レビューシートは公表時に年度単位で更新します。</p>
         </div>
         <label className="comparison-year">
           <span>現在の比較年度</span>
@@ -506,28 +525,28 @@ export default function Home() {
               <option key={item} value={item}>{item}年度</option>
             ))}
           </select>
-          <small>実支出とGビズINFOの共通年度</small>
+          <small>実支出と契約・補助金を比較する年度</small>
         </label>
         <div className="coverage-grid">
           <article>
-            <span>実支出先</span>
-            <strong>{formatCoverageYears(coverage.reviewPayments.fiscalYears)}</strong>
-            <small>行政事業レビュー公式CSV</small>
+            <span>GビズINFO</span>
+            <strong>毎日・差分取得</strong>
+            <small>補助金・調達の期間指定API</small>
           </article>
           <article>
-            <span>契約・補助金</span>
-            <strong>{formatCoverageYears(coverage.gbiz.fiscalYears)}</strong>
-            <small>GビズINFO収録レコード</small>
+            <span>レビューシート</span>
+            <strong>年1回・年度追加</strong>
+            <small>実支出先と事業別予算・執行</small>
           </article>
           <article>
-            <span>NEDO契約</span>
-            <strong>{formatCoverageYears(coverage.nedo.fiscalYears)}</strong>
-            <small>公開中の月次CSVのみ</small>
+            <span>NEDO独自契約CSV</span>
+            <strong>当面取り込まない</strong>
+            <small>GビズINFOに掲載された情報は対象</small>
           </article>
           <article className="coverage-caution">
-            <span>移行レビューシート</span>
-            <strong>{coverage.migratedReviewSheetYears[0]}–{coverage.migratedReviewSheetYears.at(-1)}年度</strong>
-            <small>支出先詳細不足のため全件集計外</small>
+            <span>データ保管</span>
+            <strong>Dataverse</strong>
+            <small>Power Appsは庁内データだけを参照</small>
           </article>
         </div>
       </section>
@@ -561,7 +580,7 @@ export default function Home() {
             <p className="eyebrow">RECIPIENTS & FUNDING</p>
             <h2>受取先と金額を検索</h2>
           </div>
-          <p>行政事業レビューの受取先別実支出、GビズINFOの契約・補助金とNEDO公表契約、事業別の予算・執行額を切り替えて確認できます。異なる系列の金額は合算しません。</p>
+          <p>行政事業レビューの支出先別実支出、GビズINFOの契約・補助金、レビューシート事業の予算・執行額を切り替えて確認できます。異なる系列の金額は合算しません。</p>
         </div>
 
         <div className="view-tabs" role="tablist" aria-label="表示するデータ">
@@ -569,7 +588,7 @@ export default function Home() {
             受取先別の実支出 <small>行政事業レビュー</small>
           </button>
           <button role="tab" aria-selected={view === "commitments"} onClick={() => changeView("commitments")}>
-            受取先別の契約・補助金 <small>GビズINFO＋NEDO公表契約</small>
+            受取先別の契約・補助金 <small>GビズINFO</small>
           </button>
           <button role="tab" aria-selected={view === "programs"} onClick={() => changeView("programs")}>
             事業別の予算・執行額 <small>行政事業レビュー</small>
@@ -698,19 +717,71 @@ export default function Home() {
         )}
       </section>
 
+      <section className="migration-section" id="migration">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">TARGET ARCHITECTURE</p>
+            <h2>METI内への移植イメージ</h2>
+          </div>
+          <p>公開サイトのコードをそのまま持ち込むのではなく、標準のPower Platform機能で同じ検索体験を再構成します。</p>
+        </div>
+        <div className="migration-flow" aria-label="公開データからSharePoint画面までの流れ">
+          <article>
+            <span className="step-number">01</span>
+            <small>公開データ</small>
+            <strong>GビズINFO<br />レビューシート</strong>
+            <p>機微情報は使わず、公開情報だけを取得します。</p>
+          </article>
+          <span className="flow-arrow" aria-hidden="true">→</span>
+          <article>
+            <span className="step-number">02</span>
+            <small>更新処理</small>
+            <strong>Power Automate<br />データフロー</strong>
+            <p>日次差分と年次取込を別々に実行します。</p>
+          </article>
+          <span className="flow-arrow" aria-hidden="true">→</span>
+          <article>
+            <span className="step-number">03</span>
+            <small>データ保管</small>
+            <strong>Dataverse</strong>
+            <p>3系列を別テーブルに保存し、重複を防ぎます。</p>
+          </article>
+          <span className="flow-arrow" aria-hidden="true">→</span>
+          <article>
+            <span className="step-number">04</span>
+            <small>庁内画面</small>
+            <strong>Power Apps<br />＋ SharePoint</strong>
+            <p>検索アプリをSharePointページへ埋め込みます。</p>
+          </article>
+        </div>
+        <div className="migration-notes">
+          <article>
+            <span>利用するもの</span>
+            <strong>Power Apps・Dataverse・Power Automate・SharePoint</strong>
+          </article>
+          <article>
+            <span>利用しないもの</span>
+            <strong>SPFx・App Catalog・Entra IDアプリ・Azure Functions・GitHub接続</strong>
+          </article>
+          <a href="https://github.com/yagiharuka/meti-funding-watch/blob/main/docs/METI_POWER_APPS_MIGRATION_GUIDE.md" target="_blank" rel="noreferrer">
+            詳細な作業手順を開く ↗
+          </a>
+        </div>
+      </section>
+
       <section className="source-section" id="sources">
         <div className="section-heading light">
-          <div><p className="eyebrow">DATA PIPELINE</p><h2>データソースの更新状況</h2></div>
-          <p>毎日自動確認し、取得失敗時は前回データを保持したまま状態を明示します。</p>
+          <div><p className="eyebrow">OPERATIONS</p><h2>移植後の更新運用</h2></div>
+          <p>GビズINFOは毎日差分更新、レビューシートは年1回更新します。取得失敗時は前回データを残します。</p>
         </div>
         <div className="source-grid">
-          {dataset.sources.map((source) => (
+          {targetSources.map((source) => (
             <article key={source.id}>
               <div><span className={`health ${source.status}`} />{source.name}</div>
               <strong>{source.recordCount.toLocaleString("ja-JP")}件</strong>
               <dl>
-                <div><dt>取得方式</dt><dd>{source.method}</dd></div>
-                <div><dt>更新周期</dt><dd>{source.frequency}</dd></div>
+                <div><dt>取得方式</dt><dd>{targetSourceMeta[source.id]?.method ?? source.method}</dd></div>
+                <div><dt>更新周期</dt><dd>{targetSourceMeta[source.id]?.frequency ?? source.frequency}</dd></div>
                 <div><dt>収録期間</dt><dd>{sourceCoverage[source.id] ?? "確認中"}</dd></div>
                 <div><dt>最終確認</dt><dd>{source.lastChecked}</dd></div>
               </dl>
@@ -726,8 +797,8 @@ export default function Home() {
         </div>
         <div className="about-copy">
           <p>
-            行政事業レビューの支出先額、事業執行額、GビズINFO等の契約・補助金掲載額は別系列です。
-            また、経産省からNEDO等への金額と、そこから先の受取先への金額も分けています。
+            行政事業レビューの支出先額、事業執行額、GビズINFOの契約・補助金掲載額は別系列です。
+            庁内版でも、段階の違う金額を合算せずに表示します。
           </p>
           <ul>
             <li>2024・2025年度レビューシートの支出先情報を、原則2023・2024年度の支出として表示</li>
@@ -746,7 +817,7 @@ export default function Home() {
 
       <footer>
         <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>事業者等への交付金額(経産省)</span></div>
-        <p>公開情報ベースの非公式プロトタイプ</p>
+        <p>庁内移植の説明用・公開情報ベースの非公式プロトタイプ</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
     </main>

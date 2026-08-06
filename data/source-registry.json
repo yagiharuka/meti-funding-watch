@@ -27,7 +27,7 @@
       "name": "NEDO 契約公表",
       "kind": "monthly-csv-index",
       "indexUrl": "https://www.nedo.go.jp/nyusatsu/itaku_keiyaku.html",
-      "enabled": true
+      "enabled": false
     }
   ]
 }

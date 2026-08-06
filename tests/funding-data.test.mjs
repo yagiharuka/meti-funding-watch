@@ -8,6 +8,7 @@ const data = JSON.parse(
 const pageManifest = JSON.parse(
   await readFile(new URL("../data/pages/manifest.json", import.meta.url), "utf8"),
 );
+const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
 test("keeps review-sheet programs, payments, and commitments as separate series", () => {
   assert.ok(Array.isArray(data.reviewPrograms));
@@ -66,4 +67,12 @@ test("identifies NEDO as an intermediary and preserves its downstream recipients
     row.route.slice(0, -1).some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
   );
   assert.ok(downstream.length > 0);
+});
+
+test("presents the METI migration target without the direct NEDO CSV series", () => {
+  assert.match(pageSource, /METI内への移植イメージ/);
+  assert.match(pageSource, /GビズINFO 差分API/);
+  assert.match(pageSource, /行政事業レビューCSV/);
+  assert.match(pageSource, /row\.ingestSource !== "nedo-monthly-csv"/);
+  assert.doesNotMatch(pageSource, /GビズINFO＋NEDO公表契約/);
 });

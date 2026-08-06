@@ -44,7 +44,8 @@ for (const source of configured.values()) {
 
 await refreshReviewSheets();
 await refreshGbiz();
-await refreshNedo();
+next.records = next.records.filter((record) => record.ingestSource !== "nedo-monthly-csv");
+next.sources = next.sources.filter((source) => source.id !== "nedo");
 await refreshGbizBulk();
 
 for (const record of next.records) {
@@ -732,118 +733,6 @@ function normalizeGbizAgency(value) {
   return agencies.find(([needle]) => value.includes(needle))?.[1] || null;
 }
 
-async function refreshNedo() {
-  const source = configured.get("nedo");
-  if (!source) return;
-
-  try {
-    const indexHtml = await fetchText(source.indexUrl);
-    const csvLinks = discoverCsvLinks(indexHtml, source.indexUrl);
-    if (!csvLinks.length) throw new Error("月別CSVが見つかりません");
-
-    const batches = await Promise.all(csvLinks.map(loadNedoCsv));
-    const loadedRecords = deduplicate(batches.flat());
-
-    if (!loadedRecords.length) throw new Error("有効な受取先契約を抽出できません");
-
-    next.records = [
-      ...next.records.filter((record) => {
-        const isMonthlyNedoRecord =
-          record.ingestSource === "nedo-monthly-csv" ||
-          (record.sourceAgency === "NEDO" && /nedo\.go\.jp\/content\/.*\.csv/.test(record.sourceUrl));
-        return !isMonthlyNedoRecord;
-      }),
-      ...loadedRecords,
-    ];
-    updateSource("nedo", {
-      recordCount: loadedRecords.length,
-      lastChecked: today,
-      status: "healthy",
-    });
-    results.push({
-      ok: true,
-      name: source.name,
-      message: `${csvLinks.length}か月分から受取先契約 ${loadedRecords.length.toLocaleString("ja-JP")}件`,
-    });
-  } catch (error) {
-    markStale("nedo", source, error);
-  }
-}
-
-async function loadNedoCsv(link) {
-  const response = await fetchWithTimeout(link.url);
-  const bytes = await response.arrayBuffer();
-  const text = new TextDecoder("shift_jis").decode(bytes);
-  const rows = parseCsv(text);
-  const headerIndex = rows.findIndex((row) => row.includes("契約件名及び品名"));
-  if (headerIndex < 0) throw new Error(`${link.label}: ヘッダーが見つかりません`);
-
-  const headers = rows[headerIndex].map(cleanCell);
-  const column = Object.fromEntries(headers.map((header, index) => [header, index]));
-  const required = [
-    "契約件名及び品名",
-    "契約締結日",
-    "契約の相手先の名称",
-    "法人番号",
-    "契約金額（円）",
-  ];
-  for (const header of required) {
-    if (!(header in column)) throw new Error(`${link.label}: ${header}列がありません`);
-  }
-
-  return rows.slice(headerIndex + 1).flatMap((row) => {
-    const organization = cleanCell(row[column["契約の相手先の名称"]]);
-    const corporateNumber = cleanCell(row[column["法人番号"]]).replace(/\D/g, "");
-    const amount = Number(cleanCell(row[column["契約金額（円）"]]).replace(/\D/g, ""));
-    const date = parseJapaneseDate(cleanCell(row[column["契約締結日"]]));
-    const program = cleanCell(row[column["契約件名及び品名"]]);
-
-    if (
-      !organization ||
-      !/^\d{13}$/.test(corporateNumber) ||
-      !Number.isSafeInteger(amount) ||
-      amount <= 0 ||
-      !date ||
-      !program
-    ) {
-      return [];
-    }
-
-    return [{
-      id: `nedo-${stableId([date, corporateNumber, amount, program])}`,
-      fiscalYear: fiscalYear(date),
-      date,
-      organization,
-      corporateNumber,
-      sourceAgency: "NEDO",
-      program,
-      amount,
-      stage: "contracted",
-      route: ["経済産業省", "NEDO", organization],
-      sourceName: `NEDO ${link.label}契約CSV`,
-      sourceUrl: link.url,
-      quality: "primary",
-      ingestSource: "nedo-monthly-csv",
-    }];
-  });
-}
-
-function discoverCsvLinks(html, indexUrl) {
-  const links = [];
-  const pattern = /<a\b[^>]*href=["']([^"']+\.csv(?:\?[^"']*)?)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(pattern)) {
-    links.push({
-      url: new URL(match[1], indexUrl).href,
-      label: stripHtml(match[2]).replace(/\s+/g, "").trim() || "月別",
-    });
-  }
-  return [...new Map(links.map((link) => [link.url, link])).values()];
-}
-
-function parseCsv(text) {
-  return [...parseCsvRows(text)];
-}
-
 function* parseCsvRows(text) {
   let row = [];
   let field = "";
@@ -1011,7 +900,9 @@ function buildAggregates(data) {
     const commitments = data.records.filter((row) => row.fiscalYear === fiscalYear);
     const recipientPayments = payments.filter((row) => row.flowLevel === "recipient");
     const intermediaryPayments = payments.filter((row) => row.flowLevel === "intermediary");
-    const recipientCommitments = commitments.filter((row) => row.flowLevel === "recipient");
+    const recipientCommitments = commitments.filter((row) =>
+      row.flowLevel === "recipient" && row.ingestSource !== "nedo-monthly-csv",
+    );
     const nedoRecipients = recipientPayments.filter((row) =>
       row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
     );
