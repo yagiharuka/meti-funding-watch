@@ -45,9 +45,16 @@ export default defineConfig({
             if (!/^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)) {
               throw new Error(`公開対象外のデータファイルです: ${filename}`);
             }
+            const expectedYear = year === "unclassified" ? "unclassified" : String(Number(year));
+            if (year !== expectedYear || filename !== `commitments-${year}.json`) {
+              throw new Error(`manifestの年度とファイル名が一致しません: ${year}/${filename}`);
+            }
             return [year, filename];
           }),
         );
+        if (new Set(Object.values(commitments)).size !== Object.keys(commitments).length) {
+          throw new Error("manifestに重複した公開ファイル名があります");
+        }
         const publicManifest: PageDataManifest = {
           generatedAt: sourceManifest.generatedAt,
           commitments,
@@ -62,9 +69,19 @@ export default defineConfig({
             const rows = JSON.parse(
               await readFile(new URL(`./data/pages/${filename}`, import.meta.url), "utf8"),
             ) as Array<Record<string, unknown>>;
-            const publicRows = rows
-              .filter((row) => row.ingestSource === "gbiz-bulk-csv")
-              .map(({ route: _route, flowLevel: _flowLevel, flowDepth: _flowDepth, ...row }) => row);
+            if (rows.some((row) => row.ingestSource !== "gbiz-bulk-csv")) {
+              throw new Error(`${filename}にGビズINFO以外の行があります`);
+            }
+            if (rows.some((row) => "route" in row || "flowLevel" in row || "flowDepth" in row)) {
+              throw new Error(`${filename}に根拠のない資金経路フィールドがあります`);
+            }
+            const manifestYear = filename.slice("commitments-".length, -".json".length);
+            if (rows.some((row) => manifestYear === "unclassified"
+              ? row.fiscalYear !== null
+              : String(row.fiscalYear) !== manifestYear)) {
+              throw new Error(`${filename}の年度と明細の算出年度が一致しません`);
+            }
+            const publicRows = rows;
             await writeFile(
               new URL(`./dist-pages/data/${filename}`, import.meta.url),
               `${JSON.stringify(publicRows)}\n`,
