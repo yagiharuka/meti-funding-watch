@@ -24,6 +24,14 @@ test("loads every official review-sheet CSV year and records source coverage", (
   assert.ok(data.reviewPayments.every((row) => row.fiscalYear === row.reviewSheetYear - 1));
 });
 
+test("precomputes first-paint aggregates without bundling every detail row", () => {
+  const aggregate = data.aggregates.byFiscalYear["2024"];
+  assert.ok(aggregate.recipientPaymentAmount > 0);
+  assert.ok(aggregate.recipientCommitmentAmount > 0);
+  assert.ok(aggregate.executionAmount > 0);
+  assert.ok(aggregate.nedoRecipientCount > 0);
+});
+
 test("classifies every record into exactly one flow layer", () => {
   const levels = new Set(["recipient", "intermediary", "unclassified"]);
   for (const row of [...data.reviewPayments, ...data.records]) {

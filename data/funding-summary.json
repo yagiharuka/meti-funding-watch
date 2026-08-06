@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-05T23:21:46.501Z",
+  "generatedAt": "2026-08-06T00:00:41.731Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 29826,
+      "recordCount": 68281,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
       "lastChecked": "2026-08-06",
@@ -41,10 +41,10 @@
       "id": "review-sheets",
       "name": "行政事業レビュー",
       "recordCount": 13944,
-      "method": "公式CSV（前回取得キャッシュ）",
+      "method": "公式CSV（事業・予算執行・支出先・支出経路）",
       "frequency": "日次確認",
       "lastChecked": "2026-08-06",
-      "status": "watch"
+      "status": "healthy"
     }
   ],
   "records": [],
@@ -99,5 +99,105 @@
       2023
     ],
     "migratedDataNote": "RSシステムでは検索可能だが、移行年度は支出先詳細・支出経路が欠けるため全件集計に含めない"
+  },
+  "aggregates": {
+    "byFiscalYear": {
+      "2015": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 160112945,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2016": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 4395357408,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2017": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 64112137576,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2018": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 356716174739,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2019": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 1841358999767,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2020": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 3952260522386,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2021": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 1850437623248,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2022": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 5104842912378,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2023": {
+        "recipientPaymentAmount": 7055462005902,
+        "intermediaryPaymentAmount": 6848664342926,
+        "recipientCommitmentAmount": 1546359175206,
+        "executionAmount": 10197938958586,
+        "nedoRecipientAmount": 36466655689,
+        "nedoRecipientCount": 831
+      },
+      "2024": {
+        "recipientPaymentAmount": 4652574271655,
+        "intermediaryPaymentAmount": 4487734323976,
+        "recipientCommitmentAmount": 259400023518,
+        "executionAmount": 7376828902097,
+        "nedoRecipientAmount": 30459227576,
+        "nedoRecipientCount": 699
+      },
+      "2025": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 212147189994,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      },
+      "2026": {
+        "recipientPaymentAmount": 0,
+        "intermediaryPaymentAmount": 0,
+        "recipientCommitmentAmount": 34010093455,
+        "executionAmount": 0,
+        "nedoRecipientAmount": 0,
+        "nedoRecipientCount": 0
+      }
+    }
   }
 }

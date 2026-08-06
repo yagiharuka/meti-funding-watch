@@ -50,6 +50,7 @@ for (const record of next.records) {
   record.flowLevel = classifyCommitmentFlow(record);
 }
 
+next.aggregates = buildAggregates(next);
 next.coverage = buildCoverage(next);
 next.generatedAt = new Date().toISOString();
 next.records.sort((a, b) => {
@@ -957,6 +958,41 @@ function buildCoverage(data) {
     migratedReviewSheetYears: [2021, 2022, 2023],
     migratedDataNote: "RSシステムでは検索可能だが、移行年度は支出先詳細・支出経路が欠けるため全件集計に含めない",
   };
+}
+
+function buildAggregates(data) {
+  const years = distinctYears([
+    ...data.reviewPayments.map((row) => row.fiscalYear),
+    ...data.records.map((row) => row.fiscalYear),
+    ...data.reviewPrograms.flatMap((row) => row.executionFiscalYear === null ? [] : [row.executionFiscalYear]),
+  ]);
+  const byFiscalYear = {};
+
+  for (const fiscalYear of years) {
+    const payments = data.reviewPayments.filter((row) => row.fiscalYear === fiscalYear);
+    const commitments = data.records.filter((row) => row.fiscalYear === fiscalYear);
+    const recipientPayments = payments.filter((row) => row.flowLevel === "recipient");
+    const intermediaryPayments = payments.filter((row) => row.flowLevel === "intermediary");
+    const recipientCommitments = commitments.filter((row) => row.flowLevel === "recipient");
+    const nedoRecipients = recipientPayments.filter((row) =>
+      row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
+    );
+    const programs = data.reviewPrograms.filter((row) => row.executionFiscalYear === fiscalYear);
+    byFiscalYear[fiscalYear] = {
+      recipientPaymentAmount: sumNullableAmounts(recipientPayments),
+      intermediaryPaymentAmount: sumNullableAmounts(intermediaryPayments),
+      recipientCommitmentAmount: sumNullableAmounts(recipientCommitments),
+      executionAmount: programs.reduce((sum, row) => sum + (row.execution ?? 0), 0),
+      nedoRecipientAmount: sumNullableAmounts(nedoRecipients),
+      nedoRecipientCount: nedoRecipients.length,
+    };
+  }
+
+  return { byFiscalYear };
+}
+
+function sumNullableAmounts(rows) {
+  return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
 }
 
 function distinctYears(values) {

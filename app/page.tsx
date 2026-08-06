@@ -86,6 +86,15 @@ type DatasetCoverage = {
   migratedDataNote: string;
 };
 
+type FiscalYearAggregate = {
+  recipientPaymentAmount: number;
+  intermediaryPaymentAmount: number;
+  recipientCommitmentAmount: number;
+  executionAmount: number;
+  nedoRecipientAmount: number;
+  nedoRecipientCount: number;
+};
+
 type FundingDataset = {
   generatedAt: string;
   sources: FundingSource[];
@@ -93,11 +102,13 @@ type FundingDataset = {
   reviewPayments?: ReviewPayment[];
   reviewPrograms?: ReviewProgram[];
   coverage?: DatasetCoverage;
+  aggregates?: {
+    byFiscalYear: Record<string, FiscalYearAggregate>;
+  };
 };
 
 const bundledFundingData = fundingSummary as FundingDataset;
-const liveDataUrl =
-  "https://raw.githubusercontent.com/yagiharuka/meti-funding-watch/main/data/funding-data.json";
+const liveDataUrl = "data/funding-data.json";
 const pageSize = 100;
 const emptyReviewPayments: ReviewPayment[] = [];
 const emptyReviewPrograms: ReviewProgram[] = [];
@@ -160,14 +171,15 @@ function formatCoverageYears(years: number[]) {
 }
 
 export default function Home() {
+  const initialComparisonYear = bundledFundingData.coverage?.commonFiscalYears.at(-1);
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
   const [view, setView] = useState<View>("payments");
   const [query, setQuery] = useState("");
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
-  const [year, setYear] = useState("all");
-  const [comparisonYear, setComparisonYear] = useState("");
+  const [year, setYear] = useState(initialComparisonYear ? String(initialComparisonYear) : "all");
+  const [comparisonYear, setComparisonYear] = useState(initialComparisonYear ? String(initialComparisonYear) : "");
   const [flowLevel, setFlowLevel] = useState<FlowLevel>("recipient");
   const [page, setPage] = useState(0);
 
@@ -258,13 +270,18 @@ export default function Home() {
   }, [commitments, payments, programs, view]);
 
   const fiscalYears = useMemo(() => {
-    const values = view === "payments"
+    const rowValues = view === "payments"
       ? payments.map((row) => row.fiscalYear)
       : view === "commitments"
         ? commitments.map((row) => row.fiscalYear)
         : programs.flatMap((row) => row.executionFiscalYear === null ? [] : [row.executionFiscalYear]);
+    const values = rowValues.length
+      ? rowValues
+      : view === "commitments"
+        ? coverage.gbiz.fiscalYears
+        : coverage.reviewPayments.fiscalYears;
     return Array.from(new Set(values)).sort((a, b) => b - a);
-  }, [commitments, payments, programs, view]);
+  }, [commitments, coverage.gbiz.fiscalYears, coverage.reviewPayments.fiscalYears, payments, programs, view]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
   const filteredPayments = useMemo(() => payments
@@ -315,22 +332,38 @@ export default function Home() {
 
   const comparisonPayments = payments.filter((row) => row.fiscalYear === comparisonFiscalYear);
   const comparisonCommitments = commitments.filter((row) => row.fiscalYear === comparisonFiscalYear);
+  const summaryAggregate = dataset.aggregates?.byFiscalYear[String(comparisonFiscalYear)];
+  const useSummaryAggregate = dataMode === "loading" && comparisonPayments.length === 0 && comparisonCommitments.length === 0;
   const recipientPayments = comparisonPayments.filter((row) => row.flowLevel === "recipient");
   const intermediaryPayments = comparisonPayments.filter((row) => row.flowLevel === "intermediary");
   const recipientCommitments = comparisonCommitments.filter((row) => (row.flowLevel ?? "recipient") === "recipient");
-  const recipientPaymentTotal = sumAmounts(recipientPayments);
-  const intermediaryPaymentTotal = sumAmounts(intermediaryPayments);
-  const recipientCommitmentTotal = sumAmounts(recipientCommitments);
-  const executionTotal = programs
+  const recipientPaymentTotal = useSummaryAggregate
+    ? summaryAggregate?.recipientPaymentAmount ?? 0
+    : sumAmounts(recipientPayments);
+  const intermediaryPaymentTotal = useSummaryAggregate
+    ? summaryAggregate?.intermediaryPaymentAmount ?? 0
+    : sumAmounts(intermediaryPayments);
+  const recipientCommitmentTotal = useSummaryAggregate
+    ? summaryAggregate?.recipientCommitmentAmount ?? 0
+    : sumAmounts(recipientCommitments);
+  const calculatedExecutionTotal = programs
     .filter((row) => row.executionFiscalYear === comparisonFiscalYear)
     .reduce((sum, row) => sum + (row.execution ?? 0), 0);
+  const executionTotal = useSummaryAggregate
+    ? summaryAggregate?.executionAmount ?? 0
+    : calculatedExecutionTotal;
   const executionYear = comparisonFiscalYear;
   const paymentYear = comparisonFiscalYear;
   const nedoRecipients = recipientPayments.filter((row) =>
     row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
   );
-  const nedoRecipientTotal = sumAmounts(nedoRecipients);
-  const showMetric = (value: number) => dataMode === "loading" && !value ? "読込中" : compactYen(value);
+  const nedoRecipientTotal = useSummaryAggregate
+    ? summaryAggregate?.nedoRecipientAmount ?? 0
+    : sumAmounts(nedoRecipients);
+  const nedoRecipientCount = useSummaryAggregate
+    ? summaryAggregate?.nedoRecipientCount ?? 0
+    : nedoRecipients.length;
+  const showMetric = (value: number) => dataMode === "loading" && !value && !summaryAggregate ? "明細読込中" : compactYen(value);
   const sourceCoverage: Record<string, string> = {
     "review-sheets": formatCoverageYears(coverage.reviewPayments.fiscalYears),
     gbiz: formatCoverageYears(coverage.gbiz.fiscalYears),
@@ -405,7 +438,7 @@ export default function Home() {
             <div className="flow-line"><span>運営費交付・基金等</span></div>
             <div className="flow-node agency"><span>実施機関</span><strong>NEDO</strong></div>
             <div className="flow-line"><span>委託・助成等</span></div>
-            <div className="flow-node company"><span>公表経路上の受取先</span><strong>{nedoRecipients.length.toLocaleString("ja-JP")}件</strong></div>
+            <div className="flow-node company"><span>公表経路上の受取先</span><strong>{nedoRecipientCount.toLocaleString("ja-JP")}件</strong></div>
           </div>
           <div className="flow-total">
             <span>{paymentYear || "—"}年度 支出先額</span>
@@ -602,8 +635,8 @@ export default function Home() {
           )}
           {!activeRows.length && (
             <div className="empty-state">
-              <strong>{dataMode === "loading" ? "全件データを読み込んでいます" : "該当するレコードがありません"}</strong>
-              <span>{dataMode === "loading" ? "しばらくお待ちください。" : "検索語や条件を変えてください。"}</span>
+              <strong>{dataMode === "loading" ? "明細データを読み込んでいます" : "該当するレコードがありません"}</strong>
+              <span>{dataMode === "loading" ? "集計値と収録期間は先に確認できます。" : "検索語や条件を変えてください。"}</span>
             </div>
           )}
         </div>
