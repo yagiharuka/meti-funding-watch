@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "経産省関係の調達・補助金情報（GビズINFO）",
-  description: "GビズINFOに掲載された経済産業省関係の調達・補助金情報を、法人等の名称と法人番号から検索する非公式サイトです。",
+  description: "GビズINFOに掲載された経済産業省関係の調達・補助金情報を検索する非公式サイトです。全支出・実支払を示すものではありません。",
   other: {
     "codex-preview": "development",
   },
