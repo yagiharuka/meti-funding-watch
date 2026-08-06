@@ -1,16 +1,17 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
+  GBIZ_AGENCY_RULES_SHA256,
   assertGbizRecordContinuity,
   assertGbizSnapshotContinuity,
   auditGbizImport,
+  gbizRecordSemanticHash,
   normalizeGbizAgency,
   parseDashboardRow,
   stripHtml,
   toGbizBulkRecords,
 } from "./gbiz-csv.mjs";
 import {
-  cleanCell,
   fiscalYear,
   hasValidCorporateNumber,
   parseAmount,
@@ -35,6 +36,9 @@ const today = new Intl.DateTimeFormat("en-CA", {
 }).format(new Date());
 
 const next = structuredClone(current);
+const previousGbizMetadata = structuredClone(
+  current.sources.find((source) => source.id === "gbiz") ?? null,
+);
 const configured = new Map(
   registry.sources.filter((source) => source.enabled).map((source) => [source.id, source]),
 );
@@ -196,8 +200,10 @@ async function refreshGbizBulk(dashboardStats) {
     return false;
   }
   try {
-    const subsidyCsv = await downloadGbizCsv(source.downloadUrl, "Hojokinjoho", token);
-    const procurementCsv = await downloadGbizCsv(source.downloadUrl, "Chotatsujoho", token);
+    const subsidyDownload = await downloadGbizCsv(source.downloadUrl, "Hojokinjoho", token);
+    const procurementDownload = await downloadGbizCsv(source.downloadUrl, "Chotatsujoho", token);
+    const subsidyCsv = subsidyDownload.text;
+    const procurementCsv = procurementDownload.text;
     const csvRetrievedAt = new Date().toISOString();
     const subsidyResult = toGbizBulkRecords(subsidyCsv, "subsidy");
     const procurementResult = toGbizBulkRecords(procurementCsv, "procurement");
@@ -209,14 +215,35 @@ async function refreshGbizBulk(dashboardStats) {
     const continuity = assertGbizRecordContinuity(next.records, newRecords);
     const snapshot = {
       ...audit,
+      ...continuity,
       csvSubsidyFileBytes: Buffer.byteLength(subsidyCsv, "utf8"),
       csvProcurementFileBytes: Buffer.byteLength(procurementCsv, "utf8"),
+      csvSubsidySha256: sha256(subsidyCsv),
+      csvProcurementSha256: sha256(procurementCsv),
       csvTotalSubsidyRows: subsidyResult.stats.totalRows,
       csvTotalProcurementRows: procurementResult.stats.totalRows,
+      csvSubsidySchemaSha256: subsidyResult.stats.schemaSha256,
+      csvProcurementSchemaSha256: procurementResult.stats.schemaSha256,
+      csvSubsidyPublisherCounts: subsidyResult.stats.publisherCounts,
+      csvProcurementPublisherCounts: procurementResult.stats.publisherCounts,
+      csvSubsidyUnmatchedAgencyDistributionSha256:
+        subsidyResult.stats.unmatchedAgencyDistributionSha256,
+      csvProcurementUnmatchedAgencyDistributionSha256:
+        procurementResult.stats.unmatchedAgencyDistributionSha256,
+      suspiciousUnmatchedAgencyRows:
+        subsidyResult.stats.suspiciousUnmatchedAgencyRows
+        + procurementResult.stats.suspiciousUnmatchedAgencyRows,
+      suspiciousUnmatchedAgencies: [
+        ...subsidyResult.stats.suspiciousUnmatchedAgencies,
+        ...procurementResult.stats.suspiciousUnmatchedAgencies,
+      ],
+      agencyRulesSha256: GBIZ_AGENCY_RULES_SHA256,
+      csvSubsidyReceipt: subsidyDownload.receipt,
+      csvProcurementReceipt: procurementDownload.receipt,
       missingSourceKeyRows:
         subsidyResult.stats.missingSourceKeyRows + procurementResult.stats.missingSourceKeyRows,
     };
-    assertGbizSnapshotContinuity(gbizMetadata, snapshot, dashboardStats);
+    assertGbizSnapshotContinuity(previousGbizMetadata, snapshot, dashboardStats);
     importSucceededAt = new Date().toISOString();
     next.records = newRecords;
     updateSource("gbiz", {
@@ -224,12 +251,7 @@ async function refreshGbizBulk(dashboardStats) {
       ...continuity,
       recordCount: audit.csvImportedRecordCount,
       csvRetrievedAt,
-      csvSubsidyFileBytes: snapshot.csvSubsidyFileBytes,
-      csvProcurementFileBytes: snapshot.csvProcurementFileBytes,
-      csvSubsidySha256: sha256(subsidyCsv),
-      csvProcurementSha256: sha256(procurementCsv),
-      csvTotalSubsidyRows: snapshot.csvTotalSubsidyRows,
-      csvTotalProcurementRows: snapshot.csvTotalProcurementRows,
+      ...snapshot,
       dashboardSiteGap: undefined,
       method: "GビズINFO全件CSVを毎日再取得",
       lastChecked: today,
@@ -308,7 +330,25 @@ async function downloadGbizCsv(downloadPageUrl, downfile, token) {
     const error = text.match(/class=["']alert-title-txt["'][^>]*>([\s\S]*?)<\/p>/i)?.[1];
     throw new Error(`GビズINFO ${downfile}: ${error ? stripHtml(error) : "CSVを取得できませんでした"}`);
   }
-  return text.replace(/^\uFEFF/, "");
+  const cleanedText = text.replace(/^\uFEFF/, "");
+  const finalUrl = new URL(response.url);
+  finalUrl.pathname = finalUrl.pathname.replace(/;jsessionid=[^/;?]+/i, "");
+  finalUrl.search = "";
+  finalUrl.hash = "";
+  return {
+    text: cleanedText,
+    receipt: {
+      dataset: downfile,
+      finalUrl: finalUrl.href,
+      contentType: contentType || null,
+      contentLength: parseNullableInteger(response.headers.get("content-length")),
+      contentEncoding: response.headers.get("content-encoding"),
+      contentDisposition: response.headers.get("content-disposition"),
+      etag: response.headers.get("etag"),
+      lastModified: response.headers.get("last-modified"),
+      receivedBytes: Buffer.byteLength(cleanedText, "utf8"),
+    },
+  };
 }
 
 function logGbizScan(kind, stats) {
@@ -335,12 +375,10 @@ function isGbizRecord(record) {
 }
 
 function sanitizeLegacyGbizRecord(record) {
-  const {
-    route: _route,
-    flowLevel: _flowLevel,
-    flowDepth: _flowDepth,
-    ...safe
-  } = record;
+  const safe = { ...record };
+  delete safe.route;
+  delete safe.flowLevel;
+  delete safe.flowDepth;
   const date = typeof safe.date === "string" && parseJapaneseDate(safe.date) === safe.date
     ? safe.date
     : null;
@@ -427,6 +465,15 @@ function validate(data) {
     if (!hasValidCorporateNumber(record.corporateNumber)) {
       throw new Error(`法人番号が不正です: ${record.id}`);
     }
+    if (!record.sourceKey) {
+      throw new Error(`GビズINFOのキー情報がありません: ${record.id}`);
+    }
+    if (record.sourceRecordHash && record.sourceRecordHash !== gbizRecordSemanticHash(record)) {
+      throw new Error(`GビズINFOの行ハッシュが一致しません: ${record.id}`);
+    }
+    if (normalizeGbizAgency(record.sourceAgency) !== record.publisherCanonical) {
+      throw new Error(`未承認または不整合な公表組織名です: ${record.id}`);
+    }
     if (record.amount !== null && !Number.isSafeInteger(record.amount)) {
       throw new Error(`金額が不正です: ${record.id}`);
     }
@@ -450,6 +497,12 @@ function validate(data) {
   const gbizSource = data.sources.find((source) => source.id === "gbiz");
   if (!gbizSource || gbizSource.recordCount !== data.records.length) {
     throw new Error("GビズINFOの収録件数が明細件数と一致しません");
+  }
+  if (
+    gbizSource.agencyRulesSha256
+    && gbizSource.agencyRulesSha256 !== GBIZ_AGENCY_RULES_SHA256
+  ) {
+    throw new Error("GビズINFO公表組織ルールのハッシュが一致しません");
   }
   if (Number.isSafeInteger(gbizSource.csvEligibleRecordCount)) {
     if (
@@ -479,6 +532,10 @@ function validate(data) {
         !== gbizSource.dashboardSubsidyCount + gbizSource.dashboardProcurementCount
       || gbizSource.dashboardMinusCsvEligibleCount
         !== gbizSource.dashboardRecordCount - gbizSource.csvEligibleRecordCount
+      || gbizSource.dashboardMinusCsvEligibleSubsidyCount
+        !== gbizSource.dashboardSubsidyCount - gbizSource.csvEligibleSubsidyCount
+      || gbizSource.dashboardMinusCsvEligibleProcurementCount
+        !== gbizSource.dashboardProcurementCount - gbizSource.csvEligibleProcurementCount
     ) {
       throw new Error("GビズINFO公式画面と全件CSVの参考照合値が不正です");
     }

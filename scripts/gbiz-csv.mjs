@@ -8,6 +8,44 @@ import {
   parseJapaneseDate,
 } from "./gbiz-values.mjs";
 
+const MAX_AUTOMATIC_COUNT_GROWTH_RATE = 0.05;
+const MAX_AUTOMATIC_COUNT_GROWTH_FLOOR = 1_000;
+const MAX_AUTOMATIC_BYTE_GROWTH_RATE = 0.10;
+
+const approvedAgencyAliases = new Map([
+  ["経済産業省", "経済産業省"],
+  ["資源エネルギー庁", "資源エネルギー庁"],
+  ["中小企業庁", "中小企業庁"],
+  ["特許庁", "特許庁"],
+  ["情報処理推進機構", "IPA"],
+  ["独立行政法人情報処理推進機構", "IPA"],
+  ["IPA", "IPA"],
+  ["国立研究開発法人新エネルギー・産業技術総合開発機構", "NEDO"],
+  ["新エネルギー・産業技術総合開発機構", "NEDO"],
+  ["国立研究開発法人NEDO", "NEDO"],
+  ["NEDO", "NEDO"],
+  ...["北海道", "東北", "関東", "中部", "近畿", "中国", "四国", "九州"].flatMap((region) => [
+    [`${region}経済産業局`, `${region}経済産業局`],
+    [`経済産業省${region}経済産業局`, `${region}経済産業局`],
+  ]),
+]);
+
+const metiAgencyMarkers = [
+  "経済産業省",
+  "経済産業局",
+  "資源エネルギー庁",
+  "中小企業庁",
+  "特許庁",
+  "情報処理推進機構",
+  "新エネルギー・産業技術総合開発機構",
+  "NEDO",
+  "IPA",
+];
+
+export const GBIZ_AGENCY_RULES_SHA256 = createHash("sha256")
+  .update(JSON.stringify([...approvedAgencyAliases.entries()].sort(([a], [b]) => a.localeCompare(b, "ja"))))
+  .digest("hex");
+
 export function parseDashboardRow(html, label) {
   const rowStart = html.indexOf(label);
   if (rowStart < 0) throw new Error(`GビズINFO dashboard: ${label}行が見つかりません`);
@@ -19,7 +57,13 @@ export function parseDashboardRow(html, label) {
   if (numbers.length < 4 || numbers.some((value) => !Number.isSafeInteger(value))) {
     throw new Error(`GビズINFO dashboard: ${label}行の件数を解析できません`);
   }
-  const [, subsidies, procurements] = numbers;
+  const [total, subsidies, procurements, other] = numbers;
+  if (total !== subsidies + procurements + other) {
+    throw new Error(
+      `GビズINFO dashboard: ${label}行の合計と内訳が一致しません `
+      + `(${total}/${subsidies + procurements + other})`,
+    );
+  }
   return { subsidies, procurements };
 }
 
@@ -41,6 +85,7 @@ export function toGbizBulkRecords(csvText, kind) {
 
   const records = [];
   const unmatchedAgencies = new Map();
+  const publisherCounts = new Map();
   let totalRows = 0;
   let recipientRows = 0;
   let eligibleRows = 0;
@@ -79,13 +124,14 @@ export function toGbizBulkRecords(csvText, kind) {
     if (!isRecipient || !agency) continue;
 
     eligibleRows += 1;
+    publisherCounts.set(agency, (publisherCounts.get(agency) || 0) + 1);
     if (!date) missingDateRows += 1;
     if (!program) missingProgramRows += 1;
     if (amount === null) missingAmountRows += 1;
     if (!sourceKey) missingSourceKeyRows += 1;
 
     const stage = kind === "procurement" ? "contracted" : "subsidy_published";
-    records.push({
+    const record = {
       id: `gbiz-${stableId(sourceKey
         ? [kind, "key", sourceKey]
         : [kind, "row", sourceRowNumber, dateRaw, corporateNumber, amountRaw, program, rawAgency])}`,
@@ -111,8 +157,14 @@ export function toGbizBulkRecords(csvText, kind) {
       sourceUrl: `https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${corporateNumber}`,
       quality: "aggregated",
       ingestSource: "gbiz-bulk-csv",
-    });
+    };
+    record.sourceRecordHash = gbizRecordSemanticHash(record);
+    records.push(record);
   }
+  const unmatchedAgencyEntries = [...unmatchedAgencies.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, "ja"));
+  const suspiciousUnmatchedAgencies = unmatchedAgencyEntries.filter(([name]) =>
+    metiAgencyMarkers.some((marker) => name.includes(marker)));
   return {
     records,
     stats: {
@@ -124,9 +176,23 @@ export function toGbizBulkRecords(csvText, kind) {
       missingProgramRows,
       missingAmountRows,
       missingSourceKeyRows,
-      unmatchedAgencies: [...unmatchedAgencies.entries()]
+      headerCount: headers.length,
+      schemaSha256: createHash("sha256").update(headers.join("\u001f")).digest("hex"),
+      agencyRulesSha256: GBIZ_AGENCY_RULES_SHA256,
+      publisherCounts: Object.fromEntries(
+        [...publisherCounts.entries()].sort(([a], [b]) => a.localeCompare(b, "ja")),
+      ),
+      unmatchedAgencyRows: unmatchedAgencyEntries.reduce((sum, [, count]) => sum + count, 0),
+      unmatchedAgencyNames: unmatchedAgencyEntries.length,
+      unmatchedAgencyDistributionSha256: createHash("sha256")
+        .update(JSON.stringify(unmatchedAgencyEntries))
+        .digest("hex"),
+      unmatchedAgencies: [...unmatchedAgencyEntries]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20),
+      suspiciousUnmatchedAgencyRows: suspiciousUnmatchedAgencies
+        .reduce((sum, [, count]) => sum + count, 0),
+      suspiciousUnmatchedAgencies,
     },
   };
 }
@@ -138,6 +204,41 @@ export function assertGbizSnapshotContinuity(previousSource, snapshot, dashboard
     );
   }
 
+  if (snapshot.suspiciousUnmatchedAgencyRows !== 0) {
+    throw new Error(
+      "GビズINFO 全件CSV: 経産省関係の可能性がある未承認の公表組織名があります "
+      + `(${snapshot.suspiciousUnmatchedAgencyRows}行: `
+      + `${snapshot.suspiciousUnmatchedAgencies.slice(0, 3).map(([name]) => name).join(", ")})`,
+    );
+  }
+
+  const requiredBaselineFields = [
+    "recordCount",
+    "csvTotalSubsidyRows",
+    "csvTotalProcurementRows",
+    "csvEligibleSubsidyCount",
+    "csvEligibleProcurementCount",
+    "csvSubsidyFileBytes",
+    "csvProcurementFileBytes",
+    "dashboardSubsidyCount",
+    "dashboardProcurementCount",
+    "dashboardMinusCsvEligibleSubsidyCount",
+    "dashboardMinusCsvEligibleProcurementCount",
+  ];
+  if (
+    typeof previousSource?.lastSuccessfulImportAt !== "string"
+    || requiredBaselineFields.some((field) => !Number.isSafeInteger(previousSource?.[field]))
+  ) {
+    throw new Error("GビズINFO 全件CSV: 承認済みの前回成功スナップショットがありません");
+  }
+  if (
+    !dashboardStats
+    || !Number.isSafeInteger(dashboardStats.dashboardSubsidyCount)
+    || !Number.isSafeInteger(dashboardStats.dashboardProcurementCount)
+  ) {
+    throw new Error("GビズINFO 全件CSV: 公式画面の区分別件数を確認できないため更新を停止します");
+  }
+
   const comparisons = [
     ["補助金CSV総行数", "csvTotalSubsidyRows"],
     ["調達CSV総行数", "csvTotalProcurementRows"],
@@ -147,46 +248,80 @@ export function assertGbizSnapshotContinuity(previousSource, snapshot, dashboard
     ["調達CSVバイト数", "csvProcurementFileBytes"],
   ];
   for (const [label, field] of comparisons) {
-    const previous = previousSource?.[field];
+    const previous = previousSource[field];
     const current = snapshot[field];
-    if (Number.isSafeInteger(previous) && Number.isSafeInteger(current) && current < previous) {
+    if (!Number.isSafeInteger(current)) {
+      throw new Error(`GビズINFO 全件CSV: ${label}を検証できません`);
+    }
+    if (current < previous) {
       throw new Error(
         `GビズINFO 全件CSV: ${label}が前回成功時から減少しました (${current}/${previous})`,
       );
     }
+    const isBytes = field.endsWith("FileBytes");
+    const allowedGrowth = isBytes
+      ? Math.max(1_000_000, Math.ceil(previous * MAX_AUTOMATIC_BYTE_GROWTH_RATE))
+      : Math.max(MAX_AUTOMATIC_COUNT_GROWTH_FLOOR, Math.ceil(previous * MAX_AUTOMATIC_COUNT_GROWTH_RATE));
+    if (current - previous > allowedGrowth) {
+      throw new Error(
+        `GビズINFO 全件CSV: ${label}の増加が自動公開の上限を超えました `
+        + `(+${current - previous}/+${allowedGrowth})`,
+      );
+    }
   }
 
-  const dashboardRecordCount = dashboardStats?.dashboardRecordCount;
-  if (Number.isSafeInteger(dashboardRecordCount)) {
-    const dashboardGap = dashboardRecordCount - snapshot.csvEligibleRecordCount;
-    const hasPreviousGap = Number.isSafeInteger(previousSource?.dashboardMinusCsvEligibleCount);
-    const allowedGap = hasPreviousGap
-      ? Math.max(0, previousSource.dashboardMinusCsvEligibleCount)
-      : Math.max(100, Math.ceil(dashboardRecordCount * 0.005));
-    if (dashboardGap > allowedGap) {
+  const kinds = [
+    ["補助金", "dashboardSubsidyCount", "csvEligibleSubsidyCount", "dashboardMinusCsvEligibleSubsidyCount"],
+    ["調達", "dashboardProcurementCount", "csvEligibleProcurementCount", "dashboardMinusCsvEligibleProcurementCount"],
+  ];
+  for (const [label, dashboardField, csvField, gapField] of kinds) {
+    const dashboardCount = dashboardStats[dashboardField];
+    const csvCount = snapshot[csvField];
+    const gap = dashboardCount - csvCount;
+    const previousGap = previousSource[gapField];
+    if (gap < 0) {
       throw new Error(
-        "GビズINFO 全件CSV: 公式画面との件数差が安全確認の上限を超えました "
-        + `(${dashboardGap}/${allowedGap})`,
+        `GビズINFO 全件CSV: ${label}CSV対象行が公式画面の件数を超えました `
+        + `(${csvCount}/${dashboardCount})`,
+      );
+    }
+    if (gap > previousGap) {
+      throw new Error(
+        `GビズINFO 全件CSV: ${label}の公式画面との差が前回成功時より拡大しました `
+        + `(${gap}/${previousGap})`,
       );
     }
   }
 }
 
 export function assertGbizRecordContinuity(previousRecords, candidateRecords) {
-  const previousKeys = uniqueRecordKeys(previousRecords, "前回成功データ");
-  const candidateKeys = uniqueRecordKeys(candidateRecords, "今回取得データ");
-  const missingKeys = [...previousKeys].filter((key) => !candidateKeys.has(key));
+  if (!previousRecords.length) {
+    throw new Error("GビズINFO 全件CSV: 承認済みの前回成功データがありません");
+  }
+  const previousRows = uniqueRecordMap(previousRecords, "前回成功データ");
+  const candidateRows = uniqueRecordMap(candidateRecords, "今回取得データ");
+  const missingKeys = [...previousRows.keys()].filter((key) => !candidateRows.has(key));
   if (missingKeys.length) {
     throw new Error(
       `GビズINFO 全件CSV: 前回成功データのキーが${missingKeys.length}件欠落しています `
       + `(${missingKeys.slice(0, 3).join(", ")})`,
     );
   }
+  const changedKeys = [...previousRows.entries()]
+    .filter(([key, record]) => gbizRecordSemanticHash(record) !== gbizRecordSemanticHash(candidateRows.get(key)))
+    .map(([key]) => key);
+  if (changedKeys.length) {
+    throw new Error(
+      `GビズINFO 全件CSV: 既存キーの内容が${changedKeys.length}件変更されています `
+      + `(${changedKeys.slice(0, 3).join(", ")})`,
+    );
+  }
   return {
-    continuityBaselineRecordCount: previousKeys.size,
-    continuityRetainedRecordCount: previousKeys.size,
+    continuityBaselineRecordCount: previousRows.size,
+    continuityRetainedRecordCount: previousRows.size,
     continuityRemovedRecordCount: 0,
-    continuityAddedRecordCount: candidateKeys.size - previousKeys.size,
+    continuityChangedRecordCount: 0,
+    continuityAddedRecordCount: candidateRows.size - previousRows.size,
   };
 }
 
@@ -254,26 +389,28 @@ export function auditGbizImport(subsidyResult, procurementResult, dashboardStats
 }
 
 export function normalizeGbizAgency(value) {
-  if (["NEDO", "IPA", "経済産業省", "資源エネルギー庁", "中小企業庁", "特許庁"].includes(value)) {
-    return value;
-  }
-  const agencies = [
-    ["新エネルギー・産業技術総合開発機構", "NEDO"],
-    ["情報処理推進機構", "IPA"],
-    ["北海道経済産業局", "北海道経済産業局"],
-    ["東北経済産業局", "東北経済産業局"],
-    ["関東経済産業局", "関東経済産業局"],
-    ["中部経済産業局", "中部経済産業局"],
-    ["近畿経済産業局", "近畿経済産業局"],
-    ["中国経済産業局", "中国経済産業局"],
-    ["四国経済産業局", "四国経済産業局"],
-    ["九州経済産業局", "九州経済産業局"],
-    ["資源エネルギー庁", "資源エネルギー庁"],
-    ["中小企業庁", "中小企業庁"],
-    ["特許庁", "特許庁"],
-    ["経済産業省", "経済産業省"],
+  return approvedAgencyAliases.get(value) || null;
+}
+
+export function gbizRecordSemanticHash(record) {
+  const values = [
+    record.stage,
+    record.sourceKey,
+    record.organization,
+    record.corporateNumber,
+    record.sourceAgency,
+    record.publisherCanonical,
+    record.program,
+    record.date,
+    record.dateRaw,
+    record.fiscalYear,
+    record.amount,
+    record.amountRaw,
+    record.notes,
+    record.dataQuality,
+    record.sourceSystem,
   ];
-  return agencies.find(([needle]) => value.includes(needle))?.[1] || null;
+  return createHash("sha256").update(JSON.stringify(values)).digest("hex");
 }
 
 export function stripHtml(value) {
@@ -295,19 +432,19 @@ function stableId(parts) {
   return createHash("sha256").update(parts.join("\u001f")).digest("hex").slice(0, 16);
 }
 
-function uniqueRecordKeys(records, label) {
-  const keys = new Set();
+function uniqueRecordMap(records, label) {
+  const rows = new Map();
   for (const record of records) {
     if (!record?.stage || !record?.sourceKey) {
       throw new Error(`GビズINFO 全件CSV: ${label}にキー情報がない行があります`);
     }
     const key = `${record.stage}\u001f${record.sourceKey}`;
-    if (keys.has(key)) {
+    if (rows.has(key)) {
       throw new Error(`GビズINFO 全件CSV: ${label}のキー情報が重複しています (${key})`);
     }
-    keys.add(key);
+    rows.set(key, record);
   }
-  return keys;
+  return rows;
 }
 
 function* parseCsvRows(text) {

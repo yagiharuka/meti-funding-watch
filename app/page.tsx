@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 
 type Stage = "contracted" | "subsidy_published";
@@ -20,6 +20,7 @@ type FundingRecord = {
   stage: Stage;
   sourceName: string;
   sourceUrl: string;
+  sourceRecordHash?: string;
   quality: "primary" | "aggregated";
   ingestSource: "gbiz-bulk-csv";
 };
@@ -175,10 +176,15 @@ export default function Home() {
         return response.json() as Promise<DataChunkManifest>;
       })
       .then((candidate) => {
-        if (typeof candidate.generatedAt === "string" && candidate.commitments) {
-          setManifest(candidate);
-          setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
+        if (
+          typeof candidate.generatedAt !== "string"
+          || !candidate.commitments
+          || typeof candidate.commitments !== "object"
+        ) {
+          throw new Error("Data manifest: invalid schema");
         }
+        setManifest(candidate);
+        setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -192,9 +198,6 @@ export default function Home() {
     if (!manifest) return;
     const controller = new AbortController();
     let active = true;
-    setDataset((current) => ({ ...current, records: [] }));
-    setDataMode("loading");
-    setDetailLoading(true);
     const filenames = year === "all"
       ? Object.values(manifest.commitments)
       : [manifest.commitments[year]].filter((filename): filename is string => Boolean(filename));
@@ -254,19 +257,22 @@ export default function Home() {
     [commitments],
   );
 
-  const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
-  const filteredCommitments = useMemo(() => commitments
+  const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = deferredQuery.trim().toLocaleLowerCase("ja-JP");
+  const sortedCommitments = useMemo(() => [...commitments]
+    .sort((a, b) =>
+      (b.fiscalYear ?? Number.NEGATIVE_INFINITY) - (a.fiscalYear ?? Number.NEGATIVE_INFINITY)
+      || (b.date ?? "").localeCompare(a.date ?? "")
+      || a.organization.localeCompare(b.organization, "ja")),
+  [commitments]);
+  const filteredCommitments = useMemo(() => sortedCommitments
     .filter((row) =>
       includesQuery([row.organization, row.corporateNumber], normalizedQuery)
       && (agency === "all" || row.sourceAgency === agency)
       && (stage === "all" || row.stage === stage)
       && (year === "all"
-        || (year === "unclassified" ? row.fiscalYear === null : String(row.fiscalYear) === year)))
-    .sort((a, b) =>
-      (b.fiscalYear ?? Number.NEGATIVE_INFINITY) - (a.fiscalYear ?? Number.NEGATIVE_INFINITY)
-      || (b.date ?? "").localeCompare(a.date ?? "")
-      || a.organization.localeCompare(b.organization, "ja")),
-  [agency, commitments, normalizedQuery, stage, year]);
+        || (year === "unclassified" ? row.fiscalYear === null : String(row.fiscalYear) === year))),
+  [agency, normalizedQuery, sortedCommitments, stage, year]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCommitments.length / pageSize));
   const visibleRows = filteredCommitments.slice(page * pageSize, (page + 1) * pageSize);
@@ -294,6 +300,7 @@ export default function Home() {
 
   function clearFilters() {
     if (year !== defaultYear) {
+      setDataset((current) => ({ ...current, records: [] }));
       setDetailLoading(true);
       setDataMode("loading");
     }
@@ -323,7 +330,7 @@ export default function Home() {
           <a href="#records">データ検索</a>
           <a href="#sources">データ更新</a>
         </nav>
-        <span className="update-chip" role="status" aria-live="polite"><i />{
+        <span className={`update-chip ${dataMode}`} role="status" aria-live="polite"><i />{
           dataMode === "github" ? "明細準備完了" : dataMode === "loading" ? "明細読込中" : "明細取得要確認"
         }</span>
       </header>
@@ -335,6 +342,10 @@ export default function Home() {
           <p className="hero-lead">
             GビズINFO公式画面の「経済産業省（小計）」と「特許庁」に対応する調達・補助金の掲載情報を、
             法人等の名称と法人番号から検索できます。
+          </p>
+          <p className="hero-scope-warning">
+            このサイトは経済産業省の全支出・実支払を示すものではありません。
+            GビズINFOに法人番号付きで掲載された調達・補助金情報だけを表示します。
           </p>
           <div className="hero-note">
             <span>{gbizSource?.lastSuccessfulImportAt ? "明細データ最終取込" : "データ生成日時"}</span>
@@ -368,7 +379,8 @@ export default function Home() {
             <p className="snapshot-note" role="status">
               <strong>GビズINFO内の2つの表示に時点差があります</strong>
               公式画面は{displayCount(dashboardRecordCount)}、取得した全件CSVの対象は{displayRows(csvEligibleRecordCount)}です。
-              差は{displayDifference(dashboardCsvGap)}ですが、CSV対象{displayRows(csvEligibleRecordCount)}はすべて取り込んでいます。
+              差は{displayDifference(dashboardCsvGap)}ですが、当サイトの抽出条件に合うCSV
+              {displayRows(csvEligibleRecordCount)}はすべて取り込んでいます。
               更新時点または集計条件が異なる可能性があります。
             </p>
           )}
@@ -382,6 +394,9 @@ export default function Home() {
             各府省庁から提供され、法人番号が付与されてGビズINFOに掲載された情報だけが対象です。同一内容が複数行になる場合があり、掲載行数は案件数とは限りません。
             年度は認定日・受注日から当サイトが算出し、日付がない行は「年度不明」に分けます。
             {latestYearIsInProgress && ` ${coverageYears.at(-1)}年度は年度途中です。`}
+          </p>
+          <p>
+            法人番号に紐づかない個人・団体、GビズINFOに未掲載の支出、所管法人・基金等からの下流支出を網羅するものではありません。
           </p>
         </aside>
 
@@ -489,7 +504,7 @@ export default function Home() {
                 <div><dt>本サイト取込行</dt><dd>{displayRows(csvImportedRecordCount ?? gbizSource.recordCount)}<small>補助金 {displayRows(gbizSource.csvImportedSubsidyCount)}／調達 {displayRows(gbizSource.csvImportedProcurementCount)}</small></dd></div>
                 <div><dt>CSV取込差（対象－取込）</dt><dd>{displayRows(csvImportGap)}</dd></div>
                 <div><dt>公式画面－CSV対象</dt><dd>{displayDifference(dashboardCsvGap)}</dd></div>
-                <div><dt>取込状態</dt><dd>{csvImportVerified ? "CSV対象行を全件取込済み" : "要確認"}</dd></div>
+                <div><dt>取込状態</dt><dd>{csvImportVerified ? "当サイトの抽出条件に合うCSV行を全件取込済み" : "要確認"}</dd></div>
               </dl>
               <p className="source-disclaimer">
                 公式ダッシュボードと全件CSVは別のスナップショットです。両者の差は取込漏れとはみなさず、参考照合として表示します。
