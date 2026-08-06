@@ -74,15 +74,13 @@ test("identifies NEDO as an intermediary and preserves its downstream recipients
   assert.ok(downstream.length > 0);
 });
 
-test("presents the finished internal app view without migration instructions", () => {
-  assert.match(pageSource, /レビューシート掲載支出額/);
+test("presents a GビズINFO-only recipient search without migration instructions", () => {
   assert.match(pageSource, /受取先別の契約・補助金/);
-  assert.match(pageSource, /レビューシート掲載支出額 <small>行政事業レビューシート・各支出先ブロック上位10者<\/small>/);
-  assert.match(pageSource, /view-tabs[\s\S]*受取先別の契約・補助金[\s\S]*レビューシート掲載支出額/);
-  assert.match(pageSource, /事業別の予算・執行額/);
-  assert.match(pageSource, /view === "programs"/);
+  assert.match(pageSource, /データ出典：GビズINFO/);
+  assert.match(pageSource, /GビズINFOに掲載された、経済産業省と所管法人による契約・補助金/);
   assert.match(pageSource, /row\.ingestSource !== "nedo-monthly-csv"/);
   assert.doesNotMatch(pageSource, /GビズINFO＋NEDO公表契約/);
+  assert.doesNotMatch(pageSource, /行政事業レビュー|レビューシート掲載支出額|事業別の予算・執行額|reviewPayments|reviewPrograms/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure|GitHub|METI内への移植イメージ|移植後の構成|移植構成を見る|移植手順書/);
   assert.doesNotMatch(pageSource, /METI_POWER_APPS_MIGRATION_GUIDE/);
   assert.doesNotMatch(pageSource, /データごとの更新状況|className="metrics"/);
@@ -90,8 +88,6 @@ test("presents the finished internal app view without migration instructions", (
   assert.doesNotMatch(pageSource, /庁内版 画面イメージ|className="prototype-banner"/);
   assert.doesNotMatch(pageSource, /違う段階の金額を、足さない。|className="about-section"/);
   assert.doesNotMatch(pageSource, />公式CSV ↗<\/a>/);
-  assert.doesNotMatch(pageSource, /受取先別の実支出|支出先別実支出/);
-  assert.match(pageSource, /各支出先ブロックの上位10者のみを掲載しており、すべての支出先を網羅していません/);
-  assert.match(pageSource, /flowLevel === "all" \|\| row\.flowLevel === flowLevel/);
+  assert.doesNotMatch(pageSource, /受取先別の実支出|支出先別実支出|公式CSV/);
   assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
 });
