@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T00:21:45.274Z",
+  "generatedAt": "2026-08-06T07:53:34.065Z",
   "sources": [
     {
       "id": "gbiz",
@@ -7,15 +7,6 @@
       "recordCount": 29826,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
-      "lastChecked": "2026-08-06",
-      "status": "healthy"
-    },
-    {
-      "id": "nedo",
-      "name": "NEDO 契約公表",
-      "recordCount": 644,
-      "method": "月次CSV",
-      "frequency": "月次",
       "lastChecked": "2026-08-06",
       "status": "healthy"
     },
@@ -82,10 +73,7 @@
       "note": "GビズINFO全件CSVに収録された経産省系の補助金・調達"
     },
     "nedo": {
-      "fiscalYears": [
-        2025,
-        2026
-      ],
+      "fiscalYears": [],
       "completeness": "published-monthly-csv",
       "note": "NEDOが公開中の月次契約CSV"
     },
@@ -185,7 +173,7 @@
       "2025": {
         "recipientPaymentAmount": 0,
         "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 212147189994,
+        "recipientCommitmentAmount": 48443959994,
         "executionAmount": 0,
         "nedoRecipientAmount": 0,
         "nedoRecipientCount": 0
@@ -193,7 +181,7 @@
       "2026": {
         "recipientPaymentAmount": 0,
         "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 34010093455,
+        "recipientCommitmentAmount": 13838679555,
         "executionAmount": 0,
         "nedoRecipientAmount": 0,
         "nedoRecipientCount": 0
