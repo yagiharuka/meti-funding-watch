@@ -48,12 +48,15 @@ jobs:
         run: npm ci
 
       - name: Refresh official data
+        id: refresh
+        continue-on-error: ${{ github.event_name == 'push' }}
         run: npm run update:data
 
       - name: Verify data and production build
         run: npm test
 
       - name: Commit changed data
+        if: steps.refresh.outcome == 'success'
         run: |
           if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages; then
             echo "No data changes"
@@ -64,6 +67,11 @@ jobs:
           git add -A -- data/funding-data.json data/funding-summary.json data/pages
           git commit -m "chore(data): refresh official funding data"
           git push
+
+      - name: Rebuild the artifact from the commit that will be published
+        run: |
+          npm run build:pages
+          node --test tests/rendered-html.test.mjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
