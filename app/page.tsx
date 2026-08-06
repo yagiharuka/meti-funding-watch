@@ -3,37 +3,47 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 
-type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
+type Stage = "contracted" | "subsidy_published";
 
 type FundingRecord = {
   id: string;
-  fiscalYear: number;
-  date: string;
+  fiscalYear: number | null;
+  date: string | null;
+  dateRaw?: string;
   organization: string;
   corporateNumber: string;
   sourceAgency: string;
+  publisherCanonical?: string;
   program: string;
   amount: number | null;
+  amountRaw?: string;
   stage: Stage;
-  route: string[];
   sourceName: string;
   sourceUrl: string;
   quality: "primary" | "aggregated";
-  ingestSource?: "gbiz-api" | "gbiz-bulk-csv" | "nedo-monthly-csv";
+  ingestSource: "gbiz-bulk-csv";
 };
 
 type FundingSource = {
   id: string;
   name: string;
   recordCount: number;
+  importedRecordCount?: number;
+  officialRecordCount?: number;
+  recordCountGap?: number | null;
+  officialSubsidyCount?: number;
+  officialProcurementCount?: number;
   method: string;
   frequency: string;
   lastChecked: string;
+  dashboardCheckedAt?: string;
+  lastSuccessfulImportAt?: string;
   status: "healthy" | "watch";
 };
 
 type CoverageSeries = {
   fiscalYears: number[];
+  unclassifiedDateCount?: number;
   completeness: string;
   note: string;
 };
@@ -57,11 +67,8 @@ const dataBaseUrl = "data/";
 const pageSize = 100;
 
 const stageLabels: Record<Stage, string> = {
-  contracted: "契約額",
-  award_decision: "交付決定額",
-  subsidy_published: "補助金掲載額",
-  finalized: "確定額",
-  paid: "支払済額",
+  contracted: "調達",
+  subsidy_published: "補助金",
 };
 
 const yen = new Intl.NumberFormat("ja-JP", {
@@ -70,14 +77,10 @@ const yen = new Intl.NumberFormat("ja-JP", {
   maximumFractionDigits: 0,
 });
 
-function compactYen(value: number) {
-  if (value >= 1_000_000_000_000) return `${(value / 1_000_000_000_000).toFixed(2)}兆円`;
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}億円`;
-  if (value >= 10_000) return `${(value / 10_000).toFixed(1)}万円`;
-  return yen.format(value);
-}
-
-function formatUpdated(value: string) {
+function formatTimestamp(value?: string) {
+  if (!value) return "未取得";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat("ja-JP", {
     timeZone: "Asia/Tokyo",
     year: "numeric",
@@ -85,7 +88,13 @@ function formatUpdated(value: string) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(parsed);
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "日付の記載なし";
+  const [year, month, day] = value.split("-");
+  return `${year}年${Number(month)}月${Number(day)}日`;
 }
 
 function includesQuery(values: Array<string | number | null>, query: string) {
@@ -93,18 +102,38 @@ function includesQuery(values: Array<string | number | null>, query: string) {
   return values.join(" ").toLocaleLowerCase("ja-JP").includes(query);
 }
 
-function distinctYears(values: number[]) {
-  return Array.from(new Set(values.filter(Number.isInteger))).sort((a, b) => a - b);
+function formatCoverageYears(years: number[], unclassifiedDateCount = 0) {
+  if (!years.length) return unclassifiedDateCount ? "日付の記載なしのみ" : "収録なし";
+  const range = years.length === 1
+    ? `${years[0]}年度`
+    : `${years[0]}–${years.at(-1)}年度（認定日・受注日基準）`;
+  return unclassifiedDateCount ? `${range}、日付の記載なしあり` : range;
 }
 
-function formatCoverageYears(years: number[]) {
-  if (!years.length) return "収録なし";
-  if (years.length === 1) return `${years[0]}年度`;
-  return `${years[0]}–${years.at(-1)}年度（${years.length}年度）`;
+function displayCount(value?: number) {
+  return Number.isSafeInteger(value) ? `${value.toLocaleString("ja-JP")}件` : "未照合";
+}
+
+function formatPublishedValue(row: FundingRecord) {
+  if (row.amount !== null) return yen.format(row.amount);
+  const raw = row.amountRaw?.trim();
+  return raw ? `原文：${raw}` : "空欄";
+}
+
+function currentFiscalYearInJapan() {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+  }).formatToParts(new Date());
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  return month <= 3 ? year - 1 : year;
 }
 
 export default function Home() {
   const initialYear = bundledFundingData.coverage?.gbiz.fiscalYears.at(-1);
+  const defaultYear = initialYear ? String(initialYear) : "all";
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
   const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
@@ -112,7 +141,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
-  const [year, setYear] = useState(initialYear ? String(initialYear) : "all");
+  const [year, setYear] = useState(defaultYear);
   const [page, setPage] = useState(0);
   const chunkCache = useRef(new Map<string, FundingRecord[]>());
 
@@ -174,40 +203,50 @@ export default function Home() {
   }, [manifest, year]);
 
   const commitments = useMemo(
-    () => dataset.records.filter((row) => row.ingestSource !== "nedo-monthly-csv"),
+    () => dataset.records.filter((row) => row.ingestSource === "gbiz-bulk-csv"),
     [dataset.records],
   );
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
-  const coverageYears = dataset.coverage?.gbiz.fiscalYears ?? distinctYears(commitments.map((row) => row.fiscalYear));
-  const defaultYear = initialYear ? String(initialYear) : "all";
+  const coverageYears = dataset.coverage?.gbiz.fiscalYears
+    ?? Object.keys(manifest?.commitments ?? {})
+      .map(Number)
+      .filter(Number.isInteger)
+      .sort((a, b) => a - b);
+  const fiscalYears = [...coverageYears].sort((a, b) => b - a);
+  const hasUndatedRecords = Boolean(
+    dataset.coverage?.gbiz.unclassifiedDateCount
+    || manifest?.commitments.unclassified,
+  );
+  const latestYearIsInProgress = coverageYears.at(-1) === currentFiscalYearInJapan();
   const agencies = useMemo(
-    () => Array.from(new Set(commitments.map((row) => row.sourceAgency).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ja")),
+    () => Array.from(new Set(commitments.map((row) => row.sourceAgency).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, "ja")),
     [commitments],
   );
-  const fiscalYears = useMemo(() => {
-    const years = commitments.length ? distinctYears(commitments.map((row) => row.fiscalYear)) : coverageYears;
-    return [...years].sort((a, b) => b - a);
-  }, [commitments, coverageYears]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
   const filteredCommitments = useMemo(() => commitments
     .filter((row) =>
-      includesQuery([row.organization, row.corporateNumber], normalizedQuery) &&
-      (agency === "all" || row.sourceAgency === agency) &&
-      (stage === "all" || row.stage === stage) &&
-      (year === "all" || String(row.fiscalYear) === year))
+      includesQuery([row.organization, row.corporateNumber], normalizedQuery)
+      && (agency === "all" || row.sourceAgency === agency)
+      && (stage === "all" || row.stage === stage)
+      && (year === "all"
+        || (year === "unclassified" ? row.fiscalYear === null : String(row.fiscalYear) === year)))
     .sort((a, b) =>
-      b.fiscalYear - a.fiscalYear ||
-      b.date.localeCompare(a.date) ||
-      a.organization.localeCompare(b.organization, "ja")),
+      (b.fiscalYear ?? Number.NEGATIVE_INFINITY) - (a.fiscalYear ?? Number.NEGATIVE_INFINITY)
+      || (b.date ?? "").localeCompare(a.date ?? "")
+      || a.organization.localeCompare(b.organization, "ja")),
   [agency, commitments, normalizedQuery, stage, year]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCommitments.length / pageSize));
   const visibleRows = filteredCommitments.slice(page * pageSize, (page + 1) * pageSize);
   const visibleStart = filteredCommitments.length ? page * pageSize + 1 : 0;
   const visibleEnd = Math.min((page + 1) * pageSize, filteredCommitments.length);
-  const filteredAmount = filteredCommitments.reduce((sum, row) => sum + (row.amount ?? 0), 0);
   const hasFilters = query || agency !== "all" || stage !== "all" || year !== defaultYear;
+  const recordCountGap = gbizSource?.recordCountGap
+    ?? (Number.isSafeInteger(gbizSource?.officialRecordCount) && Number.isSafeInteger(gbizSource?.recordCount)
+      ? (gbizSource?.officialRecordCount ?? 0) - (gbizSource?.recordCount ?? 0)
+      : null);
 
   function clearFilters() {
     if (year !== defaultYear) {
@@ -224,30 +263,30 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="事業者等への交付金額(経産省) トップ">
+        <a className="brand" href="#top" aria-label="経産省関係の調達・補助金情報 トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>事業者等への交付金額(経産省)</span>
+          <span>経産省関係の調達・補助金情報</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">データ検索</a>
           <a href="#sources">データ更新</a>
         </nav>
-        <span className="update-chip"><i />{
+        <span className="update-chip" role="status" aria-live="polite"><i />{
           dataMode === "github" ? "明細準備完了" : dataMode === "loading" ? "明細読込中" : "明細取得要確認"
         }</span>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
-          <h1>事業者等への<br /><em>交付金額(経産省)</em></h1>
+          <p className="eyebrow">G BIZ INFO SEARCH</p>
+          <h1>GビズINFO掲載の<br /><em>経産省関係 調達・補助金情報</em></h1>
           <p className="hero-lead">
-            GビズINFOに掲載された、経済産業省と所管法人による契約・補助金を、
-            受取先名・法人番号・年度などから検索できます。
+            GビズINFO公式画面の「経済産業省（小計）」と「特許庁」に対応する調達・補助金の掲載情報を、
+            法人等の名称と法人番号から検索できます。
           </p>
           <div className="hero-note">
-            <span>表示データ更新</span>
-            <strong>{formatUpdated(dataset.generatedAt)}</strong>
+            <span>{gbizSource?.lastSuccessfulImportAt ? "明細データ最終取込" : "データ生成日時"}</span>
+            <strong>{formatTimestamp(gbizSource?.lastSuccessfulImportAt ?? dataset.generatedAt)}</strong>
             <span className="source-count">データ出典：GビズINFO</span>
           </div>
           <div className="hero-actions">
@@ -260,76 +299,97 @@ export default function Home() {
       <section className="records-section" id="records">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">RECIPIENTS & FUNDING</p>
-            <h2>受取先別の契約・補助金</h2>
+            <p className="eyebrow">ORGANIZATIONS & PUBLISHED ACTIVITIES</p>
+            <h2>調達・補助金の掲載情報</h2>
           </div>
-          <p>検索対象はGビズINFOに掲載された経済産業省関係の契約・補助金です。受取先名と法人番号で検索できます。</p>
+          <p>法人等の名称と法人番号だけを全文検索します。条件を組み合わせて掲載行を確認できます。</p>
         </div>
 
+        <aside className="scope-note" aria-label="表示データの注意事項">
+          {recordCountGap !== null && recordCountGap !== 0 && (
+            <p className="incomplete-note" role="alert">
+              <strong>収録件数を確認中です</strong>
+              公式対象{displayCount(gbizSource?.officialRecordCount)}に対し、本サイトは{displayCount(gbizSource?.recordCount)}を収録しています。
+              差は{recordCountGap.toLocaleString("ja-JP")}件で、検索結果は網羅的ではありません。
+            </p>
+          )}
+          <strong>表示額は支払実績ではありません</strong>
+          <p>
+            法人等の名称は全件CSVの「商号または名称」です。掲載値は、調達CSVの「落札価格」欄または
+            補助金CSVの「金額」欄にある値です。単価・売払い・変更や確定など異なる性質の値が含まれるため、
+            このサイトでは金額を足し上げません。
+          </p>
+          <p>
+            各府省庁から提供され、法人番号が付与されてGビズINFOに掲載された情報だけが対象です。同一内容が複数行になる場合があり、掲載行数は案件数とは限りません。
+            年度は認定日・受注日から当サイトが算出し、日付がない行は「年度不明」に分けます。
+            {latestYearIsInProgress && ` ${coverageYears.at(-1)}年度は年度途中です。`}
+          </p>
+        </aside>
+
         <div className="series-label" aria-label="表示中のデータ系列">
-          <strong>受取先別の契約・補助金</strong>
+          <strong>法人等別の調達・補助金掲載情報</strong>
           <span>GビズINFO</span>
         </div>
 
         <div className="filters" aria-label="検索条件">
           <label className="search-field">
-            <span className="sr-only">受取先名または法人番号で検索</span>
+            <span className="sr-only">法人等の名称または法人番号で検索</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
-              placeholder="受取先名・法人番号で検索"
+              placeholder="法人等の名称・法人番号で検索"
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(0); }}
             />
           </label>
           <label>
-            <span className="sr-only">支出元・実施機関</span>
+            <span className="sr-only">公表組織</span>
             <select value={agency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
-              <option value="all">すべての支出元</option>
+              <option value="all">すべての公表組織</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
-            <span className="sr-only">金額段階</span>
+            <span className="sr-only">区分</span>
             <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); }}>
-              <option value="all">すべての金額段階</option>
+              <option value="all">調達・補助金</option>
               {Object.entries(stageLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
           </label>
           <label>
-            <span className="sr-only">年度</span>
+            <span className="sr-only">認定日・受注日基準年度</span>
             <select value={year} onChange={(event) => { setDetailLoading(true); setDataMode("loading"); setYear(event.target.value); setPage(0); }}>
               <option value="all">全期間</option>
-              {fiscalYears.map((item) => <option key={item} value={item}>{item}年度</option>)}
+              {fiscalYears.map((item) => <option key={item} value={item}>{item}年度（日付基準）</option>)}
+              {hasUndatedRecords && <option value="unclassified">年度不明（日付の記載なし）</option>}
             </select>
           </label>
         </div>
 
-        <div className="result-bar">
+        <div className="result-bar" role="status" aria-live="polite">
           {detailLoading ? (
             <span><strong>明細を読込中</strong></span>
           ) : (
             <span>
               <strong>{filteredCommitments.length.toLocaleString("ja-JP")}</strong>件
               {filteredCommitments.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
-              <b>・掲載額の単純合計 {compactYen(filteredAmount)}</b>
             </span>
           )}
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
-        <div className="records-table" role="region" aria-label="GビズINFO契約・補助金一覧" tabIndex={0}>
+        <div className="records-table" role="region" aria-label="GビズINFO調達・補助金掲載情報一覧" tabIndex={0}>
           <table>
-            <thead><tr><th>受取先</th><th>制度・事業</th><th>実施機関</th><th>段階</th><th>金額</th><th>年度</th><th>根拠</th></tr></thead>
+            <thead><tr><th>法人等の名称</th><th>活動名称・件名</th><th>公表組織</th><th>区分</th><th>GビズINFO掲載値</th><th>認定日・受注日</th><th>掲載ページ</th></tr></thead>
             <tbody>{visibleRows.map((row) => (
               <tr key={row.id}>
-                <td><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
-                <td><span className="program-name">{row.program}</span><small className="route">{row.route.join(" → ")}</small></td>
-                <td>{row.sourceAgency}</td>
+                <td><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
+                <td><span className="program-name">{row.program || "活動名称・件名の記載なし"}</span></td>
+                <td>{row.sourceAgency || row.publisherCanonical || "公表組織の記載なし"}</td>
                 <td><span className={`stage-badge ${row.stage}`}>{stageLabels[row.stage]}</span></td>
-                <td className="amount">{row.amount === null ? "金額未公表" : yen.format(row.amount)}</td>
-                <td>{row.fiscalYear}</td>
-                <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">原典 ↗</a></td>
+                <td className="amount">{formatPublishedValue(row)}</td>
+                <td>{formatDate(row.date)}<small>{row.fiscalYear === null ? "年度不明" : `${row.fiscalYear}年度（日付基準）`}</small></td>
+                <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>GビズINFO ↗</a></td>
               </tr>
             ))}</tbody>
           </table>
@@ -353,27 +413,35 @@ export default function Home() {
       <section className="source-section" id="sources">
         <div className="section-heading light">
           <div><p className="eyebrow">DATA UPDATES</p><h2>データ更新状況</h2></div>
-          <p>GビズINFOの更新内容を毎日取り込みます。取得に失敗した場合は、前回取得したデータを表示します。</p>
+          <p>当サイトは毎日、GビズINFO全件CSVの再取得を試みます。GビズINFO側の原データ更新時期は出典ごとに異なります。</p>
         </div>
         {gbizSource && (
           <div className="source-grid">
             <article>
               <div><span className={`health ${gbizSource.status}`} />GビズINFO</div>
-              <strong>{gbizSource.recordCount.toLocaleString("ja-JP")}件</strong>
+              <strong>{gbizSource.recordCount.toLocaleString("ja-JP")}行を収録</strong>
               <dl>
-                <div><dt>取得方式</dt><dd>期間指定API（差分取得）</dd></div>
-                <div><dt>更新周期</dt><dd>毎日</dd></div>
-                <div><dt>収録期間</dt><dd>{formatCoverageYears(coverageYears)}</dd></div>
-                <div><dt>最終確認</dt><dd>{gbizSource.lastChecked}</dd></div>
+                <div><dt>取得方式</dt><dd>全件CSVの再取得を毎日試行</dd></div>
+                <div><dt>収録期間</dt><dd>{formatCoverageYears(coverageYears, dataset.coverage?.gbiz.unclassifiedDateCount)}</dd></div>
+                <div><dt>{gbizSource.lastSuccessfulImportAt ? "明細データ最終取込" : "成功履歴"}</dt><dd>{gbizSource.lastSuccessfulImportAt ? formatTimestamp(gbizSource.lastSuccessfulImportAt) : "未記録"}</dd></div>
+                <div><dt>公式画面の確認</dt><dd>{formatTimestamp(gbizSource.dashboardCheckedAt ?? gbizSource.lastChecked)}</dd></div>
+                <div><dt>公式対象掲載行</dt><dd>{displayCount(gbizSource.officialRecordCount)}</dd></div>
+                <div><dt>本サイト収録行</dt><dd>{displayCount(gbizSource.recordCount)}</dd></div>
+                <div><dt>未収録行（公式－収録）</dt><dd>{recordCountGap === null ? "未照合" : `${recordCountGap.toLocaleString("ja-JP")}件`}</dd></div>
+                <div><dt>照合状態</dt><dd>{gbizSource.status === "healthy" ? "一致" : "要確認"}</dd></div>
               </dl>
+              <p className="source-disclaimer">
+                公式対象はGビズINFO公式画面の「経済産業省（小計）」と「特許庁」です。差が0件でないときは、取込の完全性を確認中です。
+              </p>
+              <a className="source-link" href="https://info.gbiz.go.jp/hojin/dashboard" target="_blank" rel="noreferrer">GビズINFO公式画面 ↗</a>
             </article>
           </div>
         )}
       </section>
 
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>事業者等への交付金額(経産省)</span></div>
-        <p>GビズINFOの公開情報を利用した非公式プロトタイプ</p>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達・補助金情報</span></div>
+        <p>非公式サイトです。GビズINFOおよび本サイトの抽出・取込は、正確性・完全性・最新性を保証しません。</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
     </main>

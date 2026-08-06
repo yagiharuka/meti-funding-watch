@@ -6,15 +6,23 @@ on:
       - main
     paths:
       - ".github/workflows/update-data.yml"
-      - "scripts/update-data.mjs"
+      - "app/**"
+      - "pages-site/**"
+      - "public/**"
+      - "scripts/**"
       - "data/source-registry.json"
-      - "data/review-cache/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.pages.config.ts"
   workflow_dispatch:
   schedule:
     - cron: "30 21 * * *"
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: funding-data-update
@@ -47,12 +55,33 @@ jobs:
 
       - name: Commit changed data
         run: |
-          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/review-cache data/pages; then
+          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages; then
             echo "No data changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/funding-data.json data/funding-summary.json data/review-cache data/pages
+          git add -A -- data/funding-data.json data/funding-summary.json data/pages
           git commit -m "chore(data): refresh official funding data"
           git push
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload verified GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist-pages
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: update
+    steps:
+      - name: Deploy the artifact verified in this workflow
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 600000

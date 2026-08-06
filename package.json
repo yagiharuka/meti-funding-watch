@@ -1,6 +1,6 @@
 {
   "name": "meti-funding-watch",
-  "displayName": "事業者等への交付金額(経産省)",
+  "displayName": "経産省関係の調達・補助金情報（GビズINFO）",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -13,7 +13,7 @@
     "build:pages": "vite build --config vite.pages.config.ts",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "update:data": "node scripts/update-data.mjs",
-    "test": "npm run build && node --test tests/*.test.mjs",
+    "test": "npm run build && npm run build:pages && node --test tests/*.test.mjs",
     "validate:artifact": "bash scripts/validate-artifact.sh",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern dist-pages --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"

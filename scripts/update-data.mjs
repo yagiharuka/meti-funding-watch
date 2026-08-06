@@ -1,11 +1,21 @@
-import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { unzipSync } from "fflate";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  normalizeGbizAgency,
+  parseDashboardRow,
+  stripHtml,
+  toGbizBulkRecords,
+} from "./gbiz-csv.mjs";
+import {
+  cleanCell,
+  fiscalYear,
+  hasValidCorporateNumber,
+  parseAmount,
+  parseJapaneseDate,
+} from "./gbiz-values.mjs";
 
 const dataPath = new URL("../data/funding-data.json", import.meta.url);
 const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
-const reviewCachePath = new URL("../data/review-cache/", import.meta.url);
 const pageDataPath = new URL("../data/pages/", import.meta.url);
 
 const [current, registry] = await Promise.all([
@@ -25,9 +35,15 @@ const configured = new Map(
   registry.sources.filter((source) => source.enabled).map((source) => [source.id, source]),
 );
 const results = [];
+let importSucceededAt = null;
 
-next.reviewPrograms ??= [];
-next.reviewPayments ??= [];
+next.records = next.records
+  .filter(isGbizRecord)
+  .map(sanitizeLegacyGbizRecord);
+next.sources = next.sources.filter((source) => configured.has(source.id));
+delete next.reviewPrograms;
+delete next.reviewPayments;
+delete next.aggregates;
 for (const source of configured.values()) {
   if (!next.sources.some((candidate) => candidate.id === source.id)) {
     next.sources.push({
@@ -42,21 +58,20 @@ for (const source of configured.values()) {
   }
 }
 
-await refreshReviewSheets();
-await refreshGbiz();
-next.records = next.records.filter((record) => record.ingestSource !== "nedo-monthly-csv");
-next.sources = next.sources.filter((source) => source.id !== "nedo");
-await refreshGbizBulk();
-
-for (const record of next.records) {
-  record.flowLevel = classifyCommitmentFlow(record);
+const dashboardStats = await refreshGbiz();
+const importSucceeded = await refreshGbizBulk(dashboardStats);
+if (!importSucceeded && process.env.CI === "true") {
+  for (const result of results) {
+    console.error(`${result.ok ? "OK" : "STALE"} ${result.name}: ${result.message}`);
+  }
+  throw new Error("GビズINFO全件CSVの取得・件数照合が完了しなかったため、CIでの公開更新を中止します");
 }
-
-next.aggregates = buildAggregates(next);
 next.coverage = buildCoverage(next);
-next.generatedAt = new Date().toISOString();
+if (importSucceededAt) next.generatedAt = importSucceededAt;
 next.records.sort((a, b) => {
-  return (b.amount ?? -1) - (a.amount ?? -1) || b.date.localeCompare(a.date) || a.id.localeCompare(b.id);
+  return (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY)
+    || (b.date ?? "").localeCompare(a.date ?? "")
+    || a.id.localeCompare(b.id);
 });
 
 validate(next);
@@ -66,8 +81,6 @@ await Promise.all([
   writeFile(summaryPath, `${JSON.stringify({
     ...next,
     records: [],
-    reviewPrograms: [],
-    reviewPayments: [],
   }, null, 2)}\n`),
 ]);
 
@@ -77,17 +90,14 @@ for (const result of results) {
 console.log(`Wrote ${next.records.length.toLocaleString("en-US")} records to ${dataPath.pathname}`);
 
 async function writePageData(data) {
+  await rm(pageDataPath, { recursive: true, force: true });
   await mkdir(pageDataPath, { recursive: true });
   const series = {
-    payments: groupRowsByYear(data.reviewPayments, (row) => row.fiscalYear),
-    commitments: groupRowsByYear(data.records, (row) => row.fiscalYear),
-    programs: groupRowsByYear(data.reviewPrograms, (row) => row.executionFiscalYear ?? "unclassified"),
+    commitments: groupRowsByYear(data.records, (row) => row.fiscalYear ?? "unclassified"),
   };
   const manifest = {
     generatedAt: data.generatedAt,
-    payments: {},
     commitments: {},
-    programs: {},
   };
   const writes = [];
 
@@ -112,412 +122,68 @@ function groupRowsByYear(rows, yearForRow) {
   return groups;
 }
 
-async function refreshReviewSheets() {
-  const source = configured.get("review-sheets");
-  if (!source) return;
-
-  try {
-    const reviewSheetYears = await discoverReviewSheetYears(source);
-    const yearly = [];
-    for (const reviewSheetYear of reviewSheetYears) {
-      yearly.push(await loadReviewSheetYear(source, reviewSheetYear));
-    }
-
-    next.reviewPrograms = yearly.flatMap((item) => item.programs).sort((a, b) => {
-      return b.reviewSheetYear - a.reviewSheetYear || a.projectNumber.localeCompare(b.projectNumber, "ja");
-    });
-    next.reviewPayments = yearly.flatMap((item) => item.payments).sort((a, b) => {
-      return b.amount - a.amount || a.organization.localeCompare(b.organization, "ja");
-    });
-    await writeReviewCache(reviewSheetYears, next.reviewPrograms, next.reviewPayments);
-    updateSource("review-sheets", {
-      recordCount: next.reviewPayments.length,
-      method: "公式CSV（事業・予算執行・支出先・支出経路）",
-      lastChecked: today,
-      status: "healthy",
-    });
-    results.push({
-      ok: true,
-      name: source.name,
-      message: `${reviewSheetYears.join("・")}年度シートの経産省 ${next.reviewPrograms.length.toLocaleString("ja-JP")}事業・支出先 ${next.reviewPayments.length.toLocaleString("ja-JP")}件`,
-    });
-  } catch (error) {
-    try {
-      const cached = await loadReviewCache();
-      next.reviewPrograms = cached.programs;
-      next.reviewPayments = cached.payments;
-      updateSource("review-sheets", {
-        recordCount: next.reviewPayments.length,
-        method: "公式CSV（前回取得キャッシュ）",
-        lastChecked: today,
-        status: "watch",
-      });
-      results.push({
-        ok: false,
-        name: source.name,
-        message: `${error instanceof Error ? error.message : String(error)}（${cached.reviewSheetYears.join("・")}年度の前回取得キャッシュを保持）`,
-      });
-    } catch {
-      markStale("review-sheets", source, error);
-    }
-  }
-}
-
-async function loadReviewSheetYear(source, reviewSheetYear) {
-  const specifications = {
-    organizations: `1-1_RS_${reviewSheetYear}_基本情報_組織情報.zip`,
-    budgets: `2-1_RS_${reviewSheetYear}_予算・執行_サマリ.zip`,
-    payments: `5-1_RS_${reviewSheetYear}_支出先_支出情報.zip`,
-    flows: `5-2_RS_${reviewSheetYear}_支出先_支出ブロックのつながり.zip`,
-  };
-
-  const [organizationCsv, budgetCsv, paymentCsv, flowCsv] = await Promise.all([
-    downloadReviewCsv(source, reviewSheetYear, specifications.organizations),
-    downloadReviewCsv(source, reviewSheetYear, specifications.budgets),
-    downloadReviewCsv(source, reviewSheetYear, specifications.payments),
-    downloadReviewCsv(source, reviewSheetYear, specifications.flows),
-  ]);
-  const programById = new Map();
-  for (const row of csvObjectRows(organizationCsv)) {
-    if (!isMetiReviewRow(row)) continue;
-    const projectNumber = cleanCell(row["予算事業ID"]);
-    if (!projectNumber || programById.has(projectNumber)) continue;
-    const organization = [row["局・庁"], row["部"], row["課"], row["室"]]
-      .map(cleanCell)
-      .filter(Boolean)
-      .join(" / ");
-    programById.set(projectNumber, {
-      id: `rs-${reviewSheetYear}-${projectNumber}`,
-      reviewSheetYear,
-      projectNumber,
-      name: cleanCell(row["事業名"]),
-      organization: organization || "経済産業省",
-      budgetFiscalYear: reviewSheetYear,
-      initialBudget: null,
-      availableBudget: null,
-      executionFiscalYear: null,
-      execution: null,
-      executionRate: null,
-      sourceUrl: source.indexUrl,
-    });
-  }
-
-  for (const row of csvObjectRows(budgetCsv)) {
-    if (!isMetiReviewRow(row)) continue;
-    const project = programById.get(cleanCell(row["予算事業ID"]));
-    if (!project) continue;
-    const budgetYear = Number(cleanCell(row["予算年度"]));
-    const initialBudget = parseNullableInteger(row["当初予算（合計）"]);
-    const availableBudget = parseNullableInteger(row["計（歳出予算現額合計）"]);
-    const execution = parseNullableInteger(row["執行額（合計）"]);
-    const executionRate = parseNullableNumber(row["執行率"]);
-    if (initialBudget === null && availableBudget === null && execution === null) continue;
-
-    if (budgetYear === reviewSheetYear) {
-      project.initialBudget = initialBudget;
-      project.availableBudget = availableBudget;
-    }
-    if (
-      budgetYear < reviewSheetYear &&
-      execution !== null &&
-      (project.executionFiscalYear === null || budgetYear > project.executionFiscalYear)
-    ) {
-      project.executionFiscalYear = budgetYear;
-      project.execution = execution;
-      project.executionRate = executionRate;
-    }
-  }
-
-  const graphByProject = buildReviewGraphs(csvObjectRows(flowCsv));
-  const paymentById = new Map();
-  for (const row of csvObjectRows(paymentCsv)) {
-    if (!isMetiReviewRow(row)) continue;
-    const projectNumber = cleanCell(row["予算事業ID"]);
-    const project = programById.get(projectNumber);
-    const organization = cleanCell(row["支出先名"]);
-    const amount = parseNullableInteger(row["支出先の合計支出額"]);
-    const block = cleanCell(row["支出先ブロック番号"]);
-    if (!project || !organization || !block || amount === null || amount <= 0) continue;
-
-    const corporateNumberCandidate = cleanCell(row["法人番号"]).replace(/\D/g, "");
-    const corporateNumber = /^\d{13}$/.test(corporateNumberCandidate)
-      ? corporateNumberCandidate
-      : "";
-    const graph = graphByProject.get(projectNumber);
-    const route = graph ? routeForReviewBlock(graph, block) : ["経済産業省", organization];
-    route[route.length - 1] = organization;
-    const flowDepth = graph?.depth.get(block) ?? null;
-    const isIntermediary = isKnownImplementingBody(organization, corporateNumber)
-      || Boolean(graph?.outgoing.has(block));
-    const flowLevel = isIntermediary
-      ? "intermediary"
-      : !graph || flowDepth === null
-        ? "unclassified"
-        : "recipient";
-    const id = `rs-payment-${stableId([
-      reviewSheetYear,
-      projectNumber,
-      block,
-      corporateNumber || organization,
-      amount,
-    ])}`;
-    paymentById.set(id, {
-      id,
-      fiscalYear: reviewSheetYear - 1,
-      reviewSheetYear,
-      reviewProjectId: project.id,
-      organization,
-      corporateNumber,
-      organizationType: cleanCell(row["法人種別"]),
-      sourceAgency: route.at(-2) || "経済産業省",
-      program: project.name,
-      amount,
-      flowLevel,
-      flowDepth,
-      block,
-      route,
-      sourceName: `行政事業レビュー ${reviewSheetYear}年度シート（支出先）`,
-      sourceUrl: source.indexUrl,
-      quality: "primary",
-    });
-  }
-
-  return {
-    reviewSheetYear,
-    programs: [...programById.values()],
-    payments: [...paymentById.values()],
-  };
-}
-
-async function writeReviewCache(reviewSheetYears, programs, payments) {
-  await mkdir(reviewCachePath, { recursive: true });
-  const paymentGroups = new Map();
-  for (const payment of payments) {
-    const bucket = payment.id.at(-1) || "0";
-    if (!paymentGroups.has(bucket)) paymentGroups.set(bucket, []);
-    paymentGroups.get(bucket).push(payment);
-  }
-  const paymentFiles = [...paymentGroups.keys()]
-    .sort()
-    .map((bucket) => `payments-${bucket}.json`);
-  await Promise.all([
-    writeFile(new URL("programs.json", reviewCachePath), `${JSON.stringify(programs)}\n`),
-    ...paymentFiles.map((filename) => {
-      const bucket = filename.slice("payments-".length, -".json".length);
-      return writeFile(new URL(filename, reviewCachePath), `${JSON.stringify(paymentGroups.get(bucket))}\n`);
-    }),
-  ]);
-  await writeFile(new URL("manifest.json", reviewCachePath), `${JSON.stringify({
-    schemaVersion: 2,
-    reviewSheetYears,
-    programsFile: "programs.json",
-    paymentFiles,
-  }, null, 2)}\n`);
-}
-
-async function loadReviewCache() {
-  const manifest = await readJson(new URL("manifest.json", reviewCachePath));
-  const [programs, ...paymentGroups] = await Promise.all([
-    readJson(new URL(manifest.programsFile, reviewCachePath)),
-    ...manifest.paymentFiles.map((filename) => readJson(new URL(filename, reviewCachePath))),
-  ]);
-  const payments = paymentGroups.flat();
-  if (!Array.isArray(programs) || !payments.length) throw new Error("レビューシートキャッシュが空です");
-  const reviewSheetYears = Array.isArray(manifest.reviewSheetYears)
-    ? manifest.reviewSheetYears
-    : [manifest.reviewSheetYear].filter(Number.isInteger);
-  return { reviewSheetYears, programs, payments };
-}
-
-async function discoverReviewSheetYears(source) {
-  try {
-    const response = await fetchWithTimeout(source.fiscalYearsUrl, { accept: "application/json" });
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("json")) {
-      const fiscalYears = [...new Set(collectFiscalYears(await response.json()))]
-        .filter((year) => year >= 2024)
-        .sort((a, b) => a - b);
-      if (fiscalYears.length) return fiscalYears;
-    }
-  } catch {
-    // The public frontend API is convenient but not guaranteed; static official files are authoritative.
-  }
-
-  const currentYear = Number(new Intl.DateTimeFormat("en", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-  }).format(new Date()));
-  for (let candidate = currentYear; candidate >= 2024; candidate -= 1) {
-    const filename = `1-1_RS_${candidate}_基本情報_組織情報.zip`;
-    const url = new URL(`${candidate}/rs/${filename}`, source.filesBaseUrl).href;
-    const response = await fetch(url, {
-      method: "HEAD",
-      headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)" },
-      signal: AbortSignal.timeout(30_000),
-    });
-    const contentType = response.headers.get("content-type") || "";
-    if (response.ok && !contentType.includes("text/html")) {
-      return Array.from({ length: candidate - 2024 + 1 }, (_, index) => 2024 + index);
-    }
-  }
-  if (Number.isInteger(source.fallbackReviewSheetYear)) {
-    return Array.from(
-      { length: source.fallbackReviewSheetYear - 2024 + 1 },
-      (_, index) => 2024 + index,
-    );
-  }
-  throw new Error("公開中のレビューシート年度を判定できません");
-}
-
-function collectFiscalYears(value) {
-  if (Array.isArray(value)) {
-    return value.flatMap(collectFiscalYears);
-  }
-  if (value && typeof value === "object") {
-    return Object.values(value).flatMap(collectFiscalYears);
-  }
-  const year = Number(value);
-  return Number.isInteger(year) ? [year] : [];
-}
-
-async function downloadReviewCsv(source, reviewSheetYear, filename) {
-  const url = new URL(`${reviewSheetYear}/rs/${filename}`, source.filesBaseUrl).href;
-  const response = await fetch(url, {
-    headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)" },
-    signal: AbortSignal.timeout(3 * 60_000),
-  });
-  if (!response.ok) throw new Error(`行政事業レビューCSV: ${response.status} ${filename}`);
-  const archive = unzipSync(new Uint8Array(await response.arrayBuffer()));
-  const csvName = Object.keys(archive).find((name) => name.endsWith(".csv"));
-  if (!csvName) throw new Error(`行政事業レビューCSV: ZIP内にCSVがありません（${filename}）`);
-  return new TextDecoder("utf-8").decode(archive[csvName]).replace(/^\uFEFF/, "");
-}
-
-function* csvObjectRows(csvText) {
-  const iterator = parseCsvRows(csvText);
-  const first = iterator.next();
-  if (first.done) return;
-  const headers = first.value.map(cleanCell);
-  for (const row of iterator) {
-    yield Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""]));
-  }
-}
-
-function isMetiReviewRow(row) {
-  return cleanCell(row["所管府省庁"] || row["府省庁"]) === "経済産業省";
-}
-
-function buildReviewGraphs(rows) {
-  const graphByProject = new Map();
-  for (const row of rows) {
-    if (!isMetiReviewRow(row)) continue;
-    const projectNumber = cleanCell(row["予算事業ID"]);
-    const target = cleanCell(row["支出先の支出先ブロック"]);
-    if (!projectNumber || !target) continue;
-    const graph = graphByProject.get(projectNumber) || {
-      edges: [],
-      depth: new Map(),
-      parent: new Map(),
-      names: new Map(),
-      outgoing: new Set(),
-    };
-    const from = cleanCell(row["支出元の支出先ブロック"]);
-    const fromName = cleanCell(row["支出元の支出先ブロック名"]);
-    const targetName = cleanCell(row["支出先の支出先ブロック名"]);
-    const government = cleanCell(row["担当組織からの支出"]).toUpperCase() === "TRUE";
-    graph.edges.push({ from, target, government });
-    if (from) {
-      graph.outgoing.add(from);
-      if (fromName) graph.names.set(from, fromName);
-    }
-    if (targetName) graph.names.set(target, targetName);
-    graphByProject.set(projectNumber, graph);
-  }
-
-  for (const graph of graphByProject.values()) {
-    for (const edge of graph.edges) {
-      if (edge.government) {
-        graph.depth.set(edge.target, 1);
-        graph.parent.set(edge.target, null);
-      }
-    }
-    for (let pass = 0; pass < graph.edges.length; pass += 1) {
-      let changed = false;
-      for (const edge of graph.edges) {
-        if (edge.government || !edge.from || !graph.depth.has(edge.from)) continue;
-        const depth = graph.depth.get(edge.from) + 1;
-        if (!graph.depth.has(edge.target) || depth < graph.depth.get(edge.target)) {
-          graph.depth.set(edge.target, depth);
-          graph.parent.set(edge.target, edge.from);
-          changed = true;
-        }
-      }
-      if (!changed) break;
-    }
-  }
-  return graphByProject;
-}
-
-function routeForReviewBlock(graph, block) {
-  const route = [];
-  const visited = new Set();
-  let current = block;
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    route.unshift(graph.names.get(current) || current);
-    current = graph.parent.get(current) || null;
-  }
-  route.unshift("経済産業省");
-  return route;
-}
-
 async function refreshGbiz() {
   const source = configured.get("gbiz");
-  if (!source) return;
+  if (!source) return null;
 
   try {
     const html = await fetchText(source.indexUrl);
-    const rowStart = html.indexOf("経済産業省 (小計)");
-    if (rowStart < 0) throw new Error("経産省小計行が見つかりません");
-
-    const rowText = stripHtml(html.slice(rowStart, rowStart + 2_000));
-    const numbers = [...rowText.matchAll(/\b[\d,]+\b/g)]
-      .slice(0, 4)
-      .map((match) => Number(match[0].replaceAll(",", "")));
-
-    if (numbers.length < 4 || numbers.some((value) => !Number.isFinite(value))) {
-      throw new Error("経産省小計の件数を解析できません");
-    }
-
-    const [, subsidies, procurements] = numbers;
+    const meti = parseDashboardRow(html, "経済産業省 (小計)");
+    const patent = parseDashboardRow(html, "特許庁");
+    const officialSubsidyCount = meti.subsidies + patent.subsidies;
+    const officialProcurementCount = meti.procurements + patent.procurements;
+    const officialRecordCount = officialSubsidyCount + officialProcurementCount;
+    const dashboardCheckedAt = new Date().toISOString();
+    const stats = {
+      dashboardCheckedAt,
+      officialRecordCount,
+      officialSubsidyCount,
+      officialProcurementCount,
+      officialMetiSubtotalCount: meti.subsidies + meti.procurements,
+      officialPatentCount: patent.subsidies + patent.procurements,
+    };
+    const recordCountGap = officialRecordCount - next.records.length;
     updateSource("gbiz", {
-      recordCount: subsidies + procurements,
+      ...stats,
+      recordCountGap,
       lastChecked: today,
-      status: "healthy",
+      status: "watch",
     });
     results.push({
       ok: true,
       name: source.name,
-      message: `補助金 ${subsidies.toLocaleString("ja-JP")}件、調達 ${procurements.toLocaleString("ja-JP")}件`,
+      message: `公式件数（経産省小計＋特許庁） 補助金 ${officialSubsidyCount.toLocaleString("ja-JP")}件、調達 ${officialProcurementCount.toLocaleString("ja-JP")}件`,
     });
+    return stats;
   } catch (error) {
     markStale("gbiz", source, error);
+    return null;
   }
 }
 
-async function refreshGbizBulk() {
+async function refreshGbizBulk(dashboardStats) {
   const source = configured.get("gbiz");
-  if (!source?.downloadUrl) return;
+  if (!source?.downloadUrl) return false;
 
   const tokenName = source.apiTokenEnv || "GBIZINFO_API_TOKEN";
   const token = process.env[tokenName]?.trim();
   if (!token) {
+    updateSource("gbiz", { status: "watch" });
     results.push({
-      ok: true,
+      ok: false,
       name: "GビズINFO 全件CSV",
-      message: `${tokenName}未設定のため全件取得をスキップ`,
+      message: `${tokenName}未設定のため前回の明細と最終取込日時を保持`,
     });
-    return;
+    return false;
+  }
+  if (!dashboardStats) {
+    updateSource("gbiz", { status: "watch" });
+    results.push({
+      ok: false,
+      name: "GビズINFO 全件CSV",
+      message: "公式画面の件数を確認できないため、全件CSVによる明細置換を中止",
+    });
+    return false;
   }
 
   try {
@@ -531,27 +197,45 @@ async function refreshGbizBulk() {
     );
     logGbizScan("補助金", subsidyResult.stats);
     logGbizScan("調達", procurementResult.stats);
-    const loadedRecords = deduplicate([...subsidyResult.records, ...procurementResult.records]);
-    const retainedRecords = next.records.filter((record) => {
-      const isGbizImport = record.ingestSource === "gbiz-api" || record.ingestSource === "gbiz-bulk-csv";
-      const isLegacyPrototype = !record.ingestSource && /GビズINFO|ものづくり補助金/.test(record.sourceName);
-      return !isGbizImport && !isLegacyPrototype;
-    });
-    const occupiedKeys = new Set(retainedRecords.map(fundingIdentity));
-    const newRecords = loadedRecords.filter((record) => !occupiedKeys.has(fundingIdentity(record)));
+    const newRecords = [...subsidyResult.records, ...procurementResult.records];
+    if (!newRecords.length) throw new Error("GビズINFO 全件CSV: 対象明細が0件です");
+    assertUniqueRecordIds(newRecords);
 
-    next.records = [...retainedRecords, ...newRecords];
+    const importedRecordCount = newRecords.length;
+    const importedSubsidyCount = newRecords.filter((record) => record.stage === "subsidy_published").length;
+    const importedProcurementCount = newRecords.filter((record) => record.stage === "contracted").length;
+    const officialRecordCount = dashboardStats.officialRecordCount;
+    const recordCountGap = officialRecordCount - importedRecordCount;
+    if (
+      importedSubsidyCount !== dashboardStats.officialSubsidyCount
+      || importedProcurementCount !== dashboardStats.officialProcurementCount
+      || recordCountGap !== 0
+    ) {
+      throw new Error(
+        "GビズINFO 全件CSV: 公式画面との件数照合に失敗 "
+        + `(補助金 ${importedSubsidyCount}/${dashboardStats.officialSubsidyCount}、`
+        + `調達 ${importedProcurementCount}/${dashboardStats.officialProcurementCount})`,
+      );
+    }
+    importSucceededAt = new Date().toISOString();
+    next.records = newRecords;
     updateSource("gbiz", {
-      recordCount: newRecords.length,
-      method: "全件CSV / dashboard",
+      recordCount: importedRecordCount,
+      importedRecordCount,
+      importedSubsidyCount,
+      importedProcurementCount,
+      recordCountGap,
+      method: "GビズINFO全件CSVを毎日再取得",
       lastChecked: today,
+      lastSuccessfulImportAt: importSucceededAt,
       status: "healthy",
     });
     results.push({
       ok: true,
       name: "GビズINFO 全件CSV",
-      message: `経産省系の全受取先への補助金・調達 ${newRecords.length.toLocaleString("ja-JP")}件`,
+      message: `対象公表組織の補助金・調達 ${importedRecordCount.toLocaleString("ja-JP")}件（公式画面との差 ${formatSignedCount(recordCountGap)}）`,
     });
+    return true;
   } catch (error) {
     updateSource("gbiz", { status: "watch" });
     results.push({
@@ -559,7 +243,13 @@ async function refreshGbizBulk() {
       name: "GビズINFO 全件CSV",
       message: `${error instanceof Error ? error.message : String(error)}（前回データを保持）`,
     });
+    return false;
   }
+}
+
+function formatSignedCount(value) {
+  if (value === null) return "未照合";
+  return `${value.toLocaleString("ja-JP")}件`;
 }
 
 async function downloadGbizCsv(downloadPageUrl, downfile, token) {
@@ -605,323 +295,73 @@ async function downloadGbizCsv(downloadPageUrl, downfile, token) {
   return text.replace(/^\uFEFF/, "");
 }
 
-function toGbizBulkRecords(csvText, kind) {
-  const iterator = parseCsvRows(csvText);
-  const first = iterator.next();
-  if (first.done) throw new Error(`GビズINFO ${kind}: CSVが空です`);
-  const headers = first.value.map(cleanCell);
-  const column = Object.fromEntries(headers.map((header, index) => [header, index]));
-  const fields = kind === "procurement"
-    ? { date: "受注日", program: "件名", amount: "落札価格", agency: "組織名" }
-    : { date: "証明日", program: "名称", amount: "金額", agency: "発行元" };
-  for (const header of ["法人番号", "商号または名称", ...Object.values(fields)]) {
-    if (!(header in column)) throw new Error(`GビズINFO ${kind}: ${header}列がありません`);
-  }
-
-  const records = [];
-  const unmatchedAgencies = new Map();
-  let totalRows = 0;
-  let recipientRows = 0;
-  let metiRecipientRows = 0;
-  for (const row of iterator) {
-    totalRows += 1;
-    const corporateNumber = cleanCell(row[column["法人番号"]]).replace(/\D/g, "");
-    const organization = cleanCell(row[column["商号または名称"]]);
-    const date = parseJapaneseDate(cleanCell(row[column[fields.date]]));
-    const program = cleanCell(row[column[fields.program]]);
-    const amount = parseAmount(row[column[fields.amount]]);
-    const rawAgency = cleanCell(row[column[fields.agency]]);
-    const agency = normalizeGbizAgency(rawAgency);
-    const sourceKey = "キー情報" in column ? cleanCell(row[column["キー情報"]]) : "";
-    const isRecipient = /^\d{13}$/.test(corporateNumber) && Boolean(organization);
-    if (isRecipient) recipientRows += 1;
-    if (isRecipient && !agency) {
-      unmatchedAgencies.set(rawAgency || "（発行元なし）", (unmatchedAgencies.get(rawAgency || "（発行元なし）") || 0) + 1);
-    }
-    if (!isRecipient || !date || !program || !agency) {
-      continue;
-    }
-    metiRecipientRows += 1;
-
-    const stage = kind === "procurement" ? "contracted" : "subsidy_published";
-    records.push({
-      id: `gbiz-${stableId([kind, sourceKey || [date, corporateNumber, amount ?? "unknown", program, agency].join("|")])}`,
-      fiscalYear: fiscalYear(date),
-      date,
-      organization,
-      corporateNumber,
-      sourceAgency: agency,
-      program,
-      amount,
-      stage,
-      route: agency === "経済産業省"
-        ? ["経済産業省", organization]
-        : ["経済産業省", agency, organization],
-      sourceName: `GビズINFO 全件CSV（${kind === "procurement" ? "調達" : "補助金"}）`,
-      sourceUrl: `https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${corporateNumber}`,
-      quality: "aggregated",
-      ingestSource: "gbiz-bulk-csv",
-    });
-  }
-  return {
-    records,
-    stats: {
-      totalRows,
-      recipientRows,
-      metiRecipientRows,
-      importedRows: records.length,
-      unmatchedAgencies: [...unmatchedAgencies.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20),
-    },
-  };
-}
-
 function logGbizScan(kind, stats) {
   console.log(`SCAN GビズINFO ${kind}: ${JSON.stringify(stats)}`);
 }
 
-function normalizeGbizAgency(value) {
-  const agencies = [
-    ["新エネルギー・産業技術総合開発機構", "NEDO"],
-    ["産業技術総合研究所", "AIST"],
-    ["経済産業研究所", "RIETI"],
-    ["日本原子力研究開発機構", "JAEA"],
-    ["情報処理推進機構", "IPA"],
-    ["製品評価技術基盤機構", "NITE"],
-    ["工業所有権情報・研修館", "INPIT"],
-    ["中小企業基盤整備機構", "中小機構"],
-    ["石油天然ガス・金属鉱物資源機構", "JOGMEC"],
-    ["エネルギー・金属鉱物資源機構", "JOGMEC"],
-    ["日本貿易振興機構", "JETRO"],
-    ["原子力損害賠償・廃炉等支援機構", "NDF"],
-    ["電力広域的運営推進機関", "OCCTO"],
-    ["使用済燃料再処理機構", "NuRO"],
-    ["原子力発電環境整備機構", "NUMO"],
-    ["日本貿易保険", "NEXI"],
-    ["日本アルコール産業", "日本アルコール産業"],
-    ["商工組合中央金庫", "商工中金"],
-    ["産業革新投資機構", "JIC"],
-    ["海外需要開拓支援機構", "クールジャパン機構"],
-    ["ＧＸ推進機構", "GX推進機構"],
-    ["GX推進機構", "GX推進機構"],
-    ["高圧ガス保安協会", "KHK"],
-    ["日本電気計器検定所", "JEMIC"],
-    ["日本商品先物取引協会", "日本商品先物取引協会"],
-    ["日本商工会議所", "日本商工会議所"],
-    ["全国商工会連合会", "全国商工会連合会"],
-    ["全国中小企業団体中央会", "全国中小企業団体中央会"],
-    ["全国商店街振興組合連合会", "全国商店街振興組合連合会"],
-    ["全国石油商業組合連合会", "全国石油商業組合連合会"],
-    ["日本弁理士会", "日本弁理士会"],
-    ["東京中小企業投資育成", "東京中小企業投資育成"],
-    ["名古屋中小企業投資育成", "名古屋中小企業投資育成"],
-    ["大阪中小企業投資育成", "大阪中小企業投資育成"],
-    ["北海道経済産業局", "北海道経済産業局"],
-    ["東北経済産業局", "東北経済産業局"],
-    ["関東経済産業局", "関東経済産業局"],
-    ["中部経済産業局", "中部経済産業局"],
-    ["近畿経済産業局", "近畿経済産業局"],
-    ["中国経済産業局", "中国経済産業局"],
-    ["四国経済産業局", "四国経済産業局"],
-    ["九州経済産業局", "九州経済産業局"],
-    ["資源エネルギー庁", "資源エネルギー庁"],
-    ["中小企業庁", "中小企業庁"],
-    ["特許庁", "特許庁"],
-    ["経済産業省", "経済産業省"],
-  ];
-  return agencies.find(([needle]) => value.includes(needle))?.[1] || null;
-}
-
-function* parseCsvRows(text) {
-  let row = [];
-  let field = "";
-  let quoted = false;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (quoted) {
-      if (character === '"' && text[index + 1] === '"') {
-        field += '"';
-        index += 1;
-      } else if (character === '"') {
-        quoted = false;
-      } else {
-        field += character;
-      }
-    } else if (character === '"') {
-      quoted = true;
-    } else if (character === ",") {
-      row.push(field);
-      field = "";
-    } else if (character === "\n") {
-      row.push(field);
-      yield row;
-      row = [];
-      field = "";
-    } else if (character !== "\r") {
-      field += character;
-    }
-  }
-  if (field || row.length) {
-    row.push(field);
-    yield row;
-  }
-}
-
-function cleanCell(value = "") {
-  return value.replace(/^\uFEFF/, "").replace(/[\u3000\s]+/g, " ").trim();
-}
-
-function stripHtml(value) {
-  return value
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;|&#160;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function parseJapaneseDate(value) {
-  const iso = value.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
-  const compact = value.match(/^(\d{4})(\d{2})(\d{2})$/);
-  if (compact) return `${compact[1]}-${compact[2]}-${compact[3]}`;
-  const match = value.match(/(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
-  if (!match) return null;
-  return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
-}
-
-function fiscalYear(date) {
-  const [year, month] = date.split("-").map(Number);
-  return month <= 3 ? year - 1 : year;
-}
-
-function stableId(parts) {
-  return createHash("sha256").update(parts.join("\u001f")).digest("hex").slice(0, 16);
-}
-
-function parseAmount(value) {
-  const amount = parseNullableInteger(value);
-  return amount !== null && amount > 0 ? amount : null;
-}
-
 function parseNullableInteger(value) {
-  if (value === null || value === undefined || cleanCell(String(value)) === "") return null;
-  const normalized = cleanCell(String(value))
-    .replaceAll(",", "")
-    .replace(/[円￥]/g, "");
-  const amount = Number(normalized);
-  return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
+  const amount = parseAmount(value);
+  return Number.isSafeInteger(amount) ? amount : null;
 }
 
-function parseNullableNumber(value) {
-  if (value === null || value === undefined || cleanCell(String(value)) === "") return null;
-  const amount = Number(cleanCell(String(value)).replaceAll(",", ""));
-  return Number.isFinite(amount) ? amount : null;
-}
-
-function classifyCommitmentFlow(record) {
-  if (["recipient", "intermediary", "unclassified"].includes(record.flowLevel)) {
-    return record.flowLevel;
+function assertUniqueRecordIds(records) {
+  const ids = new Set();
+  for (const record of records) {
+    if (ids.has(record.id)) {
+      throw new Error(`GビズINFO 全件CSV: キー情報が重複しています (${record.id})`);
+    }
+    ids.add(record.id);
   }
-  const centralMetiPayers = /経済産業省|経済産業局|資源エネルギー庁|中小企業庁|特許庁/;
-  if (centralMetiPayers.test(record.sourceAgency) && isKnownImplementingBody(record.organization, record.corporateNumber)) {
-    return "intermediary";
-  }
-  return "recipient";
 }
 
-function isKnownImplementingBody(organization, corporateNumber = "") {
-  const corporateNumbers = new Set([
-    "2020005008480", // NEDO
-  ]);
-  const names = /新エネルギー・産業技術総合開発機構|\bNEDO\b|情報処理推進機構|\bIPA\b|中小企業基盤整備機構|中小機構|石油天然ガス・金属鉱物資源機構|エネルギー・金属鉱物資源機構|\bJOGMEC\b|日本貿易振興機構|\bJETRO\b/;
-  return corporateNumbers.has(corporateNumber) || names.test(organization);
+function isGbizRecord(record) {
+  return record?.ingestSource === "gbiz-bulk-csv" || String(record?.id ?? "").startsWith("gbiz-");
 }
 
-function fundingIdentity(record) {
-  const program = record.program.replace(/[\s\p{P}\p{S}]+/gu, "").toLocaleLowerCase("ja-JP");
-  return [record.corporateNumber, record.date, record.amount ?? "unknown", program].join("\u001f");
-}
-
-function deduplicate(records) {
-  const unique = new Map();
-  for (const record of records) unique.set(record.id, record);
-  return [...unique.values()];
-}
-
-function buildCoverage(data) {
-  const reviewFiscalYears = distinctYears(data.reviewPayments.map((row) => row.fiscalYear));
-  const reviewSheetYears = distinctYears(data.reviewPayments.map((row) => row.reviewSheetYear));
-  const gbizFiscalYears = distinctYears(data.records
-    .filter((row) => row.ingestSource === "gbiz-bulk-csv" || /GビズINFO/.test(row.sourceName))
-    .map((row) => row.fiscalYear));
-  const nedoFiscalYears = distinctYears(data.records
-    .filter((row) => row.ingestSource === "nedo-monthly-csv" || /^NEDO .+契約CSV/.test(row.sourceName))
-    .map((row) => row.fiscalYear));
-  const commonFiscalYears = reviewFiscalYears.filter((year) => gbizFiscalYears.includes(year));
-
+function sanitizeLegacyGbizRecord(record) {
+  const {
+    route: _route,
+    flowLevel: _flowLevel,
+    flowDepth: _flowDepth,
+    ...safe
+  } = record;
+  const date = typeof safe.date === "string" && parseJapaneseDate(safe.date) === safe.date
+    ? safe.date
+    : null;
+  const amount = safe.amount === null || Number.isSafeInteger(safe.amount)
+    ? safe.amount
+    : null;
   return {
-    reviewPayments: {
-      fiscalYears: reviewFiscalYears,
-      reviewSheetYears,
-      completeness: "official-csv",
-      note: "行政事業レビュー公式CSVで支出先・支出経路を確認できる年度",
-    },
-    gbiz: {
-      fiscalYears: gbizFiscalYears,
-      completeness: "source-records",
-      note: "GビズINFO全件CSVに収録された経産省系の補助金・調達",
-    },
-    nedo: {
-      fiscalYears: nedoFiscalYears,
-      completeness: "published-monthly-csv",
-      note: "NEDOが公開中の月次契約CSV",
-    },
-    commonFiscalYears,
-    migratedReviewSheetYears: [2021, 2022, 2023],
-    migratedDataNote: "RSシステムでは検索可能だが、移行年度は支出先詳細・支出経路が欠けるため全件集計に含めない",
+    ...safe,
+    fiscalYear: date ? fiscalYear(date) : null,
+    date,
+    dateRaw: typeof safe.dateRaw === "string" ? safe.dateRaw : (date ?? ""),
+    program: typeof safe.program === "string" ? safe.program : "",
+    amount,
+    amountRaw: typeof safe.amountRaw === "string"
+      ? safe.amountRaw
+      : amount === null ? "" : String(amount),
+    sourceAgency: typeof safe.sourceAgency === "string" ? safe.sourceAgency : "",
+    publisherCanonical: safe.publisherCanonical
+      || normalizeGbizAgency(typeof safe.sourceAgency === "string" ? safe.sourceAgency : "")
+      || "",
+    sourceKey: typeof safe.sourceKey === "string" ? safe.sourceKey : "",
+    ingestSource: "gbiz-bulk-csv",
   };
 }
 
-function buildAggregates(data) {
-  const years = distinctYears([
-    ...data.reviewPayments.map((row) => row.fiscalYear),
-    ...data.records.map((row) => row.fiscalYear),
-    ...data.reviewPrograms.flatMap((row) => row.executionFiscalYear === null ? [] : [row.executionFiscalYear]),
-  ]);
-  const byFiscalYear = {};
+function buildCoverage(data) {
+  const gbizRecords = data.records.filter(isGbizRecord);
+  const gbizFiscalYears = distinctYears(gbizRecords.map((row) => row.fiscalYear));
 
-  for (const fiscalYear of years) {
-    const payments = data.reviewPayments.filter((row) => row.fiscalYear === fiscalYear);
-    const commitments = data.records.filter((row) => row.fiscalYear === fiscalYear);
-    const recipientPayments = payments.filter((row) => row.flowLevel === "recipient");
-    const intermediaryPayments = payments.filter((row) => row.flowLevel === "intermediary");
-    const recipientCommitments = commitments.filter((row) =>
-      row.flowLevel === "recipient" && row.ingestSource !== "nedo-monthly-csv",
-    );
-    const nedoRecipients = recipientPayments.filter((row) =>
-      row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
-    );
-    const programs = data.reviewPrograms.filter((row) => row.executionFiscalYear === fiscalYear);
-    byFiscalYear[fiscalYear] = {
-      recipientPaymentAmount: sumNullableAmounts(recipientPayments),
-      intermediaryPaymentAmount: sumNullableAmounts(intermediaryPayments),
-      recipientCommitmentAmount: sumNullableAmounts(recipientCommitments),
-      executionAmount: programs.reduce((sum, row) => sum + (row.execution ?? 0), 0),
-      nedoRecipientAmount: sumNullableAmounts(nedoRecipients),
-      nedoRecipientCount: nedoRecipients.length,
-    };
-  }
-
-  return { byFiscalYear };
-}
-
-function sumNullableAmounts(rows) {
-  return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+  return {
+    gbiz: {
+      fiscalYears: gbizFiscalYears,
+      unclassifiedDateCount: gbizRecords.filter((row) => row.fiscalYear === null).length,
+      completeness: "source-records",
+      note: "GビズINFO全件CSVから抽出した経産省小計・特許庁の補助金・調達。年度は認定日・受注日ベース",
+    },
+  };
 }
 
 function distinctYears(values) {
@@ -961,43 +401,44 @@ async function fetchWithTimeout(url, extraHeaders = {}) {
 }
 
 function validate(data) {
-  if (
-    !Array.isArray(data.records) ||
-    !Array.isArray(data.sources) ||
-    !Array.isArray(data.reviewPrograms) ||
-    !Array.isArray(data.reviewPayments)
-  ) {
+  if (!Array.isArray(data.records) || !Array.isArray(data.sources)) {
     throw new Error("funding-data.json の構造が不正です");
   }
   const ids = new Set();
   for (const record of data.records) {
     if (ids.has(record.id)) throw new Error(`重複ID: ${record.id}`);
     ids.add(record.id);
-    if (!/^\d{13}$/.test(record.corporateNumber)) {
+    if (!hasValidCorporateNumber(record.corporateNumber)) {
       throw new Error(`法人番号が不正です: ${record.id}`);
     }
-    if (record.amount !== null && (!Number.isSafeInteger(record.amount) || record.amount <= 0)) {
+    if (record.amount !== null && !Number.isSafeInteger(record.amount)) {
       throw new Error(`金額が不正です: ${record.id}`);
     }
-    if (!/^https:\/\//.test(record.sourceUrl)) {
-      throw new Error(`原典URLが不正です: ${record.id}`);
+    if (record.date === null) {
+      if (record.fiscalYear !== null) throw new Error(`日付なし行の年度が不正です: ${record.id}`);
+    } else {
+      if (parseJapaneseDate(record.date) !== record.date || fiscalYear(record.date) !== record.fiscalYear) {
+        throw new Error(`日付・算出年度が不正です: ${record.id}`);
+      }
     }
-    if (!["recipient", "intermediary", "unclassified"].includes(record.flowLevel)) {
-      throw new Error(`資金レイヤーが不正です: ${record.id}`);
+    if (!["contracted", "subsidy_published"].includes(record.stage)) {
+      throw new Error(`区分が不正です: ${record.id}`);
+    }
+    if ("route" in record || "flowLevel" in record || "flowDepth" in record) {
+      throw new Error(`根拠のない資金経路情報があります: ${record.id}`);
+    }
+    if (!/^https:\/\//.test(record.sourceUrl)) {
+      throw new Error(`掲載ページURLが不正です: ${record.id}`);
     }
   }
-  const reviewPaymentIds = new Set();
-  for (const payment of data.reviewPayments) {
-    if (reviewPaymentIds.has(payment.id)) throw new Error(`レビュー支出先の重複ID: ${payment.id}`);
-    reviewPaymentIds.add(payment.id);
-    if (payment.corporateNumber && !/^\d{13}$/.test(payment.corporateNumber)) {
-      throw new Error(`レビュー支出先の法人番号が不正です: ${payment.id}`);
-    }
-    if (!Number.isSafeInteger(payment.amount) || payment.amount <= 0) {
-      throw new Error(`レビュー支出先の金額が不正です: ${payment.id}`);
-    }
-    if (!["recipient", "intermediary", "unclassified"].includes(payment.flowLevel)) {
-      throw new Error(`レビュー支出先の資金レイヤーが不正です: ${payment.id}`);
+  const gbizSource = data.sources.find((source) => source.id === "gbiz");
+  if (!gbizSource || gbizSource.recordCount !== data.records.length) {
+    throw new Error("GビズINFOの収録件数が明細件数と一致しません");
+  }
+  if (Number.isSafeInteger(gbizSource.officialRecordCount)) {
+    const expectedGap = gbizSource.officialRecordCount - gbizSource.recordCount;
+    if (gbizSource.recordCountGap !== expectedGap) {
+      throw new Error("GビズINFOの公式件数との差が不正です");
     }
   }
 }

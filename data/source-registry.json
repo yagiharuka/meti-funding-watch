@@ -1,18 +1,6 @@
 {
   "sources": [
     {
-      "id": "review-sheets",
-      "name": "行政事業レビュー",
-      "kind": "official-review-sheet-csv",
-      "indexUrl": "https://rssystem.go.jp/download-csv",
-      "fiscalYearsUrl": "https://rssystem.go.jp/api/projects/fiscal-years/",
-      "filesBaseUrl": "https://rssystem.go.jp/files/",
-      "fallbackReviewSheetYear": 2025,
-      "method": "公式CSV（事業・予算執行・支出先・支出経路）",
-      "frequency": "日次確認",
-      "enabled": true
-    },
-    {
       "id": "gbiz",
       "name": "GビズINFO",
       "kind": "dashboard-summary",
@@ -21,13 +9,6 @@
       "downloadUrl": "https://info.gbiz.go.jp/hojin/DownloadTop",
       "apiTokenEnv": "GBIZINFO_API_TOKEN",
       "enabled": true
-    },
-    {
-      "id": "nedo",
-      "name": "NEDO 契約公表",
-      "kind": "monthly-csv-index",
-      "indexUrl": "https://www.nedo.go.jp/nyusatsu/itaku_keiyaku.html",
-      "enabled": false
     }
   ]
 }

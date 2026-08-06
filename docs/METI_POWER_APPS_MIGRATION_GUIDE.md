@@ -1,5 +1,7 @@
 # 「事業者等への交付金額（経産省）」庁内移植手順
 
+> **旧検討資料です。** 現在の公開サイトはGビズINFOの調達・補助金掲載情報だけを対象としており、行政事業レビューやPower Platform移植を現行仕様には含めていません。
+
 この文書は、GitHub Pagesで動いている説明用プロトタイプを、METI環境の **SharePoint Online＋Power Apps＋Dataverse＋Power Automate** で再構成するための手順書です。
 
 対象読者はPower Appsを初めて使う担当者です。最初から完全自動化を目指さず、次の順番で作ります。
@@ -467,4 +469,3 @@ SharePointページへ埋め込んだだけでは、アプリやDataverseの権�
 - [Dataverseを使ったCanvasアプリの作成](https://learn.microsoft.com/ja-jp/power-apps/maker/canvas-apps/data-platform-create-app-scratch)
 - [Dataverseの代替キー](https://learn.microsoft.com/ja-jp/power-apps/maker/data-platform/define-alternate-keys-portal)
 - [SharePointのPower Apps Webパーツ](https://learn.microsoft.com/ja-jp/power-apps/user/powerapps-web-part)
-

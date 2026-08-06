@@ -7,53 +7,19 @@
       "recordCount": 29826,
       "method": "全件CSV / dashboard",
       "frequency": "日次確認",
-      "lastChecked": "2026-08-06",
-      "status": "healthy"
-    },
-    {
-      "id": "meti",
-      "name": "経産省 契約公表",
-      "recordCount": 9576,
-      "method": "XLSX",
-      "frequency": "日次確認",
-      "lastChecked": "2026-08-05",
-      "status": "healthy"
-    },
-    {
-      "id": "subsidy",
-      "name": "補助金 採択・交付情報",
-      "recordCount": 42783,
-      "method": "HTML / PDF",
-      "frequency": "日次確認",
-      "lastChecked": "2026-08-05",
-      "status": "watch"
-    },
-    {
-      "id": "review-sheets",
-      "name": "行政事業レビュー",
-      "recordCount": 13944,
-      "method": "公式CSV（前回取得キャッシュ）",
-      "frequency": "日次確認",
-      "lastChecked": "2026-08-06",
-      "status": "watch"
+      "lastChecked": "2026-08-07",
+      "status": "watch",
+      "dashboardCheckedAt": "2026-08-06T15:04:16.044Z",
+      "officialRecordCount": 69505,
+      "officialSubsidyCount": 51380,
+      "officialProcurementCount": 18125,
+      "officialMetiSubtotalCount": 68281,
+      "officialPatentCount": 1224,
+      "recordCountGap": 39679
     }
   ],
   "records": [],
-  "reviewPrograms": [],
-  "reviewPayments": [],
   "coverage": {
-    "reviewPayments": {
-      "fiscalYears": [
-        2023,
-        2024
-      ],
-      "reviewSheetYears": [
-        2024,
-        2025
-      ],
-      "completeness": "official-csv",
-      "note": "行政事業レビュー公式CSVで支出先・支出経路を確認できる年度"
-    },
     "gbiz": {
       "fiscalYears": [
         2015,
@@ -69,123 +35,9 @@
         2025,
         2026
       ],
+      "unclassifiedDateCount": 0,
       "completeness": "source-records",
-      "note": "GビズINFO全件CSVに収録された経産省系の補助金・調達"
-    },
-    "nedo": {
-      "fiscalYears": [],
-      "completeness": "published-monthly-csv",
-      "note": "NEDOが公開中の月次契約CSV"
-    },
-    "commonFiscalYears": [
-      2023,
-      2024
-    ],
-    "migratedReviewSheetYears": [
-      2021,
-      2022,
-      2023
-    ],
-    "migratedDataNote": "RSシステムでは検索可能だが、移行年度は支出先詳細・支出経路が欠けるため全件集計に含めない"
-  },
-  "aggregates": {
-    "byFiscalYear": {
-      "2015": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 160112945,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2016": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 4395357408,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2017": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 64112137576,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2018": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 356716174739,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2019": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 1841358999767,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2020": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 3952260522386,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2021": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 1850437623248,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2022": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 5104842912378,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2023": {
-        "recipientPaymentAmount": 7055462005902,
-        "intermediaryPaymentAmount": 6848664342926,
-        "recipientCommitmentAmount": 1546359175206,
-        "executionAmount": 10197938958586,
-        "nedoRecipientAmount": 36466655689,
-        "nedoRecipientCount": 831
-      },
-      "2024": {
-        "recipientPaymentAmount": 4652574271655,
-        "intermediaryPaymentAmount": 4487734323976,
-        "recipientCommitmentAmount": 259400023518,
-        "executionAmount": 7376828902097,
-        "nedoRecipientAmount": 30459227576,
-        "nedoRecipientCount": 699
-      },
-      "2025": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 48443959994,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      },
-      "2026": {
-        "recipientPaymentAmount": 0,
-        "intermediaryPaymentAmount": 0,
-        "recipientCommitmentAmount": 13838679555,
-        "executionAmount": 0,
-        "nedoRecipientAmount": 0,
-        "nedoRecipientCount": 0
-      }
+      "note": "GビズINFO全件CSVから抽出した経産省小計・特許庁の補助金・調達。年度は認定日・受注日ベース"
     }
   }
 }
