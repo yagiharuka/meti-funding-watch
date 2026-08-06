@@ -5,6 +5,7 @@ import fundingSummary from "@/data/funding-summary.json";
 
 type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
 type FlowLevel = "recipient" | "intermediary" | "unclassified";
+type FlowFilter = "all" | FlowLevel;
 type View = "payments" | "commitments" | "programs";
 
 type FundingRecord = {
@@ -134,6 +135,11 @@ const flowLabels: Record<FlowLevel, string> = {
   unclassified: "経路未分類",
 };
 
+const flowFilterLabels: Record<FlowFilter, string> = {
+  all: "すべての経路上の掲載先",
+  ...flowLabels,
+};
+
 const targetSourceMeta: Record<string, Pick<FundingSource, "method" | "frequency">> = {
   gbiz: {
     method: "期間指定API（差分取得）",
@@ -199,7 +205,7 @@ export default function Home() {
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
   const [year, setYear] = useState(initialComparisonYear ? String(initialComparisonYear) : "all");
-  const [flowLevel, setFlowLevel] = useState<FlowLevel>("recipient");
+  const [flowLevel, setFlowLevel] = useState<FlowFilter>("all");
   const [page, setPage] = useState(0);
   const chunkCache = useRef(new Map<string, unknown[]>());
 
@@ -341,7 +347,7 @@ export default function Home() {
   const filteredPayments = useMemo(() => payments
     .filter((row) =>
       includesQuery([row.organization, row.corporateNumber], normalizedQuery) &&
-      row.flowLevel === flowLevel &&
+      (flowLevel === "all" || row.flowLevel === flowLevel) &&
       (agency === "all" || row.sourceAgency === agency) &&
       (year === "all" || String(row.fiscalYear) === year))
     .sort((a, b) =>
@@ -353,7 +359,6 @@ export default function Home() {
   const filteredCommitments = useMemo(() => commitments
     .filter((row) =>
       includesQuery([row.organization, row.corporateNumber], normalizedQuery) &&
-      (row.flowLevel ?? "recipient") === flowLevel &&
       (agency === "all" || row.sourceAgency === agency) &&
       (stage === "all" || row.stage === stage) &&
       (year === "all" || String(row.fiscalYear) === year))
@@ -361,7 +366,7 @@ export default function Home() {
       b.fiscalYear - a.fiscalYear ||
       b.date.localeCompare(a.date) ||
       a.organization.localeCompare(b.organization, "ja")),
-  [agency, commitments, flowLevel, normalizedQuery, stage, year]);
+  [agency, commitments, normalizedQuery, stage, year]);
 
   const filteredPrograms = useMemo(() => programs
     .filter((row) =>
@@ -397,7 +402,7 @@ export default function Home() {
     setAgency("all");
     setStage("all");
     setYear(defaultYear);
-    setFlowLevel("recipient");
+    setFlowLevel(nextView === "payments" ? "all" : "recipient");
     setPage(0);
   }
 
@@ -410,11 +415,12 @@ export default function Home() {
     setAgency("all");
     setStage("all");
     setYear(defaultYear);
-    setFlowLevel("recipient");
+    setFlowLevel(view === "payments" ? "all" : "recipient");
     setPage(0);
   }
 
-  const hasFilters = query || agency !== "all" || stage !== "all" || year !== defaultYear || flowLevel !== "recipient";
+  const defaultFlowLevel: FlowFilter = view === "payments" ? "all" : "recipient";
+  const hasFilters = query || agency !== "all" || stage !== "all" || year !== defaultYear || flowLevel !== defaultFlowLevel;
 
   return (
     <main>
@@ -437,7 +443,7 @@ export default function Home() {
           <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
           <h1>事業者等への<br /><em>交付金額(経産省)</em></h1>
           <p className="hero-lead">
-            GビズINFOの契約・補助金と、行政事業レビューシートの支出先別実支出・事業別予算／執行を
+            GビズINFOの契約・補助金と、行政事業レビューシートの掲載支出額・事業別予算／執行を
             1画面で検索します。意味の異なる金額は分けて表示します。
           </p>
           <div className="hero-note">
@@ -459,7 +465,7 @@ export default function Home() {
             <p className="eyebrow">RECIPIENTS & FUNDING</p>
             <h2>受取先と金額を検索</h2>
           </div>
-          <p>GビズINFOの契約・補助金、行政事業レビューシートの支出先別実支出、事業別の予算・執行額を切り替えて確認できます。異なる系列の金額は合算しません。</p>
+          <p>GビズINFOの契約・補助金、行政事業レビューシートの掲載支出額、事業別の予算・執行額を切り替えて確認できます。異なる系列の金額は合算しません。</p>
         </div>
 
         <div className="view-tabs" role="tablist" aria-label="表示するデータ">
@@ -467,7 +473,7 @@ export default function Home() {
             受取先別の契約・補助金 <small>GビズINFO</small>
           </button>
           <button role="tab" aria-selected={view === "payments"} onClick={() => changeView("payments")}>
-            受取先別の実支出 <small>行政事業レビューシート</small>
+            レビューシート掲載支出額 <small>行政事業レビューシート・各支出先ブロック上位10者</small>
           </button>
           <button role="tab" aria-selected={view === "programs"} onClick={() => changeView("programs")}>
             事業別の予算・執行額 <small>行政事業レビューシート</small>
@@ -492,11 +498,11 @@ export default function Home() {
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
-          {view !== "programs" && (
+          {view === "payments" && (
             <label>
-              <span className="sr-only">資金レイヤー</span>
-              <select value={flowLevel} onChange={(event) => { setFlowLevel(event.target.value as FlowLevel); setPage(0); }}>
-                {Object.entries(flowLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              <span className="sr-only">レビューシート上の経路区分</span>
+              <select value={flowLevel} onChange={(event) => { setFlowLevel(event.target.value as FlowFilter); setPage(0); }}>
+                {Object.entries(flowFilterLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
               </select>
             </label>
           )}
@@ -525,16 +531,23 @@ export default function Home() {
             <span>
               <strong>{activeRows.length.toLocaleString("ja-JP")}</strong>件
               {activeRows.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
-              {filteredAmount !== null && <b>・選択系列 {compactYen(filteredAmount)}</b>}
+              {filteredAmount !== null && <b>・掲載額の単純合計 {compactYen(filteredAmount)}</b>}
             </span>
           )}
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
+        {view === "payments" && (
+          <p className="coverage-note">
+            各支出先ブロックの上位10者のみを掲載しており、すべての支出先を網羅していません。
+            <a href="https://rssystem.go.jp/files/user-guide.pdf" target="_blank" rel="noreferrer">公式ガイド ↗</a>
+          </p>
+        )}
+
         <div className="records-table" role="region" aria-label="資金レコード一覧" tabIndex={0}>
           {view === "payments" && (
             <table>
-              <thead><tr><th>受取先</th><th>レビューシート事業</th><th>支出元・経路</th><th>分類</th><th>支出先額</th><th>年度</th></tr></thead>
+              <thead><tr><th>掲載先</th><th>レビューシート事業</th><th>支出元・経路</th><th>分類</th><th>掲載支出額</th><th>年度</th></tr></thead>
               <tbody>{(visibleRows as ReviewPayment[]).map((row) => (
                 <tr key={row.id}>
                   <td><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
@@ -617,7 +630,7 @@ export default function Home() {
 
       <footer>
         <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>事業者等への交付金額(経産省)</span></div>
-        <p>庁内画面の説明用・公開情報ベースの非公式プロトタイプ</p>
+        <p>公開情報ベースの非公式プロトタイプ</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
     </main>
