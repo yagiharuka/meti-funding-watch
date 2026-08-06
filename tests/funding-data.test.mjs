@@ -72,7 +72,9 @@ test("identifies NEDO as an intermediary and preserves its downstream recipients
 test("presents the finished internal app view without migration instructions", () => {
   assert.match(pageSource, /受取先別の実支出/);
   assert.match(pageSource, /受取先別の契約・補助金/);
-  assert.match(pageSource, /事業別の予算・執行額/);
+  assert.match(pageSource, /受取先別の実支出 <small>行政事業レビューシート<\/small>/);
+  assert.match(pageSource, /view-tabs[\s\S]*受取先別の契約・補助金[\s\S]*受取先別の実支出/);
+  assert.doesNotMatch(pageSource, /事業別の予算・執行額|view === "programs"/);
   assert.match(pageSource, /row\.ingestSource !== "nedo-monthly-csv"/);
   assert.doesNotMatch(pageSource, /GビズINFO＋NEDO公表契約/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure|GitHub|METI内への移植イメージ|移植後の構成|移植構成を見る|移植手順書/);
