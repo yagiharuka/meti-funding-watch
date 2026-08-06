@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
+  assertGbizRecordContinuity,
+  assertGbizSnapshotContinuity,
   auditGbizImport,
   normalizeGbizAgency,
   parseDashboardRow,
@@ -204,18 +206,30 @@ async function refreshGbizBulk(dashboardStats) {
     const newRecords = [...subsidyResult.records, ...procurementResult.records];
     assertUniqueRecordIds(newRecords);
     const audit = auditGbizImport(subsidyResult, procurementResult, dashboardStats);
+    const continuity = assertGbizRecordContinuity(next.records, newRecords);
+    const snapshot = {
+      ...audit,
+      csvSubsidyFileBytes: Buffer.byteLength(subsidyCsv, "utf8"),
+      csvProcurementFileBytes: Buffer.byteLength(procurementCsv, "utf8"),
+      csvTotalSubsidyRows: subsidyResult.stats.totalRows,
+      csvTotalProcurementRows: procurementResult.stats.totalRows,
+      missingSourceKeyRows:
+        subsidyResult.stats.missingSourceKeyRows + procurementResult.stats.missingSourceKeyRows,
+    };
+    assertGbizSnapshotContinuity(gbizMetadata, snapshot, dashboardStats);
     importSucceededAt = new Date().toISOString();
     next.records = newRecords;
     updateSource("gbiz", {
       ...audit,
+      ...continuity,
       recordCount: audit.csvImportedRecordCount,
       csvRetrievedAt,
-      csvSubsidyFileBytes: Buffer.byteLength(subsidyCsv, "utf8"),
-      csvProcurementFileBytes: Buffer.byteLength(procurementCsv, "utf8"),
+      csvSubsidyFileBytes: snapshot.csvSubsidyFileBytes,
+      csvProcurementFileBytes: snapshot.csvProcurementFileBytes,
       csvSubsidySha256: sha256(subsidyCsv),
       csvProcurementSha256: sha256(procurementCsv),
-      csvTotalSubsidyRows: subsidyResult.stats.totalRows,
-      csvTotalProcurementRows: procurementResult.stats.totalRows,
+      csvTotalSubsidyRows: snapshot.csvTotalSubsidyRows,
+      csvTotalProcurementRows: snapshot.csvTotalProcurementRows,
       dashboardSiteGap: undefined,
       method: "GビズINFO全件CSVを毎日再取得",
       lastChecked: today,
@@ -271,7 +285,12 @@ async function downloadGbizCsv(downloadPageUrl, downfile, token) {
     apiToken: token,
     downtype: "csv",
   });
-  const response = await fetch(new URL(action.replaceAll("&amp;", "&"), downloadPageUrl), {
+  const downloadPage = new URL(downloadPageUrl);
+  const downloadAction = new URL(action.replaceAll("&amp;", "&"), downloadPage);
+  if (downloadAction.origin !== downloadPage.origin) {
+    throw new Error("GビズINFOの全件ダウンロード先が公式画面と異なるオリジンです");
+  }
+  const response = await fetch(downloadAction, {
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",

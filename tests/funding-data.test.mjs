@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fiscalYear, parseAmount, parseJapaneseDate } from "../scripts/gbiz-values.mjs";
-import { auditGbizImport, parseDashboardRow, toGbizBulkRecords } from "../scripts/gbiz-csv.mjs";
+import {
+  assertGbizRecordContinuity,
+  assertGbizSnapshotContinuity,
+  auditGbizImport,
+  parseDashboardRow,
+  toGbizBulkRecords,
+} from "../scripts/gbiz-csv.mjs";
 
 const data = JSON.parse(
   await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
@@ -171,6 +177,53 @@ test("separates CSV import completeness from the dashboard comparison", () => {
   );
 });
 
+test("rejects a partial CSV snapshot before it can replace the last successful data", () => {
+  const previous = {
+    csvTotalSubsidyRows: 545_877,
+    csvTotalProcurementRows: 308_125,
+    csvEligibleSubsidyCount: 51_375,
+    csvEligibleProcurementCount: 18_116,
+    csvSubsidyFileBytes: 175_574_914,
+    csvProcurementFileBytes: 102_217_942,
+    dashboardMinusCsvEligibleCount: 14,
+  };
+  const complete = {
+    csvTotalSubsidyRows: 545_877,
+    csvTotalProcurementRows: 308_125,
+    csvEligibleRecordCount: 69_491,
+    csvEligibleSubsidyCount: 51_375,
+    csvEligibleProcurementCount: 18_116,
+    csvSubsidyFileBytes: 175_574_914,
+    csvProcurementFileBytes: 102_217_942,
+    missingSourceKeyRows: 0,
+  };
+  const dashboard = { dashboardRecordCount: 69_505 };
+  assert.doesNotThrow(() => assertGbizSnapshotContinuity(previous, complete, dashboard));
+
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, {
+      ...complete,
+      csvTotalSubsidyRows: 1,
+      csvEligibleRecordCount: 18_117,
+      csvEligibleSubsidyCount: 1,
+      csvSubsidyFileBytes: 200,
+    }, dashboard),
+    /前回成功時から減少しました/,
+  );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, { ...complete, missingSourceKeyRows: 1 }, dashboard),
+    /キー情報がない対象行/,
+  );
+
+  const same = assertGbizRecordContinuity(data.records, data.records);
+  assert.equal(same.continuityBaselineRecordCount, data.records.length);
+  assert.equal(same.continuityRemovedRecordCount, 0);
+  assert.throws(
+    () => assertGbizRecordContinuity(data.records, data.records.slice(0, -1)),
+    /前回成功データのキーが1件欠落しています/,
+  );
+});
+
 test("reports CSV and dashboard counts without conflating their gaps", () => {
   const gbizSource = data.sources.find((source) => source.id === "gbiz");
   assert.ok(gbizSource, "Gbiz source metadata is required");
@@ -213,6 +266,19 @@ test("derives the year selector from declared coverage", () => {
 
   assert.match(pageSource, /coverageYears[\s\S]{0,500}(?:fiscalYears|\.map\()/);
   assert.doesNotMatch(pageSource, /distinctYears\(commitments\.map/);
+});
+
+test("starts with all periods and clears stale rows for each chunk batch", () => {
+  assert.match(pageSource, /const defaultYear = ["']all["'];/);
+  assert.doesNotMatch(pageSource, /const initialYear\b/);
+  const chunkEffect = pageSource.slice(
+    pageSource.indexOf("let active = true"),
+    pageSource.indexOf("const commitments = useMemo"),
+  );
+  assert.ok(chunkEffect.indexOf("records: []") < chunkEffect.indexOf("Promise.all("));
+  assert.match(chunkEffect, /let active = true/);
+  assert.match(chunkEffect, /if \(!active\) return/);
+  assert.match(chunkEffect, /active = false;[\s\S]{0,100}controller\.abort\(\)/);
 });
 
 test("validates every published corporate number including its check digit", () => {

@@ -155,8 +155,7 @@ function currentFiscalYearInJapan() {
 }
 
 export default function Home() {
-  const initialYear = bundledFundingData.coverage?.gbiz.fiscalYears.at(-1);
-  const defaultYear = initialYear ? String(initialYear) : "all";
+  const defaultYear = "all";
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
   const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
@@ -192,6 +191,10 @@ export default function Home() {
   useEffect(() => {
     if (!manifest) return;
     const controller = new AbortController();
+    let active = true;
+    setDataset((current) => ({ ...current, records: [] }));
+    setDataMode("loading");
+    setDetailLoading(true);
     const filenames = year === "all"
       ? Object.values(manifest.commitments)
       : [manifest.commitments[year]].filter((filename): filename is string => Boolean(filename));
@@ -209,6 +212,7 @@ export default function Home() {
       return rows;
     }))
       .then((groups) => {
+        if (!active) return;
         setDataset((current) => ({
           ...current,
           generatedAt: manifest.generatedAt,
@@ -218,11 +222,14 @@ export default function Home() {
         setDetailLoading(false);
       })
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) return;
         setDataMode("unavailable");
         setDetailLoading(false);
       });
-    return () => controller.abort();
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [manifest, year]);
 
   const commitments = useMemo(
@@ -294,6 +301,14 @@ export default function Home() {
     setAgency("all");
     setStage("all");
     setYear(defaultYear);
+    setPage(0);
+  }
+
+  function changeYear(nextYear: string) {
+    setDataset((current) => ({ ...current, records: [] }));
+    setDetailLoading(true);
+    setDataMode("loading");
+    setYear(nextYear);
     setPage(0);
   }
 
@@ -402,7 +417,7 @@ export default function Home() {
           </label>
           <label>
             <span className="sr-only">認定日・受注日基準年度</span>
-            <select value={year} onChange={(event) => { setDetailLoading(true); setDataMode("loading"); setYear(event.target.value); setPage(0); }}>
+            <select value={year} onChange={(event) => changeYear(event.target.value)}>
               <option value="all">全期間</option>
               {fiscalYears.map((item) => <option key={item} value={item}>{item}年度（日付基準）</option>)}
               {hasUndatedRecords && <option value="unclassified">年度不明（日付の記載なし）</option>}

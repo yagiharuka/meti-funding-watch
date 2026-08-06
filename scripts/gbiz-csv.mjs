@@ -28,11 +28,14 @@ export function toGbizBulkRecords(csvText, kind) {
   const first = iterator.next();
   if (first.done) throw new Error(`GビズINFO ${kind}: CSVが空です`);
   const headers = first.value.map(cleanCell);
+  if (new Set(headers).size !== headers.length) {
+    throw new Error(`GビズINFO ${kind}: CSVヘッダーが重複しています`);
+  }
   const column = Object.fromEntries(headers.map((header, index) => [header, index]));
   const fields = kind === "procurement"
     ? { date: "受注日", program: "件名", amount: "落札価格", agency: "組織名" }
     : { date: "証明日", program: "名称", amount: "金額", agency: "発行元" };
-  for (const header of ["法人番号", "商号または名称", ...Object.values(fields)]) {
+  for (const header of ["法人番号", "商号または名称", "キー情報", ...Object.values(fields)]) {
     if (!(header in column)) throw new Error(`GビズINFO ${kind}: ${header}列がありません`);
   }
 
@@ -125,6 +128,65 @@ export function toGbizBulkRecords(csvText, kind) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20),
     },
+  };
+}
+
+export function assertGbizSnapshotContinuity(previousSource, snapshot, dashboardStats = null) {
+  if (snapshot.missingSourceKeyRows !== 0) {
+    throw new Error(
+      `GビズINFO 全件CSV: キー情報がない対象行があります (${snapshot.missingSourceKeyRows}行)`,
+    );
+  }
+
+  const comparisons = [
+    ["補助金CSV総行数", "csvTotalSubsidyRows"],
+    ["調達CSV総行数", "csvTotalProcurementRows"],
+    ["補助金CSV対象行", "csvEligibleSubsidyCount"],
+    ["調達CSV対象行", "csvEligibleProcurementCount"],
+    ["補助金CSVバイト数", "csvSubsidyFileBytes"],
+    ["調達CSVバイト数", "csvProcurementFileBytes"],
+  ];
+  for (const [label, field] of comparisons) {
+    const previous = previousSource?.[field];
+    const current = snapshot[field];
+    if (Number.isSafeInteger(previous) && Number.isSafeInteger(current) && current < previous) {
+      throw new Error(
+        `GビズINFO 全件CSV: ${label}が前回成功時から減少しました (${current}/${previous})`,
+      );
+    }
+  }
+
+  const dashboardRecordCount = dashboardStats?.dashboardRecordCount;
+  if (Number.isSafeInteger(dashboardRecordCount)) {
+    const dashboardGap = dashboardRecordCount - snapshot.csvEligibleRecordCount;
+    const hasPreviousGap = Number.isSafeInteger(previousSource?.dashboardMinusCsvEligibleCount);
+    const allowedGap = hasPreviousGap
+      ? Math.max(0, previousSource.dashboardMinusCsvEligibleCount)
+      : Math.max(100, Math.ceil(dashboardRecordCount * 0.005));
+    if (dashboardGap > allowedGap) {
+      throw new Error(
+        "GビズINFO 全件CSV: 公式画面との件数差が安全確認の上限を超えました "
+        + `(${dashboardGap}/${allowedGap})`,
+      );
+    }
+  }
+}
+
+export function assertGbizRecordContinuity(previousRecords, candidateRecords) {
+  const previousKeys = uniqueRecordKeys(previousRecords, "前回成功データ");
+  const candidateKeys = uniqueRecordKeys(candidateRecords, "今回取得データ");
+  const missingKeys = [...previousKeys].filter((key) => !candidateKeys.has(key));
+  if (missingKeys.length) {
+    throw new Error(
+      `GビズINFO 全件CSV: 前回成功データのキーが${missingKeys.length}件欠落しています `
+      + `(${missingKeys.slice(0, 3).join(", ")})`,
+    );
+  }
+  return {
+    continuityBaselineRecordCount: previousKeys.size,
+    continuityRetainedRecordCount: previousKeys.size,
+    continuityRemovedRecordCount: 0,
+    continuityAddedRecordCount: candidateKeys.size - previousKeys.size,
   };
 }
 
@@ -231,6 +293,21 @@ function valueFor(row, column, header) {
 
 function stableId(parts) {
   return createHash("sha256").update(parts.join("\u001f")).digest("hex").slice(0, 16);
+}
+
+function uniqueRecordKeys(records, label) {
+  const keys = new Set();
+  for (const record of records) {
+    if (!record?.stage || !record?.sourceKey) {
+      throw new Error(`GビズINFO 全件CSV: ${label}にキー情報がない行があります`);
+    }
+    const key = `${record.stage}\u001f${record.sourceKey}`;
+    if (keys.has(key)) {
+      throw new Error(`GビズINFO 全件CSV: ${label}のキー情報が重複しています (${key})`);
+    }
+    keys.add(key);
+  }
+  return keys;
 }
 
 function* parseCsvRows(text) {
