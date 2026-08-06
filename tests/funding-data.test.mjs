@@ -39,14 +39,19 @@ test("precomputes first-paint aggregates without bundling every detail row", () 
 test("publishes detail rows in series-and-year chunks", async () => {
   assert.deepEqual(Object.keys(pageManifest.payments), ["2023", "2024"]);
   assert.deepEqual(Object.keys(pageManifest.commitments), data.coverage.gbiz.fiscalYears.map(String));
+  assert.deepEqual(Object.keys(pageManifest.programs), ["2023", "2024", "unclassified"]);
   const paymentGroups = await Promise.all(Object.values(pageManifest.payments).map(async (filename) =>
     JSON.parse(await readFile(new URL(`../data/pages/${filename}`, import.meta.url), "utf8")),
   ));
   const commitmentGroups = await Promise.all(Object.values(pageManifest.commitments).map(async (filename) =>
     JSON.parse(await readFile(new URL(`../data/pages/${filename}`, import.meta.url), "utf8")),
   ));
+  const programGroups = await Promise.all(Object.values(pageManifest.programs).map(async (filename) =>
+    JSON.parse(await readFile(new URL(`../data/pages/${filename}`, import.meta.url), "utf8")),
+  ));
   assert.equal(paymentGroups.flat().length, data.reviewPayments.length);
   assert.equal(commitmentGroups.flat().length, data.records.length);
+  assert.equal(programGroups.flat().length, data.reviewPrograms.length);
 });
 
 test("classifies every record into exactly one flow layer", () => {
@@ -74,7 +79,8 @@ test("presents the finished internal app view without migration instructions", (
   assert.match(pageSource, /受取先別の契約・補助金/);
   assert.match(pageSource, /受取先別の実支出 <small>行政事業レビューシート<\/small>/);
   assert.match(pageSource, /view-tabs[\s\S]*受取先別の契約・補助金[\s\S]*受取先別の実支出/);
-  assert.doesNotMatch(pageSource, /事業別の予算・執行額|view === "programs"/);
+  assert.match(pageSource, /事業別の予算・執行額/);
+  assert.match(pageSource, /view === "programs"/);
   assert.match(pageSource, /row\.ingestSource !== "nedo-monthly-csv"/);
   assert.doesNotMatch(pageSource, /GビズINFO＋NEDO公表契約/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure|GitHub|METI内への移植イメージ|移植後の構成|移植構成を見る|移植手順書/);
@@ -82,4 +88,7 @@ test("presents the finished internal app view without migration instructions", (
   assert.doesNotMatch(pageSource, /データごとの更新状況|className="metrics"/);
   assert.doesNotMatch(pageSource, /この画面で確認できること|className="flow-card"|2 VIEWS/);
   assert.doesNotMatch(pageSource, /庁内版 画面イメージ|className="prototype-banner"/);
+  assert.doesNotMatch(pageSource, /違う段階の金額を、足さない。|className="about-section"/);
+  assert.doesNotMatch(pageSource, />公式CSV ↗<\/a>/);
+  assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
 });
