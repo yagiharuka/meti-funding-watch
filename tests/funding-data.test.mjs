@@ -6,6 +6,7 @@ import {
   assertGbizRecordContinuity,
   assertGbizSnapshotContinuity,
   auditGbizImport,
+  normalizeGbizAgency,
   parseDashboardRow,
   toGbizBulkRecords,
 } from "../scripts/gbiz-csv.mjs";
@@ -137,12 +138,20 @@ test("converts blank dates, blank names, zero and negative CSV values without dr
   assert.equal(procurement.records.length, 1);
   assert.equal(procurement.records[0].amount, 1);
   assert.equal(procurement.records[0].notes, "単価");
+  assert.match(procurement.records[0].sourceRecordHash, /^[0-9a-f]{64}$/);
 
   const dashboardHtml = "<tr><th>経済産業省 (小計)</th><td>68,281</td><td>51,358</td><td>16,923</td><td>0</td></tr>";
   assert.deepEqual(parseDashboardRow(dashboardHtml, "経済産業省 (小計)"), {
     subsidies: 51_358,
     procurements: 16_923,
   });
+  assert.throws(
+    () => parseDashboardRow(
+      "<tr><th>経済産業省 (小計)</th><td>999,999</td><td>51,358</td><td>16,923</td><td>0</td></tr>",
+      "経済産業省 (小計)",
+    ),
+    /合計と内訳が一致しません/,
+  );
 });
 
 test("separates CSV import completeness from the dashboard comparison", () => {
@@ -179,6 +188,8 @@ test("separates CSV import completeness from the dashboard comparison", () => {
 
 test("rejects a partial CSV snapshot before it can replace the last successful data", () => {
   const previous = {
+    recordCount: 69_491,
+    lastSuccessfulImportAt: "2026-08-06T15:42:24.531Z",
     csvTotalSubsidyRows: 545_877,
     csvTotalProcurementRows: 308_125,
     csvEligibleSubsidyCount: 51_375,
@@ -186,6 +197,10 @@ test("rejects a partial CSV snapshot before it can replace the last successful d
     csvSubsidyFileBytes: 175_574_914,
     csvProcurementFileBytes: 102_217_942,
     dashboardMinusCsvEligibleCount: 14,
+    dashboardSubsidyCount: 51_380,
+    dashboardProcurementCount: 18_125,
+    dashboardMinusCsvEligibleSubsidyCount: 5,
+    dashboardMinusCsvEligibleProcurementCount: 9,
   };
   const complete = {
     csvTotalSubsidyRows: 545_877,
@@ -196,8 +211,14 @@ test("rejects a partial CSV snapshot before it can replace the last successful d
     csvSubsidyFileBytes: 175_574_914,
     csvProcurementFileBytes: 102_217_942,
     missingSourceKeyRows: 0,
+    suspiciousUnmatchedAgencyRows: 0,
+    suspiciousUnmatchedAgencies: [],
   };
-  const dashboard = { dashboardRecordCount: 69_505 };
+  const dashboard = {
+    dashboardRecordCount: 69_505,
+    dashboardSubsidyCount: 51_380,
+    dashboardProcurementCount: 18_125,
+  };
   assert.doesNotThrow(() => assertGbizSnapshotContinuity(previous, complete, dashboard));
 
   assert.throws(
@@ -214,6 +235,53 @@ test("rejects a partial CSV snapshot before it can replace the last successful d
     () => assertGbizSnapshotContinuity(previous, { ...complete, missingSourceKeyRows: 1 }, dashboard),
     /キー情報がない対象行/,
   );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(null, complete, dashboard),
+    /前回成功スナップショットがありません/,
+  );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, complete, null),
+    /公式画面の区分別件数を確認できない/,
+  );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, {
+      ...complete,
+      csvTotalSubsidyRows: previous.csvTotalSubsidyRows + 100_000,
+      csvEligibleRecordCount: complete.csvEligibleRecordCount + 100_000,
+      csvEligibleSubsidyCount: complete.csvEligibleSubsidyCount + 100_000,
+      csvSubsidyFileBytes: previous.csvSubsidyFileBytes + 30_000_000,
+    }, {
+      ...dashboard,
+      dashboardRecordCount: dashboard.dashboardRecordCount + 100_000,
+      dashboardSubsidyCount: dashboard.dashboardSubsidyCount + 100_000,
+    }),
+    /増加が自動公開の上限を超えました/,
+  );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, complete, {
+      ...dashboard,
+      dashboardSubsidyCount: dashboard.dashboardSubsidyCount + 1,
+      dashboardProcurementCount: dashboard.dashboardProcurementCount - 1,
+    }),
+    /補助金の公式画面との差が前回成功時より拡大しました/,
+  );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, complete, {
+      ...dashboard,
+      dashboardRecordCount: complete.csvEligibleRecordCount - 1,
+      dashboardSubsidyCount: complete.csvEligibleSubsidyCount - 1,
+      dashboardProcurementCount: complete.csvEligibleProcurementCount,
+    }),
+    /補助金CSV対象行が公式画面の件数を超えました/,
+  );
+  assert.throws(
+    () => assertGbizSnapshotContinuity(previous, {
+      ...complete,
+      suspiciousUnmatchedAgencyRows: 1,
+      suspiciousUnmatchedAgencies: [["経済産業省を含む別組織", 1]],
+    }, dashboard),
+    /未承認の公表組織名/,
+  );
 
   const same = assertGbizRecordContinuity(data.records, data.records);
   assert.equal(same.continuityBaselineRecordCount, data.records.length);
@@ -222,6 +290,35 @@ test("rejects a partial CSV snapshot before it can replace the last successful d
     () => assertGbizRecordContinuity(data.records, data.records.slice(0, -1)),
     /前回成功データのキーが1件欠落しています/,
   );
+  assert.throws(
+    () => assertGbizRecordContinuity([], [data.records[0]]),
+    /前回成功データがありません/,
+  );
+  for (const [field, value] of [
+    ["amount", (data.records[0].amount ?? 0) + 1],
+    ["corporateNumber", "6010001030402"],
+    ["organization", `${data.records[0].organization}（変更）`],
+    ["date", "2026-08-07"],
+    ["sourceAgency", "特許庁"],
+  ]) {
+    const changedRow = { ...structuredClone(data.records[0]), [field]: value };
+    const changed = [changedRow, ...data.records.slice(1)];
+    assert.throws(
+      () => assertGbizRecordContinuity(data.records, changed),
+      /既存キーの内容が1件変更されています/,
+      `changing ${field} must stop publication`,
+    );
+  }
+  const added = {
+    ...structuredClone(data.records[0]),
+    id: "gbiz-new-record",
+    sourceKey: "new-source-key",
+  };
+  const withAddition = assertGbizRecordContinuity(data.records, [...data.records, added]);
+  assert.equal(withAddition.continuityAddedRecordCount, 1);
+  assert.equal(withAddition.continuityChangedRecordCount, 0);
+  assert.equal(normalizeGbizAgency("経済産業省"), "経済産業省");
+  assert.equal(normalizeGbizAgency("経済産業省を含む別組織"), null);
 });
 
 test("reports CSV and dashboard counts without conflating their gaps", () => {
@@ -275,10 +372,11 @@ test("starts with all periods and clears stale rows for each chunk batch", () =>
     pageSource.indexOf("let active = true"),
     pageSource.indexOf("const commitments = useMemo"),
   );
-  assert.ok(chunkEffect.indexOf("records: []") < chunkEffect.indexOf("Promise.all("));
   assert.match(chunkEffect, /let active = true/);
   assert.match(chunkEffect, /if \(!active\) return/);
   assert.match(chunkEffect, /active = false;[\s\S]{0,100}controller\.abort\(\)/);
+  assert.match(pageSource, /function changeYear[\s\S]{0,180}records: \[\]/);
+  assert.match(pageSource, /function clearFilters[\s\S]{0,180}records: \[\]/);
 });
 
 test("validates every published corporate number including its check digit", () => {
@@ -287,12 +385,20 @@ test("validates every published corporate number including its check digit", () 
       hasValidCorporateNumberCheckDigit(row.corporateNumber),
       `${row.id}: invalid corporate number ${row.corporateNumber}`,
     );
+    assert.equal(
+      normalizeGbizAgency(row.sourceAgency),
+      row.publisherCanonical,
+      `${row.id}: unapproved publisher alias ${row.sourceAgency}`,
+    );
   }
 });
 
 test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /法人等/);
   assert.match(pageSource, /データ出典：GビズINFO/);
+  assert.match(pageSource, /全支出・実支払を示すものではありません/);
+  assert.match(pageSource, /当サイトの抽出条件に合うCSV行を全件取込済み/);
+  assert.match(pageSource, /update-chip \$\{dataMode\}/);
   assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
 
   assert.doesNotMatch(pageSource, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
@@ -312,7 +418,11 @@ test("fails closed before replacing records when source counts cannot be reconci
   assert.match(updateSource, /process\.env\.CI === "true"/);
   assert.match(updateWorkflow, /- "scripts\/\*\*"/);
   assert.match(updateWorkflow, /npm run update:data/);
+  assert.match(updateWorkflow, /continue-on-error: \$\{\{ github\.event_name == 'push' \}\}/);
+  assert.match(updateWorkflow, /if: steps\.refresh\.outcome == 'success'/);
   assert.match(updateWorkflow, /npm test/);
+  assert.match(updateWorkflow, /Rebuild the artifact from the commit that will be published/);
+  assert.match(updateWorkflow, /node --test tests\/rendered-html\.test\.mjs/);
   assert.match(updateWorkflow, /actions\/upload-pages-artifact@v4/);
   assert.match(updateWorkflow, /needs: update/);
   assert.match(updateWorkflow, /actions\/deploy-pages@v4/);
