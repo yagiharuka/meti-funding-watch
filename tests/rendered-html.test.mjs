@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
+
+const sourceData = JSON.parse(
+  await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
+);
 
 const developmentPreviewMeta =
   /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
@@ -39,6 +45,7 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
     await readFile(new URL("manifest.json", dataDirectory), "utf8"),
   );
   assert.deepEqual(Object.keys(publicManifest).sort(), ["commitments", "generatedAt"]);
+  assert.equal(publicManifest.generatedAt, sourceData.generatedAt);
 
   const publicDataFiles = (await readdir(dataDirectory)).sort();
   assert.ok(publicDataFiles.includes("manifest.json"));
@@ -46,13 +53,58 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.ok(publicDataFiles.every((filename) =>
     filename === "manifest.json" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)));
   assert.ok(!publicDataFiles.some((filename) => /^(?:payments|programs)-/.test(filename)));
-  for (const filename of publicDataFiles.filter((name) => name.startsWith("commitments-"))) {
+  const publicIds = [];
+  const allowedFields = new Set([
+    "amount", "amountRaw", "corporateNumber", "dataQuality", "date", "dateRaw",
+    "fiscalYear", "id", "ingestSource", "notes", "organization", "program",
+    "publisherCanonical", "quality", "sourceAgency", "sourceKey", "sourceName",
+    "sourceRecordHash", "sourceRetrievedAt", "sourceRowNumber", "sourceSystem",
+    "sourceUpdatedAt", "sourceUrl", "stage",
+  ]);
+  for (const [year, filename] of Object.entries(publicManifest.commitments)) {
     const rows = JSON.parse(await readFile(new URL(filename, dataDirectory), "utf8"));
     assert.ok(rows.every((row) =>
       row.ingestSource === "gbiz-bulk-csv"
       && !("route" in row)
       && !("flowLevel" in row)
       && !("flowDepth" in row)));
+    assert.ok(rows.every((row) => year === "unclassified"
+      ? row.fiscalYear === null
+      : String(row.fiscalYear) === year));
+    for (const row of rows) {
+      assert.ok(Object.keys(row).every((field) => allowedFields.has(field)), `${row.id}: unknown field`);
+      publicIds.push(row.id);
+    }
+  }
+  assert.equal(new Set(publicIds).size, publicIds.length);
+  assert.deepEqual(
+    [...publicIds].sort(),
+    sourceData.records.map((row) => row.id).sort(),
+  );
+
+  const release = JSON.parse(
+    await readFile(new URL("../dist-pages/release.json", import.meta.url), "utf8"),
+  );
+  assert.equal(release.generatedAt, publicManifest.generatedAt);
+  assert.equal(release.recordCount, publicIds.length);
+  assert.equal(release.commitSha, execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8",
+  }).trim());
+  assert.equal(
+    release.idSetSha256,
+    sha256(`${[...publicIds].sort().join("\n")}\n`),
+  );
+  assert.equal(
+    release.manifestSha256,
+    sha256(await readFile(new URL("manifest.json", dataDirectory), "utf8")),
+  );
+  for (const [filename, metadata] of Object.entries(release.files)) {
+    const fileUrl = new URL(filename, dataDirectory);
+    const text = await readFile(fileUrl, "utf8");
+    assert.equal(metadata.sha256, sha256(text));
+    assert.equal(metadata.bytes, (await stat(fileUrl)).size);
+    assert.equal(metadata.rows, JSON.parse(text).length);
   }
 
   const publicIndex = await readFile(new URL("../dist-pages/index.html", import.meta.url), "utf8");
@@ -66,3 +118,7 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.doesNotMatch(publicUi, /行政事業レビュー|レビューシート/);
   assert.doesNotMatch(publicUi, /合計|交付金額|期間指定API/);
 });
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
