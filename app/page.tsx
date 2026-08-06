@@ -199,7 +199,6 @@ export default function Home() {
   const [agency, setAgency] = useState("all");
   const [stage, setStage] = useState("all");
   const [year, setYear] = useState(initialComparisonYear ? String(initialComparisonYear) : "all");
-  const [comparisonYear, setComparisonYear] = useState(initialComparisonYear ? String(initialComparisonYear) : "");
   const [flowLevel, setFlowLevel] = useState<FlowLevel>("recipient");
   const [page, setPage] = useState(0);
   const chunkCache = useRef(new Map<string, unknown[]>());
@@ -313,9 +312,7 @@ export default function Home() {
     };
   }, [commitments, dataset.coverage, payments]);
 
-  const comparisonFiscalYear = Number(
-    comparisonYear || coverage.commonFiscalYears.at(-1) || coverage.reviewPayments.fiscalYears.at(-1) || 0,
-  );
+  const defaultYear = initialComparisonYear ? String(initialComparisonYear) : "all";
 
   const agencies = useMemo(() => {
     const values = view === "payments"
@@ -387,28 +384,6 @@ export default function Home() {
   const visibleEnd = Math.min((page + 1) * pageSize, activeRows.length);
   const filteredAmount = view === "programs" ? null : sumAmounts(activeRows as Array<{ amount: number | null }>);
 
-  const comparisonPayments = payments.filter((row) => row.fiscalYear === comparisonFiscalYear);
-  const comparisonCommitments = commitments.filter((row) => row.fiscalYear === comparisonFiscalYear);
-  const comparisonPrograms = programs.filter((row) => row.executionFiscalYear === comparisonFiscalYear);
-  const summaryAggregate = dataset.aggregates?.byFiscalYear[String(comparisonFiscalYear)];
-  const recipientPayments = comparisonPayments.filter((row) => row.flowLevel === "recipient");
-  const intermediaryPayments = comparisonPayments.filter((row) => row.flowLevel === "intermediary");
-  const recipientCommitments = comparisonCommitments.filter((row) => (row.flowLevel ?? "recipient") === "recipient");
-  const recipientPaymentTotal = comparisonPayments.length
-    ? sumAmounts(recipientPayments)
-    : summaryAggregate?.recipientPaymentAmount ?? 0;
-  const intermediaryPaymentTotal = comparisonPayments.length
-    ? sumAmounts(intermediaryPayments)
-    : summaryAggregate?.intermediaryPaymentAmount ?? 0;
-  const recipientCommitmentTotal = comparisonCommitments.length
-    ? sumAmounts(recipientCommitments)
-    : summaryAggregate?.recipientCommitmentAmount ?? 0;
-  const executionTotal = comparisonPrograms.length
-    ? comparisonPrograms.reduce((sum, row) => sum + (row.execution ?? 0), 0)
-    : summaryAggregate?.executionAmount ?? 0;
-  const executionYear = comparisonFiscalYear;
-  const paymentYear = comparisonFiscalYear;
-  const showMetric = (value: number) => dataMode === "loading" && !value && !summaryAggregate ? "明細読込中" : compactYen(value);
   const sourceCoverage: Record<string, string> = {
     "review-sheets": formatCoverageYears(coverage.reviewPayments.fiscalYears),
     gbiz: formatCoverageYears(coverage.gbiz.fiscalYears),
@@ -421,33 +396,25 @@ export default function Home() {
     setView(nextView);
     setAgency("all");
     setStage("all");
-    setYear(comparisonYear || "all");
+    setYear(defaultYear);
     setFlowLevel("recipient");
     setPage(0);
   }
 
   function clearFilters() {
-    if (year !== (comparisonYear || "all")) {
+    if (year !== defaultYear) {
       setDetailLoading(true);
       setDataMode("loading");
     }
     setQuery("");
     setAgency("all");
     setStage("all");
-    setYear(comparisonYear || "all");
+    setYear(defaultYear);
     setFlowLevel("recipient");
     setPage(0);
   }
 
-  function changeComparisonYear(nextYear: string) {
-    setDetailLoading(true);
-    setDataMode("loading");
-    setComparisonYear(nextYear);
-    setYear(nextYear);
-    setPage(0);
-  }
-
-  const hasFilters = query || agency !== "all" || stage !== "all" || year !== (comparisonYear || "all") || flowLevel !== "recipient";
+  const hasFilters = query || agency !== "all" || stage !== "all" || year !== defaultYear || flowLevel !== "recipient";
 
   return (
     <main>
@@ -506,68 +473,6 @@ export default function Home() {
           </div>
           <p>受取先名・法人番号・事業名・年度で検索できます。</p>
         </aside>
-      </section>
-
-      <section className="coverage-panel" aria-label="データの更新周期と比較年度">
-        <div className="coverage-copy">
-          <p className="eyebrow">DATA FRESHNESS</p>
-          <h2>データごとの更新状況</h2>
-          <p>GビズINFOは毎日、レビューシートは公表時に年1回更新します。比較は共通して収録されている年度にそろえます。</p>
-        </div>
-        <label className="comparison-year">
-          <span>現在の比較年度</span>
-          <select value={String(comparisonFiscalYear || "")} onChange={(event) => changeComparisonYear(event.target.value)}>
-            {coverage.commonFiscalYears.slice().reverse().map((item) => (
-              <option key={item} value={item}>{item}年度</option>
-            ))}
-          </select>
-          <small>実支出と契約・補助金を比較する年度</small>
-        </label>
-        <div className="coverage-grid">
-          <article>
-            <span>GビズINFO</span>
-            <strong>毎日更新</strong>
-            <small>契約・補助金</small>
-          </article>
-          <article>
-            <span>レビューシート</span>
-            <strong>年1回更新</strong>
-            <small>実支出先と事業別予算・執行</small>
-          </article>
-          <article>
-            <span>NEDO独自契約CSV</span>
-            <strong>現在は対象外</strong>
-            <small>GビズINFOに掲載された情報は対象</small>
-          </article>
-          <article>
-            <span>現在の比較年度</span>
-            <strong>{comparisonFiscalYear || "—"}年度</strong>
-            <small>実支出と契約・補助金を同年度で比較</small>
-          </article>
-        </div>
-      </section>
-
-      <section className="metrics" aria-label="データ全体の集計">
-        <article>
-          <span>{paymentYear || "—"}年度 公表経路上の支出先額</span>
-          <strong>{showMetric(recipientPaymentTotal)}</strong>
-          <small>行政事業レビュー・終端ブロック</small>
-        </article>
-        <article className="metric-upstream">
-          <span>{paymentYear || "—"}年度 実施機関・中間受取先額</span>
-          <strong>{showMetric(intermediaryPaymentTotal)}</strong>
-          <small>上の支出先額とは合算しません</small>
-        </article>
-        <article>
-          <span>{executionYear || "—"}年度 事業執行額</span>
-          <strong>{showMetric(executionTotal)}</strong>
-          <small>レビューシート単純合計・重複可能性あり</small>
-        </article>
-        <article className="metric-warning">
-          <span>{comparisonFiscalYear || "—"}年度 契約・補助金掲載額</span>
-          <strong>{showMetric(recipientCommitmentTotal)}</strong>
-          <small>同年度に限定・実支出とは別系列</small>
-        </article>
       </section>
 
       <section className="records-section" id="records">
