@@ -75,10 +75,10 @@ test("identifies NEDO as an intermediary and preserves its downstream recipients
 });
 
 test("presents the finished internal app view without migration instructions", () => {
-  assert.match(pageSource, /受取先別の実支出/);
+  assert.match(pageSource, /レビューシート掲載支出額/);
   assert.match(pageSource, /受取先別の契約・補助金/);
-  assert.match(pageSource, /受取先別の実支出 <small>行政事業レビューシート<\/small>/);
-  assert.match(pageSource, /view-tabs[\s\S]*受取先別の契約・補助金[\s\S]*受取先別の実支出/);
+  assert.match(pageSource, /レビューシート掲載支出額 <small>行政事業レビューシート・各支出先ブロック上位10者<\/small>/);
+  assert.match(pageSource, /view-tabs[\s\S]*受取先別の契約・補助金[\s\S]*レビューシート掲載支出額/);
   assert.match(pageSource, /事業別の予算・執行額/);
   assert.match(pageSource, /view === "programs"/);
   assert.match(pageSource, /row\.ingestSource !== "nedo-monthly-csv"/);
@@ -90,5 +90,8 @@ test("presents the finished internal app view without migration instructions", (
   assert.doesNotMatch(pageSource, /庁内版 画面イメージ|className="prototype-banner"/);
   assert.doesNotMatch(pageSource, /違う段階の金額を、足さない。|className="about-section"/);
   assert.doesNotMatch(pageSource, />公式CSV ↗<\/a>/);
+  assert.doesNotMatch(pageSource, /受取先別の実支出|支出先別実支出/);
+  assert.match(pageSource, /各支出先ブロックの上位10者のみを掲載しており、すべての支出先を網羅していません/);
+  assert.match(pageSource, /flowLevel === "all" \|\| row\.flowLevel === flowLevel/);
   assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
 });
