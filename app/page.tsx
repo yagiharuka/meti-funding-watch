@@ -458,8 +458,7 @@ export default function Home() {
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">データ検索</a>
-          <a href="#migration">移植後の構成</a>
-          <a href="#sources">更新運用</a>
+          <a href="#sources">データ更新</a>
           <a href="#about">集計上の注意</a>
         </nav>
         <span className="update-chip"><i />{
@@ -468,55 +467,52 @@ export default function Home() {
       </header>
 
       <div className="prototype-banner" role="note">
-        <strong>庁内移植後の完成イメージ</strong>
-        <span>SharePoint OnlineにPower Appsを埋め込み、Dataverseのデータを検索する想定です。</span>
+        <strong>庁内版 画面イメージ</strong>
+        <span>公開データを検索・比較する画面の完成イメージです。</span>
       </div>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">SHAREPOINT / POWER APPS CONCEPT</p>
+          <p className="eyebrow">PUBLIC MONEY EXPLORER</p>
           <h1>事業者等への<br /><em>交付金額(経産省)</em></h1>
           <p className="hero-lead">
-            GビズINFOの契約・補助金と、行政事業レビューシートの実支出先・事業別予算を、
-            庁内の1画面から検索します。データの更新頻度に合わせ、日次更新と年次更新を分けて運用します。
+            行政事業レビューの支出先別実支出、GビズINFOの契約・補助金、事業別の予算・執行額を
+            1画面で検索します。意味の異なる金額は分けて表示します。
           </p>
           <div className="hero-note">
             <span>表示データ更新</span>
             <strong>{formatUpdated(dataset.generatedAt)}</strong>
-            <span className="source-count">庁内版ではDataverseから読込み</span>
+            <span className="source-count">2つの公式データ系列</span>
           </div>
           <div className="hero-actions">
-            <a className="primary-action" href="#records">画面イメージを見る</a>
-            <a className="secondary-action" href="#migration">移植構成を見る</a>
+            <a className="primary-action" href="#records">データを検索</a>
+            <a className="secondary-action" href="#sources">更新状況を見る</a>
           </div>
         </div>
 
-        <aside className="flow-card" aria-label="庁内移植後のデータ構成">
+        <aside className="flow-card" aria-label="この画面で確認できる3つのデータ表示">
           <div className="flow-card-head">
-            <span>庁内版のデータ構成</span>
-            <span className="live-dot">TARGET</span>
+            <span>この画面で確認できること</span>
+            <span className="live-dot">3 VIEWS</span>
           </div>
           <div className="flow-path">
-            <div className="flow-node ministry"><span>毎日</span><strong>GビズINFO 差分API</strong></div>
-            <div className="flow-node review"><span>年1回</span><strong>行政事業レビューCSV</strong></div>
-            <div className="flow-line"><span>Power Automate / データフロー</span></div>
-            <div className="flow-node agency"><span>データベース</span><strong>Dataverse</strong></div>
-            <div className="flow-line"><span>検索・絞り込み</span></div>
-            <div className="flow-node company"><span>SharePointに埋込み</span><strong>Power Apps</strong></div>
+            <div className="flow-node ministry"><span>行政事業レビュー</span><strong>受取先別の実支出</strong></div>
+            <div className="flow-node review"><span>GビズINFO</span><strong>受取先別の契約・補助金</strong></div>
+            <div className="flow-node agency"><span>行政事業レビュー</span><strong>事業別の予算・執行額</strong></div>
           </div>
           <div className="flow-total">
-            <span>GitHubとの自動接続</span>
-            <strong>不要</strong>
+            <span>表示する金額系列</span>
+            <strong>3つ</strong>
           </div>
-          <p>SPFx、Entra IDアプリ、Azure Functionsを使わない最小構成です。</p>
+          <p>受取先名・法人番号・事業名・年度で検索できます。</p>
         </aside>
       </section>
 
-      <section className="coverage-panel" aria-label="移植後の更新頻度と比較年度">
+      <section className="coverage-panel" aria-label="データの更新周期と比較年度">
         <div className="coverage-copy">
-          <p className="eyebrow">UPDATE POLICY</p>
-          <h2>更新頻度を分けて、無理なく続ける</h2>
-          <p>85万行規模の全件CSVを毎日処理せず、GビズINFOは差分だけ、レビューシートは公表時に年度単位で更新します。</p>
+          <p className="eyebrow">DATA FRESHNESS</p>
+          <h2>データごとの更新状況</h2>
+          <p>GビズINFOは毎日、レビューシートは公表時に年1回更新します。比較は共通して収録されている年度にそろえます。</p>
         </div>
         <label className="comparison-year">
           <span>現在の比較年度</span>
@@ -530,23 +526,23 @@ export default function Home() {
         <div className="coverage-grid">
           <article>
             <span>GビズINFO</span>
-            <strong>毎日・差分取得</strong>
-            <small>補助金・調達の期間指定API</small>
+            <strong>毎日更新</strong>
+            <small>契約・補助金</small>
           </article>
           <article>
             <span>レビューシート</span>
-            <strong>年1回・年度追加</strong>
+            <strong>年1回更新</strong>
             <small>実支出先と事業別予算・執行</small>
           </article>
           <article>
             <span>NEDO独自契約CSV</span>
-            <strong>当面取り込まない</strong>
+            <strong>現在は対象外</strong>
             <small>GビズINFOに掲載された情報は対象</small>
           </article>
-          <article className="coverage-caution">
-            <span>データ保管</span>
-            <strong>Dataverse</strong>
-            <small>Power Appsは庁内データだけを参照</small>
+          <article>
+            <span>現在の比較年度</span>
+            <strong>{comparisonFiscalYear || "—"}年度</strong>
+            <small>実支出と契約・補助金を同年度で比較</small>
           </article>
         </div>
       </section>
@@ -717,61 +713,9 @@ export default function Home() {
         )}
       </section>
 
-      <section className="migration-section" id="migration">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">TARGET ARCHITECTURE</p>
-            <h2>METI内への移植イメージ</h2>
-          </div>
-          <p>公開サイトのコードをそのまま持ち込むのではなく、標準のPower Platform機能で同じ検索体験を再構成します。</p>
-        </div>
-        <div className="migration-flow" aria-label="公開データからSharePoint画面までの流れ">
-          <article>
-            <span className="step-number">01</span>
-            <small>公開データ</small>
-            <strong>GビズINFO<br />レビューシート</strong>
-            <p>機微情報は使わず、公開情報だけを取得します。</p>
-          </article>
-          <span className="flow-arrow" aria-hidden="true">→</span>
-          <article>
-            <span className="step-number">02</span>
-            <small>更新処理</small>
-            <strong>Power Automate<br />データフロー</strong>
-            <p>日次差分と年次取込を別々に実行します。</p>
-          </article>
-          <span className="flow-arrow" aria-hidden="true">→</span>
-          <article>
-            <span className="step-number">03</span>
-            <small>データ保管</small>
-            <strong>Dataverse</strong>
-            <p>3系列を別テーブルに保存し、重複を防ぎます。</p>
-          </article>
-          <span className="flow-arrow" aria-hidden="true">→</span>
-          <article>
-            <span className="step-number">04</span>
-            <small>庁内画面</small>
-            <strong>Power Apps<br />＋ SharePoint</strong>
-            <p>検索アプリをSharePointページへ埋め込みます。</p>
-          </article>
-        </div>
-        <div className="migration-notes">
-          <article>
-            <span>利用するもの</span>
-            <strong>Power Apps・Dataverse・Power Automate・SharePoint</strong>
-          </article>
-          <article>
-            <span>利用しないもの</span>
-            <strong>SPFx・App Catalog・Entra IDアプリ・Azure Functions・GitHub接続</strong>
-          </article>
-          <a href="https://github.com/yagiharuka/meti-funding-watch/blob/main/docs/METI_POWER_APPS_MIGRATION_GUIDE.md" target="_blank" rel="noreferrer">
-            詳細な作業手順を開く ↗
-          </a>
-        </div>
-      </section>
-
       <section className="source-section" id="sources">
         <div className="section-heading light">
-          <div><p className="eyebrow">OPERATIONS</p><h2>移植後の更新運用</h2></div>
+          <div><p className="eyebrow">DATA UPDATES</p><h2>データ更新状況</h2></div>
           <p>GビズINFOは毎日差分更新、レビューシートは年1回更新します。取得失敗時は前回データを残します。</p>
         </div>
         <div className="source-grid">
@@ -798,12 +742,12 @@ export default function Home() {
         <div className="about-copy">
           <p>
             行政事業レビューの支出先額、事業執行額、GビズINFOの契約・補助金掲載額は別系列です。
-            庁内版でも、段階の違う金額を合算せずに表示します。
+            この画面では、段階の違う金額を合算せずに表示します。
           </p>
           <ul>
             <li>2024・2025年度レビューシートの支出先情報を、原則2023・2024年度の支出として表示</li>
             <li>GビズINFOとの比較は共通して収録されている同一年度に限定し、全期間総額を横並びにしない</li>
-            <li>2021〜2023年度の移行レビューシートは支出先詳細・支出経路が不足するため、全件集計には含めない</li>
+            <li>2021〜2023年度レビューシートは支出先詳細・支出経路が不足するため、全件集計には含めない</li>
             <li>「公表経路上の受取先」は、レビューシートでその先の経路が確認できない終端を意味する</li>
             <li>レビューシートの予算・執行額はシート単純合計で、同一予算事業の重複を含む可能性がある</li>
             <li>法人番号がない団体もレビューシート掲載名のまま収録し、欠損を0円に置き換えない</li>
@@ -817,7 +761,7 @@ export default function Home() {
 
       <footer>
         <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>事業者等への交付金額(経産省)</span></div>
-        <p>庁内移植の説明用・公開情報ベースの非公式プロトタイプ</p>
+        <p>庁内画面の説明用・公開情報ベースの非公式プロトタイプ</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
     </main>

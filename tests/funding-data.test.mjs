@@ -69,10 +69,12 @@ test("identifies NEDO as an intermediary and preserves its downstream recipients
   assert.ok(downstream.length > 0);
 });
 
-test("presents the METI migration target without the direct NEDO CSV series", () => {
-  assert.match(pageSource, /METI内への移植イメージ/);
-  assert.match(pageSource, /GビズINFO 差分API/);
-  assert.match(pageSource, /行政事業レビューCSV/);
+test("presents the finished internal app view without migration instructions", () => {
+  assert.match(pageSource, /受取先別の実支出/);
+  assert.match(pageSource, /受取先別の契約・補助金/);
+  assert.match(pageSource, /事業別の予算・執行額/);
   assert.match(pageSource, /row\.ingestSource !== "nedo-monthly-csv"/);
   assert.doesNotMatch(pageSource, /GビズINFO＋NEDO公表契約/);
+  assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure|GitHub|METI内への移植イメージ|移植後の構成|移植構成を見る|移植手順書/);
+  assert.doesNotMatch(pageSource, /METI_POWER_APPS_MIGRATION_GUIDE/);
 });
