@@ -561,18 +561,18 @@ export default function Home() {
             <p className="eyebrow">RECIPIENTS & FUNDING</p>
             <h2>受取先と金額を検索</h2>
           </div>
-          <p>実支出、契約・補助金、予算事業を切り替えて確認できます。異なる系列の金額は合算しません。</p>
+          <p>行政事業レビューの受取先別実支出、GビズINFOの契約・補助金とNEDO公表契約、事業別の予算・執行額を切り替えて確認できます。異なる系列の金額は合算しません。</p>
         </div>
 
         <div className="view-tabs" role="tablist" aria-label="表示するデータ">
           <button role="tab" aria-selected={view === "payments"} onClick={() => changeView("payments")}>
-            実支出先 <small>行政事業レビュー</small>
+            受取先別の実支出 <small>行政事業レビュー</small>
           </button>
           <button role="tab" aria-selected={view === "commitments"} onClick={() => changeView("commitments")}>
-            契約・補助金 <small>GビズINFO / NEDO</small>
+            受取先別の契約・補助金 <small>GビズINFO＋NEDO公表契約</small>
           </button>
           <button role="tab" aria-selected={view === "programs"} onClick={() => changeView("programs")}>
-            予算・執行 <small>レビューシート事業</small>
+            事業別の予算・執行額 <small>行政事業レビュー</small>
           </button>
         </div>
 
