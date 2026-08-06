@@ -338,11 +338,7 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">G BIZ INFO SEARCH</p>
-          <h1>GビズINFO掲載の<br /><em>経産省関係 調達・補助金情報</em></h1>
-          <p className="hero-lead">
-            GビズINFO公式画面の「経済産業省（小計）」と「特許庁」に対応する調達・補助金の掲載情報を、
-            法人等の名称と法人番号から検索できます。
-          </p>
+          <h1><em>経産省関係 調達・補助金情報</em></h1>
           <p className="hero-scope-warning">
             このサイトは経済産業省の全支出・実支払を示すものではありません。
             GビズINFOに法人番号付きで掲載された調達・補助金情報だけを表示します。
