@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
+  auditGbizImport,
   normalizeGbizAgency,
   parseDashboardRow,
   stripHtml,
@@ -55,6 +57,22 @@ for (const source of configured.values()) {
       lastChecked: "未取得",
       status: "watch",
     });
+  }
+}
+const gbizMetadata = next.sources.find((source) => source.id === "gbiz");
+if (gbizMetadata) {
+  for (const legacyField of [
+    "officialRecordCount",
+    "officialSubsidyCount",
+    "officialProcurementCount",
+    "officialMetiSubtotalCount",
+    "officialPatentCount",
+    "recordCountGap",
+    "importedRecordCount",
+    "importedSubsidyCount",
+    "importedProcurementCount",
+  ]) {
+    delete gbizMetadata[legacyField];
   }
 }
 
@@ -130,29 +148,28 @@ async function refreshGbiz() {
     const html = await fetchText(source.indexUrl);
     const meti = parseDashboardRow(html, "経済産業省 (小計)");
     const patent = parseDashboardRow(html, "特許庁");
-    const officialSubsidyCount = meti.subsidies + patent.subsidies;
-    const officialProcurementCount = meti.procurements + patent.procurements;
-    const officialRecordCount = officialSubsidyCount + officialProcurementCount;
+    const dashboardSubsidyCount = meti.subsidies + patent.subsidies;
+    const dashboardProcurementCount = meti.procurements + patent.procurements;
+    const dashboardRecordCount = dashboardSubsidyCount + dashboardProcurementCount;
     const dashboardCheckedAt = new Date().toISOString();
     const stats = {
       dashboardCheckedAt,
-      officialRecordCount,
-      officialSubsidyCount,
-      officialProcurementCount,
-      officialMetiSubtotalCount: meti.subsidies + meti.procurements,
-      officialPatentCount: patent.subsidies + patent.procurements,
+      dashboardRecordCount,
+      dashboardSubsidyCount,
+      dashboardProcurementCount,
+      dashboardMetiSubtotalCount: meti.subsidies + meti.procurements,
+      dashboardPatentCount: patent.subsidies + patent.procurements,
     };
-    const recordCountGap = officialRecordCount - next.records.length;
     updateSource("gbiz", {
       ...stats,
-      recordCountGap,
+      dashboardSiteGap: dashboardRecordCount - next.records.length,
       lastChecked: today,
       status: "watch",
     });
     results.push({
       ok: true,
       name: source.name,
-      message: `公式件数（経産省小計＋特許庁） 補助金 ${officialSubsidyCount.toLocaleString("ja-JP")}件、調達 ${officialProcurementCount.toLocaleString("ja-JP")}件`,
+      message: `公式画面（経産省小計＋特許庁） 補助金 ${dashboardSubsidyCount.toLocaleString("ja-JP")}件、調達 ${dashboardProcurementCount.toLocaleString("ja-JP")}件`,
     });
     return stats;
   } catch (error) {
@@ -176,55 +193,30 @@ async function refreshGbizBulk(dashboardStats) {
     });
     return false;
   }
-  if (!dashboardStats) {
-    updateSource("gbiz", { status: "watch" });
-    results.push({
-      ok: false,
-      name: "GビズINFO 全件CSV",
-      message: "公式画面の件数を確認できないため、全件CSVによる明細置換を中止",
-    });
-    return false;
-  }
-
   try {
-    const subsidyResult = toGbizBulkRecords(
-      await downloadGbizCsv(source.downloadUrl, "Hojokinjoho", token),
-      "subsidy",
-    );
-    const procurementResult = toGbizBulkRecords(
-      await downloadGbizCsv(source.downloadUrl, "Chotatsujoho", token),
-      "procurement",
-    );
+    const subsidyCsv = await downloadGbizCsv(source.downloadUrl, "Hojokinjoho", token);
+    const procurementCsv = await downloadGbizCsv(source.downloadUrl, "Chotatsujoho", token);
+    const csvRetrievedAt = new Date().toISOString();
+    const subsidyResult = toGbizBulkRecords(subsidyCsv, "subsidy");
+    const procurementResult = toGbizBulkRecords(procurementCsv, "procurement");
     logGbizScan("補助金", subsidyResult.stats);
     logGbizScan("調達", procurementResult.stats);
     const newRecords = [...subsidyResult.records, ...procurementResult.records];
-    if (!newRecords.length) throw new Error("GビズINFO 全件CSV: 対象明細が0件です");
     assertUniqueRecordIds(newRecords);
-
-    const importedRecordCount = newRecords.length;
-    const importedSubsidyCount = newRecords.filter((record) => record.stage === "subsidy_published").length;
-    const importedProcurementCount = newRecords.filter((record) => record.stage === "contracted").length;
-    const officialRecordCount = dashboardStats.officialRecordCount;
-    const recordCountGap = officialRecordCount - importedRecordCount;
-    if (
-      importedSubsidyCount !== dashboardStats.officialSubsidyCount
-      || importedProcurementCount !== dashboardStats.officialProcurementCount
-      || recordCountGap !== 0
-    ) {
-      throw new Error(
-        "GビズINFO 全件CSV: 公式画面との件数照合に失敗 "
-        + `(補助金 ${importedSubsidyCount}/${dashboardStats.officialSubsidyCount}、`
-        + `調達 ${importedProcurementCount}/${dashboardStats.officialProcurementCount})`,
-      );
-    }
+    const audit = auditGbizImport(subsidyResult, procurementResult, dashboardStats);
     importSucceededAt = new Date().toISOString();
     next.records = newRecords;
     updateSource("gbiz", {
-      recordCount: importedRecordCount,
-      importedRecordCount,
-      importedSubsidyCount,
-      importedProcurementCount,
-      recordCountGap,
+      ...audit,
+      recordCount: audit.csvImportedRecordCount,
+      csvRetrievedAt,
+      csvSubsidyFileBytes: Buffer.byteLength(subsidyCsv, "utf8"),
+      csvProcurementFileBytes: Buffer.byteLength(procurementCsv, "utf8"),
+      csvSubsidySha256: sha256(subsidyCsv),
+      csvProcurementSha256: sha256(procurementCsv),
+      csvTotalSubsidyRows: subsidyResult.stats.totalRows,
+      csvTotalProcurementRows: procurementResult.stats.totalRows,
+      dashboardSiteGap: undefined,
       method: "GビズINFO全件CSVを毎日再取得",
       lastChecked: today,
       lastSuccessfulImportAt: importSucceededAt,
@@ -233,7 +225,8 @@ async function refreshGbizBulk(dashboardStats) {
     results.push({
       ok: true,
       name: "GビズINFO 全件CSV",
-      message: `対象公表組織の補助金・調達 ${importedRecordCount.toLocaleString("ja-JP")}件（公式画面との差 ${formatSignedCount(recordCountGap)}）`,
+      message: `CSV対象 ${audit.csvEligibleRecordCount.toLocaleString("ja-JP")}行を全件取込 `
+        + `（CSV取込差 ${formatSignedCount(audit.csvImportGap)}、公式画面－CSV ${formatSignedCount(audit.dashboardMinusCsvEligibleCount)}）`,
     });
     return true;
   } catch (error) {
@@ -250,6 +243,10 @@ async function refreshGbizBulk(dashboardStats) {
 function formatSignedCount(value) {
   if (value === null) return "未照合";
   return `${value.toLocaleString("ja-JP")}件`;
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 async function downloadGbizCsv(downloadPageUrl, downfile, token) {
@@ -435,10 +432,36 @@ function validate(data) {
   if (!gbizSource || gbizSource.recordCount !== data.records.length) {
     throw new Error("GビズINFOの収録件数が明細件数と一致しません");
   }
-  if (Number.isSafeInteger(gbizSource.officialRecordCount)) {
-    const expectedGap = gbizSource.officialRecordCount - gbizSource.recordCount;
-    if (gbizSource.recordCountGap !== expectedGap) {
-      throw new Error("GビズINFOの公式件数との差が不正です");
+  if (Number.isSafeInteger(gbizSource.csvEligibleRecordCount)) {
+    if (
+      gbizSource.csvImportedRecordCount !== gbizSource.recordCount
+      || gbizSource.csvImportGap !== gbizSource.csvEligibleRecordCount - gbizSource.csvImportedRecordCount
+      || gbizSource.csvImportGap !== 0
+    ) {
+      throw new Error("GビズINFO全件CSVの対象行と取込行が一致しません");
+    }
+    const importedSubsidyCount = data.records.filter((record) => record.stage === "subsidy_published").length;
+    const importedProcurementCount = data.records.filter((record) => record.stage === "contracted").length;
+    if (
+      gbizSource.csvImportedSubsidyCount !== importedSubsidyCount
+      || gbizSource.csvEligibleSubsidyCount !== importedSubsidyCount
+      || gbizSource.csvImportedProcurementCount !== importedProcurementCount
+      || gbizSource.csvEligibleProcurementCount !== importedProcurementCount
+    ) {
+      throw new Error("GビズINFO全件CSVの区分別件数が一致しません");
+    }
+  }
+  if (
+    Number.isSafeInteger(gbizSource.dashboardRecordCount)
+    && Number.isSafeInteger(gbizSource.csvEligibleRecordCount)
+  ) {
+    if (
+      gbizSource.dashboardRecordCount
+        !== gbizSource.dashboardSubsidyCount + gbizSource.dashboardProcurementCount
+      || gbizSource.dashboardMinusCsvEligibleCount
+        !== gbizSource.dashboardRecordCount - gbizSource.csvEligibleRecordCount
+    ) {
+      throw new Error("GビズINFO公式画面と全件CSVの参考照合値が不正です");
     }
   }
 }

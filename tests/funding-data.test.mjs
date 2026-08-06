@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fiscalYear, parseAmount, parseJapaneseDate } from "../scripts/gbiz-values.mjs";
-import { parseDashboardRow, toGbizBulkRecords } from "../scripts/gbiz-csv.mjs";
+import { auditGbizImport, parseDashboardRow, toGbizBulkRecords } from "../scripts/gbiz-csv.mjs";
 
 const data = JSON.parse(
   await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
@@ -139,24 +139,61 @@ test("converts blank dates, blank names, zero and negative CSV values without dr
   });
 });
 
-test("reports included and official Gbiz counts without hiding the gap", () => {
+test("separates CSV import completeness from the dashboard comparison", () => {
+  const subsidy = toGbizBulkRecords([
+    "法人番号,商号または名称,証明日,名称,金額,発行元,キー情報",
+    "6010001030403,テスト法人,,補助事業,100,経済産業省,sub-1",
+  ].join("\n"), "subsidy");
+  const procurement = toGbizBulkRecords([
+    "法人番号,商号または名称,受注日,件名,落札価格,組織名,キー情報,備考",
+    "6010001030403,テスト法人,2026-04-01,調達事業,1,特許庁,proc-1,単価",
+  ].join("\n"), "procurement");
+  const audit = auditGbizImport(subsidy, procurement, {
+    dashboardRecordCount: 16,
+    dashboardSubsidyCount: 6,
+    dashboardProcurementCount: 10,
+  });
+  assert.equal(audit.csvEligibleRecordCount, 2);
+  assert.equal(audit.csvImportedRecordCount, 2);
+  assert.equal(audit.csvImportGap, 0);
+  assert.equal(audit.dashboardMinusCsvEligibleCount, 14);
+  assert.equal(audit.dashboardComparisonStatus, "different");
+
+  const withoutDashboard = auditGbizImport(subsidy, procurement, null);
+  assert.equal(withoutDashboard.csvImportGap, 0);
+  assert.equal(withoutDashboard.dashboardComparisonStatus, "unavailable");
+
+  const incomplete = structuredClone(subsidy);
+  incomplete.stats.eligibleRows += 1;
+  assert.throws(
+    () => auditGbizImport(incomplete, procurement, null),
+    /CSV対象行との件数照合に失敗/,
+  );
+});
+
+test("reports CSV and dashboard counts without conflating their gaps", () => {
   const gbizSource = data.sources.find((source) => source.id === "gbiz");
   assert.ok(gbizSource, "Gbiz source metadata is required");
   assert.equal(gbizSource.recordCount, data.records.length);
-  assert.ok(Number.isSafeInteger(gbizSource.officialRecordCount));
-  assert.equal(
-    gbizSource.recordCountGap,
-    gbizSource.officialRecordCount - gbizSource.recordCount,
-  );
-  assert.equal(
-    gbizSource.officialRecordCount,
-    gbizSource.officialSubsidyCount + gbizSource.officialProcurementCount,
-  );
-  assert.equal(
-    gbizSource.officialRecordCount,
-    gbizSource.officialMetiSubtotalCount + gbizSource.officialPatentCount,
-  );
-  if (gbizSource.recordCountGap !== 0) assert.equal(gbizSource.status, "watch");
+  if (Number.isSafeInteger(gbizSource.csvEligibleRecordCount)) {
+    assert.equal(gbizSource.csvImportedRecordCount, gbizSource.recordCount);
+    assert.equal(gbizSource.csvImportGap, 0);
+    assert.equal(gbizSource.csvEligibleRecordCount, gbizSource.csvImportedRecordCount);
+    assert.equal(
+      gbizSource.csvEligibleRecordCount,
+      gbizSource.csvEligibleSubsidyCount + gbizSource.csvEligibleProcurementCount,
+    );
+    assert.equal(gbizSource.status, "healthy");
+    if (Number.isSafeInteger(gbizSource.dashboardRecordCount)) {
+      assert.equal(
+        gbizSource.dashboardMinusCsvEligibleCount,
+        gbizSource.dashboardRecordCount - gbizSource.csvEligibleRecordCount,
+      );
+    }
+  } else {
+    assert.equal(gbizSource.status, "watch");
+    assert.equal(gbizSource.lastSuccessfulImportAt, undefined);
+  }
 });
 
 test("derives the year selector from declared coverage", () => {
@@ -196,13 +233,15 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.doesNotMatch(pageSource, /受取先|支出元・実施機関|契約額/);
   assert.doesNotMatch(pageSource, /\broute\b/);
   assert.doesNotMatch(pageSource, /合計|交付金額|期間指定API/);
+  assert.doesNotMatch(pageSource, /未収録行|検索結果は網羅的では/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure/);
   assert.doesNotMatch(styleSource, /\.route\b|award_decision|\.finalized\b|\.paid\b/);
 });
 
 test("fails closed before replacing records when source counts cannot be reconciled", () => {
-  assert.match(updateSource, /全件CSVによる明細置換を中止/);
-  assert.match(updateSource, /公式画面との件数照合に失敗/);
+  assert.match(updateSource, /auditGbizImport/);
+  assert.match(updateSource, /csvImportGap/);
+  assert.match(updateSource, /CSVの対象行と取込行が一致しません/);
   assert.match(updateSource, /assertUniqueRecordIds\(newRecords\)/);
   assert.match(updateSource, /process\.env\.CI === "true"/);
   assert.match(updateWorkflow, /- "scripts\/\*\*"/);

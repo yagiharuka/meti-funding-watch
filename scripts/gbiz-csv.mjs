@@ -40,7 +40,7 @@ export function toGbizBulkRecords(csvText, kind) {
   const unmatchedAgencies = new Map();
   let totalRows = 0;
   let recipientRows = 0;
-  let metiRecipientRows = 0;
+  let eligibleRows = 0;
   let missingDateRows = 0;
   let missingProgramRows = 0;
   let missingAmountRows = 0;
@@ -48,6 +48,12 @@ export function toGbizBulkRecords(csvText, kind) {
   let sourceRowNumber = 1;
   for (const row of iterator) {
     sourceRowNumber += 1;
+    if (row.length !== headers.length) {
+      throw new Error(
+        `GビズINFO ${kind}: ${sourceRowNumber}行目の列数が不正です `
+        + `(${row.length}/${headers.length})`,
+      );
+    }
     totalRows += 1;
     const corporateNumber = cleanCell(row[column["法人番号"]]).replace(/\D/g, "");
     const organization = cleanCell(row[column["商号または名称"]]);
@@ -69,7 +75,7 @@ export function toGbizBulkRecords(csvText, kind) {
     }
     if (!isRecipient || !agency) continue;
 
-    metiRecipientRows += 1;
+    eligibleRows += 1;
     if (!date) missingDateRows += 1;
     if (!program) missingProgramRows += 1;
     if (amount === null) missingAmountRows += 1;
@@ -109,7 +115,7 @@ export function toGbizBulkRecords(csvText, kind) {
     stats: {
       totalRows,
       recipientRows,
-      metiRecipientRows,
+      eligibleRows,
       importedRows: records.length,
       missingDateRows,
       missingProgramRows,
@@ -119,6 +125,69 @@ export function toGbizBulkRecords(csvText, kind) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20),
     },
+  };
+}
+
+export function auditGbizImport(subsidyResult, procurementResult, dashboardStats = null) {
+  const csvEligibleSubsidyCount = subsidyResult.stats.eligibleRows;
+  const csvEligibleProcurementCount = procurementResult.stats.eligibleRows;
+  const csvImportedSubsidyCount = subsidyResult.records.length;
+  const csvImportedProcurementCount = procurementResult.records.length;
+  const csvEligibleRecordCount = csvEligibleSubsidyCount + csvEligibleProcurementCount;
+  const csvImportedRecordCount = csvImportedSubsidyCount + csvImportedProcurementCount;
+  const csvImportGap = csvEligibleRecordCount - csvImportedRecordCount;
+
+  if (!csvEligibleRecordCount) {
+    throw new Error("GビズINFO 全件CSV: 対象行が0件です");
+  }
+  if (
+    csvImportedSubsidyCount !== csvEligibleSubsidyCount
+    || csvImportedProcurementCount !== csvEligibleProcurementCount
+    || csvImportGap !== 0
+  ) {
+    throw new Error(
+      "GビズINFO 全件CSV: CSV対象行との件数照合に失敗 "
+      + `(補助金 ${csvImportedSubsidyCount}/${csvEligibleSubsidyCount}、`
+      + `調達 ${csvImportedProcurementCount}/${csvEligibleProcurementCount})`,
+    );
+  }
+  if (subsidyResult.records.some((record) => record.stage !== "subsidy_published")) {
+    throw new Error("GビズINFO 全件CSV: 補助金CSVに異なる区分があります");
+  }
+  if (procurementResult.records.some((record) => record.stage !== "contracted")) {
+    throw new Error("GビズINFO 全件CSV: 調達CSVに異なる区分があります");
+  }
+
+  const dashboardRecordCount = dashboardStats?.dashboardRecordCount ?? null;
+  const dashboardSubsidyCount = dashboardStats?.dashboardSubsidyCount ?? null;
+  const dashboardProcurementCount = dashboardStats?.dashboardProcurementCount ?? null;
+  const dashboardMinusCsvEligibleCount = Number.isSafeInteger(dashboardRecordCount)
+    ? dashboardRecordCount - csvEligibleRecordCount
+    : null;
+  const dashboardMinusCsvEligibleSubsidyCount = Number.isSafeInteger(dashboardSubsidyCount)
+    ? dashboardSubsidyCount - csvEligibleSubsidyCount
+    : null;
+  const dashboardMinusCsvEligibleProcurementCount = Number.isSafeInteger(dashboardProcurementCount)
+    ? dashboardProcurementCount - csvEligibleProcurementCount
+    : null;
+
+  return {
+    csvEligibleRecordCount,
+    csvImportedRecordCount,
+    csvImportGap,
+    csvEligibleSubsidyCount,
+    csvImportedSubsidyCount,
+    csvEligibleProcurementCount,
+    csvImportedProcurementCount,
+    dashboardRecordCount,
+    dashboardSubsidyCount,
+    dashboardProcurementCount,
+    dashboardMinusCsvEligibleCount,
+    dashboardMinusCsvEligibleSubsidyCount,
+    dashboardMinusCsvEligibleProcurementCount,
+    dashboardComparisonStatus: dashboardRecordCount === null
+      ? "unavailable"
+      : dashboardMinusCsvEligibleCount === 0 ? "matched" : "different",
   };
 }
 
@@ -194,6 +263,7 @@ function* parseCsvRows(text) {
       field += character;
     }
   }
+  if (quoted) throw new Error("GビズINFO CSV: 引用符が閉じられていません");
   if (field || row.length) {
     row.push(field);
     yield row;

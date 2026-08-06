@@ -28,7 +28,22 @@ type FundingSource = {
   id: string;
   name: string;
   recordCount: number;
-  importedRecordCount?: number;
+  csvEligibleRecordCount?: number;
+  csvImportedRecordCount?: number;
+  csvImportGap?: number;
+  csvEligibleSubsidyCount?: number;
+  csvImportedSubsidyCount?: number;
+  csvEligibleProcurementCount?: number;
+  csvImportedProcurementCount?: number;
+  dashboardRecordCount?: number | null;
+  dashboardSubsidyCount?: number | null;
+  dashboardProcurementCount?: number | null;
+  dashboardMinusCsvEligibleCount?: number | null;
+  dashboardMinusCsvEligibleSubsidyCount?: number | null;
+  dashboardMinusCsvEligibleProcurementCount?: number | null;
+  dashboardComparisonStatus?: "matched" | "different" | "unavailable";
+  csvRetrievedAt?: string;
+  // 旧スナップショットを安全に表示するための後方互換フィールド
   officialRecordCount?: number;
   recordCountGap?: number | null;
   officialSubsidyCount?: number;
@@ -110,7 +125,15 @@ function formatCoverageYears(years: number[], unclassifiedDateCount = 0) {
   return unclassifiedDateCount ? `${range}、日付の記載なしあり` : range;
 }
 
-function displayCount(value?: number) {
+function displayCount(value?: number | null) {
+  return Number.isSafeInteger(value) ? `${value.toLocaleString("ja-JP")}件` : "未照合";
+}
+
+function displayRows(value?: number | null) {
+  return Number.isSafeInteger(value) ? `${value.toLocaleString("ja-JP")}行` : "未照合";
+}
+
+function displayDifference(value?: number | null) {
   return Number.isSafeInteger(value) ? `${value.toLocaleString("ja-JP")}件` : "未照合";
 }
 
@@ -243,10 +266,24 @@ export default function Home() {
   const visibleStart = filteredCommitments.length ? page * pageSize + 1 : 0;
   const visibleEnd = Math.min((page + 1) * pageSize, filteredCommitments.length);
   const hasFilters = query || agency !== "all" || stage !== "all" || year !== defaultYear;
-  const recordCountGap = gbizSource?.recordCountGap
-    ?? (Number.isSafeInteger(gbizSource?.officialRecordCount) && Number.isSafeInteger(gbizSource?.recordCount)
-      ? (gbizSource?.officialRecordCount ?? 0) - (gbizSource?.recordCount ?? 0)
+  const dashboardRecordCount = gbizSource?.dashboardRecordCount ?? gbizSource?.officialRecordCount;
+  const csvEligibleRecordCount = gbizSource?.csvEligibleRecordCount;
+  const csvImportedRecordCount = gbizSource?.csvImportedRecordCount;
+  const csvImportGap = gbizSource?.csvImportGap
+    ?? (Number.isSafeInteger(csvEligibleRecordCount) && Number.isSafeInteger(csvImportedRecordCount)
+      ? (csvEligibleRecordCount ?? 0) - (csvImportedRecordCount ?? 0)
       : null);
+  const dashboardCsvGap = gbizSource?.dashboardMinusCsvEligibleCount
+    ?? (Number.isSafeInteger(dashboardRecordCount) && Number.isSafeInteger(csvEligibleRecordCount)
+      ? (dashboardRecordCount ?? 0) - (csvEligibleRecordCount ?? 0)
+      : null);
+  const csvImportVerified = Boolean(
+    gbizSource?.lastSuccessfulImportAt
+    && gbizSource.status === "healthy"
+    && Number.isSafeInteger(csvEligibleRecordCount)
+    && Number.isSafeInteger(csvImportedRecordCount)
+    && csvImportGap === 0,
+  );
 
   function clearFilters() {
     if (year !== defaultYear) {
@@ -306,11 +343,18 @@ export default function Home() {
         </div>
 
         <aside className="scope-note" aria-label="表示データの注意事項">
-          {recordCountGap !== null && recordCountGap !== 0 && (
+          {!csvImportVerified && (
             <p className="incomplete-note" role="alert">
-              <strong>収録件数を確認中です</strong>
-              公式対象{displayCount(gbizSource?.officialRecordCount)}に対し、本サイトは{displayCount(gbizSource?.recordCount)}を収録しています。
-              差は{recordCountGap.toLocaleString("ja-JP")}件で、検索結果は網羅的ではありません。
+              <strong>全件CSVの取込を確認中です</strong>
+              検証済みのCSV対象行数と取込行数が一致するまで、公開データは更新しません。
+            </p>
+          )}
+          {csvImportVerified && dashboardCsvGap !== null && dashboardCsvGap !== 0 && (
+            <p className="snapshot-note" role="status">
+              <strong>GビズINFO内の2つの表示に時点差があります</strong>
+              公式画面は{displayCount(dashboardRecordCount)}、取得した全件CSVの対象は{displayRows(csvEligibleRecordCount)}です。
+              差は{displayDifference(dashboardCsvGap)}ですが、CSV対象{displayRows(csvEligibleRecordCount)}はすべて取り込んでいます。
+              更新時点または集計条件が異なる可能性があります。
             </p>
           )}
           <strong>表示額は支払実績ではありません</strong>
@@ -425,13 +469,16 @@ export default function Home() {
                 <div><dt>収録期間</dt><dd>{formatCoverageYears(coverageYears, dataset.coverage?.gbiz.unclassifiedDateCount)}</dd></div>
                 <div><dt>{gbizSource.lastSuccessfulImportAt ? "明細データ最終取込" : "成功履歴"}</dt><dd>{gbizSource.lastSuccessfulImportAt ? formatTimestamp(gbizSource.lastSuccessfulImportAt) : "未記録"}</dd></div>
                 <div><dt>公式画面の確認</dt><dd>{formatTimestamp(gbizSource.dashboardCheckedAt ?? gbizSource.lastChecked)}</dd></div>
-                <div><dt>公式対象掲載行</dt><dd>{displayCount(gbizSource.officialRecordCount)}</dd></div>
-                <div><dt>本サイト収録行</dt><dd>{displayCount(gbizSource.recordCount)}</dd></div>
-                <div><dt>未収録行（公式－収録）</dt><dd>{recordCountGap === null ? "未照合" : `${recordCountGap.toLocaleString("ja-JP")}件`}</dd></div>
-                <div><dt>照合状態</dt><dd>{gbizSource.status === "healthy" ? "一致" : "要確認"}</dd></div>
+                <div><dt>公式ダッシュボード</dt><dd>{displayCount(dashboardRecordCount)}<small>補助金 {displayCount(gbizSource.dashboardSubsidyCount)}／調達 {displayCount(gbizSource.dashboardProcurementCount)}</small></dd></div>
+                <div><dt>取得CSVの対象行</dt><dd>{displayRows(csvEligibleRecordCount)}<small>補助金 {displayRows(gbizSource.csvEligibleSubsidyCount)}／調達 {displayRows(gbizSource.csvEligibleProcurementCount)}</small></dd></div>
+                <div><dt>本サイト取込行</dt><dd>{displayRows(csvImportedRecordCount ?? gbizSource.recordCount)}<small>補助金 {displayRows(gbizSource.csvImportedSubsidyCount)}／調達 {displayRows(gbizSource.csvImportedProcurementCount)}</small></dd></div>
+                <div><dt>CSV取込差（対象－取込）</dt><dd>{displayRows(csvImportGap)}</dd></div>
+                <div><dt>公式画面－CSV対象</dt><dd>{displayDifference(dashboardCsvGap)}</dd></div>
+                <div><dt>取込状態</dt><dd>{csvImportVerified ? "CSV対象行を全件取込済み" : "要確認"}</dd></div>
               </dl>
               <p className="source-disclaimer">
-                公式対象はGビズINFO公式画面の「経済産業省（小計）」と「特許庁」です。差が0件でないときは、取込の完全性を確認中です。
+                公式ダッシュボードと全件CSVは別のスナップショットです。両者の差は取込漏れとはみなさず、参考照合として表示します。
+                公開条件は、取得CSVの対象行と本サイト取込行が区分別にも一致することです。
               </p>
               <a className="source-link" href="https://info.gbiz.go.jp/hojin/dashboard" target="_blank" rel="noreferrer">GビズINFO公式画面 ↗</a>
             </article>

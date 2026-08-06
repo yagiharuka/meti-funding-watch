@@ -65,6 +65,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .scope-note p { margin: 5px 0 0; font-size: 11px; line-height: 1.75; }
 .scope-note .incomplete-note { margin: -2px -2px 18px; padding: 13px 15px; border: 1px solid #c68822; border-radius: 10px; background: #fff3d6; color: #6b4a10; }
 .scope-note .incomplete-note strong { margin-bottom: 3px; font-size: 13px; }
+.scope-note .snapshot-note { margin: -2px -2px 18px; padding: 13px 15px; border: 1px solid #8fac9f; border-radius: 10px; background: #f1f8f3; color: #365f50; }
+.scope-note .snapshot-note strong { margin-bottom: 3px; font-size: 13px; }
 .series-label { display: flex; align-items: baseline; gap: 10px; max-width: 1440px; margin: 0 auto 14px; padding: 17px 20px; border: 1px solid var(--line); border-radius: 15px; background: #fff; color: var(--green); }
 .series-label strong { font-size: 16px; }
 .series-label span { color: #87958f; font-size: 10px; font-weight: 700; }
@@ -114,6 +116,7 @@ td small { display: block; margin-top: 5px; color: #8b9994; font-size: 9px; }
 .source-grid dl div { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; }
 .source-grid dt { color: #849b92; }
 .source-grid dd { margin: 0; color: #c7d2ce; text-align: right; }
+.source-grid dd small { display: block; margin-top: 3px; color: #849b92; font-size: 9px; }
 .source-disclaimer { margin: 18px 0 12px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.1); color: #9cafaa; font-size: 10px; line-height: 1.7; }
 
 
