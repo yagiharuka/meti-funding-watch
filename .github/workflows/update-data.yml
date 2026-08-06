@@ -47,12 +47,12 @@ jobs:
 
       - name: Commit changed data
         run: |
-          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/review-cache; then
+          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/review-cache data/pages; then
             echo "No data changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/funding-data.json data/funding-summary.json data/review-cache
+          git add data/funding-data.json data/funding-summary.json data/review-cache data/pages
           git commit -m "chore(data): refresh official funding data"
           git push

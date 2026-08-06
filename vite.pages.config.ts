@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from "node:url";
-import { copyFile, mkdir } from "node:fs/promises";
+import { cp, mkdir } from "node:fs/promises";
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -17,10 +17,7 @@ export default defineConfig({
       async closeBundle() {
         const dataDirectory = fileURLToPath(new URL("./dist-pages/data", import.meta.url));
         await mkdir(dataDirectory, { recursive: true });
-        await copyFile(
-          fileURLToPath(new URL("./data/funding-data.json", import.meta.url)),
-          fileURLToPath(new URL("./dist-pages/data/funding-data.json", import.meta.url)),
-        );
+        await cp(fileURLToPath(new URL("./data/pages", import.meta.url)), dataDirectory, { recursive: true });
       },
     },
   ],

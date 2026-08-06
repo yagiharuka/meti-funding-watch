@@ -5,6 +5,9 @@ import test from "node:test";
 const data = JSON.parse(
   await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
 );
+const pageManifest = JSON.parse(
+  await readFile(new URL("../data/pages/manifest.json", import.meta.url), "utf8"),
+);
 
 test("keeps review-sheet programs, payments, and commitments as separate series", () => {
   assert.ok(Array.isArray(data.reviewPrograms));
@@ -30,6 +33,19 @@ test("precomputes first-paint aggregates without bundling every detail row", () 
   assert.ok(aggregate.recipientCommitmentAmount > 0);
   assert.ok(aggregate.executionAmount > 0);
   assert.ok(aggregate.nedoRecipientCount > 0);
+});
+
+test("publishes detail rows in series-and-year chunks", async () => {
+  assert.deepEqual(Object.keys(pageManifest.payments), ["2023", "2024"]);
+  assert.deepEqual(Object.keys(pageManifest.commitments), data.coverage.gbiz.fiscalYears.map(String));
+  const paymentGroups = await Promise.all(Object.values(pageManifest.payments).map(async (filename) =>
+    JSON.parse(await readFile(new URL(`../data/pages/${filename}`, import.meta.url), "utf8")),
+  ));
+  const commitmentGroups = await Promise.all(Object.values(pageManifest.commitments).map(async (filename) =>
+    JSON.parse(await readFile(new URL(`../data/pages/${filename}`, import.meta.url), "utf8")),
+  ));
+  assert.equal(paymentGroups.flat().length, data.reviewPayments.length);
+  assert.equal(commitmentGroups.flat().length, data.records.length);
 });
 
 test("classifies every record into exactly one flow layer", () => {

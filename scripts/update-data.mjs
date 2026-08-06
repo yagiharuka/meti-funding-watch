@@ -6,6 +6,7 @@ const dataPath = new URL("../data/funding-data.json", import.meta.url);
 const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
 const reviewCachePath = new URL("../data/review-cache/", import.meta.url);
+const pageDataPath = new URL("../data/pages/", import.meta.url);
 
 const [current, registry] = await Promise.all([
   readJson(dataPath),
@@ -58,6 +59,7 @@ next.records.sort((a, b) => {
 });
 
 validate(next);
+await writePageData(next);
 await Promise.all([
   writeFile(dataPath, `${JSON.stringify(next)}\n`),
   writeFile(summaryPath, `${JSON.stringify({
@@ -72,6 +74,42 @@ for (const result of results) {
   console.log(`${result.ok ? "OK" : "STALE"} ${result.name}: ${result.message}`);
 }
 console.log(`Wrote ${next.records.length.toLocaleString("en-US")} records to ${dataPath.pathname}`);
+
+async function writePageData(data) {
+  await mkdir(pageDataPath, { recursive: true });
+  const series = {
+    payments: groupRowsByYear(data.reviewPayments, (row) => row.fiscalYear),
+    commitments: groupRowsByYear(data.records, (row) => row.fiscalYear),
+    programs: groupRowsByYear(data.reviewPrograms, (row) => row.executionFiscalYear ?? "unclassified"),
+  };
+  const manifest = {
+    generatedAt: data.generatedAt,
+    payments: {},
+    commitments: {},
+    programs: {},
+  };
+  const writes = [];
+
+  for (const [seriesName, groups] of Object.entries(series)) {
+    for (const [year, rows] of groups) {
+      const filename = `${seriesName}-${year}.json`;
+      manifest[seriesName][year] = filename;
+      writes.push(writeFile(new URL(filename, pageDataPath), `${JSON.stringify(rows)}\n`));
+    }
+  }
+  await Promise.all(writes);
+  await writeFile(new URL("manifest.json", pageDataPath), `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+function groupRowsByYear(rows, yearForRow) {
+  const groups = new Map();
+  for (const row of rows) {
+    const year = String(yearForRow(row));
+    if (!groups.has(year)) groups.set(year, []);
+    groups.get(year).push(row);
+  }
+  return groups;
+}
 
 async function refreshReviewSheets() {
   const source = configured.get("review-sheets");

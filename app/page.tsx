@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 
 type Stage = "contracted" | "award_decision" | "subsidy_published" | "finalized" | "paid";
@@ -107,8 +107,15 @@ type FundingDataset = {
   };
 };
 
+type DataChunkManifest = {
+  generatedAt: string;
+  payments: Record<string, string>;
+  commitments: Record<string, string>;
+  programs: Record<string, string>;
+};
+
 const bundledFundingData = fundingSummary as FundingDataset;
-const liveDataUrl = "data/funding-data.json";
+const dataBaseUrl = "data/";
 const pageSize = 100;
 const emptyReviewPayments: ReviewPayment[] = [];
 const emptyReviewPrograms: ReviewProgram[] = [];
@@ -174,6 +181,8 @@ export default function Home() {
   const initialComparisonYear = bundledFundingData.coverage?.commonFiscalYears.at(-1);
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
+  const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
+  const [detailLoading, setDetailLoading] = useState(true);
   const [view, setView] = useState<View>("payments");
   const [query, setQuery] = useState("");
   const [agency, setAgency] = useState("all");
@@ -182,43 +191,73 @@ export default function Home() {
   const [comparisonYear, setComparisonYear] = useState(initialComparisonYear ? String(initialComparisonYear) : "");
   const [flowLevel, setFlowLevel] = useState<FlowLevel>("recipient");
   const [page, setPage] = useState(0);
+  const chunkCache = useRef(new Map<string, unknown[]>());
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(liveDataUrl, { cache: "no-store", signal: controller.signal })
+    fetch(`${dataBaseUrl}manifest.json`, { cache: "no-store", signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error(`GitHub data: ${response.status}`);
-        return response.json() as Promise<FundingDataset>;
+        if (!response.ok) throw new Error(`Data manifest: ${response.status}`);
+        return response.json() as Promise<DataChunkManifest>;
       })
       .then((candidate) => {
         if (
           typeof candidate.generatedAt === "string" &&
-          Array.isArray(candidate.records) &&
-          Array.isArray(candidate.sources)
+          candidate.payments &&
+          candidate.commitments &&
+          candidate.programs
         ) {
-          setDataset(candidate);
-          const reviewYears = candidate.coverage?.reviewPayments.fiscalYears
-            ?? distinctYears((candidate.reviewPayments ?? []).map((row) => row.fiscalYear));
-          const gbizYears = candidate.coverage?.gbiz.fiscalYears
-            ?? distinctYears(candidate.records
-              .filter((row) => row.ingestSource === "gbiz-bulk-csv" || /GビズINFO/.test(row.sourceName))
-              .map((row) => row.fiscalYear));
-          const commonYears = candidate.coverage?.commonFiscalYears
-            ?? reviewYears.filter((item) => gbizYears.includes(item));
-          const latestCommonYear = commonYears.at(-1);
-          if (latestCommonYear) {
-            setComparisonYear(String(latestCommonYear));
-            setYear(String(latestCommonYear));
-          }
-          setDataMode("github");
+          setManifest(candidate);
+          setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
         }
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setDataMode("unavailable");
+        setDetailLoading(false);
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!manifest) return;
+    const controller = new AbortController();
+    const filesByYear = manifest[view];
+    const filenames = year === "all"
+      ? Object.values(filesByYear)
+      : [filesByYear[year]].filter((filename): filename is string => Boolean(filename));
+
+    Promise.all(filenames.map(async (filename) => {
+      const cached = chunkCache.current.get(filename);
+      if (cached) return cached;
+      const response = await fetch(`${dataBaseUrl}${filename}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`Data chunk: ${response.status}`);
+      const rows = await response.json() as unknown[];
+      chunkCache.current.set(filename, rows);
+      return rows;
+    }))
+      .then((groups) => {
+        const rows = groups.flat();
+        setDataset((current) => ({
+          ...current,
+          generatedAt: manifest.generatedAt,
+          records: view === "commitments" ? rows as FundingRecord[] : current.records,
+          reviewPayments: view === "payments" ? rows as ReviewPayment[] : current.reviewPayments,
+          reviewPrograms: view === "programs" ? rows as ReviewProgram[] : current.reviewPrograms,
+        }));
+        setDataMode("github");
+        setDetailLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setDataMode("unavailable");
+        setDetailLoading(false);
+      });
+    return () => controller.abort();
+  }, [manifest, view, year]);
 
   const commitments = dataset.records;
   const payments = dataset.reviewPayments ?? emptyReviewPayments;
@@ -332,37 +371,34 @@ export default function Home() {
 
   const comparisonPayments = payments.filter((row) => row.fiscalYear === comparisonFiscalYear);
   const comparisonCommitments = commitments.filter((row) => row.fiscalYear === comparisonFiscalYear);
+  const comparisonPrograms = programs.filter((row) => row.executionFiscalYear === comparisonFiscalYear);
   const summaryAggregate = dataset.aggregates?.byFiscalYear[String(comparisonFiscalYear)];
-  const useSummaryAggregate = dataMode === "loading" && comparisonPayments.length === 0 && comparisonCommitments.length === 0;
   const recipientPayments = comparisonPayments.filter((row) => row.flowLevel === "recipient");
   const intermediaryPayments = comparisonPayments.filter((row) => row.flowLevel === "intermediary");
   const recipientCommitments = comparisonCommitments.filter((row) => (row.flowLevel ?? "recipient") === "recipient");
-  const recipientPaymentTotal = useSummaryAggregate
-    ? summaryAggregate?.recipientPaymentAmount ?? 0
-    : sumAmounts(recipientPayments);
-  const intermediaryPaymentTotal = useSummaryAggregate
-    ? summaryAggregate?.intermediaryPaymentAmount ?? 0
-    : sumAmounts(intermediaryPayments);
-  const recipientCommitmentTotal = useSummaryAggregate
-    ? summaryAggregate?.recipientCommitmentAmount ?? 0
-    : sumAmounts(recipientCommitments);
-  const calculatedExecutionTotal = programs
-    .filter((row) => row.executionFiscalYear === comparisonFiscalYear)
-    .reduce((sum, row) => sum + (row.execution ?? 0), 0);
-  const executionTotal = useSummaryAggregate
-    ? summaryAggregate?.executionAmount ?? 0
-    : calculatedExecutionTotal;
+  const recipientPaymentTotal = comparisonPayments.length
+    ? sumAmounts(recipientPayments)
+    : summaryAggregate?.recipientPaymentAmount ?? 0;
+  const intermediaryPaymentTotal = comparisonPayments.length
+    ? sumAmounts(intermediaryPayments)
+    : summaryAggregate?.intermediaryPaymentAmount ?? 0;
+  const recipientCommitmentTotal = comparisonCommitments.length
+    ? sumAmounts(recipientCommitments)
+    : summaryAggregate?.recipientCommitmentAmount ?? 0;
+  const executionTotal = comparisonPrograms.length
+    ? comparisonPrograms.reduce((sum, row) => sum + (row.execution ?? 0), 0)
+    : summaryAggregate?.executionAmount ?? 0;
   const executionYear = comparisonFiscalYear;
   const paymentYear = comparisonFiscalYear;
   const nedoRecipients = recipientPayments.filter((row) =>
     row.route.some((node) => /NEDO|新エネルギー・産業技術総合開発機構/.test(node)),
   );
-  const nedoRecipientTotal = useSummaryAggregate
-    ? summaryAggregate?.nedoRecipientAmount ?? 0
-    : sumAmounts(nedoRecipients);
-  const nedoRecipientCount = useSummaryAggregate
-    ? summaryAggregate?.nedoRecipientCount ?? 0
-    : nedoRecipients.length;
+  const nedoRecipientTotal = comparisonPayments.length
+    ? sumAmounts(nedoRecipients)
+    : summaryAggregate?.nedoRecipientAmount ?? 0;
+  const nedoRecipientCount = comparisonPayments.length
+    ? nedoRecipients.length
+    : summaryAggregate?.nedoRecipientCount ?? 0;
   const showMetric = (value: number) => dataMode === "loading" && !value && !summaryAggregate ? "明細読込中" : compactYen(value);
   const sourceCoverage: Record<string, string> = {
     "review-sheets": formatCoverageYears(coverage.reviewPayments.fiscalYears),
@@ -371,6 +407,9 @@ export default function Home() {
   };
 
   function changeView(nextView: View) {
+    if (nextView === view) return;
+    setDetailLoading(true);
+    setDataMode("loading");
     setView(nextView);
     setAgency("all");
     setStage("all");
@@ -380,6 +419,10 @@ export default function Home() {
   }
 
   function clearFilters() {
+    if (year !== (comparisonYear || "all")) {
+      setDetailLoading(true);
+      setDataMode("loading");
+    }
     setQuery("");
     setAgency("all");
     setStage("all");
@@ -389,6 +432,8 @@ export default function Home() {
   }
 
   function changeComparisonYear(nextYear: string) {
+    setDetailLoading(true);
+    setDataMode("loading");
     setComparisonYear(nextYear);
     setYear(nextYear);
     setPage(0);
@@ -409,7 +454,7 @@ export default function Home() {
           <a href="#about">集計上の注意</a>
         </nav>
         <span className="update-chip"><i />{
-          dataMode === "github" ? "GitHub日次更新" : dataMode === "loading" ? "全件データ読込中" : "データ取得要確認"
+          dataMode === "github" ? "明細準備完了" : dataMode === "loading" ? "明細読込中" : "明細取得要確認"
         }</span>
       </header>
 
@@ -568,7 +613,7 @@ export default function Home() {
           )}
           <label>
             <span className="sr-only">年度</span>
-            <select value={year} onChange={(event) => { setYear(event.target.value); setPage(0); }}>
+            <select value={year} onChange={(event) => { setDetailLoading(true); setDataMode("loading"); setYear(event.target.value); setPage(0); }}>
               <option value="all">全期間（収録範囲が異なります）</option>
               {fiscalYears.map((item) => <option key={item} value={item}>{item}年度</option>)}
             </select>
@@ -576,11 +621,15 @@ export default function Home() {
         </div>
 
         <div className="result-bar">
-          <span>
-            <strong>{activeRows.length.toLocaleString("ja-JP")}</strong>件
-            {activeRows.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
-            {filteredAmount !== null && <b>・選択系列 {compactYen(filteredAmount)}</b>}
-          </span>
+          {detailLoading ? (
+            <span><strong>明細を読込中</strong></span>
+          ) : (
+            <span>
+              <strong>{activeRows.length.toLocaleString("ja-JP")}</strong>件
+              {activeRows.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
+              {filteredAmount !== null && <b>・選択系列 {compactYen(filteredAmount)}</b>}
+            </span>
+          )}
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
@@ -635,8 +684,8 @@ export default function Home() {
           )}
           {!activeRows.length && (
             <div className="empty-state">
-              <strong>{dataMode === "loading" ? "明細データを読み込んでいます" : "該当するレコードがありません"}</strong>
-              <span>{dataMode === "loading" ? "集計値と収録期間は先に確認できます。" : "検索語や条件を変えてください。"}</span>
+              <strong>{detailLoading ? "明細データを読み込んでいます" : dataMode === "unavailable" ? "明細データを取得できません" : "該当するレコードがありません"}</strong>
+              <span>{detailLoading ? "集計値と収録期間は先に確認できます。" : dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "検索語や条件を変えてください。"}</span>
             </div>
           )}
         </div>
