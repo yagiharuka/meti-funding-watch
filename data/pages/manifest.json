@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T07:53:34.065Z",
+  "generatedAt": "2026-08-06T15:42:24.531Z",
   "commitments": {
     "2015": "commitments-2015.json",
     "2016": "commitments-2016.json",
@@ -12,6 +12,7 @@
     "2023": "commitments-2023.json",
     "2024": "commitments-2024.json",
     "2025": "commitments-2025.json",
-    "2026": "commitments-2026.json"
+    "2026": "commitments-2026.json",
+    "unclassified": "commitments-unclassified.json"
   }
 }
