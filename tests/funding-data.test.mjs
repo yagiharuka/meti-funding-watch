@@ -399,8 +399,9 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /全支出・実支払を示すものではありません/);
   assert.match(pageSource, /経済産業省を原資とする支出かどうかはGビズINFOだけでは判別できません/);
   assert.match(pageSource, /GビズINFO掲載区分/);
-  assert.match(pageSource, /調達CSV/);
+  assert.match(pageSource, /調達CSV（委託を含む）/);
   assert.match(pageSource, /補助金CSV/);
+  assert.match(pageSource, /調達・委託・補助金/);
   assert.match(pageSource, /認定日・受注日の記載がない/);
   assert.match(pageSource, /当サイトの抽出条件に合うCSV行を全件取込済み/);
   assert.match(pageSource, /update-chip \$\{dataMode\}/);

@@ -83,7 +83,7 @@ const dataBaseUrl = "data/";
 const pageSize = 100;
 
 const stageLabels: Record<Stage, string> = {
-  contracted: "調達CSV",
+  contracted: "調達CSV（委託を含む）",
   subsidy_published: "補助金CSV",
 };
 
@@ -312,9 +312,9 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="経産省関係の調達・補助金情報 トップ">
+        <a className="brand" href="#top" aria-label="経産省関係の調達・委託・補助金情報 トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達・補助金情報</span>
+          <span>経産省関係の調達・委託・補助金情報</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">データ検索</a>
@@ -328,10 +328,10 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">G BIZ INFO SEARCH</p>
-          <h1><em>経産省関係 調達・補助金情報</em></h1>
+          <h1><em>経産省関係 調達・委託・補助金情報</em></h1>
           <p className="hero-scope-warning">
             このサイトは経済産業省の全支出・実支払を示すものではありません。
-            GビズINFOに法人番号付きで掲載された調達・補助金情報だけを表示します。
+            GビズINFOに法人番号付きで掲載された調達（委託を含む）・補助金情報だけを表示します。
             所管法人については、NEDO・IPAのGビズINFO掲載分のみが対象で、その他の所管法人は含みません。
             NEDO・IPAの掲載分についても、経済産業省を原資とする支出かどうかはGビズINFOだけでは判別できません。
           </p>
@@ -351,14 +351,14 @@ export default function Home() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">ORGANIZATIONS & PUBLISHED ACTIVITIES</p>
-            <h2>調達・補助金の掲載情報</h2>
+            <h2>調達・委託・補助金の掲載情報</h2>
           </div>
           <p>法人等の名称と法人番号だけを全文検索します。条件を組み合わせて掲載行を確認できます。</p>
         </div>
 
 
         <div className="series-label" aria-label="表示中のデータ系列">
-          <strong>法人等別の調達・補助金掲載情報</strong>
+          <strong>法人等別の調達・委託・補助金掲載情報</strong>
           <span>GビズINFO</span>
         </div>
 
@@ -414,7 +414,7 @@ export default function Home() {
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
-        <div className="records-table" role="region" aria-label="GビズINFO調達・補助金掲載情報一覧" tabIndex={0}>
+        <div className="records-table" role="region" aria-label="GビズINFO調達・委託・補助金掲載情報一覧" tabIndex={0}>
           <table>
             <thead><tr><th>法人等の名称</th><th>活動名称・件名</th><th>公表組織</th><th>GビズINFO掲載区分</th><th>GビズINFO掲載値</th><th>認定日・受注日</th><th>掲載ページ</th></tr></thead>
             <tbody>{visibleRows.map((row) => (
@@ -479,7 +479,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達・補助金情報</span></div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達・委託・補助金情報</span></div>
         <p>非公式サイトです。GビズINFOおよび本サイトの抽出・取込は、正確性・完全性・最新性を保証しません。</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
