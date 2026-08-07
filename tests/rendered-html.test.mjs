@@ -115,6 +115,10 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
     readFile(new URL(filename, assetDirectory), "utf8")))).join("\n");
   const publicUi = `${publicIndex}\n${javascript}`;
 
+  assert.match(publicUi, /中小企業庁の補助金採択者情報/);
+  assert.match(publicUi, /補助金採択者検索を開く/);
+  assert.match(publicUi, /採択は補助金交付の候補者として選定された段階/);
+  assert.doesNotMatch(publicUi, /_next\/data/);
   assert.doesNotMatch(publicUi, /行政事業レビュー|レビューシート/);
   assert.doesNotMatch(publicUi, /合計|交付金額|期間指定API/);
 });
