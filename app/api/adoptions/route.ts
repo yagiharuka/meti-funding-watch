@@ -63,9 +63,12 @@ export async function GET(request: Request) {
         Accept: "text/html,application/xhtml+xml",
         "User-Agent": "METI-Funding-Watch/1.0 (+https://yagiharuka.github.io/meti-funding-watch/)",
       },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15_000),
     });
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error(`公式検索がHTTP ${response.status}のリダイレクトを返しました`);
+    }
     if (!response.ok) {
       throw new Error(`公式検索がHTTP ${response.status}を返しました`);
     }
@@ -86,7 +89,10 @@ export async function GET(request: Request) {
       sourceUrl: sourceUrl.toString(),
     }, 200, true);
   } catch (error) {
-    console.error("Mirasapo search proxy failed", error);
+    const diagnostic = error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : `Unknown error: ${String(error)}`;
+    console.error(`Mirasapo search proxy failed: ${diagnostic}`);
     return json({
       error: "中小企業庁の公式検索から現在データを取得できません。時間をおいて再度お試しください。",
       sourceUrl: sourceUrl.toString(),
