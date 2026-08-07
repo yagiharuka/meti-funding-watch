@@ -10,20 +10,13 @@ type FundingRecord = {
   id: string;
   fiscalYear: number | null;
   date: string | null;
-  dateRaw?: string;
   organization: string;
   corporateNumber: string;
   sourceAgency: string;
-  publisherCanonical?: string;
   program: string;
   amount: number | null;
   amountRaw?: string;
   stage: Stage;
-  sourceName: string;
-  sourceUrl: string;
-  sourceRecordHash?: string;
-  quality: "primary" | "aggregated";
-  ingestSource: "gbiz-bulk-csv";
 };
 
 type FundingSource = {
@@ -79,14 +72,28 @@ type DataChunkManifest = {
   commitments: Record<string, string>;
 };
 
+type DataRelease = {
+  schemaVersion: 1;
+  commitSha: string;
+  generatedAt: string;
+  recordCount: number;
+  manifestSha256: string;
+  idSetSha256: string;
+  files: Record<string, { sha256: string; bytes: number; rows: number }>;
+};
+
 const bundledFundingData = fundingSummary as FundingDataset;
 const pageSize = 100;
 
-function getDataBaseUrl() {
+function getPublicBaseUrl() {
   if (typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site")) {
-    return "https://yagiharuka.github.io/meti-funding-watch/data/";
+    return "https://yagiharuka.github.io/meti-funding-watch/";
   }
-  return "data/";
+  return "";
+}
+
+function getDataBaseUrl() {
+  return `${getPublicBaseUrl()}data/`;
 }
 
 const stageLabels: Record<Stage, string> = {
@@ -151,29 +158,130 @@ function formatPublishedValue(row: FundingRecord) {
   return raw ? `原文：${raw}` : "空欄";
 }
 
+function parseJsonBytes<T>(bytes: ArrayBuffer, label: string): T {
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  } catch {
+    throw new Error(`${label}のJSONが不正です`);
+  }
+}
+
+async function sha256(bytes: ArrayBuffer) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+async function idSetSha256(rows: FundingRecord[]) {
+  const value = `${rows.map(({ id }) => id).sort().join("\n")}\n`;
+  const bytes = new TextEncoder().encode(value);
+  return sha256(bytes.buffer as ArrayBuffer);
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{64}$/i.test(value);
+}
+
+function validateRelease(value: unknown): asserts value is DataRelease {
+  if (!value || typeof value !== "object") throw new Error("公開releaseの形式が不正です");
+  const release = value as Partial<DataRelease>;
+  if (
+    release.schemaVersion !== 1
+    || typeof release.commitSha !== "string" || !/^[0-9a-f]{40}$/i.test(release.commitSha)
+    || typeof release.generatedAt !== "string"
+    || !Number.isSafeInteger(release.recordCount) || (release.recordCount ?? -1) < 0
+    || !isSha256(release.manifestSha256)
+    || !isSha256(release.idSetSha256)
+    || !release.files || typeof release.files !== "object"
+  ) {
+    throw new Error("公開releaseの形式が不正です");
+  }
+  for (const [filename, metadata] of Object.entries(release.files)) {
+    if (
+      !/^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)
+      || !metadata || typeof metadata !== "object"
+      || !isSha256(metadata.sha256)
+      || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0
+      || !Number.isSafeInteger(metadata.rows) || metadata.rows < 0
+    ) {
+      throw new Error("公開releaseのファイル情報が不正です");
+    }
+  }
+}
+
+function validateChunkRows(rows: unknown, yearKey: string, filename: string): FundingRecord[] {
+  if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
+  const ids = new Set<string>();
+  for (const [index, raw] of rows.entries()) {
+    const row = raw as Partial<FundingRecord>;
+    if (
+      !raw || typeof raw !== "object"
+      || typeof row.id !== "string" || !row.id
+      || (row.fiscalYear !== null && !Number.isInteger(row.fiscalYear))
+      || (row.date !== null && typeof row.date !== "string")
+      || typeof row.organization !== "string" || !row.organization
+      || typeof row.corporateNumber !== "string" || !/^\d{13}$/.test(row.corporateNumber)
+      || typeof row.sourceAgency !== "string" || !row.sourceAgency
+      || typeof row.program !== "string"
+      || (row.amount !== null && (typeof row.amount !== "number" || !Number.isFinite(row.amount)))
+      || (row.amountRaw !== undefined && typeof row.amountRaw !== "string")
+      || (row.stage !== "contracted" && row.stage !== "subsidy_published")
+      || (yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== yearKey)
+    ) {
+      throw new Error(`${filename}の${index + 1}行目が公開スキーマと一致しません`);
+    }
+    if (ids.has(row.id)) throw new Error(`${filename}の明細IDが重複しています`);
+    ids.add(row.id);
+  }
+  return rows as FundingRecord[];
+}
+
+function initialSearchParam(name: string, fallback: string) {
+  if (typeof window === "undefined") return fallback;
+  return new URLSearchParams(window.location.search).get(name) ?? fallback;
+}
+
 
 export default function Home() {
   const defaultYear = "all";
   const [dataset, setDataset] = useState<FundingDataset>(bundledFundingData);
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
   const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
+  const [release, setRelease] = useState<DataRelease | null>(null);
   const [detailLoading, setDetailLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [agency, setAgency] = useState("all");
-  const [stage, setStage] = useState("all");
-  const [year, setYear] = useState(defaultYear);
-  const [page, setPage] = useState(0);
+  const [query, setQuery] = useState(() => initialSearchParam("q", ""));
+  const [agency, setAgency] = useState(() => initialSearchParam("agency", "all"));
+  const [stage, setStage] = useState(() => {
+    const requested = initialSearchParam("stage", "all");
+    return requested === "contracted" || requested === "subsidy_published" ? requested : "all";
+  });
+  const [year, setYear] = useState(() => {
+    const requested = initialSearchParam("year", defaultYear);
+    return requested === "all" || requested === "unclassified" || /^\d{4}$/.test(requested)
+      ? requested
+      : defaultYear;
+  });
+  const [page, setPage] = useState(() => {
+    const requested = Number(initialSearchParam("page", "1"));
+    return Number.isSafeInteger(requested) && requested > 0 ? requested - 1 : 0;
+  });
   const chunkCache = useRef(new Map<string, FundingRecord[]>());
 
   useEffect(() => {
     const controller = new AbortController();
-    const dataBaseUrl = getDataBaseUrl();
-    fetch(`${dataBaseUrl}manifest.json`, { cache: "no-store", signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`Data manifest: ${response.status}`);
-        return response.json() as Promise<DataChunkManifest>;
-      })
-      .then((candidate) => {
+    const publicBaseUrl = getPublicBaseUrl();
+    Promise.all([
+      fetch(`${publicBaseUrl}data/manifest.json`, { cache: "no-store", signal: controller.signal }),
+      fetch(`${publicBaseUrl}release.json`, { cache: "no-store", signal: controller.signal }),
+    ])
+      .then(async ([manifestResponse, releaseResponse]) => {
+        if (!manifestResponse.ok) throw new Error(`Data manifest: ${manifestResponse.status}`);
+        if (!releaseResponse.ok) throw new Error(`Data release: ${releaseResponse.status}`);
+        const [manifestBytes, releaseBytes] = await Promise.all([
+          manifestResponse.arrayBuffer(),
+          releaseResponse.arrayBuffer(),
+        ]);
+        const candidate = parseJsonBytes<DataChunkManifest>(manifestBytes, "Data manifest");
+        const candidateRelease = parseJsonBytes<unknown>(releaseBytes, "Data release");
         if (
           typeof candidate.generatedAt !== "string"
           || !candidate.commitments
@@ -181,7 +289,34 @@ export default function Home() {
         ) {
           throw new Error("Data manifest: invalid schema");
         }
+        const manifestEntries = Object.entries(candidate.commitments);
+        if (
+          !manifestEntries.length
+          || manifestEntries.some(([yearKey, filename]) =>
+            !/^(?:\d{4}|unclassified)$/.test(yearKey)
+            || !/^commitments-(?:\d{4}|unclassified)\.json$/.test(filename))
+          || new Set(manifestEntries.map(([, filename]) => filename)).size !== manifestEntries.length
+        ) {
+          throw new Error("Data manifest: invalid file map");
+        }
+        validateRelease(candidateRelease);
+        if (candidateRelease.generatedAt !== candidate.generatedAt) {
+          throw new Error("Data manifestとreleaseの生成日時が一致しません");
+        }
+        if (await sha256(manifestBytes) !== candidateRelease.manifestSha256) {
+          throw new Error("Data manifestのSHA-256が一致しません");
+        }
+        const manifestFiles = Object.values(candidate.commitments).sort();
+        const releaseFiles = Object.keys(candidateRelease.files).sort();
+        if (JSON.stringify(manifestFiles) !== JSON.stringify(releaseFiles)) {
+          throw new Error("Data manifestとreleaseのファイル一覧が一致しません");
+        }
+        return { candidate, candidateRelease };
+      })
+      .then(({ candidate, candidateRelease }) => {
+        chunkCache.current.clear();
         setManifest(candidate);
+        setRelease(candidateRelease);
         setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
       })
       .catch((error: unknown) => {
@@ -193,7 +328,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!manifest) return;
+    if (!manifest || !release) return;
     const controller = new AbortController();
     const dataBaseUrl = getDataBaseUrl();
     let active = true;
@@ -201,24 +336,46 @@ export default function Home() {
       ? Object.values(manifest.commitments)
       : [manifest.commitments[year]].filter((filename): filename is string => Boolean(filename));
 
-    Promise.all(filenames.map(async (filename) => {
-      const cached = chunkCache.current.get(filename);
+    const chunkRequest = filenames.length ? Promise.all(filenames.map(async (filename) => {
+      const cacheKey = `${release.commitSha}:${filename}`;
+      const cached = chunkCache.current.get(cacheKey);
       if (cached) return cached;
+      const metadata = release.files[filename];
+      if (!metadata) throw new Error(`Data releaseに${filename}がありません`);
       const response = await fetch(`${dataBaseUrl}${filename}`, {
         cache: "no-store",
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(`Data chunk: ${response.status}`);
-      const rows = await response.json() as FundingRecord[];
-      chunkCache.current.set(filename, rows);
+      const bytes = await response.arrayBuffer();
+      if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
+      if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
+      const yearKey = Object.entries(manifest.commitments).find(([, value]) => value === filename)?.[0];
+      if (!yearKey) throw new Error(`${filename}の年度を確認できません`);
+      const rows = validateChunkRows(parseJsonBytes<unknown>(bytes, filename), yearKey, filename);
+      if (rows.length !== metadata.rows) throw new Error(`${filename}の行数が一致しません`);
+      chunkCache.current.set(cacheKey, rows);
       return rows;
-    }))
-      .then((groups) => {
+    })) : Promise.reject(new Error("指定された期間の公開明細がありません"));
+
+    chunkRequest
+      .then(async (groups) => {
+        if (!active) return;
+        const records = groups.flat();
+        if (new Set(records.map(({ id }) => id)).size !== records.length) {
+          throw new Error("公開明細のIDが重複しています");
+        }
+        if (year === "all") {
+          if (records.length !== release.recordCount) throw new Error("公開明細の総行数が一致しません");
+          if (await idSetSha256(records) !== release.idSetSha256) {
+            throw new Error("公開明細のID集合SHA-256が一致しません");
+          }
+        }
         if (!active) return;
         setDataset((current) => ({
           ...current,
           generatedAt: manifest.generatedAt,
-          records: groups.flat(),
+          records,
         }));
         setDataMode("github");
         setDetailLoading(false);
@@ -232,12 +389,9 @@ export default function Home() {
       active = false;
       controller.abort();
     };
-  }, [manifest, year]);
+  }, [manifest, release, year]);
 
-  const commitments = useMemo(
-    () => dataset.records.filter((row) => row.ingestSource === "gbiz-bulk-csv"),
-    [dataset.records],
-  );
+  const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
   const coverageYears = dataset.coverage?.gbiz.fiscalYears
     ?? Object.keys(manifest?.commitments ?? {})
@@ -255,6 +409,7 @@ export default function Home() {
       .sort((a, b) => a.localeCompare(b, "ja")),
     [commitments],
   );
+  const effectiveAgency = agency === "all" || detailLoading || agencies.includes(agency) ? agency : "all";
 
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim().toLocaleLowerCase("ja-JP");
@@ -267,17 +422,35 @@ export default function Home() {
   const filteredCommitments = useMemo(() => sortedCommitments
     .filter((row) =>
       includesQuery([row.organization, row.corporateNumber], normalizedQuery)
-      && (agency === "all" || row.sourceAgency === agency)
+      && (effectiveAgency === "all" || row.sourceAgency === effectiveAgency)
       && (stage === "all" || row.stage === stage)
       && (year === "all"
         || (year === "unclassified" ? row.fiscalYear === null : String(row.fiscalYear) === year))),
-  [agency, normalizedQuery, sortedCommitments, stage, year]);
+  [effectiveAgency, normalizedQuery, sortedCommitments, stage, year]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCommitments.length / pageSize));
-  const visibleRows = filteredCommitments.slice(page * pageSize, (page + 1) * pageSize);
-  const visibleStart = filteredCommitments.length ? page * pageSize + 1 : 0;
-  const visibleEnd = Math.min((page + 1) * pageSize, filteredCommitments.length);
-  const hasFilters = query || agency !== "all" || stage !== "all" || year !== defaultYear;
+  const effectivePage = Math.min(page, totalPages - 1);
+  const visibleRows = filteredCommitments.slice(effectivePage * pageSize, (effectivePage + 1) * pageSize);
+  const visibleStart = filteredCommitments.length ? effectivePage * pageSize + 1 : 0;
+  const visibleEnd = Math.min((effectivePage + 1) * pageSize, filteredCommitments.length);
+  const hasFilters = query || effectiveAgency !== "all" || stage !== "all" || year !== defaultYear;
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const values: Record<string, string> = {
+      q: query.trim(),
+      agency: effectiveAgency === "all" ? "" : effectiveAgency,
+      stage: stage === "all" ? "" : stage,
+      year: year === defaultYear ? "" : year,
+      page: effectivePage > 0 ? String(effectivePage + 1) : "",
+    };
+    for (const [key, value] of Object.entries(values)) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [effectiveAgency, effectivePage, query, stage, year]);
+
   const dashboardRecordCount = gbizSource?.dashboardRecordCount ?? gbizSource?.officialRecordCount;
   const csvEligibleRecordCount = gbizSource?.csvEligibleRecordCount;
   const csvImportedRecordCount = gbizSource?.csvImportedRecordCount;
@@ -314,6 +487,7 @@ export default function Home() {
     setDataset((current) => ({ ...current, records: [] }));
     setDetailLoading(true);
     setDataMode("loading");
+    setAgency("all");
     setYear(nextYear);
     setPage(0);
   }
@@ -321,16 +495,16 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="経産省関係の調達・委託・補助金情報 トップ">
+        <a className="brand" href="#top" aria-label="経産省関係の調達（委託を含む）・補助金情報 トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達・委託・補助金情報</span>
+          <span>経産省関係の調達（委託を含む）・補助金情報</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#records">データ検索</a>
           <a href="#sources">データ更新</a>
         </nav>
         <span className={`update-chip ${dataMode}`} role="status" aria-live="polite"><i />{
-          dataMode === "github" ? "明細準備完了" : dataMode === "loading" ? "明細読込中" : "明細取得要確認"
+          dataMode === "github" ? "掲載データ読込済み" : dataMode === "loading" ? "掲載データ読込中" : "掲載データ取得要確認"
         }</span>
       </header>
 
@@ -339,7 +513,7 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">G BIZ INFO SEARCH</p>
-          <h1><em>経産省関係 調達・委託・補助金情報</em></h1>
+          <h1><em>経産省関係 調達（委託を含む）・補助金情報</em></h1>
           <p className="hero-scope-warning">
             このサイトは経済産業省の全支出・実支払を示すものではありません。
             GビズINFOに法人番号付きで掲載された調達（委託を含む）・補助金情報だけを表示します。
@@ -347,7 +521,7 @@ export default function Home() {
             NEDO・IPAの掲載分についても、経済産業省を原資とする支出かどうかはGビズINFOだけでは判別できません。
           </p>
           <div className="hero-note">
-            <span>{gbizSource?.lastSuccessfulImportAt ? "明細データ最終取込" : "データ生成日時"}</span>
+            <span>{gbizSource?.lastSuccessfulImportAt ? "取得時CSVの最終取込成功" : "データ生成日時"}</span>
             <strong>{formatTimestamp(gbizSource?.lastSuccessfulImportAt ?? dataset.generatedAt)}</strong>
             <span className="source-count">データ出典：GビズINFO</span>
           </div>
@@ -362,14 +536,14 @@ export default function Home() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">ORGANIZATIONS & PUBLISHED ACTIVITIES</p>
-            <h2>調達・委託・補助金の掲載情報</h2>
+            <h2>調達（委託を含む）・補助金の掲載情報</h2>
           </div>
           <p>法人等の名称と法人番号だけを全文検索します。条件を組み合わせて掲載行を確認できます。</p>
         </div>
 
 
         <div className="series-label" aria-label="表示中のデータ系列">
-          <strong>法人等別の調達・委託・補助金掲載情報</strong>
+          <strong>法人等別の調達（委託を含む）・補助金掲載情報</strong>
           <span>GビズINFO</span>
         </div>
 
@@ -386,7 +560,7 @@ export default function Home() {
           </label>
           <label>
             <span className="sr-only">公表組織</span>
-            <select value={agency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
+            <select value={effectiveAgency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
               <option value="all">すべての公表組織</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
@@ -418,25 +592,26 @@ export default function Home() {
             <span><strong>明細を読込中</strong></span>
           ) : (
             <span>
-              <strong>{filteredCommitments.length.toLocaleString("ja-JP")}</strong>件
-              {filteredCommitments.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}件を表示）`}
+              <strong>{filteredCommitments.length.toLocaleString("ja-JP")}</strong>掲載行
+              {filteredCommitments.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}行を表示）`}
             </span>
           )}
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
-        <div className="records-table" role="region" aria-label="GビズINFO調達・委託・補助金掲載情報一覧" tabIndex={0}>
+        <div className="records-table" role="region" aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧" tabIndex={0}>
           <table>
-            <thead><tr><th>法人等の名称</th><th>活動名称・件名</th><th>公表組織</th><th>GビズINFO掲載区分</th><th>GビズINFO掲載値</th><th>認定日・受注日</th><th>掲載ページ</th></tr></thead>
+            <caption className="sr-only">GビズINFOに掲載された調達（委託を含む）・補助金情報</caption>
+            <thead><tr><th scope="col">法人等の名称</th><th scope="col">活動名称・件名</th><th scope="col">公表組織</th><th scope="col">GビズINFO掲載区分</th><th scope="col">GビズINFO掲載値</th><th scope="col">認定日・受注日</th><th scope="col">掲載ページ</th></tr></thead>
             <tbody>{visibleRows.map((row) => (
               <tr key={row.id}>
-                <td><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
-                <td><span className="program-name">{row.program || "活動名称・件名の記載なし"}</span></td>
-                <td>{row.sourceAgency || row.publisherCanonical || "公表組織の記載なし"}</td>
-                <td><span className={`stage-badge ${row.stage}`}>{stageLabels[row.stage]}</span></td>
-                <td className="amount">{formatPublishedValue(row)}</td>
-                <td>{formatDate(row.date)}<small>{row.fiscalYear === null ? "年度不明" : `${row.fiscalYear}年度（日付基準）`}</small></td>
-                <td><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>GビズINFO ↗</a></td>
+                <td data-label="法人等の名称"><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
+                <td data-label="活動名称・件名"><span className="program-name">{row.program || "活動名称・件名の記載なし"}</span></td>
+                <td data-label="公表組織">{row.sourceAgency || "公表組織の記載なし"}</td>
+                <td data-label="掲載区分"><span className={`stage-badge ${row.stage}`}>{stageLabels[row.stage]}</span></td>
+                <td className="amount" data-label="掲載値">{formatPublishedValue(row)}</td>
+                <td data-label="認定日・受注日">{formatDate(row.date)}<small>{row.fiscalYear === null ? "年度不明" : `${row.fiscalYear}年度（日付基準）`}</small></td>
+                <td data-label="掲載ページ"><a className="source-link" href={`https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${row.corporateNumber}`} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>GビズINFO ↗</a></td>
               </tr>
             ))}</tbody>
           </table>
@@ -450,9 +625,9 @@ export default function Home() {
 
         {filteredCommitments.length > pageSize && (
           <nav className="pagination" aria-label="検索結果のページ送り">
-            <button disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>← 前へ</button>
-            <span>{page + 1} / {totalPages}</span>
-            <button disabled={page + 1 >= totalPages} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>次へ →</button>
+            <button disabled={effectivePage === 0} onClick={() => setPage(Math.max(0, effectivePage - 1))}>← 前へ</button>
+            <span>{effectivePage + 1} / {totalPages}</span>
+            <button disabled={effectivePage + 1 >= totalPages} onClick={() => setPage(Math.min(totalPages - 1, effectivePage + 1))}>次へ →</button>
           </nav>
         )}
       </section>
@@ -469,15 +644,15 @@ export default function Home() {
               <strong>{gbizSource.recordCount.toLocaleString("ja-JP")}行を収録</strong>
               <dl>
                 <div><dt>取得方式</dt><dd>全件CSVの再取得を毎日試行</dd></div>
-                <div><dt>収録期間</dt><dd>{formatCoverageYears(coverageYears, dataset.coverage?.gbiz.unclassifiedDateCount)}</dd></div>
-                <div><dt>{gbizSource.lastSuccessfulImportAt ? "明細データ最終取込" : "成功履歴"}</dt><dd>{gbizSource.lastSuccessfulImportAt ? formatTimestamp(gbizSource.lastSuccessfulImportAt) : "未記録"}</dd></div>
-                <div><dt>公式画面の確認</dt><dd>{formatTimestamp(gbizSource.dashboardCheckedAt ?? gbizSource.lastChecked)}</dd></div>
+                <div><dt>掲載行の日付範囲</dt><dd>{formatCoverageYears(coverageYears, dataset.coverage?.gbiz.unclassifiedDateCount)}</dd></div>
+                <div><dt>{gbizSource.lastSuccessfulImportAt ? "取得時CSVの最終取込成功" : "成功履歴"}</dt><dd>{gbizSource.lastSuccessfulImportAt ? formatTimestamp(gbizSource.lastSuccessfulImportAt) : "未記録"}</dd></div>
+                <div><dt>公式ダッシュボード確認日時</dt><dd>{formatTimestamp(gbizSource.dashboardCheckedAt ?? gbizSource.lastChecked)}</dd></div>
                 <div><dt>公式ダッシュボード</dt><dd>{displayCount(dashboardRecordCount)}<small>補助金 {displayCount(gbizSource.dashboardSubsidyCount)}／調達 {displayCount(gbizSource.dashboardProcurementCount)}</small></dd></div>
                 <div><dt>取得CSVの対象行</dt><dd>{displayRows(csvEligibleRecordCount)}<small>補助金 {displayRows(gbizSource.csvEligibleSubsidyCount)}／調達 {displayRows(gbizSource.csvEligibleProcurementCount)}</small></dd></div>
                 <div><dt>本サイト取込行</dt><dd>{displayRows(csvImportedRecordCount ?? gbizSource.recordCount)}<small>補助金 {displayRows(gbizSource.csvImportedSubsidyCount)}／調達 {displayRows(gbizSource.csvImportedProcurementCount)}</small></dd></div>
                 <div><dt>CSV取込差（対象－取込）</dt><dd>{displayRows(csvImportGap)}</dd></div>
-                <div><dt>公式画面－CSV対象</dt><dd>{displayDifference(dashboardCsvGap)}</dd></div>
-                <div><dt>取込状態</dt><dd>{csvImportVerified ? "当サイトの抽出条件に合うCSV行を全件取込済み" : "要確認"}</dd></div>
+                <div><dt>確認時点の公式画面－取得時CSV対象</dt><dd>{displayDifference(dashboardCsvGap)}</dd></div>
+                <div><dt>取込確認</dt><dd>{csvImportVerified ? "取得時CSVの抽出対象行を取込確認" : "要確認"}</dd></div>
               </dl>
               <p className="source-disclaimer">
                 公式ダッシュボードと全件CSVは別のスナップショットです。両者の差は取込漏れとはみなさず、参考照合として表示します。
@@ -490,8 +665,8 @@ export default function Home() {
       </section>
 
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達・委託・補助金情報</span></div>
-        <p>非公式サイトです。GビズINFOおよび本サイトの抽出・取込は、正確性・完全性・最新性を保証しません。</p>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達（委託を含む）・補助金情報</span></div>
+        <p>「GビズINFO」（経済産業省）のデータを当サイトで抽出・整形して作成した非公式サイトです。原データと本サイトの抽出・取込は、正確性・完全性・最新性を保証しません。</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
     </main>

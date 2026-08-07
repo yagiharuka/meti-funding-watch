@@ -1,6 +1,6 @@
 {
   "name": "meti-funding-watch",
-  "displayName": "経産省関係の調達・補助金情報（GビズINFO）",
+  "displayName": "経産省関係の調達（委託を含む）・補助金情報",
   "version": "0.1.0",
   "private": true,
   "engines": {

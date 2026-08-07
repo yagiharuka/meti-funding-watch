@@ -11,6 +11,45 @@ import {
 const MAX_AUTOMATIC_COUNT_GROWTH_RATE = 0.05;
 const MAX_AUTOMATIC_COUNT_GROWTH_FLOOR = 1_000;
 const MAX_AUTOMATIC_BYTE_GROWTH_RATE = 0.10;
+const MAX_AUTOMATIC_CHANGED_RECORDS = 100;
+const MAX_AUTOMATIC_CHANGED_RECORD_RATE = 0.002;
+
+const DASHBOARD_HEADERS = [
+  "",
+  "省庁",
+  "財務情報",
+  "特許情報",
+  "届出・認定・行政処分情報",
+  "補助金情報",
+  "調達情報",
+  "表彰情報",
+  "職場情報",
+];
+
+const GBIZ_SEMANTIC_FIELDS = [
+  "stage",
+  "sourceKey",
+  "organization",
+  "corporateNumber",
+  "sourceAgency",
+  "publisherCanonical",
+  "program",
+  "date",
+  "dateRaw",
+  "fiscalYear",
+  "amount",
+  "amountRaw",
+  "notes",
+  "dataQuality",
+  "sourceSystem",
+];
+
+const GBIZ_IDENTITY_FIELDS = [
+  "stage",
+  "sourceKey",
+  "corporateNumber",
+  "publisherCanonical",
+];
 
 const approvedAgencyAliases = new Map([
   ["経済産業省", "経済産業省"],
@@ -47,24 +86,57 @@ export const GBIZ_AGENCY_RULES_SHA256 = createHash("sha256")
   .digest("hex");
 
 export function parseDashboardRow(html, label) {
-  const rowStart = html.indexOf(label);
-  if (rowStart < 0) throw new Error(`GビズINFO dashboard: ${label}行が見つかりません`);
-  const rowEnd = html.indexOf("</tr>", rowStart);
-  const rowText = stripHtml(html.slice(rowStart, rowEnd < 0 ? rowStart + 2_000 : rowEnd + 5));
-  const numbers = [...rowText.matchAll(/\b[\d,]+\b/g)]
-    .slice(0, 4)
-    .map((match) => Number(match[0].replaceAll(",", "")));
-  if (numbers.length < 4 || numbers.some((value) => !Number.isSafeInteger(value))) {
-    throw new Error(`GビズINFO dashboard: ${label}行の件数を解析できません`);
+  const tableMatch = html.match(
+    /<table\b[^>]*\bid=["']corporateActivityNumbersTable["'][^>]*>([\s\S]*?)<\/table>/i,
+  );
+  if (!tableMatch) {
+    if (/<(?:!doctype|html|table|thead|tbody)\b/i.test(html)) {
+      throw new Error("GビズINFO dashboard: 法人活動情報テーブルが見つかりません");
+    }
+    return parseLegacyDashboardFixture(html, label);
   }
-  const [total, subsidies, procurements, other] = numbers;
-  if (total !== subsidies + procurements + other) {
+
+  const tableHtml = tableMatch[1];
+  const headerRow = tableHtml.match(/<thead\b[^>]*>[\s\S]*?<tr\b[^>]*>([\s\S]*?)<\/tr>[\s\S]*?<\/thead>/i)?.[1];
+  if (!headerRow) {
+    throw new Error("GビズINFO dashboard: 法人活動情報テーブルの列見出しがありません");
+  }
+  const headers = parseHtmlCells(headerRow);
+  if (
+    headers.length !== DASHBOARD_HEADERS.length
+    || headers.some((header, index) => header !== DASHBOARD_HEADERS[index])
+  ) {
     throw new Error(
-      `GビズINFO dashboard: ${label}行の合計と内訳が一致しません `
-      + `(${total}/${subsidies + procurements + other})`,
+      "GビズINFO dashboard: 法人活動情報テーブルの列見出しまたは列順が変更されました",
     );
   }
-  return { subsidies, procurements };
+
+  const agencyIndex = headers.indexOf("省庁");
+  const subsidyIndex = headers.indexOf("補助金情報");
+  const procurementIndex = headers.indexOf("調達情報");
+  const bodyHtml = tableHtml.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i)?.[1];
+  if (!bodyHtml) {
+    throw new Error("GビズINFO dashboard: 法人活動情報テーブルの本体がありません");
+  }
+  const matchedRows = [...bodyHtml.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
+    .map((match) => parseHtmlCells(match[1]))
+    .filter((cells) => cells[agencyIndex] === label);
+  if (matchedRows.length !== 1) {
+    throw new Error(
+      `GビズINFO dashboard: ${label}行が${matchedRows.length ? "重複しています" : "見つかりません"}`,
+    );
+  }
+  const cells = matchedRows[0];
+  if (cells.length !== headers.length) {
+    throw new Error(
+      `GビズINFO dashboard: ${label}行の列数が見出しと一致しません `
+      + `(${cells.length}/${headers.length})`,
+    );
+  }
+  return {
+    subsidies: parseDashboardCount(cells[subsidyIndex], label, "補助金情報"),
+    procurements: parseDashboardCount(cells[procurementIndex], label, "調達情報"),
+  };
 }
 
 export function toGbizBulkRecords(csvText, kind) {
@@ -294,12 +366,19 @@ export function assertGbizSnapshotContinuity(previousSource, snapshot, dashboard
   }
 }
 
-export function assertGbizRecordContinuity(previousRecords, candidateRecords) {
+export function assertGbizRecordContinuity(
+  previousRecords,
+  candidateRecords,
+  { allowOfficialCorrections = false } = {},
+) {
   if (!previousRecords.length) {
     throw new Error("GビズINFO 全件CSV: 承認済みの前回成功データがありません");
   }
   const previousRows = uniqueRecordMap(previousRecords, "前回成功データ");
   const candidateRows = uniqueRecordMap(candidateRecords, "今回取得データ");
+  if (allowOfficialCorrections) {
+    assertIdentityFieldsUnchanged(previousRecords, candidateRecords);
+  }
   const missingKeys = [...previousRows.keys()].filter((key) => !candidateRows.has(key));
   if (missingKeys.length) {
     throw new Error(
@@ -307,20 +386,56 @@ export function assertGbizRecordContinuity(previousRecords, candidateRecords) {
       + `(${missingKeys.slice(0, 3).join(", ")})`,
     );
   }
-  const changedKeys = [...previousRows.entries()]
-    .filter(([key, record]) => gbizRecordSemanticHash(record) !== gbizRecordSemanticHash(candidateRows.get(key)))
-    .map(([key]) => key);
-  if (changedKeys.length) {
+  const changedRecords = [...previousRows.entries()]
+    .map(([key, record]) => {
+      const candidate = candidateRows.get(key);
+      const oldHash = gbizRecordSemanticHash(record);
+      const newHash = gbizRecordSemanticHash(candidate);
+      if (oldHash === newHash) return null;
+      return {
+        key,
+        oldHash,
+        newHash,
+        changedFields: GBIZ_SEMANTIC_FIELDS.filter(
+          (field) => !Object.is(record[field] ?? null, candidate[field] ?? null),
+        ),
+      };
+    })
+    .filter(Boolean);
+  if (changedRecords.length && !allowOfficialCorrections) {
     throw new Error(
-      `GビズINFO 全件CSV: 既存キーの内容が${changedKeys.length}件変更されています `
-      + `(${changedKeys.slice(0, 3).join(", ")})`,
+      `GビズINFO 全件CSV: 既存キーの内容が${changedRecords.length}件変更されています `
+      + `(${changedRecords.slice(0, 3).map(({ key }) => key).join(", ")})`,
+    );
+  }
+  const identityChange = changedRecords.find((change) =>
+    change.changedFields.some((field) => GBIZ_IDENTITY_FIELDS.includes(field)));
+  if (identityChange) {
+    throw new Error(
+      "GビズINFO 全件CSV: 既存キーの識別情報が変更されています "
+      + `(${identityChange.key}: ${identityChange.changedFields.join(", ")})`,
+    );
+  }
+  const allowedChangedRecordCount = Math.max(
+    1,
+    Math.min(
+      MAX_AUTOMATIC_CHANGED_RECORDS,
+      Math.ceil(previousRows.size * MAX_AUTOMATIC_CHANGED_RECORD_RATE),
+    ),
+  );
+  if (changedRecords.length > allowedChangedRecordCount) {
+    throw new Error(
+      "GビズINFO 全件CSV: 公式訂正と思われる既存キーの変更が自動取込上限を超えました "
+      + `(${changedRecords.length}/${allowedChangedRecordCount})`,
     );
   }
   return {
     continuityBaselineRecordCount: previousRows.size,
     continuityRetainedRecordCount: previousRows.size,
     continuityRemovedRecordCount: 0,
-    continuityChangedRecordCount: 0,
+    continuityChangedRecordCount: changedRecords.length,
+    continuityChangedRecordLimit: allowedChangedRecordCount,
+    continuityChangedRecords: changedRecords,
     continuityAddedRecordCount: candidateRows.size - previousRows.size,
   };
 }
@@ -393,23 +508,7 @@ export function normalizeGbizAgency(value) {
 }
 
 export function gbizRecordSemanticHash(record) {
-  const values = [
-    record.stage,
-    record.sourceKey,
-    record.organization,
-    record.corporateNumber,
-    record.sourceAgency,
-    record.publisherCanonical,
-    record.program,
-    record.date,
-    record.dateRaw,
-    record.fiscalYear,
-    record.amount,
-    record.amountRaw,
-    record.notes,
-    record.dataQuality,
-    record.sourceSystem,
-  ];
+  const values = GBIZ_SEMANTIC_FIELDS.map((field) => record[field] ?? null);
   return createHash("sha256").update(JSON.stringify(values)).digest("hex");
 }
 
@@ -426,6 +525,60 @@ export function stripHtml(value) {
 
 function valueFor(row, column, header) {
   return header in column ? cleanCell(row[column[header]]) : "";
+}
+
+function parseHtmlCells(rowHtml) {
+  return [...rowHtml.matchAll(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi)]
+    .map((match) => stripHtml(match[1]));
+}
+
+function parseDashboardCount(value, label, columnLabel) {
+  if (!value || !/^(?:0|[1-9]\d*|[1-9]\d{0,2}(?:,\d{3})+)$/.test(value)) {
+    throw new Error(
+      `GビズINFO dashboard: ${label}行の${columnLabel}を解析できません (${value || "空欄"})`,
+    );
+  }
+  const count = Number(value.replaceAll(",", ""));
+  if (!Number.isSafeInteger(count)) {
+    throw new Error(`GビズINFO dashboard: ${label}行の${columnLabel}が整数ではありません`);
+  }
+  return count;
+}
+
+function parseLegacyDashboardFixture(html, label) {
+  const row = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
+    .map((match) => parseHtmlCells(match[1]))
+    .find((cells) => cells[0] === label);
+  if (!row) throw new Error(`GビズINFO dashboard: ${label}行が見つかりません`);
+  if (row.length !== 5) {
+    throw new Error(`GビズINFO dashboard: ${label}行の件数を解析できません`);
+  }
+  const [total, subsidies, procurements, other] = row.slice(1)
+    .map((value, index) => parseDashboardCount(value, label, `旧fixture列${index + 1}`));
+  if (total !== subsidies + procurements + other) {
+    throw new Error(
+      `GビズINFO dashboard: ${label}行の合計と内訳が一致しません `
+      + `(${total}/${subsidies + procurements + other})`,
+    );
+  }
+  return { subsidies, procurements };
+}
+
+function assertIdentityFieldsUnchanged(previousRecords, candidateRecords) {
+  const candidatesById = new Map(candidateRecords.map((record) => [record.id, record]));
+  for (const previous of previousRecords) {
+    const candidate = candidatesById.get(previous.id);
+    if (!candidate) continue;
+    const changedFields = GBIZ_IDENTITY_FIELDS.filter(
+      (field) => !Object.is(previous[field] ?? null, candidate[field] ?? null),
+    );
+    if (changedFields.length) {
+      throw new Error(
+        "GビズINFO 全件CSV: 既存行の識別情報が変更されています "
+        + `(${previous.id}: ${changedFields.join(", ")})`,
+      );
+    }
+  }
 }
 
 function stableId(parts) {

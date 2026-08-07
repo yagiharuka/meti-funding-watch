@@ -66,14 +66,60 @@ function formatRetrievedAt(value: string) {
   }).format(date);
 }
 
+function formatApplicationYear(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return "不明";
+  if (/^\d{4}$/.test(normalized)) return `${normalized}年`;
+  return normalized;
+}
+
+function formatApplicationRound(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return "";
+  if (/^第.+回$/.test(normalized)) return normalized;
+  if (/^[0-9０-９]+$/.test(normalized)) return `第${normalized}回`;
+  return normalized;
+}
+
+function initialCriteria() {
+  if (typeof window === "undefined") return EMPTY_CRITERIA;
+  const params = new URLSearchParams(window.location.search);
+  return {
+    keyword: (params.get("keyword") ?? "").slice(0, 20),
+    prefCode: params.get("prefCode") ?? "",
+    subsidyCode: params.get("subsidyCode") ?? "",
+  };
+}
+
+function initialPage() {
+  if (typeof window === "undefined") return 1;
+  const requested = Number(new URLSearchParams(window.location.search).get("page"));
+  return Number.isSafeInteger(requested) && requested > 0 ? requested : 1;
+}
+
 export default function AdoptionSearch() {
-  const [draft, setDraft] = useState<Criteria>(EMPTY_CRITERIA);
-  const [criteria, setCriteria] = useState<Criteria>(EMPTY_CRITERIA);
-  const [page, setPage] = useState(1);
+  const [draft, setDraft] = useState<Criteria>(initialCriteria);
+  const [criteria, setCriteria] = useState<Criteria>(initialCriteria);
+  const [page, setPage] = useState(initialPage);
   const [revision, setRevision] = useState(0);
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const values: Record<string, string> = {
+      keyword: criteria.keyword,
+      prefCode: criteria.prefCode,
+      subsidyCode: criteria.subsidyCode,
+      page: page > 1 ? String(page) : "",
+    };
+    for (const [key, value] of Object.entries(values)) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [criteria, page]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -95,7 +141,7 @@ export default function AdoptionSearch() {
       .catch((reason) => {
         if (!active || (reason instanceof DOMException && reason.name === "AbortError")) return;
         setResult(null);
-        setError(reason instanceof Error ? reason.message : "採択者情報を取得できませんでした");
+        setError("中小企業庁の公式検索から現在データを取得できません。時間をおいて再度お試しください。");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -108,14 +154,14 @@ export default function AdoptionSearch() {
   }, [criteria, page, revision]);
 
   const officialSearchUrl = useMemo(() => {
-    if (result?.sourceUrl) return result.sourceUrl;
+    if (!loading && result?.page === page && result.sourceUrl) return result.sourceUrl;
     const url = new URL("https://mirasapo-connect.go.jp/chusho-subsidies");
     if (criteria.keyword) url.searchParams.set("keyword", criteria.keyword);
     if (criteria.prefCode) url.searchParams.set("prefCode", criteria.prefCode);
     if (criteria.subsidyCode) url.searchParams.set("subsidyCodes", criteria.subsidyCode);
     if (page > 1) url.searchParams.set("page", String(page));
     return url.toString();
-  }, [criteria, page, result?.sourceUrl]);
+  }, [criteria, loading, page, result?.page, result?.sourceUrl]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,7 +186,6 @@ export default function AdoptionSearch() {
   function changePage(nextPage: number) {
     setLoading(true);
     setError(null);
-    setResult(null);
     setPage(nextPage);
   }
 
@@ -187,12 +232,12 @@ export default function AdoptionSearch() {
         <button className="adoption-search-button" type="submit" disabled={loading}>検索</button>
       </form>
 
-      <div className="adoption-result-bar" role="status" aria-live="polite">
-        <div>
+      <div className="adoption-result-bar">
+        <div role="status" aria-live="polite">
           {loading ? <strong>検索中…</strong> : error ? <strong>取得できませんでした</strong> : (
             <><strong>{result?.totalRecords.toLocaleString("ja-JP") ?? 0}</strong><span> 採択掲載行</span></>
           )}
-          {result && !loading && <small>公式検索取得：{formatRetrievedAt(result.retrievedAt)}</small>}
+          {result && !loading && <small>公式検索取得：{formatRetrievedAt(result.retrievedAt)}（原データの更新日時ではありません）</small>}
         </div>
         <button type="button" onClick={clear} disabled={loading}>条件をクリア</button>
       </div>
@@ -211,14 +256,15 @@ export default function AdoptionSearch() {
             <div className="empty-state"><strong>該当する掲載行はありません</strong><span>条件を変えて検索してください。</span></div>
           ) : (
             <table>
+              <caption className="sr-only">中小企業庁の公式検索に掲載された補助金採択者情報</caption>
               <thead>
                 <tr>
-                  <th>掲載事業者名</th>
-                  <th>都道府県</th>
-                  <th>補助金名</th>
-                  <th>事業計画名</th>
-                  <th>申請年度・公募回</th>
-                  <th>掲載元</th>
+                  <th scope="col">掲載事業者名</th>
+                  <th scope="col">都道府県</th>
+                  <th scope="col">補助金名</th>
+                  <th scope="col">事業計画名</th>
+                  <th scope="col">申請年度・公募回</th>
+                  <th scope="col">掲載元</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,8 +274,8 @@ export default function AdoptionSearch() {
                     <td data-label="都道府県">{row.prefecture || "記載なし"}</td>
                     <td data-label="補助金名">{row.subsidy}</td>
                     <td data-label="事業計画名"><span className="adoption-plan">{row.plan || "記載なし"}</span></td>
-                    <td data-label="申請年度・公募回">{row.year || "不明"}{row.round ? `・第${row.round}回` : ""}</td>
-                    <td data-label="掲載元"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">公式詳細 ↗</a></td>
+                    <td data-label="申請年度・公募回">{formatApplicationYear(row.year)}{row.round ? `・${formatApplicationRound(row.round)}` : ""}</td>
+                    <td data-label="掲載元"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${row.name}の${row.subsidy}に関する公式詳細を新しいタブで開く`}>公式詳細 ↗</a></td>
                   </tr>
                 ))}
               </tbody>
@@ -247,8 +293,9 @@ export default function AdoptionSearch() {
       )}
 
       <p className="adoption-source-note">
-        表示内容は中小企業庁の公開検索から取得しています。公式画面の仕様変更時には取得できない場合があります。
+        表示内容は中小企業庁の公開検索を当サイトで取得・整形したものです。表示する取得時刻は原データの更新日時ではありません。公式画面の仕様変更時には取得できない場合があります。
         <a href={officialSearchUrl} target="_blank" rel="noreferrer"> 同じ条件を公式検索で確認 ↗</a>
+        <a href="https://www.chusho.meti.go.jp/hojyokin/data_policy/" target="_blank" rel="noreferrer"> データ利活用ポリシー ↗</a>
       </p>
     </section>
   );

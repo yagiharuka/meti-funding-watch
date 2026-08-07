@@ -11,6 +11,15 @@ export const MIRASAPO_SUBSIDIES = [
 ];
 
 const SUBSIDY_CODES = new Set(MIRASAPO_SUBSIDIES.map(({ value }) => value));
+const SUBSIDY_LABEL_BY_CODE = new Map(MIRASAPO_SUBSIDIES.map(({ value, label }) => [value, label]));
+
+const PREFECTURES = [
+  "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県", "茨城県", "栃木県", "群馬県",
+  "埼玉県", "千葉県", "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県",
+  "岐阜県", "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県",
+  "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県",
+  "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
+];
 
 function readSingle(searchParams, name) {
   const values = searchParams.getAll(name);
@@ -78,7 +87,55 @@ function requireInteger(value, label) {
   return value;
 }
 
-export function parseMirasapoSearchHtml(html) {
+function optionalString(value, label) {
+  if (value === undefined) return "";
+  return requireString(value, label);
+}
+
+function optionalSingleItemArray(value, label) {
+  if (value === undefined) return "";
+  if (!Array.isArray(value) || value.length !== 1) {
+    throw new Error(`${label}の形式が変わりました`);
+  }
+  return requireString(value[0], `${label}[0]`, { allowEmpty: false });
+}
+
+function parseUpstreamQuery(root, pageProps) {
+  const nextQuery = requirePlainObject(root.query, "公式検索データ.query");
+  const appliedQuery = requirePlainObject(pageProps.query, "公式検索データ.pageProps.query");
+
+  const rawPage = nextQuery.page === undefined
+    ? "1"
+    : requireString(nextQuery.page, "公式検索データ.query.page", { allowEmpty: false });
+  if (!/^\d{1,5}$/.test(rawPage)) {
+    throw new Error("公式検索データ.query.pageの形式が変わりました");
+  }
+  const page = Number(rawPage);
+  if (!Number.isSafeInteger(page) || page < 1 || page > 20_000) {
+    throw new Error("公式検索データ.query.pageの形式が変わりました");
+  }
+
+  const requestQuery = {
+    page,
+    keyword: optionalString(nextQuery.keyword, "公式検索データ.query.keyword"),
+    prefCode: optionalString(nextQuery.prefCode, "公式検索データ.query.prefCode"),
+    subsidyCode: optionalString(nextQuery.subsidyCodes, "公式検索データ.query.subsidyCodes"),
+  };
+  const pagePropsQuery = {
+    keyword: optionalString(appliedQuery.keyword, "公式検索データ.pageProps.query.keyword"),
+    prefCode: optionalSingleItemArray(appliedQuery.prefCode, "公式検索データ.pageProps.query.prefCode"),
+    subsidyCode: optionalSingleItemArray(appliedQuery.subsidyCodes, "公式検索データ.pageProps.query.subsidyCodes"),
+  };
+
+  for (const key of ["keyword", "prefCode", "subsidyCode"]) {
+    if (requestQuery[key] !== pagePropsQuery[key]) {
+      throw new Error(`公式検索が${key}条件を反映していません`);
+    }
+  }
+  return { ...pagePropsQuery, page };
+}
+
+export function parseMirasapoSearchHtml(html, { includeQuery = false } = {}) {
   if (typeof html !== "string" || !html.includes("__NEXT_DATA__")) {
     throw new Error("公式検索の応答形式が変わりました");
   }
@@ -112,6 +169,8 @@ export function parseMirasapoSearchHtml(html) {
   const totalRecords = Number(countText.replaceAll(",", ""));
   requireInteger(totalRecords, "公式検索の表示件数");
 
+  const query = includeQuery ? parseUpstreamQuery(root, pageProps) : null;
+
   const records = pageProps.listView.map((raw, index) => {
     const row = requirePlainObject(raw, `公式検索結果${index + 1}行目`);
     const id = requireString(row.id, `公式検索結果${index + 1}行目.id`, { allowEmpty: false });
@@ -127,12 +186,64 @@ export function parseMirasapoSearchHtml(html) {
     };
   });
 
-  if (totalRecords === 0 && (totalPages !== 0 || records.length !== 0)) {
+  if (new Set(records.map(({ id }) => id)).size !== records.length) {
+    throw new Error("公式検索結果に同じIDが重複しています");
+  }
+
+  // The official search currently represents an empty result as one empty page.
+  if (totalRecords === 0 && (totalPages !== 1 || records.length !== 0)) {
     throw new Error("公式検索の0件応答が整合しません");
   }
   if (totalRecords > 0 && totalPages !== Math.ceil(totalRecords / 20)) {
     throw new Error("公式検索の件数とページ数が整合しません");
   }
 
-  return { totalRecords, totalPages, records };
+  return includeQuery
+    ? { totalRecords, totalPages, records, query }
+    : { totalRecords, totalPages, records };
+}
+
+export function validateMirasapoSearchResult(parsed, criteria) {
+  const query = requirePlainObject(parsed.query, "公式検索の検索条件");
+  for (const key of ["page", "keyword", "prefCode", "subsidyCode"]) {
+    if (query[key] !== criteria[key]) {
+      throw new Error(`公式検索が${key}条件を反映していません`);
+    }
+  }
+
+  if (parsed.totalRecords === 0) {
+    if (criteria.page !== 1) {
+      throw new RangeError("指定されたページは検索結果の範囲外です");
+    }
+    if (parsed.records.length !== 0) {
+      throw new Error("公式検索の0件応答が整合しません");
+    }
+    return;
+  }
+
+  if (criteria.page > parsed.totalPages) {
+    throw new RangeError("指定されたページは検索結果の範囲外です");
+  }
+
+  const expectedRecords = criteria.page < parsed.totalPages
+    ? 20
+    : parsed.totalRecords - (parsed.totalPages - 1) * 20;
+  if (parsed.records.length !== expectedRecords) {
+    throw new Error("公式検索のページ内件数が整合しません");
+  }
+
+  const expectedPrefecture = criteria.prefCode
+    ? PREFECTURES[Number(criteria.prefCode) - 1]
+    : "";
+  const expectedSubsidy = criteria.subsidyCode
+    ? SUBSIDY_LABEL_BY_CODE.get(criteria.subsidyCode)
+    : "";
+  for (const record of parsed.records) {
+    if (expectedPrefecture && record.prefecture !== expectedPrefecture) {
+      throw new Error("公式検索結果が指定した都道府県と一致しません");
+    }
+    if (expectedSubsidy && record.subsidy !== expectedSubsidy) {
+      throw new Error("公式検索結果が指定した補助金と一致しません");
+    }
+  }
 }

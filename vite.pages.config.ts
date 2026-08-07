@@ -12,8 +12,22 @@ type PageDataManifest = {
   commitments: Record<string, string>;
 };
 
+type PublicFundingRow = {
+  id: string;
+  fiscalYear: number | null;
+  date: string | null;
+  organization: string;
+  corporateNumber: string;
+  sourceAgency: string;
+  program: string;
+  amount: number | null;
+  amountRaw?: string;
+  stage: "contracted" | "subsidy_published";
+};
+
 export default defineConfig({
   root: fileURLToPath(new URL("./pages-site", import.meta.url)),
+  publicDir: fileURLToPath(new URL("./public", import.meta.url)),
   base: "/meti-funding-watch/",
   plugins: [
     {
@@ -81,7 +95,37 @@ export default defineConfig({
               : String(row.fiscalYear) !== manifestYear)) {
               throw new Error(`${filename}の年度と明細の算出年度が一致しません`);
             }
-            const publicRows = rows;
+            const publicRows = rows.map((row, index): PublicFundingRow => {
+              const label = `${filename} ${index + 1}行目`;
+              if (
+                typeof row.id !== "string" || !row.id
+                || (row.fiscalYear !== null && !Number.isInteger(row.fiscalYear))
+                || (row.date !== null && typeof row.date !== "string")
+                || typeof row.organization !== "string" || !row.organization
+                || typeof row.corporateNumber !== "string" || !/^\d{13}$/.test(row.corporateNumber)
+                || typeof row.sourceAgency !== "string" || !row.sourceAgency
+                || typeof row.program !== "string"
+                || (row.amount !== null && typeof row.amount !== "number")
+                || !["contracted", "subsidy_published"].includes(String(row.stage))
+              ) {
+                throw new Error(`${label}の公開必須項目が不正です`);
+              }
+              const amount = row.amount as number | null;
+              return {
+                id: row.id,
+                fiscalYear: row.fiscalYear as number | null,
+                date: row.date as string | null,
+                organization: row.organization,
+                corporateNumber: row.corporateNumber,
+                sourceAgency: row.sourceAgency,
+                program: row.program,
+                amount,
+                ...(amount === null && typeof row.amountRaw === "string" && row.amountRaw.trim()
+                  ? { amountRaw: row.amountRaw }
+                  : {}),
+                stage: row.stage as PublicFundingRow["stage"],
+              };
+            });
             await writeFile(
               new URL(`./dist-pages/data/${filename}`, import.meta.url),
               `${JSON.stringify(publicRows)}\n`,

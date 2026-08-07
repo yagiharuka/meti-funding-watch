@@ -12,7 +12,7 @@ export default function ViewTabs({ active }: ViewTabsProps) {
         href={onAdoptions ? "../" : "#top"}
         aria-current={active === "gbiz" ? "page" : undefined}
       >
-        <strong>調達・委託・補助金</strong>
+        <strong>調達（委託を含む）・補助金</strong>
         <span>GビズINFO</span>
       </a>
       <a

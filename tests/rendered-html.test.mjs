@@ -55,19 +55,19 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.ok(!publicDataFiles.some((filename) => /^(?:payments|programs)-/.test(filename)));
   const publicIds = [];
   const allowedFields = new Set([
-    "amount", "amountRaw", "corporateNumber", "dataQuality", "date", "dateRaw",
-    "fiscalYear", "id", "ingestSource", "notes", "organization", "program",
-    "publisherCanonical", "quality", "sourceAgency", "sourceKey", "sourceName",
-    "sourceRecordHash", "sourceRetrievedAt", "sourceRowNumber", "sourceSystem",
-    "sourceUpdatedAt", "sourceUrl", "stage",
+    "amount", "amountRaw", "corporateNumber", "date", "fiscalYear", "id",
+    "organization", "program", "sourceAgency", "stage",
   ]);
   for (const [year, filename] of Object.entries(publicManifest.commitments)) {
     const rows = JSON.parse(await readFile(new URL(filename, dataDirectory), "utf8"));
     assert.ok(rows.every((row) =>
-      row.ingestSource === "gbiz-bulk-csv"
-      && !("route" in row)
-      && !("flowLevel" in row)
-      && !("flowDepth" in row)));
+      typeof row.id === "string"
+      && typeof row.organization === "string"
+      && /^\d{13}$/.test(row.corporateNumber)
+      && typeof row.sourceAgency === "string"
+      && typeof row.program === "string"
+      && (row.amount === null || typeof row.amount === "number")
+      && ["contracted", "subsidy_published"].includes(row.stage)));
     assert.ok(rows.every((row) => year === "unclassified"
       ? row.fiscalYear === null
       : String(row.fiscalYear) === year));
@@ -116,13 +116,13 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
     readFile(new URL(filename, assetDirectory), "utf8")))).join("\n");
   const publicUi = `${publicIndex}\n${adoptionIndex}\n${javascript}`;
 
-  assert.match(publicIndex, /<title>経産省関係の調達・委託・補助金情報/);
+  assert.match(publicIndex, /<title>経産省関係の調達（委託を含む）・補助金情報/);
   assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
   assert.notEqual(
     publicIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
     adoptionIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
   );
-  assert.match(publicUi, /調達・委託・補助金/);
+  assert.match(publicUi, /調達（委託を含む）・補助金/);
   assert.match(publicUi, /中小企業庁の補助金採択者情報/);
   assert.match(publicUi, /事業者名・事業計画名/);
   assert.match(publicUi, /すべての補助金/);

@@ -379,7 +379,7 @@ test("starts with all periods and clears stale rows for each chunk batch", () =>
   assert.doesNotMatch(pageSource, /const initialYear\b/);
   const chunkEffect = pageSource.slice(
     pageSource.indexOf("let active = true"),
-    pageSource.indexOf("const commitments = useMemo"),
+    pageSource.indexOf("const commitments = dataset.records"),
   );
   assert.match(chunkEffect, /let active = true/);
   assert.match(chunkEffect, /if \(!active\) return/);
@@ -410,10 +410,11 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /GビズINFO掲載区分/);
   assert.match(pageSource, /調達CSV（委託を含む）/);
   assert.match(pageSource, /補助金CSV/);
-  assert.match(pageSource, /調達・委託・補助金/);
+  assert.match(pageSource, /調達（委託を含む）・補助金/);
   assert.match(pageSource, /認定日・受注日の記載がない/);
-  assert.match(pageSource, /当サイトの抽出条件に合うCSV行を全件取込済み/);
-  assert.match(pageSource, /https:\/\/yagiharuka\.github\.io\/meti-funding-watch\/data\//);
+  assert.match(pageSource, /取得時CSVの抽出対象行を取込確認/);
+  assert.match(pageSource, /https:\/\/yagiharuka\.github\.io\/meti-funding-watch\//);
+  assert.match(pageSource, /manifestSha256|idSetSha256/);
   assert.match(pageSource, /update-chip \$\{dataMode\}/);
   assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
 
@@ -455,7 +456,7 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.match(adoptionApiSource, /maximumBytes = 1_000_000/);
   assert.doesNotMatch(adoptionSearchSource, /補助金採択者検索を開く/);
   assert.doesNotMatch(adoptionSearchSource, /法人番号|交付先|受取先|金額列/);
-  assert.match(viewTabsSource, /調達・委託・補助金/);
+  assert.match(viewTabsSource, /調達（委託を含む）・補助金/);
   assert.match(viewTabsSource, /補助金採択者情報/);
   assert.match(viewTabsSource, /onAdoptions \? "\.\.\/" : "#top"/);
   assert.match(viewTabsSource, /onAdoptions \? "#top" : "adoptions\/"/);

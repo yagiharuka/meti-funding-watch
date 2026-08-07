@@ -212,7 +212,9 @@ async function refreshGbizBulk(dashboardStats) {
     const newRecords = [...subsidyResult.records, ...procurementResult.records];
     assertUniqueRecordIds(newRecords);
     const audit = auditGbizImport(subsidyResult, procurementResult, dashboardStats);
-    const continuity = assertGbizRecordContinuity(next.records, newRecords);
+    const continuity = assertGbizRecordContinuity(next.records, newRecords, {
+      allowOfficialCorrections: true,
+    });
     const snapshot = {
       ...audit,
       ...continuity,

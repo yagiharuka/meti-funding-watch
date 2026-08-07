@@ -52,6 +52,12 @@ jobs:
         continue-on-error: ${{ github.event_name == 'push' }}
         run: npm run update:data
 
+      - name: Stop publication after refresh failure
+        if: steps.refresh.outcome != 'success'
+        run: |
+          echo "::error::Official data refresh failed; verified stale data will not be redeployed."
+          exit 1
+
       - name: Verify data and production build
         run: npm test
 

@@ -12,9 +12,9 @@ export default function AdoptionsPage() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="../" aria-label="経産省関係の調達・委託・補助金情報 トップ">
+        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報 トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達・委託・補助金情報</span>
+          <span>経産省関係の調達（委託を含む）・補助金情報</span>
         </a>
       </header>
 

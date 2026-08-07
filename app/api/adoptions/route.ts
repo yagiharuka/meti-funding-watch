@@ -2,6 +2,7 @@ import {
   buildMirasapoSourceUrl,
   normalizeMirasapoSearchParams,
   parseMirasapoSearchHtml,
+  validateMirasapoSearchResult,
 } from "@/scripts/mirasapo-search.mjs";
 
 const GITHUB_PAGES_ORIGIN = "https://yagiharuka.github.io";
@@ -53,7 +54,11 @@ export async function GET(request: Request) {
   try {
     criteria = normalizeMirasapoSearchParams(new URL(request.url).searchParams);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "検索条件が不正です" }, 400);
+    const diagnostic = error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : `Unknown error: ${String(error)}`;
+    console.error(`Mirasapo search request rejected: ${diagnostic}`);
+    return json({ error: "検索条件が不正です。入力内容を確認してください。" }, 400);
   }
 
   const sourceUrl = buildMirasapoSourceUrl(criteria);
@@ -77,12 +82,19 @@ export async function GET(request: Request) {
       throw new Error("公式検索の応答形式がHTMLではありません");
     }
 
-    const parsed = parseMirasapoSearchHtml(await readHtmlWithLimit(response));
-    if (parsed.totalRecords === 0 ? criteria.page !== 1 : criteria.page > parsed.totalPages) {
-      return json({ error: "指定されたページは検索結果の範囲外です", sourceUrl: sourceUrl.toString() }, 400);
+    const parsed = parseMirasapoSearchHtml(await readHtmlWithLimit(response), { includeQuery: true });
+    try {
+      validateMirasapoSearchResult(parsed, criteria);
+    } catch (error) {
+      if (error instanceof RangeError) {
+        return json({ error: "指定されたページは検索結果の範囲外です。" }, 400);
+      }
+      throw error;
     }
     return json({
-      ...parsed,
+      totalRecords: parsed.totalRecords,
+      totalPages: parsed.totalPages,
+      records: parsed.records,
       page: criteria.page,
       pageSize: 20,
       retrievedAt: new Date().toISOString(),
@@ -95,7 +107,6 @@ export async function GET(request: Request) {
     console.error(`Mirasapo search proxy failed: ${diagnostic}`);
     return json({
       error: "中小企業庁の公式検索から現在データを取得できません。時間をおいて再度お試しください。",
-      sourceUrl: sourceUrl.toString(),
     }, 502);
   }
 }
