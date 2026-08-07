@@ -99,5 +99,11 @@ export default defineConfig({
   build: {
     outDir: pagesOutDir,
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL("./pages-site/index.html", import.meta.url)),
+        adoptions: fileURLToPath(new URL("./pages-site/adoptions/index.html", import.meta.url)),
+      },
+    },
   },
 });

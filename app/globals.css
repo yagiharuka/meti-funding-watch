@@ -41,6 +41,21 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .update-chip.loading i { background: #9aa7a1; box-shadow: 0 0 0 4px rgba(154,167,161,.14); }
 .update-chip.unavailable i { background: #d17b22; box-shadow: 0 0 0 4px rgba(209,123,34,.14); }
 
+.view-tabs {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  max-width: 1440px; margin: 24px auto 0; padding: 8px;
+  border: 1px solid #d2ddd4; border-radius: 18px; background: #e9eee8;
+}
+.view-tabs a {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  min-height: 58px; padding: 15px 20px; border-radius: 13px;
+  color: #53665f; text-align: center;
+}
+.view-tabs a:hover { color: var(--green); }
+.view-tabs a.active { background: #fff; color: var(--green); box-shadow: 0 8px 22px rgba(32, 59, 50, .08); }
+.view-tabs strong { font-size: 15px; }
+.view-tabs span { color: #7d8d87; font-size: 10px; font-weight: 700; }
+
 .hero { padding: clamp(58px, 7vw, 96px) clamp(22px, 7vw, 112px) 70px; overflow: hidden; }
 .hero-copy { max-width: 810px; }
 .eyebrow { margin: 0 0 20px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .18em; }
@@ -58,14 +73,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .secondary-action { border: 1px solid #bdcbc1; background: #fff; color: var(--green-dark); }
 .secondary-action:hover { border-color: var(--green); }
 
-.adoption-section { padding: 0 clamp(22px, 5vw, 78px) 86px; scroll-margin-top: 88px; }
+.adoption-page { min-height: calc(100vh - 250px); padding: clamp(42px, 6vw, 84px) clamp(22px, 5vw, 78px) 96px; }
 .adoption-card {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 330px); gap: 44px;
   max-width: 1440px; margin: 0 auto; padding: clamp(28px, 4vw, 52px);
   border: 1px solid #c9d9ce; border-radius: 22px; background: #fff;
   box-shadow: 0 18px 46px rgba(32, 59, 50, .06);
 }
-.adoption-copy h2 { margin: 0; font-size: clamp(25px, 3vw, 42px); line-height: 1.18; letter-spacing: -.04em; }
+.adoption-copy h1 { margin: 0; font-size: clamp(30px, 4vw, 54px); line-height: 1.18; letter-spacing: -.04em; }
 .adoption-lead { max-width: 760px; margin: 20px 0 0; color: #40534c; font-size: 15px; line-height: 1.85; }
 .adoption-warning { max-width: 800px; margin: 18px 0 0; padding: 14px 16px; border-left: 3px solid var(--amber); background: #fffaf0; color: #5e563f; font-size: 13px; line-height: 1.8; }
 .adoption-detail { max-width: 800px; margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
@@ -148,6 +163,7 @@ footer a { color: var(--green); font-weight: 700; }
 @media (max-width: 1000px) {
   .topbar nav { display: none; }
   .update-chip { margin-left: auto; }
+  .view-tabs { margin-right: 22px; margin-left: 22px; }
   .adoption-card { grid-template-columns: 1fr; gap: 28px; }
   .adoption-actions { max-width: 440px; }
   .filters { grid-template-columns: 1fr 1fr; }
@@ -157,9 +173,13 @@ footer a { color: var(--green); font-weight: 700; }
 @media (max-width: 640px) {
   .topbar { min-height: 64px; }
   .topbar .brand > span:last-child { display: none; }
+  .view-tabs { gap: 5px; margin-top: 14px; padding: 5px; border-radius: 14px; }
+  .view-tabs a { align-items: center; min-height: 54px; padding: 10px 8px; border-radius: 10px; }
+  .view-tabs strong { font-size: 12px; line-height: 1.35; }
+  .view-tabs span { display: none; }
   .hero { padding-top: 62px; padding-bottom: 60px; }
   .hero h1 { font-size: 40px; }
-  .adoption-section { padding-bottom: 64px; }
+  .adoption-page { padding-top: 44px; padding-bottom: 64px; }
   .adoption-card { padding: 24px 20px; border-radius: 18px; }
   .hero-note { align-items: flex-start; flex-direction: column; }
   .source-count { padding-left: 0; border-left: 0; }

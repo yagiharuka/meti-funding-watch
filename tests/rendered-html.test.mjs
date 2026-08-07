@@ -108,13 +108,21 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   }
 
   const publicIndex = await readFile(new URL("../dist-pages/index.html", import.meta.url), "utf8");
+  const adoptionIndex = await readFile(new URL("../dist-pages/adoptions/index.html", import.meta.url), "utf8");
   const assetDirectory = new URL("../dist-pages/assets/", import.meta.url);
   const javascriptAssets = (await readdir(assetDirectory))
     .filter((filename) => filename.endsWith(".js"));
   const javascript = (await Promise.all(javascriptAssets.map((filename) =>
     readFile(new URL(filename, assetDirectory), "utf8")))).join("\n");
-  const publicUi = `${publicIndex}\n${javascript}`;
+  const publicUi = `${publicIndex}\n${adoptionIndex}\n${javascript}`;
 
+  assert.match(publicIndex, /<title>経産省関係の調達・委託・補助金情報/);
+  assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
+  assert.notEqual(
+    publicIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
+    adoptionIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
+  );
+  assert.match(publicUi, /調達・委託・補助金/);
   assert.match(publicUi, /中小企業庁の補助金採択者情報/);
   assert.match(publicUi, /補助金採択者検索を開く/);
   assert.match(publicUi, /採択は補助金交付の候補者として選定された段階/);

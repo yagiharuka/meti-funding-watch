@@ -18,6 +18,8 @@ const pageManifest = JSON.parse(
   await readFile(new URL("../data/pages/manifest.json", import.meta.url), "utf8"),
 );
 const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const adoptionPageSource = await readFile(new URL("../app/adoptions/page.tsx", import.meta.url), "utf8");
+const viewTabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const updateSource = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
 const updateWorkflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
@@ -417,16 +419,24 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
 });
 
 test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
-  assert.match(pageSource, /中小企業庁の補助金採択者情報/);
-  assert.match(pageSource, /採択は補助金交付の候補者として選定された段階/);
-  assert.match(pageSource, /交付決定額・確定額・実支払額を示しません/);
-  assert.match(pageSource, /検索先に金額は掲載されていない/);
-  assert.match(pageSource, /GビズINFOの掲載情報とは合算しません/);
-  assert.match(pageSource, /公開に同意した採択者のみ/);
-  assert.match(pageSource, /掲載事業者と国から直接補助金を受ける事業管理機関が異なる場合/);
-  assert.match(pageSource, /https:\/\/mirasapo-connect\.go\.jp\/chusho-subsidies/);
-  assert.match(pageSource, /subsidyCodes=GO_TECH/);
-  assert.doesNotMatch(pageSource, /_next\/data|217,?9\d{2}/);
+  assert.match(pageSource, /<ViewTabs active="gbiz"/);
+  assert.doesNotMatch(pageSource, /adoption-section|中小企業庁の補助金採択者情報/);
+  assert.match(adoptionPageSource, /<ViewTabs active="adoptions"/);
+  assert.match(adoptionPageSource, /中小企業庁の補助金採択者情報/);
+  assert.match(adoptionPageSource, /採択は補助金交付の候補者として選定された段階/);
+  assert.match(adoptionPageSource, /交付決定額・確定額・実支払額を示しません/);
+  assert.match(adoptionPageSource, /検索先に金額は掲載されていない/);
+  assert.match(adoptionPageSource, /GビズINFOの掲載情報とは合算しません/);
+  assert.match(adoptionPageSource, /公開に同意した採択者のみ/);
+  assert.match(adoptionPageSource, /掲載事業者と国から直接補助金を受ける事業管理機関が異なる場合/);
+  assert.match(adoptionPageSource, /https:\/\/mirasapo-connect\.go\.jp\/chusho-subsidies/);
+  assert.match(adoptionPageSource, /subsidyCodes=GO_TECH/);
+  assert.match(viewTabsSource, /調達・委託・補助金/);
+  assert.match(viewTabsSource, /補助金採択者情報/);
+  assert.match(viewTabsSource, /onAdoptions \? "\.\.\/" : "#top"/);
+  assert.match(viewTabsSource, /onAdoptions \? "#top" : "adoptions\/"/);
+  assert.match(viewTabsSource, /aria-current/);
+  assert.doesNotMatch(`${adoptionPageSource}\n${viewTabsSource}`, /_next\/data|217,?9\d{2}/);
 });
 
 test("fails closed before replacing records when source counts cannot be reconciled", () => {
