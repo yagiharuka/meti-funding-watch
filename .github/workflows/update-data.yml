@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pages: write
   id-token: write
   attestations: write
@@ -31,6 +32,8 @@ concurrency:
 
 jobs:
   update:
+    outputs:
+      published_sha: ${{ steps.published.outputs.sha }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -62,6 +65,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      - name: Report refresh status
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          REFRESH_OUTCOME: ${{ steps.refresh.outcome }}
+        run: node scripts/report-update-status.mjs
+
       - name: Stop publication after refresh failure
         if: steps.refresh.outcome != 'success'
         run: |
@@ -83,6 +96,10 @@ jobs:
           git add -A -- data/funding-data.json data/funding-summary.json data/pages
           git commit -m "chore(data): refresh official funding data"
           git push
+
+      - name: Record the commit that will be published
+        id: published
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Rebuild the artifact from the commit that will be published
         run: |
@@ -124,3 +141,24 @@ jobs:
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         with:
           timeout: 600000
+
+  sync-search:
+    runs-on: ubuntu-latest
+    needs: [update, deploy]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Sync the verified release to the server-side search index
+        env:
+          EXPECTED_COMMIT: ${{ needs.update.outputs.published_sha }}
+        run: |
+          response=$(curl -fsSL -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=meti-funding-watch-sync")
+          OIDC_TOKEN=$(echo "$response" | jq -r .value)
+          test -n "$OIDC_TOKEN" && test "$OIDC_TOKEN" != "null"
+          curl -fsSL --retry 3 --retry-all-errors \
+            -X POST \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"expectedCommit\":\"${EXPECTED_COMMIT}\"}" \
+            https://meti-funding-watch.haru620328.chatgpt.site/api/funding/sync

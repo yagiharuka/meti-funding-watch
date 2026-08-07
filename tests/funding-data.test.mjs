@@ -416,7 +416,9 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /https:\/\/yagiharuka\.github\.io\/meti-funding-watch\//);
   assert.match(pageSource, /manifestSha256|idSetSha256/);
   assert.match(pageSource, /update-chip \$\{dataMode\}/);
-  assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
+  assert.match(pageSource, /q: deferredQuery\.trim\(\)/);
+  assert.match(pageSource, /getFundingSearchUrl\(\)/);
+  assert.doesNotMatch(pageSource, /includesQuery|loadWithConcurrency|chunkCache/);
 
   assert.doesNotMatch(pageSource, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
   assert.doesNotMatch(pageSource, /受取先|支出元・実施機関|契約額/);

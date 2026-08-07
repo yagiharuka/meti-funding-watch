@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
 
@@ -92,6 +92,18 @@ type DataRelease = {
   };
 };
 
+type FundingSearchResponse = {
+  totalRecords: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+  records: FundingRecord[];
+  agencies: string[];
+  releaseCommit: string;
+  generatedAt: string;
+  syncedAt: string;
+};
+
 const bundledFundingData = fundingSummary as FundingDataset;
 const pageSize = 100;
 
@@ -102,8 +114,11 @@ function getPublicBaseUrl() {
   return "";
 }
 
-function getDataBaseUrl() {
-  return `${getPublicBaseUrl()}data/`;
+function getFundingSearchUrl() {
+  if (typeof window !== "undefined" && window.location.hostname === "yagiharuka.github.io") {
+    return "https://meti-funding-watch.haru620328.chatgpt.site/api/funding";
+  }
+  return "/api/funding";
 }
 
 const stageLabels: Record<Stage, string> = {
@@ -135,11 +150,6 @@ function formatDate(value: string | null) {
   if (!value) return "日付の記載なし";
   const [year, month, day] = value.split("-");
   return `${year}年${Number(month)}月${Number(day)}日`;
-}
-
-function includesQuery(values: Array<string | number | null>, query: string) {
-  if (!query) return true;
-  return values.join(" ").toLocaleLowerCase("ja-JP").includes(query);
 }
 
 function formatCoverageYears(years: number[], unclassifiedDateCount = 0) {
@@ -179,12 +189,6 @@ function parseJsonBytes<T>(bytes: ArrayBuffer, label: string): T {
 async function sha256(bytes: ArrayBuffer) {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
-}
-
-async function idSetSha256(rows: FundingRecord[]) {
-  const value = `${rows.map(({ id }) => id).sort().join("\n")}\n`;
-  const bytes = new TextEncoder().encode(value);
-  return sha256(bytes.buffer as ArrayBuffer);
 }
 
 function isSha256(value: unknown): value is string {
@@ -230,8 +234,8 @@ function validateRelease(value: unknown): asserts value is DataRelease {
   }
 }
 
-function validateChunkRows(rows: unknown, yearKey: string, filename: string): FundingRecord[] {
-  if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
+function validateSearchRows(rows: unknown): FundingRecord[] {
+  if (!Array.isArray(rows)) throw new Error("検索結果が配列ではありません");
   const ids = new Set<string>();
   for (const [index, raw] of rows.entries()) {
     const row = raw as Partial<FundingRecord>;
@@ -250,57 +254,13 @@ function validateChunkRows(rows: unknown, yearKey: string, filename: string): Fu
       || typeof row.sourceKey !== "string" || !row.sourceKey
       || !Number.isSafeInteger(row.sourceRowNumber) || (row.sourceRowNumber ?? 0) < 1
       || typeof row.sourceSystem !== "string" || !row.sourceSystem
-      || (yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== yearKey)
     ) {
-      throw new Error(`${filename}の${index + 1}行目が公開スキーマと一致しません`);
+      throw new Error(`検索結果の${index + 1}行目が公開スキーマと一致しません`);
     }
-    if (ids.has(row.id)) throw new Error(`${filename}の明細IDが重複しています`);
+    if (ids.has(row.id)) throw new Error("検索結果の明細IDが重複しています");
     ids.add(row.id);
   }
   return rows as FundingRecord[];
-}
-
-async function delayWithSignal(milliseconds: number, signal: AbortSignal) {
-  await new Promise<void>((resolve, reject) => {
-    const timeout = window.setTimeout(resolve, milliseconds);
-    signal.addEventListener("abort", () => {
-      window.clearTimeout(timeout);
-      reject(new DOMException("Aborted", "AbortError"));
-    }, { once: true });
-  });
-}
-
-async function fetchWithRetry(url: string, signal: AbortSignal) {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      const response = await fetch(url, { cache: "no-store", signal });
-      if (response.ok || response.status < 500) return response;
-      lastError = new Error(`Data chunk: ${response.status}`);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-      lastError = error;
-    }
-    if (attempt < 2) await delayWithSignal(350 * (attempt + 1), signal);
-  }
-  throw lastError instanceof Error ? lastError : new Error("Data chunkを取得できません");
-}
-
-async function loadWithConcurrency<T, R>(
-  values: T[],
-  worker: (value: T) => Promise<R>,
-  concurrency = 3,
-) {
-  const results = new Array<R>(values.length);
-  let cursor = 0;
-  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-    while (cursor < values.length) {
-      const index = cursor;
-      cursor += 1;
-      results[index] = await worker(values[index]);
-    }
-  }));
-  return results;
 }
 
 function initialSearchParam(name: string, fallback: string) {
@@ -316,7 +276,11 @@ export default function Home() {
   const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
   const [release, setRelease] = useState<DataRelease | null>(null);
   const [detailLoading, setDetailLoading] = useState(true);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchTotalPages, setSearchTotalPages] = useState(1);
+  const [agencies, setAgencies] = useState<string[]>([]);
   const [query, setQuery] = useState(() => initialSearchParam("q", ""));
+  const deferredQuery = useDeferredValue(query);
   const [agency, setAgency] = useState(() => initialSearchParam("agency", "all"));
   const [stage, setStage] = useState(() => {
     const requested = initialSearchParam("stage", "all");
@@ -332,7 +296,6 @@ export default function Home() {
     const requested = Number(initialSearchParam("page", "1"));
     return Number.isSafeInteger(requested) && requested > 0 ? requested - 1 : 0;
   });
-  const chunkCache = useRef(new Map<string, FundingRecord[]>());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -382,7 +345,6 @@ export default function Home() {
         return { candidate, candidateRelease };
       })
       .then(({ candidate, candidateRelease }) => {
-        chunkCache.current.clear();
         setManifest(candidate);
         setRelease(candidateRelease);
         setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
@@ -398,50 +360,38 @@ export default function Home() {
   useEffect(() => {
     if (!manifest || !release) return;
     const controller = new AbortController();
-    const dataBaseUrl = getDataBaseUrl();
     let active = true;
-    const filenames = year === "all"
-      ? Object.values(manifest.commitments)
-      : [manifest.commitments[year]].filter((filename): filename is string => Boolean(filename));
-
-    const chunkRequest = filenames.length ? loadWithConcurrency(filenames, async (filename) => {
-      const cacheKey = `${release.commitSha}:${filename}`;
-      const cached = chunkCache.current.get(cacheKey);
-      if (cached) return cached;
-      const metadata = release.files[filename];
-      if (!metadata) throw new Error(`Data releaseに${filename}がありません`);
-      const response = await fetchWithRetry(`${dataBaseUrl}${filename}`, controller.signal);
-      if (!response.ok) throw new Error(`Data chunk: ${response.status}`);
-      const bytes = await response.arrayBuffer();
-      if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
-      if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
-      const yearKey = Object.entries(manifest.commitments).find(([, value]) => value === filename)?.[0];
-      if (!yearKey) throw new Error(`${filename}の年度を確認できません`);
-      const rows = validateChunkRows(parseJsonBytes<unknown>(bytes, filename), yearKey, filename);
-      if (rows.length !== metadata.rows) throw new Error(`${filename}の行数が一致しません`);
-      chunkCache.current.set(cacheKey, rows);
-      return rows;
-    }) : Promise.reject(new Error("指定された期間の公開明細がありません"));
-
-    chunkRequest
-      .then(async (groups) => {
-        if (!active) return;
-        const records = groups.flat();
-        if (new Set(records.map(({ id }) => id)).size !== records.length) {
-          throw new Error("公開明細のIDが重複しています");
-        }
-        if (year === "all") {
-          if (records.length !== release.recordCount) throw new Error("公開明細の総行数が一致しません");
-          if (await idSetSha256(records) !== release.idSetSha256) {
-            throw new Error("公開明細のID集合SHA-256が一致しません");
-          }
-        }
+    const parameters = new URLSearchParams({
+      q: deferredQuery.trim(),
+      agency,
+      stage,
+      year,
+      page: String(page + 1),
+    });
+    fetch(`${getFundingSearchUrl()}?${parameters}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Funding search: ${response.status}`);
+        const candidate = await response.json() as Partial<FundingSearchResponse>;
+        const records = validateSearchRows(candidate.records);
+        if (
+          candidate.releaseCommit !== release.commitSha
+          || candidate.generatedAt !== release.generatedAt
+          || candidate.pageSize !== pageSize
+          || !Number.isSafeInteger(candidate.totalRecords) || (candidate.totalRecords ?? -1) < 0
+          || !Number.isSafeInteger(candidate.totalPages) || (candidate.totalPages ?? 0) < 1
+          || candidate.page !== page + 1
+          || records.length > pageSize
+          || !Array.isArray(candidate.agencies) || candidate.agencies.some((item) => typeof item !== "string")
+        ) throw new Error("検索結果と公開releaseが一致しません");
         if (!active) return;
         setDataset((current) => ({
           ...current,
           generatedAt: manifest.generatedAt,
           records,
         }));
+        setSearchTotal(candidate.totalRecords ?? 0);
+        setSearchTotalPages(candidate.totalPages ?? 1);
+        setAgencies(candidate.agencies ?? []);
         setDataMode("github");
         setDetailLoading(false);
       })
@@ -454,7 +404,7 @@ export default function Home() {
       active = false;
       controller.abort();
     };
-  }, [manifest, release, year]);
+  }, [agency, deferredQuery, manifest, page, release, stage, year]);
 
   const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
@@ -469,35 +419,13 @@ export default function Home() {
     || manifest?.commitments.unclassified,
   );
   const unclassifiedDateCount = dataset.coverage?.gbiz.unclassifiedDateCount ?? 0;
-  const agencies = useMemo(
-    () => Array.from(new Set(commitments.map((row) => row.sourceAgency).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b, "ja")),
-    [commitments],
-  );
   const effectiveAgency = agency === "all" || detailLoading || agencies.includes(agency) ? agency : "all";
-
-  const deferredQuery = useDeferredValue(query);
-  const normalizedQuery = deferredQuery.trim().toLocaleLowerCase("ja-JP");
-  const sortedCommitments = useMemo(() => [...commitments]
-    .sort((a, b) =>
-      (b.fiscalYear ?? Number.NEGATIVE_INFINITY) - (a.fiscalYear ?? Number.NEGATIVE_INFINITY)
-      || (b.date ?? "").localeCompare(a.date ?? "")
-      || a.organization.localeCompare(b.organization, "ja")),
-  [commitments]);
-  const filteredCommitments = useMemo(() => sortedCommitments
-    .filter((row) =>
-      includesQuery([row.organization, row.corporateNumber], normalizedQuery)
-      && (effectiveAgency === "all" || row.sourceAgency === effectiveAgency)
-      && (stage === "all" || row.stage === stage)
-      && (year === "all"
-        || (year === "unclassified" ? row.fiscalYear === null : String(row.fiscalYear) === year))),
-  [effectiveAgency, normalizedQuery, sortedCommitments, stage, year]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCommitments.length / pageSize));
+  const filteredCommitments = commitments;
+  const totalPages = searchTotalPages;
   const effectivePage = Math.min(page, totalPages - 1);
-  const visibleRows = filteredCommitments.slice(effectivePage * pageSize, (effectivePage + 1) * pageSize);
-  const visibleStart = filteredCommitments.length ? effectivePage * pageSize + 1 : 0;
-  const visibleEnd = Math.min((effectivePage + 1) * pageSize, filteredCommitments.length);
+  const visibleRows = filteredCommitments;
+  const visibleStart = searchTotal ? effectivePage * pageSize + 1 : 0;
+  const visibleEnd = Math.min((effectivePage + 1) * pageSize, searchTotal);
   const hasFilters = query || effectiveAgency !== "all" || stage !== "all" || year !== defaultYear;
 
   useEffect(() => {
@@ -620,19 +548,19 @@ export default function Home() {
               type="search"
               placeholder="法人等の名称・法人番号で検索"
               value={query}
-              onChange={(event) => { setQuery(event.target.value); setPage(0); }}
+              onChange={(event) => { setQuery(event.target.value); setPage(0); setDetailLoading(true); setDataMode("loading"); }}
             />
           </label>
           <label>
             <span className="sr-only">公表組織</span>
-            <select value={effectiveAgency} onChange={(event) => { setAgency(event.target.value); setPage(0); }}>
+            <select value={effectiveAgency} onChange={(event) => { setAgency(event.target.value); setPage(0); setDetailLoading(true); setDataMode("loading"); }}>
               <option value="all">すべての公表組織</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
             <span className="sr-only">GビズINFO掲載区分</span>
-            <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); }}>
+            <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); setDetailLoading(true); setDataMode("loading"); }}>
               <option value="all">すべての掲載区分</option>
               {Object.entries(stageLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
@@ -658,8 +586,8 @@ export default function Home() {
               <strong>明細を読込中</strong>
             ) : (
               <>
-                <strong>{filteredCommitments.length.toLocaleString("ja-JP")}</strong>掲載行
-                {filteredCommitments.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}行を表示）`}
+                <strong>{searchTotal.toLocaleString("ja-JP")}</strong>掲載行
+                {searchTotal > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}行を表示）`}
               </>
             )}
           </span>
@@ -693,11 +621,11 @@ export default function Home() {
           )}
         </div>
 
-        {filteredCommitments.length > pageSize && (
+        {searchTotal > pageSize && (
           <nav className="pagination" aria-label="検索結果のページ送り">
-            <button disabled={effectivePage === 0} onClick={() => setPage(Math.max(0, effectivePage - 1))}>← 前へ</button>
+            <button disabled={effectivePage === 0} onClick={() => { setPage(Math.max(0, effectivePage - 1)); setDetailLoading(true); setDataMode("loading"); }}>← 前へ</button>
             <span>{effectivePage + 1} / {totalPages}</span>
-            <button disabled={effectivePage + 1 >= totalPages} onClick={() => setPage(Math.min(totalPages - 1, effectivePage + 1))}>次へ →</button>
+            <button disabled={effectivePage + 1 >= totalPages} onClick={() => { setPage(Math.min(totalPages - 1, effectivePage + 1)); setDetailLoading(true); setDataMode("loading"); }}>次へ →</button>
           </nav>
         )}
       </section>

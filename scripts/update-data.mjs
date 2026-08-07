@@ -195,6 +195,7 @@ async function refreshGbizBulk(dashboardStats) {
   const tokenName = source.apiTokenEnv || "GBIZINFO_API_TOKEN";
   const token = process.env[tokenName]?.trim();
   if (!token) {
+    await writeGbizFailure(`${tokenName}未設定`);
     updateSource("gbiz", { status: "watch" });
     results.push({
       ok: false,
@@ -286,6 +287,7 @@ async function refreshGbizBulk(dashboardStats) {
     });
     return true;
   } catch (error) {
+    await writeGbizFailure(error instanceof Error ? error.message : String(error));
     updateSource("gbiz", { status: "watch" });
     results.push({
       ok: false,
@@ -294,6 +296,14 @@ async function refreshGbizBulk(dashboardStats) {
     });
     return false;
   }
+}
+
+async function writeGbizFailure(message) {
+  await mkdir(auditDataPath, { recursive: true });
+  await writeFile(new URL("failure.json", auditDataPath), `${JSON.stringify({
+    failedAt: new Date().toISOString(),
+    message: String(message).slice(0, 2_000),
+  }, null, 2)}\n`);
 }
 
 async function writeGbizAuditEvidence({

@@ -15,10 +15,10 @@ test("resets hidden agency state whenever the fiscal year changes", () => {
 });
 
 test("describes Gbiz results as published rows and uses the official category wording", () => {
-  assert.match(pageSource, /<strong>\{filteredCommitments\.length\.toLocaleString\("ja-JP"\)\}<\/strong>掲載行/);
+  assert.match(pageSource, /<strong>\{searchTotal\.toLocaleString\("ja-JP"\)\}<\/strong>掲載行/);
   assert.match(pageSource, /–\$\{visibleEnd\.toLocaleString\("ja-JP"\)\}行を表示/);
   assert.match(pageSource, /調達（委託を含む）・補助金/);
-  assert.doesNotMatch(pageSource, /<strong>\{filteredCommitments\.length\.toLocaleString\("ja-JP"\)\}<\/strong>件/);
+  assert.doesNotMatch(pageSource, /<strong>\{searchTotal\.toLocaleString\("ja-JP"\)\}<\/strong>件/);
   assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報(?:（GビズINFO）)?<\/title>/);
 });
 
@@ -54,16 +54,14 @@ test("search state is reflected in the URL", () => {
   assert.match(adoptionSource, /popstate/);
 });
 
-test("verifies the published release before marking Gbiz rows as loaded", () => {
+test("verifies the release and loads only paginated server search rows", () => {
   assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json`/);
   assert.match(pageSource, /await sha256\(manifestBytes\).*candidateRelease\.manifestSha256/);
-  assert.match(pageSource, /bytes\.byteLength !== metadata\.bytes/);
-  assert.match(pageSource, /await sha256\(bytes\) !== metadata\.sha256/);
-  assert.match(pageSource, /records\.length !== release\.recordCount/);
-  assert.match(pageSource, /await idSetSha256\(records\) !== release\.idSetSha256/);
   assert.match(pageSource, /sourceSnapshots\.gbiz/);
-  assert.match(pageSource, /fetchWithRetry/);
-  assert.match(pageSource, /loadWithConcurrency/);
+  assert.match(pageSource, /getFundingSearchUrl/);
+  assert.match(pageSource, /candidate\.releaseCommit !== release\.commitSha/);
+  assert.match(pageSource, /records\.length > pageSize/);
+  assert.doesNotMatch(pageSource, /loadWithConcurrency|chunkCache|fetchWithRetry/);
 });
 
 test("keeps interactive controls outside the Gbiz live status region", () => {
