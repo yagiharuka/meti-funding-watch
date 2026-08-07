@@ -83,8 +83,8 @@ const dataBaseUrl = "data/";
 const pageSize = 100;
 
 const stageLabels: Record<Stage, string> = {
-  contracted: "調達",
-  subsidy_published: "補助金",
+  contracted: "調達CSV",
+  subsidy_published: "補助金CSV",
 };
 
 const yen = new Intl.NumberFormat("ja-JP", {
@@ -240,6 +240,7 @@ export default function Home() {
     dataset.coverage?.gbiz.unclassifiedDateCount
     || manifest?.commitments.unclassified,
   );
+  const unclassifiedDateCount = dataset.coverage?.gbiz.unclassifiedDateCount ?? 0;
   const agencies = useMemo(
     () => Array.from(new Set(commitments.map((row) => row.sourceAgency).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b, "ja")),
@@ -332,6 +333,7 @@ export default function Home() {
             このサイトは経済産業省の全支出・実支払を示すものではありません。
             GビズINFOに法人番号付きで掲載された調達・補助金情報だけを表示します。
             所管法人については、NEDO・IPAのGビズINFO掲載分のみが対象で、その他の所管法人は含みません。
+            NEDO・IPAの掲載分についても、経済産業省を原資とする支出かどうかはGビズINFOだけでは判別できません。
           </p>
           <div className="hero-note">
             <span>{gbizSource?.lastSuccessfulImportAt ? "明細データ最終取込" : "データ生成日時"}</span>
@@ -379,9 +381,9 @@ export default function Home() {
             </select>
           </label>
           <label>
-            <span className="sr-only">区分</span>
+            <span className="sr-only">GビズINFO掲載区分</span>
             <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); }}>
-              <option value="all">調達・補助金</option>
+              <option value="all">すべての掲載区分</option>
               {Object.entries(stageLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
           </label>
@@ -394,6 +396,11 @@ export default function Home() {
             </select>
           </label>
         </div>
+        {unclassifiedDateCount > 0 && (
+          <p className="filter-note">
+            年度を指定すると、認定日・受注日の記載がない{unclassifiedDateCount.toLocaleString("ja-JP")}行は検索対象から外れます。
+          </p>
+        )}
 
         <div className="result-bar" role="status" aria-live="polite">
           {detailLoading ? (
@@ -409,7 +416,7 @@ export default function Home() {
 
         <div className="records-table" role="region" aria-label="GビズINFO調達・補助金掲載情報一覧" tabIndex={0}>
           <table>
-            <thead><tr><th>法人等の名称</th><th>活動名称・件名</th><th>公表組織</th><th>区分</th><th>GビズINFO掲載値</th><th>認定日・受注日</th><th>掲載ページ</th></tr></thead>
+            <thead><tr><th>法人等の名称</th><th>活動名称・件名</th><th>公表組織</th><th>GビズINFO掲載区分</th><th>GビズINFO掲載値</th><th>認定日・受注日</th><th>掲載ページ</th></tr></thead>
             <tbody>{visibleRows.map((row) => (
               <tr key={row.id}>
                 <td><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
