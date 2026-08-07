@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { gzipSync } from "node:zlib";
 import {
   GBIZ_AGENCY_RULES_SHA256,
   assertGbizRecordContinuity,
@@ -22,6 +23,9 @@ const dataPath = new URL("../data/funding-data.json", import.meta.url);
 const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
 const pageDataPath = new URL("../data/pages/", import.meta.url);
+const auditDataPath = new URL("../.audit/gbiz/", import.meta.url);
+
+await rm(auditDataPath, { recursive: true, force: true });
 
 const [current, registry] = await Promise.all([
   readJson(dataPath),
@@ -246,6 +250,20 @@ async function refreshGbizBulk(dashboardStats) {
         subsidyResult.stats.missingSourceKeyRows + procurementResult.stats.missingSourceKeyRows,
     };
     assertGbizSnapshotContinuity(previousGbizMetadata, snapshot, dashboardStats);
+    await writeGbizAuditEvidence({
+      subsidyCsv,
+      procurementCsv,
+      csvRetrievedAt,
+      snapshot,
+      previousRecords: next.records,
+      candidateRecords: newRecords,
+      changedRecords: continuity.continuityChangedRecords,
+    });
+    if (continuity.continuityChangedRecordCount > 0) {
+      throw new Error(
+        `GビズINFO 全件CSV: 既存キーの内容変更${continuity.continuityChangedRecordCount}件を人手確認用に隔離しました`,
+      );
+    }
     importSucceededAt = new Date().toISOString();
     next.records = newRecords;
     updateSource("gbiz", {
@@ -276,6 +294,52 @@ async function refreshGbizBulk(dashboardStats) {
     });
     return false;
   }
+}
+
+async function writeGbizAuditEvidence({
+  subsidyCsv,
+  procurementCsv,
+  csvRetrievedAt,
+  snapshot,
+  previousRecords,
+  candidateRecords,
+  changedRecords,
+}) {
+  await mkdir(auditDataPath, { recursive: true });
+  const previousByKey = new Map(previousRecords.map((row) => [`${row.stage}\u001f${row.sourceKey}`, row]));
+  const candidateByKey = new Map(candidateRecords.map((row) => [`${row.stage}\u001f${row.sourceKey}`, row]));
+  const correctionCandidates = changedRecords.map((change) => ({
+    ...change,
+    previous: auditRecord(previousByKey.get(change.key)),
+    candidate: auditRecord(candidateByKey.get(change.key)),
+  }));
+  await Promise.all([
+    writeFile(new URL("Hojokinjoho.csv.gz", auditDataPath), gzipSync(subsidyCsv, { level: 9 })),
+    writeFile(new URL("Chotatsujoho.csv.gz", auditDataPath), gzipSync(procurementCsv, { level: 9 })),
+    writeFile(
+      new URL("snapshot.json", auditDataPath),
+      `${JSON.stringify({ csvRetrievedAt, snapshot, correctionCandidates }, null, 2)}\n`,
+    ),
+  ]);
+}
+
+function auditRecord(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    sourceKey: row.sourceKey,
+    sourceRowNumber: row.sourceRowNumber,
+    organization: row.organization,
+    corporateNumber: row.corporateNumber,
+    sourceAgency: row.sourceAgency,
+    sourceSystem: row.sourceSystem,
+    program: row.program,
+    date: row.date,
+    fiscalYear: row.fiscalYear,
+    amount: row.amount,
+    amountRaw: row.amountRaw,
+    stage: row.stage,
+  };
 }
 
 function formatSignedCount(value) {

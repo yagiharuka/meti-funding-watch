@@ -156,4 +156,17 @@ test("workflow cannot deploy stale data after a refresh failure", async () => {
     workflow,
     /- name: Stop publication after refresh failure\s+if: steps\.refresh\.outcome != 'success'[\s\S]*?exit 1/,
   );
+  assert.match(workflow, /Preserve source snapshot and correction evidence/);
+  assert.match(workflow, /Attest the verified public release/);
+  assert.doesNotMatch(workflow, /uses: actions\/[a-z-]+@v\d/);
+});
+
+test("production quarantines existing-key corrections instead of auto-publishing them", async () => {
+  const updater = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
+  assert.match(updater, /continuityChangedRecordCount > 0/);
+  assert.match(updater, /人手確認用に隔離しました/);
+  assert.ok(
+    updater.indexOf("writeGbizAuditEvidence") < updater.indexOf("continuityChangedRecordCount > 0"),
+    "source evidence must be written before publication is stopped",
+  );
 });

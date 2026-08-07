@@ -23,6 +23,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  attestations: write
 
 concurrency:
   group: funding-data-update
@@ -36,10 +37,10 @@ jobs:
       GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -51,6 +52,15 @@ jobs:
         id: refresh
         continue-on-error: ${{ github.event_name == 'push' }}
         run: npm run update:data
+
+      - name: Preserve source snapshot and correction evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gbiz-source-evidence-${{ github.run_id }}
+          path: .audit/gbiz
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Stop publication after refresh failure
         if: steps.refresh.outcome != 'success'
@@ -79,11 +89,26 @@ jobs:
           npm run build:pages
           node --test tests/rendered-html.test.mjs
 
+      - name: Package the verified public release
+        run: tar -czf pages-release.tgz -C dist-pages .
+
+      - name: Attest the verified public release
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: pages-release.tgz
+
+      - name: Preserve the attested public release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pages-release-${{ github.run_id }}
+          path: pages-release.tgz
+          retention-days: 90
+
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
       - name: Upload verified GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: ./dist-pages
 
@@ -96,6 +121,6 @@ jobs:
     steps:
       - name: Deploy the artifact verified in this workflow
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         with:
           timeout: 600000

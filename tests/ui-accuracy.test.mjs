@@ -50,7 +50,8 @@ test("search state is reflected in the URL", () => {
   assert.match(pageSource, /new URLSearchParams\(window\.location\.search\)/);
   assert.match(pageSource, /window\.history\.replaceState/);
   assert.match(adoptionSource, /new URLSearchParams\(window\.location\.search\)/);
-  assert.match(adoptionSource, /window\.history\.replaceState/);
+  assert.match(adoptionSource, /pushState/);
+  assert.match(adoptionSource, /popstate/);
 });
 
 test("verifies the published release before marking Gbiz rows as loaded", () => {
@@ -60,4 +61,12 @@ test("verifies the published release before marking Gbiz rows as loaded", () => 
   assert.match(pageSource, /await sha256\(bytes\) !== metadata\.sha256/);
   assert.match(pageSource, /records\.length !== release\.recordCount/);
   assert.match(pageSource, /await idSetSha256\(records\) !== release\.idSetSha256/);
+  assert.match(pageSource, /sourceSnapshots\.gbiz/);
+  assert.match(pageSource, /fetchWithRetry/);
+  assert.match(pageSource, /loadWithConcurrency/);
+});
+
+test("keeps interactive controls outside the Gbiz live status region", () => {
+  assert.match(pageSource, /<div className="result-bar">\s*<span role="status" aria-live="polite">/);
+  assert.doesNotMatch(pageSource, /<div className="result-bar" role="status"/);
 });

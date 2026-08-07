@@ -8,6 +8,16 @@ const dataDirectory = new URL("../dist-pages/data/", import.meta.url);
 const manifestUrl = new URL("manifest.json", dataDirectory);
 const manifestText = await readFile(manifestUrl, "utf8");
 const manifest = JSON.parse(manifestText);
+const summary = JSON.parse(await readFile(new URL("../data/funding-summary.json", import.meta.url), "utf8"));
+const gbizSource = summary.sources?.find((source) => source.id === "gbiz");
+if (
+  !gbizSource
+  || typeof gbizSource.csvRetrievedAt !== "string"
+  || !/^[0-9a-f]{64}$/i.test(gbizSource.csvSubsidySha256 ?? "")
+  || !/^[0-9a-f]{64}$/i.test(gbizSource.csvProcurementSha256 ?? "")
+  || !Number.isSafeInteger(gbizSource.csvSubsidyFileBytes)
+  || !Number.isSafeInteger(gbizSource.csvProcurementFileBytes)
+) throw new Error("公開releaseに必要なGビズINFO取得元情報がありません");
 const filenames = Object.values(manifest.commitments ?? {}).sort();
 if (!filenames.length) throw new Error("公開releaseにGビズINFO明細ファイルがありません");
 
@@ -42,6 +52,21 @@ const release = {
   recordCount: ids.length,
   manifestSha256: sha256(manifestText),
   idSetSha256: sha256(`${[...ids].sort().join("\n")}\n`),
+  sourceSnapshots: {
+    gbiz: {
+      csvRetrievedAt: gbizSource.csvRetrievedAt,
+      subsidy: {
+        sha256: gbizSource.csvSubsidySha256,
+        bytes: gbizSource.csvSubsidyFileBytes,
+        filename: gbizSource.csvSubsidyReceipt?.contentDisposition ?? "Hojokinjoho.csv",
+      },
+      procurement: {
+        sha256: gbizSource.csvProcurementSha256,
+        bytes: gbizSource.csvProcurementFileBytes,
+        filename: gbizSource.csvProcurementReceipt?.contentDisposition ?? "Chotatsujoho.csv",
+      },
+    },
+  },
   files,
 };
 await writeFile(

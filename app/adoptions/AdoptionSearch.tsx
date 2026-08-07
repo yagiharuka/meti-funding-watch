@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { MIRASAPO_SUBSIDIES } from "@/scripts/mirasapo-search.mjs";
 
@@ -105,6 +105,7 @@ export default function AdoptionSearch() {
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const historyMode = useRef<"replace" | "push" | "skip">("replace");
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -118,8 +119,33 @@ export default function AdoptionSearch() {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
     }
-    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    if (historyMode.current === "skip") {
+      historyMode.current = "replace";
+      return;
+    }
+    window.history[historyMode.current === "push" ? "pushState" : "replaceState"](
+      null,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+    historyMode.current = "replace";
   }, [criteria, page]);
+
+  useEffect(() => {
+    function restoreFromHistory() {
+      const restoredCriteria = initialCriteria();
+      const restoredPage = initialPage();
+      historyMode.current = "skip";
+      setDraft(restoredCriteria);
+      setCriteria(restoredCriteria);
+      setPage(restoredPage);
+      setLoading(true);
+      setError(null);
+      setResult(null);
+    }
+    window.addEventListener("popstate", restoreFromHistory);
+    return () => window.removeEventListener("popstate", restoreFromHistory);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -165,6 +191,7 @@ export default function AdoptionSearch() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    historyMode.current = "push";
     setLoading(true);
     setError(null);
     setResult(null);
@@ -174,6 +201,7 @@ export default function AdoptionSearch() {
   }
 
   function clear() {
+    historyMode.current = "push";
     setLoading(true);
     setError(null);
     setResult(null);
@@ -184,6 +212,7 @@ export default function AdoptionSearch() {
   }
 
   function changePage(nextPage: number) {
+    historyMode.current = "push";
     setLoading(true);
     setError(null);
     setPage(nextPage);

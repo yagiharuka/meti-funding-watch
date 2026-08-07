@@ -17,6 +17,9 @@ type FundingRecord = {
   amount: number | null;
   amountRaw?: string;
   stage: Stage;
+  sourceKey: string;
+  sourceRowNumber: number;
+  sourceSystem: string;
 };
 
 type FundingSource = {
@@ -80,6 +83,13 @@ type DataRelease = {
   manifestSha256: string;
   idSetSha256: string;
   files: Record<string, { sha256: string; bytes: number; rows: number }>;
+  sourceSnapshots: {
+    gbiz: {
+      csvRetrievedAt: string;
+      subsidy: { sha256: string; bytes: number; filename: string };
+      procurement: { sha256: string; bytes: number; filename: string };
+    };
+  };
 };
 
 const bundledFundingData = fundingSummary as FundingDataset;
@@ -192,6 +202,7 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     || !isSha256(release.manifestSha256)
     || !isSha256(release.idSetSha256)
     || !release.files || typeof release.files !== "object"
+    || !release.sourceSnapshots || typeof release.sourceSnapshots !== "object"
   ) {
     throw new Error("公開releaseの形式が不正です");
   }
@@ -205,6 +216,17 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     ) {
       throw new Error("公開releaseのファイル情報が不正です");
     }
+  }
+  const gbiz = release.sourceSnapshots.gbiz;
+  if (
+    !gbiz || typeof gbiz !== "object"
+    || typeof gbiz.csvRetrievedAt !== "string"
+    || !isSha256(gbiz.subsidy?.sha256) || !Number.isSafeInteger(gbiz.subsidy?.bytes)
+    || typeof gbiz.subsidy?.filename !== "string"
+    || !isSha256(gbiz.procurement?.sha256) || !Number.isSafeInteger(gbiz.procurement?.bytes)
+    || typeof gbiz.procurement?.filename !== "string"
+  ) {
+    throw new Error("公開releaseの取得元情報が不正です");
   }
 }
 
@@ -225,6 +247,9 @@ function validateChunkRows(rows: unknown, yearKey: string, filename: string): Fu
       || (row.amount !== null && (typeof row.amount !== "number" || !Number.isFinite(row.amount)))
       || (row.amountRaw !== undefined && typeof row.amountRaw !== "string")
       || (row.stage !== "contracted" && row.stage !== "subsidy_published")
+      || typeof row.sourceKey !== "string" || !row.sourceKey
+      || !Number.isSafeInteger(row.sourceRowNumber) || (row.sourceRowNumber ?? 0) < 1
+      || typeof row.sourceSystem !== "string" || !row.sourceSystem
       || (yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== yearKey)
     ) {
       throw new Error(`${filename}の${index + 1}行目が公開スキーマと一致しません`);
@@ -233,6 +258,49 @@ function validateChunkRows(rows: unknown, yearKey: string, filename: string): Fu
     ids.add(row.id);
   }
   return rows as FundingRecord[];
+}
+
+async function delayWithSignal(milliseconds: number, signal: AbortSignal) {
+  await new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(resolve, milliseconds);
+    signal.addEventListener("abort", () => {
+      window.clearTimeout(timeout);
+      reject(new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  });
+}
+
+async function fetchWithRetry(url: string, signal: AbortSignal) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(url, { cache: "no-store", signal });
+      if (response.ok || response.status < 500) return response;
+      lastError = new Error(`Data chunk: ${response.status}`);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+      lastError = error;
+    }
+    if (attempt < 2) await delayWithSignal(350 * (attempt + 1), signal);
+  }
+  throw lastError instanceof Error ? lastError : new Error("Data chunkを取得できません");
+}
+
+async function loadWithConcurrency<T, R>(
+  values: T[],
+  worker: (value: T) => Promise<R>,
+  concurrency = 3,
+) {
+  const results = new Array<R>(values.length);
+  let cursor = 0;
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+    while (cursor < values.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await worker(values[index]);
+    }
+  }));
+  return results;
 }
 
 function initialSearchParam(name: string, fallback: string) {
@@ -336,16 +404,13 @@ export default function Home() {
       ? Object.values(manifest.commitments)
       : [manifest.commitments[year]].filter((filename): filename is string => Boolean(filename));
 
-    const chunkRequest = filenames.length ? Promise.all(filenames.map(async (filename) => {
+    const chunkRequest = filenames.length ? loadWithConcurrency(filenames, async (filename) => {
       const cacheKey = `${release.commitSha}:${filename}`;
       const cached = chunkCache.current.get(cacheKey);
       if (cached) return cached;
       const metadata = release.files[filename];
       if (!metadata) throw new Error(`Data releaseに${filename}がありません`);
-      const response = await fetch(`${dataBaseUrl}${filename}`, {
-        cache: "no-store",
-        signal: controller.signal,
-      });
+      const response = await fetchWithRetry(`${dataBaseUrl}${filename}`, controller.signal);
       if (!response.ok) throw new Error(`Data chunk: ${response.status}`);
       const bytes = await response.arrayBuffer();
       if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
@@ -356,7 +421,7 @@ export default function Home() {
       if (rows.length !== metadata.rows) throw new Error(`${filename}の行数が一致しません`);
       chunkCache.current.set(cacheKey, rows);
       return rows;
-    })) : Promise.reject(new Error("指定された期間の公開明細がありません"));
+    }) : Promise.reject(new Error("指定された期間の公開明細がありません"));
 
     chunkRequest
       .then(async (groups) => {
@@ -587,15 +652,17 @@ export default function Home() {
           </p>
         )}
 
-        <div className="result-bar" role="status" aria-live="polite">
-          {detailLoading ? (
-            <span><strong>明細を読込中</strong></span>
-          ) : (
-            <span>
-              <strong>{filteredCommitments.length.toLocaleString("ja-JP")}</strong>掲載行
-              {filteredCommitments.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}行を表示）`}
-            </span>
-          )}
+        <div className="result-bar">
+          <span role="status" aria-live="polite">
+            {detailLoading ? (
+              <strong>明細を読込中</strong>
+            ) : (
+              <>
+                <strong>{filteredCommitments.length.toLocaleString("ja-JP")}</strong>掲載行
+                {filteredCommitments.length > pageSize && `（${visibleStart.toLocaleString("ja-JP")}–${visibleEnd.toLocaleString("ja-JP")}行を表示）`}
+              </>
+            )}
+          </span>
           {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
         </div>
 
@@ -611,7 +678,10 @@ export default function Home() {
                 <td data-label="掲載区分"><span className={`stage-badge ${row.stage}`}>{stageLabels[row.stage]}</span></td>
                 <td className="amount" data-label="掲載値">{formatPublishedValue(row)}</td>
                 <td data-label="認定日・受注日">{formatDate(row.date)}<small>{row.fiscalYear === null ? "年度不明" : `${row.fiscalYear}年度（日付基準）`}</small></td>
-                <td data-label="掲載ページ"><a className="source-link" href={`https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${row.corporateNumber}`} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>GビズINFO ↗</a></td>
+                <td data-label="掲載ページ">
+                  <a className="source-link" href={`https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${row.corporateNumber}`} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>GビズINFO ↗</a>
+                  <small title="取得した全件CSV内の一意識別子">出典キー：{row.sourceKey}</small>
+                </td>
               </tr>
             ))}</tbody>
           </table>

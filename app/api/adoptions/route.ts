@@ -6,6 +6,30 @@ import {
 } from "@/scripts/mirasapo-search.mjs";
 
 const GITHUB_PAGES_ORIGIN = "https://yagiharuka.github.io";
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_REQUESTS = 30;
+const rateLimitBuckets = new Map<string, { startedAt: number; count: number }>();
+
+function enforceRateLimit(request: Request) {
+  const now = Date.now();
+  const clientKey = request.headers.get("CF-Connecting-IP")
+    || request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim()
+    || "unknown";
+  const current = rateLimitBuckets.get(clientKey);
+  if (!current || now - current.startedAt >= RATE_LIMIT_WINDOW_MS) {
+    rateLimitBuckets.set(clientKey, { startedAt: now, count: 1 });
+    return null;
+  }
+  current.count += 1;
+  if (rateLimitBuckets.size > 5_000) {
+    for (const [key, bucket] of rateLimitBuckets) {
+      if (now - bucket.startedAt >= RATE_LIMIT_WINDOW_MS) rateLimitBuckets.delete(key);
+    }
+  }
+  return current.count > RATE_LIMIT_REQUESTS
+    ? Math.max(1, Math.ceil((RATE_LIMIT_WINDOW_MS - (now - current.startedAt)) / 1_000))
+    : null;
+}
 
 function corsHeaders(cacheable = false) {
   return {
@@ -50,6 +74,12 @@ export async function OPTIONS() {
 }
 
 export async function GET(request: Request) {
+  const retryAfter = enforceRateLimit(request);
+  if (retryAfter !== null) {
+    const response = json({ error: "検索が集中しています。少し待ってから再度お試しください。" }, 429);
+    response.headers.set("Retry-After", String(retryAfter));
+    return response;
+  }
   let criteria;
   try {
     criteria = normalizeMirasapoSearchParams(new URL(request.url).searchParams);

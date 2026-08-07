@@ -56,7 +56,8 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   const publicIds = [];
   const allowedFields = new Set([
     "amount", "amountRaw", "corporateNumber", "date", "fiscalYear", "id",
-    "organization", "program", "sourceAgency", "stage",
+    "organization", "program", "sourceAgency", "sourceKey", "sourceRowNumber",
+    "sourceSystem", "stage",
   ]);
   for (const [year, filename] of Object.entries(publicManifest.commitments)) {
     const rows = JSON.parse(await readFile(new URL(filename, dataDirectory), "utf8"));
@@ -65,6 +66,9 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
       && typeof row.organization === "string"
       && /^\d{13}$/.test(row.corporateNumber)
       && typeof row.sourceAgency === "string"
+      && typeof row.sourceKey === "string" && row.sourceKey.length > 0
+      && Number.isSafeInteger(row.sourceRowNumber) && row.sourceRowNumber > 0
+      && typeof row.sourceSystem === "string" && row.sourceSystem.length > 0
       && typeof row.program === "string"
       && (row.amount === null || typeof row.amount === "number")
       && ["contracted", "subsidy_published"].includes(row.stage)));
@@ -87,6 +91,10 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   );
   assert.equal(release.generatedAt, publicManifest.generatedAt);
   assert.equal(release.recordCount, publicIds.length);
+  assert.match(release.sourceSnapshots.gbiz.subsidy.sha256, /^[0-9a-f]{64}$/);
+  assert.match(release.sourceSnapshots.gbiz.procurement.sha256, /^[0-9a-f]{64}$/);
+  assert.ok(release.sourceSnapshots.gbiz.subsidy.bytes > 0);
+  assert.ok(release.sourceSnapshots.gbiz.procurement.bytes > 0);
   assert.equal(release.commitSha, execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: new URL("..", import.meta.url),
     encoding: "utf8",

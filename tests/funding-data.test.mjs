@@ -540,8 +540,8 @@ test("fails closed before replacing records when source counts cannot be reconci
   assert.match(updateWorkflow, /npm test/);
   assert.match(updateWorkflow, /Rebuild the artifact from the commit that will be published/);
   assert.match(updateWorkflow, /node --test tests\/rendered-html\.test\.mjs/);
-  assert.match(updateWorkflow, /actions\/upload-pages-artifact@v4/);
+  assert.match(updateWorkflow, /actions\/upload-pages-artifact@[0-9a-f]{40} # v4/);
   assert.match(updateWorkflow, /needs: update/);
-  assert.match(updateWorkflow, /actions\/deploy-pages@v4/);
+  assert.match(updateWorkflow, /actions\/deploy-pages@[0-9a-f]{40} # v4/);
   assert.doesNotMatch(updateWorkflow, /workflow_run/);
 });

@@ -23,6 +23,9 @@ type PublicFundingRow = {
   amount: number | null;
   amountRaw?: string;
   stage: "contracted" | "subsidy_published";
+  sourceKey: string;
+  sourceRowNumber: number;
+  sourceSystem: string;
 };
 
 export default defineConfig({
@@ -107,6 +110,9 @@ export default defineConfig({
                 || typeof row.program !== "string"
                 || (row.amount !== null && typeof row.amount !== "number")
                 || !["contracted", "subsidy_published"].includes(String(row.stage))
+                || typeof row.sourceKey !== "string" || !row.sourceKey
+                || !Number.isSafeInteger(row.sourceRowNumber) || Number(row.sourceRowNumber) < 1
+                || typeof row.sourceSystem !== "string" || !row.sourceSystem
               ) {
                 throw new Error(`${label}の公開必須項目が不正です`);
               }
@@ -124,6 +130,9 @@ export default defineConfig({
                   ? { amountRaw: row.amountRaw }
                   : {}),
                 stage: row.stage as PublicFundingRow["stage"],
+                sourceKey: row.sourceKey,
+                sourceRowNumber: row.sourceRowNumber,
+                sourceSystem: row.sourceSystem,
               };
             });
             await writeFile(
