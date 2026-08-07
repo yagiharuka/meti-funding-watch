@@ -80,8 +80,14 @@ type DataChunkManifest = {
 };
 
 const bundledFundingData = fundingSummary as FundingDataset;
-const dataBaseUrl = "data/";
 const pageSize = 100;
+
+function getDataBaseUrl() {
+  if (typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site")) {
+    return "https://yagiharuka.github.io/meti-funding-watch/data/";
+  }
+  return "data/";
+}
 
 const stageLabels: Record<Stage, string> = {
   contracted: "調達CSV（委託を含む）",
@@ -161,6 +167,7 @@ export default function Home() {
 
   useEffect(() => {
     const controller = new AbortController();
+    const dataBaseUrl = getDataBaseUrl();
     fetch(`${dataBaseUrl}manifest.json`, { cache: "no-store", signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`Data manifest: ${response.status}`);
@@ -188,6 +195,7 @@ export default function Home() {
   useEffect(() => {
     if (!manifest) return;
     const controller = new AbortController();
+    const dataBaseUrl = getDataBaseUrl();
     let active = true;
     const filenames = year === "all"
       ? Object.values(manifest.commitments)

@@ -413,6 +413,7 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /調達・委託・補助金/);
   assert.match(pageSource, /認定日・受注日の記載がない/);
   assert.match(pageSource, /当サイトの抽出条件に合うCSV行を全件取込済み/);
+  assert.match(pageSource, /https:\/\/yagiharuka\.github\.io\/meti-funding-watch\/data\//);
   assert.match(pageSource, /update-chip \$\{dataMode\}/);
   assert.match(pageSource, /includesQuery\(\[row\.organization, row\.corporateNumber\], normalizedQuery\)/);
 
