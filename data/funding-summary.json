@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T05:50:10.237Z",
+  "generatedAt": "2026-08-07T14:03:04.401Z",
   "sources": [
     {
       "id": "gbiz",
@@ -9,7 +9,7 @@
       "frequency": "日次確認",
       "lastChecked": "2026-08-07",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-07T05:49:50.876Z",
+      "dashboardCheckedAt": "2026-08-07T14:02:37.742Z",
       "dashboardRecordCount": 69509,
       "dashboardSubsidyCount": 51380,
       "dashboardProcurementCount": 18129,
@@ -26,38 +26,21 @@
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-07T05:50:03.825Z",
+      "csvRetrievedAt": "2026-08-07T14:02:51.694Z",
       "csvSubsidyFileBytes": 175575031,
       "csvProcurementFileBytes": 102259331,
       "csvSubsidySha256": "5f80773bc3ffdc28b5f11153f5cdb8f5e512bdadd0c8b67669c5c9f63cbd01b6",
       "csvProcurementSha256": "108174484e36eb656575550538f453564bd866824db6fd0a3ac56c2300d1d62d",
       "csvTotalSubsidyRows": 545877,
       "csvTotalProcurementRows": 308249,
-      "lastSuccessfulImportAt": "2026-08-07T05:50:10.237Z",
-      "continuityBaselineRecordCount": 69491,
-      "continuityRetainedRecordCount": 69491,
+      "lastSuccessfulImportAt": "2026-08-07T14:03:04.401Z",
+      "continuityBaselineRecordCount": 69495,
+      "continuityRetainedRecordCount": 69495,
       "continuityRemovedRecordCount": 0,
-      "continuityChangedRecordCount": 2,
+      "continuityChangedRecordCount": 0,
       "continuityChangedRecordLimit": 100,
-      "continuityChangedRecords": [
-        {
-          "key": "subsidy_published\u001f2023_04_94_20240325_00018883",
-          "oldHash": "9b226b0c389c8a2182719dfd6989042afbf4f9d9b0dd07ba0d04b0c2ea21f459",
-          "newHash": "2633e755321d6b3a73b663b8c1c0175f9e1811f6500118f11ad72976e42d96ea",
-          "changedFields": [
-            "organization"
-          ]
-        },
-        {
-          "key": "subsidy_published\u001f2024_04_94_20250307_00004853",
-          "oldHash": "fda3707afbba2013b2ddf10ae6ff5b7c60d67aadaec4f7fb0ab9cd0847a1d297",
-          "newHash": "2802749b0541e5098895eb63e2b334f7a60df47f48868f7559710e8668915af9",
-          "changedFields": [
-            "organization"
-          ]
-        }
-      ],
-      "continuityAddedRecordCount": 4,
+      "continuityChangedRecords": [],
+      "continuityAddedRecordCount": 0,
       "csvSubsidySchemaSha256": "b3f021be2271d0b7404ced03d2fb3c32f4deb54bbc3d67df1ed9a5fd6f53fc49",
       "csvProcurementSchemaSha256": "1cab7eb602079eb5c23531450aea840378124f9c1977c5b750563d6887cc808b",
       "csvSubsidyPublisherCounts": {
