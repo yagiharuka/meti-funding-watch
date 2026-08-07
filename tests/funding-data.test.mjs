@@ -10,6 +10,11 @@ import {
   parseDashboardRow,
   toGbizBulkRecords,
 } from "../scripts/gbiz-csv.mjs";
+import {
+  buildMirasapoSourceUrl,
+  normalizeMirasapoSearchParams,
+  parseMirasapoSearchHtml,
+} from "../scripts/mirasapo-search.mjs";
 
 const data = JSON.parse(
   await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
@@ -19,6 +24,8 @@ const pageManifest = JSON.parse(
 );
 const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 const adoptionPageSource = await readFile(new URL("../app/adoptions/page.tsx", import.meta.url), "utf8");
+const adoptionSearchSource = await readFile(new URL("../app/adoptions/AdoptionSearch.tsx", import.meta.url), "utf8");
+const adoptionApiSource = await readFile(new URL("../app/api/adoptions/route.ts", import.meta.url), "utf8");
 const viewTabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const updateSource = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
@@ -425,18 +432,97 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.match(adoptionPageSource, /中小企業庁の補助金採択者情報/);
   assert.match(adoptionPageSource, /採択は補助金交付の候補者として選定された段階/);
   assert.match(adoptionPageSource, /交付決定額・確定額・実支払額を示しません/);
-  assert.match(adoptionPageSource, /検索先に金額は掲載されていない/);
+  assert.match(adoptionPageSource, /金額は掲載されていない/);
   assert.match(adoptionPageSource, /GビズINFOの掲載情報とは合算しません/);
   assert.match(adoptionPageSource, /公開に同意した採択者のみ/);
   assert.match(adoptionPageSource, /掲載事業者と国から直接補助金を受ける事業管理機関が異なる場合/);
-  assert.match(adoptionPageSource, /https:\/\/mirasapo-connect\.go\.jp\/chusho-subsidies/);
-  assert.match(adoptionPageSource, /subsidyCodes=GO_TECH/);
+  assert.match(adoptionPageSource, /<AdoptionSearch/);
+  assert.match(adoptionSearchSource, /事業者名・事業計画名/);
+  assert.match(adoptionSearchSource, /すべての補助金/);
+  assert.match(adoptionSearchSource, /すべての都道府県/);
+  assert.match(adoptionSearchSource, /採択掲載行/);
+  assert.match(adoptionSearchSource, /掲載事業者名/);
+  assert.match(adoptionSearchSource, /事業計画名/);
+  assert.match(adoptionSearchSource, /申請年度・公募回/);
+  assert.match(adoptionSearchSource, /公式検索取得/);
+  assert.match(adoptionSearchSource, /0件とは扱っていません/);
+  assert.match(adoptionSearchSource, /meti-funding-watch\.haru620328\.chatgpt\.site\/api\/adoptions/);
+  assert.match(adoptionApiSource, /https:\/\/yagiharuka\.github\.io/);
+  assert.match(adoptionApiSource, /parseMirasapoSearchHtml/);
+  assert.match(adoptionApiSource, /content-type/);
+  assert.match(adoptionApiSource, /AbortSignal\.timeout\(15_000\)/);
+  assert.match(adoptionApiSource, /maximumBytes = 1_000_000/);
+  assert.doesNotMatch(adoptionSearchSource, /補助金採択者検索を開く/);
+  assert.doesNotMatch(adoptionSearchSource, /法人番号|交付先|受取先|金額列/);
   assert.match(viewTabsSource, /調達・委託・補助金/);
   assert.match(viewTabsSource, /補助金採択者情報/);
   assert.match(viewTabsSource, /onAdoptions \? "\.\.\/" : "#top"/);
   assert.match(viewTabsSource, /onAdoptions \? "#top" : "adoptions\/"/);
   assert.match(viewTabsSource, /aria-current/);
-  assert.doesNotMatch(`${adoptionPageSource}\n${viewTabsSource}`, /_next\/data|217,?9\d{2}/);
+  assert.doesNotMatch(`${adoptionPageSource}\n${adoptionSearchSource}\n${adoptionApiSource}\n${viewTabsSource}`, /_next\/data|217,?9\d{2}/);
+});
+
+test("parses only the documented fields exposed by the public Mirasapo search page", () => {
+  const payload = {
+    props: {
+      pageProps: {
+        listView: [
+          {
+            id: "GT-test",
+            name: " テスト株式会社 ",
+            address: "東京都 ",
+            subsidy: "Go-Tech事業",
+            year: "2025年",
+            times: "1",
+            plan: "研究開発",
+          },
+        ],
+        total: 1,
+        count: "1",
+      },
+    },
+  };
+  const parsed = parseMirasapoSearchHtml(
+    `<html><script type="application/json" id="__NEXT_DATA__">${JSON.stringify(payload)}</script></html>`,
+  );
+  assert.deepEqual(parsed, {
+    totalRecords: 1,
+    totalPages: 1,
+    records: [{
+      id: "GT-test",
+      name: "テスト株式会社",
+      prefecture: "東京都",
+      subsidy: "Go-Tech事業",
+      year: "2025年",
+      round: "1",
+      plan: "研究開発",
+      sourceUrl: "https://mirasapo-connect.go.jp/chusho-subsidies/GT-test",
+    }],
+  });
+  assert.throws(() => parseMirasapoSearchHtml("<html></html>"), /応答形式が変わりました/);
+  assert.throws(
+    () => parseMirasapoSearchHtml(`<script id="__NEXT_DATA__">${JSON.stringify({ props: { pageProps: { listView: [], total: 0, count: "1" } } })}</script>`),
+    /件数とページ数が整合しません/,
+  );
+});
+
+test("allows only bounded Mirasapo search parameters and a fixed upstream origin", () => {
+  const params = new URLSearchParams({
+    page: "2",
+    keyword: "三菱",
+    prefCode: "13",
+    subsidyCode: "GO_TECH",
+  });
+  const criteria = normalizeMirasapoSearchParams(params);
+  assert.deepEqual(criteria, { page: 2, keyword: "三菱", prefCode: "13", subsidyCode: "GO_TECH" });
+  assert.equal(
+    buildMirasapoSourceUrl(criteria).toString(),
+    "https://mirasapo-connect.go.jp/chusho-subsidies?page=2&keyword=%E4%B8%89%E8%8F%B1&prefCode=13&subsidyCodes=GO_TECH",
+  );
+  assert.throws(() => normalizeMirasapoSearchParams(new URLSearchParams({ page: "0" })), /範囲外/);
+  assert.throws(() => normalizeMirasapoSearchParams(new URLSearchParams({ prefCode: "99" })), /都道府県コード/);
+  assert.throws(() => normalizeMirasapoSearchParams(new URLSearchParams({ subsidyCode: "UNKNOWN" })), /補助金コード/);
+  assert.throws(() => normalizeMirasapoSearchParams(new URLSearchParams({ keyword: "あ".repeat(21) })), /20文字以内/);
 });
 
 test("fails closed before replacing records when source counts cannot be reconciled", () => {

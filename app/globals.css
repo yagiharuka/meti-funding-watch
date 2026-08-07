@@ -75,7 +75,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .adoption-page { min-height: calc(100vh - 250px); padding: clamp(42px, 6vw, 84px) clamp(22px, 5vw, 78px) 96px; }
 .adoption-card {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 330px); gap: 44px;
+  display: block;
   max-width: 1440px; margin: 0 auto; padding: clamp(28px, 4vw, 52px);
   border: 1px solid #c9d9ce; border-radius: 22px; background: #fff;
   box-shadow: 0 18px 46px rgba(32, 59, 50, .06);
@@ -84,9 +84,37 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .adoption-lead { max-width: 760px; margin: 20px 0 0; color: #40534c; font-size: 15px; line-height: 1.85; }
 .adoption-warning { max-width: 800px; margin: 18px 0 0; padding: 14px 16px; border-left: 3px solid var(--amber); background: #fffaf0; color: #5e563f; font-size: 13px; line-height: 1.8; }
 .adoption-detail { max-width: 800px; margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
-.adoption-actions { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
-.adoption-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; border-radius: 11px; font-size: 13px; font-weight: 800; text-align: center; }
-.adoption-actions span { margin-top: 3px; color: #607169; font-size: 11px; line-height: 1.6; text-align: center; }
+.adoption-results { padding: 0 clamp(22px, 5vw, 78px) 96px; }
+.adoption-filters {
+  display: grid; grid-template-columns: minmax(280px, 1.5fr) minmax(210px, 1fr) minmax(190px, .8fr) auto; gap: 10px;
+  max-width: 1440px; margin: 0 auto 14px;
+}
+.adoption-filters label { display: grid; gap: 6px; color: #65766f; font-size: 10px; font-weight: 800; }
+.adoption-filters input, .adoption-filters select {
+  width: 100%; height: 52px; padding: 0 14px; border: 1px solid #cad5cc; border-radius: 13px;
+  background: #fff; color: var(--ink); outline: none;
+}
+.adoption-filters input:focus, .adoption-filters select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(11,113,79,.1); }
+.adoption-search-button {
+  align-self: end; min-width: 112px; height: 52px; padding: 0 20px; border: 0; border-radius: 13px;
+  background: var(--green); color: #fff; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+.adoption-search-button:hover { background: var(--green-dark); }
+.adoption-search-button:disabled { cursor: wait; opacity: .62; }
+.adoption-result-bar { display: flex; align-items: end; justify-content: space-between; gap: 18px; max-width: 1440px; margin: 0 auto 13px; color: var(--muted); font-size: 11px; }
+.adoption-result-bar strong { color: var(--ink); font-size: 17px; }
+.adoption-result-bar small { display: block; margin-top: 5px; color: #82918b; font-size: 9px; }
+.adoption-result-bar button { border: 0; background: transparent; color: var(--green); font-size: 11px; font-weight: 800; cursor: pointer; }
+.adoption-result-bar button:disabled { color: #9aa7a1; cursor: default; }
+.adoption-records { max-width: 1440px; min-height: 220px; margin: 0 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 18px 46px rgba(32, 59, 50, .06); }
+.adoption-records table { min-width: 1040px; }
+.adoption-records td strong { max-width: 240px; }
+.adoption-plan { display: block; max-width: 440px; color: var(--ink); line-height: 1.65; }
+.adoption-error { max-width: 1440px; min-height: 180px; margin: 0 auto; padding: 28px; border: 1px solid #d7c89c; border-radius: 18px; background: #fffaf0; color: #6b4a10; }
+.adoption-error strong { color: var(--ink); }
+.adoption-error p { font-size: 11px; line-height: 1.7; }
+.adoption-error a, .adoption-source-note a { color: var(--green); font-weight: 800; }
+.adoption-source-note { max-width: 1440px; margin: 18px auto 0; color: #6d7c76; font-size: 10px; line-height: 1.8; }
 
 .records-section, .source-section { padding: 0 clamp(22px, 5vw, 78px) 110px; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; max-width: 1440px; margin: 0 auto 34px; }
@@ -164,8 +192,9 @@ footer a { color: var(--green); font-weight: 700; }
   .topbar nav { display: none; }
   .update-chip { margin-left: auto; }
   .view-tabs { margin-right: 22px; margin-left: 22px; }
-  .adoption-card { grid-template-columns: 1fr; gap: 28px; }
-  .adoption-actions { max-width: 440px; }
+  .adoption-filters { grid-template-columns: 1fr 1fr; }
+  .adoption-keyword { grid-column: 1 / -1; }
+  .adoption-search-button { align-self: end; }
   .filters { grid-template-columns: 1fr 1fr; }
   .search-field { grid-column: 1 / -1; }
 }
@@ -181,6 +210,19 @@ footer a { color: var(--green); font-weight: 700; }
   .hero h1 { font-size: 40px; }
   .adoption-page { padding-top: 44px; padding-bottom: 64px; }
   .adoption-card { padding: 24px 20px; border-radius: 18px; }
+  .adoption-results { padding-bottom: 64px; }
+  .adoption-filters { grid-template-columns: 1fr; }
+  .adoption-keyword { grid-column: auto; }
+  .adoption-search-button { width: 100%; }
+  .adoption-result-bar { align-items: flex-start; }
+  .adoption-records { overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .adoption-records table, .adoption-records thead, .adoption-records tbody, .adoption-records tr, .adoption-records td { display: block; width: 100%; min-width: 0; }
+  .adoption-records thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .adoption-records tbody { display: grid; gap: 12px; }
+  .adoption-records tr { padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 10px 24px rgba(32,59,50,.05); }
+  .adoption-records td { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding: 8px 0; border: 0; font-size: 11px; }
+  .adoption-records td::before { content: attr(data-label); color: #7c8b85; font-size: 9px; font-weight: 800; }
+  .adoption-records td strong, .adoption-plan { max-width: none; }
   .hero-note { align-items: flex-start; flex-direction: column; }
   .source-count { padding-left: 0; border-left: 0; }
   .section-heading { display: block; }
