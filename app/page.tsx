@@ -144,16 +144,6 @@ function formatPublishedValue(row: FundingRecord) {
   return raw ? `原文：${raw}` : "空欄";
 }
 
-function currentFiscalYearInJapan() {
-  const parts = new Intl.DateTimeFormat("en", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "numeric",
-  }).formatToParts(new Date());
-  const year = Number(parts.find((part) => part.type === "year")?.value);
-  const month = Number(parts.find((part) => part.type === "month")?.value);
-  return month <= 3 ? year - 1 : year;
-}
 
 export default function Home() {
   const defaultYear = "all";
@@ -250,7 +240,6 @@ export default function Home() {
     dataset.coverage?.gbiz.unclassifiedDateCount
     || manifest?.commitments.unclassified,
   );
-  const latestYearIsInProgress = coverageYears.at(-1) === currentFiscalYearInJapan();
   const agencies = useMemo(
     () => Array.from(new Set(commitments.map((row) => row.sourceAgency).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b, "ja")),
@@ -364,37 +353,6 @@ export default function Home() {
           <p>法人等の名称と法人番号だけを全文検索します。条件を組み合わせて掲載行を確認できます。</p>
         </div>
 
-        <aside className="scope-note" aria-label="表示データの注意事項">
-          {!csvImportVerified && (
-            <p className="incomplete-note" role="alert">
-              <strong>全件CSVの取込を確認中です</strong>
-              検証済みのCSV対象行数と取込行数が一致するまで、公開データは更新しません。
-            </p>
-          )}
-          {csvImportVerified && dashboardCsvGap !== null && dashboardCsvGap !== 0 && (
-            <p className="snapshot-note" role="status">
-              <strong>GビズINFO内の2つの表示に時点差があります</strong>
-              公式画面は{displayCount(dashboardRecordCount)}、取得した全件CSVの対象は{displayRows(csvEligibleRecordCount)}です。
-              差は{displayDifference(dashboardCsvGap)}ですが、当サイトの抽出条件に合うCSV
-              {displayRows(csvEligibleRecordCount)}はすべて取り込んでいます。
-              更新時点または集計条件が異なる可能性があります。
-            </p>
-          )}
-          <strong>表示額は支払実績ではありません</strong>
-          <p>
-            法人等の名称は全件CSVの「商号または名称」です。掲載値は、調達CSVの「落札価格」欄または
-            補助金CSVの「金額」欄にある値です。単価・売払い・変更や確定など異なる性質の値が含まれるため、
-            このサイトでは金額を足し上げません。
-          </p>
-          <p>
-            各府省庁から提供され、法人番号が付与されてGビズINFOに掲載された情報だけが対象です。同一内容が複数行になる場合があり、掲載行数は案件数とは限りません。
-            年度は認定日・受注日から当サイトが算出し、日付がない行は「年度不明」に分けます。
-            {latestYearIsInProgress && ` ${coverageYears.at(-1)}年度は年度途中です。`}
-          </p>
-          <p>
-            法人番号に紐づかない個人・団体、GビズINFOに未掲載の支出、所管法人・基金等からの下流支出を網羅するものではありません。
-          </p>
-        </aside>
 
         <div className="series-label" aria-label="表示中のデータ系列">
           <strong>法人等別の調達・補助金掲載情報</strong>
