@@ -58,7 +58,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .secondary-action { border: 1px solid #bdcbc1; background: #fff; color: var(--green-dark); }
 .secondary-action:hover { border-color: var(--green); }
 
-.adoption-section { padding: 0 clamp(22px, 5vw, 78px) 86px; }
+.adoption-section { padding: 0 clamp(22px, 5vw, 78px) 86px; scroll-margin-top: 88px; }
 .adoption-card {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 330px); gap: 44px;
   max-width: 1440px; margin: 0 auto; padding: clamp(28px, 4vw, 52px);
@@ -71,7 +71,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .adoption-detail { max-width: 800px; margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
 .adoption-actions { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
 .adoption-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; border-radius: 11px; font-size: 13px; font-weight: 800; text-align: center; }
-.adoption-actions span { margin-top: 3px; color: #87958f; font-size: 11px; line-height: 1.6; text-align: center; }
+.adoption-actions span { margin-top: 3px; color: #607169; font-size: 11px; line-height: 1.6; text-align: center; }
 
 .records-section, .source-section { padding: 0 clamp(22px, 5vw, 78px) 110px; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; max-width: 1440px; margin: 0 auto 34px; }

@@ -419,7 +419,8 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
 test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.match(pageSource, /中小企業庁の補助金採択者情報/);
   assert.match(pageSource, /採択は補助金交付の候補者として選定された段階/);
-  assert.match(pageSource, /交付決定額・確定額・実支払額ではなく/);
+  assert.match(pageSource, /交付決定額・確定額・実支払額を示しません/);
+  assert.match(pageSource, /検索先に金額は掲載されていない/);
   assert.match(pageSource, /GビズINFOの掲載情報とは合算しません/);
   assert.match(pageSource, /公開に同意した採択者のみ/);
   assert.match(pageSource, /掲載事業者と国から直接補助金を受ける事業管理機関が異なる場合/);
