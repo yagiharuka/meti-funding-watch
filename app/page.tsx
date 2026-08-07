@@ -331,6 +331,7 @@ export default function Home() {
           <p className="hero-scope-warning">
             このサイトは経済産業省の全支出・実支払を示すものではありません。
             GビズINFOに法人番号付きで掲載された調達・補助金情報だけを表示します。
+            所管法人については、NEDO・IPAのGビズINFO掲載分のみが対象で、その他の所管法人は含みません。
           </p>
           <div className="hero-note">
             <span>{gbizSource?.lastSuccessfulImportAt ? "明細データ最終取込" : "データ生成日時"}</span>
