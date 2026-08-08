@@ -20,8 +20,7 @@ export default function ViewTabs({ active }: ViewTabsProps) {
         href={onAdoptions ? "#top" : "adoptions/"}
         aria-current={onAdoptions ? "page" : undefined}
       >
-        <strong>補助金採択者情報</strong>
-        <span>中小企業庁</span>
+        <strong>補助金採択者情報（中小企業庁のみ）</strong>
       </a>
     </nav>
   );
