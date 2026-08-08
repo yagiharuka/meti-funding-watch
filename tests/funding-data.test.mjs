@@ -230,6 +230,14 @@ test("rejects a partial CSV snapshot before it can replace the last successful d
   };
   assert.doesNotThrow(() => assertGbizSnapshotContinuity(previous, complete, dashboard));
 
+  assert.doesNotThrow(
+    () => assertGbizSnapshotContinuity(previous, {
+      ...complete,
+      csvSubsidyFileBytes: previous.csvSubsidyFileBytes - 114,
+    }, dashboard),
+    "文言訂正などによる軽微なバイト数減少だけでは完全性エラーにしない",
+  );
+
   assert.throws(
     () => assertGbizSnapshotContinuity(previous, {
       ...complete,
@@ -258,7 +266,7 @@ test("rejects a partial CSV snapshot before it can replace the last successful d
       csvTotalSubsidyRows: previous.csvTotalSubsidyRows + 100_000,
       csvEligibleRecordCount: complete.csvEligibleRecordCount + 100_000,
       csvEligibleSubsidyCount: complete.csvEligibleSubsidyCount + 100_000,
-      csvSubsidyFileBytes: previous.csvSubsidyFileBytes + 30_000_000,
+      csvSubsidyFileBytes: previous.csvSubsidyFileBytes,
     }, {
       ...dashboard,
       dashboardRecordCount: dashboard.dashboardRecordCount + 100_000,

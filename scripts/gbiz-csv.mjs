@@ -10,7 +10,6 @@ import {
 
 const MAX_AUTOMATIC_COUNT_GROWTH_RATE = 0.05;
 const MAX_AUTOMATIC_COUNT_GROWTH_FLOOR = 1_000;
-const MAX_AUTOMATIC_BYTE_GROWTH_RATE = 0.10;
 const MAX_AUTOMATIC_CHANGED_RECORDS = 100;
 const MAX_AUTOMATIC_CHANGED_RECORD_RATE = 0.002;
 
@@ -316,8 +315,6 @@ export function assertGbizSnapshotContinuity(previousSource, snapshot, dashboard
     ["調達CSV総行数", "csvTotalProcurementRows"],
     ["補助金CSV対象行", "csvEligibleSubsidyCount"],
     ["調達CSV対象行", "csvEligibleProcurementCount"],
-    ["補助金CSVバイト数", "csvSubsidyFileBytes"],
-    ["調達CSVバイト数", "csvProcurementFileBytes"],
   ];
   for (const [label, field] of comparisons) {
     const previous = previousSource[field];
@@ -330,15 +327,26 @@ export function assertGbizSnapshotContinuity(previousSource, snapshot, dashboard
         `GビズINFO 全件CSV: ${label}が前回成功時から減少しました (${current}/${previous})`,
       );
     }
-    const isBytes = field.endsWith("FileBytes");
-    const allowedGrowth = isBytes
-      ? Math.max(1_000_000, Math.ceil(previous * MAX_AUTOMATIC_BYTE_GROWTH_RATE))
-      : Math.max(MAX_AUTOMATIC_COUNT_GROWTH_FLOOR, Math.ceil(previous * MAX_AUTOMATIC_COUNT_GROWTH_RATE));
+    const allowedGrowth = Math.max(
+      MAX_AUTOMATIC_COUNT_GROWTH_FLOOR,
+      Math.ceil(previous * MAX_AUTOMATIC_COUNT_GROWTH_RATE),
+    );
     if (current - previous > allowedGrowth) {
       throw new Error(
         `GビズINFO 全件CSV: ${label}の増加が自動公開の上限を超えました `
         + `(+${current - previous}/+${allowedGrowth})`,
       );
+    }
+  }
+
+  // CSVのバイト数は文言訂正・改行・引用符の変化だけでも増減するため、
+  // 完全性の判定には使わない。取得証跡として正の整数であることだけ確認する。
+  for (const [label, field] of [
+    ["補助金CSVバイト数", "csvSubsidyFileBytes"],
+    ["調達CSVバイト数", "csvProcurementFileBytes"],
+  ]) {
+    if (!Number.isSafeInteger(snapshot[field]) || snapshot[field] <= 0) {
+      throw new Error(`GビズINFO 全件CSV: ${label}を検証できません`);
     }
   }
 
