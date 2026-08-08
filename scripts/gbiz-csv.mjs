@@ -448,6 +448,58 @@ export function assertGbizRecordContinuity(
   };
 }
 
+export function assertApprovedGbizCorrections(changedRecords, approvalDocument) {
+  if (!changedRecords.length) return [];
+  if (
+    approvalDocument?.schemaVersion !== 1
+    || !Array.isArray(approvalDocument.approvedCorrections)
+  ) {
+    throw new Error("GビズINFO 全件CSV: 公式訂正の承認台帳が不正です");
+  }
+
+  const approvals = new Map();
+  for (const approval of approvalDocument.approvedCorrections) {
+    const approvalKey = [approval?.key, approval?.oldHash, approval?.newHash].join("\u001f");
+    if (
+      typeof approval?.key !== "string"
+      || !/^[0-9a-f]{64}$/.test(approval?.oldHash ?? "")
+      || !/^[0-9a-f]{64}$/.test(approval?.newHash ?? "")
+      || !Array.isArray(approval?.changedFields)
+      || !approval.changedFields.length
+      || typeof approval?.officialUrl !== "string"
+      || !/^https:\/\/info\.gbiz\.go\.jp\//.test(approval.officialUrl)
+      || typeof approval?.reviewedAt !== "string"
+      || !/^\d{4}-\d{2}-\d{2}$/.test(approval.reviewedAt)
+    ) {
+      throw new Error("GビズINFO 全件CSV: 公式訂正の承認項目が不正です");
+    }
+    if (approvals.has(approvalKey)) {
+      throw new Error(`GビズINFO 全件CSV: 公式訂正の承認が重複しています (${approval.key})`);
+    }
+    approvals.set(approvalKey, approval);
+  }
+
+  return changedRecords.map((change) => {
+    const approvalKey = [change.key, change.oldHash, change.newHash].join("\u001f");
+    const approval = approvals.get(approvalKey);
+    const approvedFields = [...(approval?.changedFields ?? [])].sort();
+    const actualFields = [...change.changedFields].sort();
+    if (!approval || JSON.stringify(approvedFields) !== JSON.stringify(actualFields)) {
+      throw new Error(
+        `GビズINFO 全件CSV: 未承認の既存キー変更があります (${change.key})`,
+      );
+    }
+    return {
+      key: change.key,
+      oldHash: change.oldHash,
+      newHash: change.newHash,
+      changedFields: actualFields,
+      reviewedAt: approval.reviewedAt,
+      officialUrl: approval.officialUrl,
+    };
+  });
+}
+
 export function auditGbizImport(subsidyResult, procurementResult, dashboardStats = null) {
   const csvEligibleSubsidyCount = subsidyResult.stats.eligibleRows;
   const csvEligibleProcurementCount = procurementResult.stats.eligibleRows;

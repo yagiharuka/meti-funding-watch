@@ -161,12 +161,16 @@ test("workflow cannot deploy stale data after a refresh failure", async () => {
   assert.doesNotMatch(workflow, /uses: actions\/[a-z-]+@v\d/);
 });
 
-test("production quarantines existing-key corrections instead of auto-publishing them", async () => {
+test("production publishes only exact corrections from the reviewed ledger", async () => {
   const updater = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
-  assert.match(updater, /continuityChangedRecordCount > 0/);
-  assert.match(updater, /人手確認用に隔離しました/);
+  assert.match(updater, /assertApprovedGbizCorrections/);
+  assert.match(updater, /approved-gbiz-corrections\.json/);
   assert.ok(
-    updater.indexOf("writeGbizAuditEvidence") < updater.indexOf("continuityChangedRecordCount > 0"),
-    "source evidence must be written before publication is stopped",
+    updater.indexOf("writeGbizAuditEvidence") < updater.indexOf("assertApprovedGbizCorrections("),
+    "source evidence must be written before a correction is checked",
+  );
+  assert.ok(
+    updater.indexOf("assertApprovedGbizCorrections(") < updater.indexOf("next.records = newRecords"),
+    "corrections must be approved before records are replaced",
   );
 });

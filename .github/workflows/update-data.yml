@@ -11,6 +11,7 @@ on:
       - "public/**"
       - "scripts/**"
       - "data/source-registry.json"
+      - "data/approved-gbiz-corrections.json"
       - "tests/**"
       - "package.json"
       - "package-lock.json"
