@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fiscalYear, parseAmount, parseJapaneseDate } from "../scripts/gbiz-values.mjs";
 import {
-  assertApprovedGbizCorrections,
   assertGbizRecordContinuity,
   assertGbizSnapshotContinuity,
   auditGbizImport,
@@ -31,9 +30,6 @@ const viewTabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta
 const styleSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const updateSource = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
 const updateWorkflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
-const approvedCorrections = JSON.parse(
-  await readFile(new URL("../data/approved-gbiz-corrections.json", import.meta.url), "utf8"),
-);
 
 function fiscalYearForDate(value) {
   const [year, month] = value.split("-").map(Number);
@@ -365,36 +361,6 @@ test("reports CSV and dashboard counts without conflating their gaps", () => {
     assert.equal(gbizSource.status, "watch");
     assert.equal(gbizSource.lastSuccessfulImportAt, undefined);
   }
-});
-
-test("accepts only exact, reviewed Gbiz corrections", () => {
-  const reviewedChanges = approvedCorrections.approvedCorrections.map((approval) => ({
-    key: approval.key,
-    oldHash: approval.oldHash,
-    newHash: approval.newHash,
-    changedFields: approval.changedFields,
-  }));
-  const accepted = assertApprovedGbizCorrections(reviewedChanges, approvedCorrections);
-  assert.equal(accepted.length, 2);
-  assert.deepEqual(accepted.map((row) => row.changedFields), [["organization"], ["organization"]]);
-
-  assert.throws(
-    () => assertApprovedGbizCorrections([
-      { ...reviewedChanges[0], newHash: "0".repeat(64) },
-    ], approvedCorrections),
-    /未承認の既存キー変更/,
-  );
-  assert.throws(
-    () => assertApprovedGbizCorrections([
-      { ...reviewedChanges[0], changedFields: ["amount"] },
-    ], approvedCorrections),
-    /未承認の既存キー変更/,
-  );
-  assert.equal(
-    updateWorkflow.includes('data/approved-gbiz-corrections.json'),
-    true,
-    "approval ledger changes must trigger the guarded update workflow",
-  );
 });
 
 test("derives the year selector from declared coverage", () => {

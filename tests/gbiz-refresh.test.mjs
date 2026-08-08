@@ -161,16 +161,13 @@ test("workflow cannot deploy stale data after a refresh failure", async () => {
   assert.doesNotMatch(workflow, /uses: actions\/[a-z-]+@v\d/);
 });
 
-test("production publishes only exact corrections from the reviewed ledger", async () => {
+test("production automatically publishes bounded non-identity corrections", async () => {
   const updater = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
-  assert.match(updater, /assertApprovedGbizCorrections/);
-  assert.match(updater, /approved-gbiz-corrections\.json/);
+  assert.match(updater, /allowOfficialCorrections: true/);
+  assert.doesNotMatch(updater, /assertApprovedGbizCorrections/);
+  assert.doesNotMatch(updater, /approved-gbiz-corrections\.json/);
   assert.ok(
-    updater.indexOf("writeGbizAuditEvidence") < updater.indexOf("assertApprovedGbizCorrections("),
-    "source evidence must be written before a correction is checked",
-  );
-  assert.ok(
-    updater.indexOf("assertApprovedGbizCorrections(") < updater.indexOf("next.records = newRecords"),
-    "corrections must be approved before records are replaced",
+    updater.indexOf("writeGbizAuditEvidence") < updater.indexOf("next.records = newRecords"),
+    "source evidence must be written before corrected records are published",
   );
 });

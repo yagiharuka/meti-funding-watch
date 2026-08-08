@@ -3,7 +3,6 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import {
   GBIZ_AGENCY_RULES_SHA256,
-  assertApprovedGbizCorrections,
   assertGbizRecordContinuity,
   assertGbizSnapshotContinuity,
   auditGbizImport,
@@ -23,19 +22,14 @@ import {
 const dataPath = new URL("../data/funding-data.json", import.meta.url);
 const summaryPath = new URL("../data/funding-summary.json", import.meta.url);
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
-const approvedCorrectionsPath = new URL(
-  "../data/approved-gbiz-corrections.json",
-  import.meta.url,
-);
 const pageDataPath = new URL("../data/pages/", import.meta.url);
 const auditDataPath = new URL("../.audit/gbiz/", import.meta.url);
 
 await rm(auditDataPath, { recursive: true, force: true });
 
-const [current, registry, approvedCorrections] = await Promise.all([
+const [current, registry] = await Promise.all([
   readJson(dataPath),
   readJson(registryPath),
-  readJson(approvedCorrectionsPath),
 ]);
 
 const today = new Intl.DateTimeFormat("en-CA", {
@@ -87,6 +81,8 @@ if (gbizMetadata) {
     "importedRecordCount",
     "importedSubsidyCount",
     "importedProcurementCount",
+    "approvedCorrectionCount",
+    "approvedCorrections",
   ]) {
     delete gbizMetadata[legacyField];
   }
@@ -266,10 +262,6 @@ async function refreshGbizBulk(dashboardStats) {
       candidateRecords: newRecords,
       changedRecords: continuity.continuityChangedRecords,
     });
-    const acceptedCorrections = assertApprovedGbizCorrections(
-      continuity.continuityChangedRecords,
-      approvedCorrections,
-    );
     importSucceededAt = new Date().toISOString();
     next.records = newRecords;
     updateSource("gbiz", {
@@ -278,8 +270,6 @@ async function refreshGbizBulk(dashboardStats) {
       recordCount: audit.csvImportedRecordCount,
       csvRetrievedAt,
       ...snapshot,
-      approvedCorrectionCount: acceptedCorrections.length,
-      approvedCorrections: acceptedCorrections,
       dashboardSiteGap: undefined,
       method: "GビズINFO全件CSVを毎日再取得",
       lastChecked: today,
