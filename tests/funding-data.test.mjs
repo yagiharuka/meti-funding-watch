@@ -467,9 +467,8 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.doesNotMatch(adoptionSearchSource, /補助金採択者検索を開く/);
   assert.doesNotMatch(adoptionSearchSource, /法人番号|交付先|受取先|金額列/);
   assert.match(viewTabsSource, /調達（委託を含む）・補助金/);
-  assert.match(viewTabsSource, /補助金採択者情報（中小企業庁のみ）/);
-  assert.match(viewTabsSource, /onAdoptions \? "\.\.\/" : "#top"/);
-  assert.match(viewTabsSource, /onAdoptions \? "#top" : "adoptions\/"/);
+  assert.doesNotMatch(viewTabsSource, /補助金採択者情報（中小企業庁のみ）|href=.*adoptions\\//);
+  assert.match(viewTabsSource, /active === "adoptions" \\? "\\.\\.\\/" : "#top"/);
   assert.match(viewTabsSource, /aria-current/);
   assert.doesNotMatch(`${adoptionPageSource}\n${adoptionSearchSource}\n${adoptionApiSource}\n${viewTabsSource}`, /_next\/data|217,?9\d{2}/);
 });
