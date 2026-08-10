@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10T01:15:13.397Z",
+  "generatedAt": "2026-08-10T22:08:32.845Z",
   "sources": [
     {
       "id": "gbiz",
@@ -7,9 +7,9 @@
       "recordCount": 69504,
       "method": "GビズINFO全件CSVを毎日再取得",
       "frequency": "日次確認",
-      "lastChecked": "2026-08-10",
+      "lastChecked": "2026-08-11",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-10T01:14:46.841Z",
+      "dashboardCheckedAt": "2026-08-10T22:08:10.220Z",
       "dashboardRecordCount": 69518,
       "dashboardSubsidyCount": 51380,
       "dashboardProcurementCount": 18138,
@@ -26,20 +26,37 @@
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-10T01:15:00.756Z",
-      "csvSubsidyFileBytes": 175574917,
-      "csvProcurementFileBytes": 102358071,
-      "csvSubsidySha256": "2c3af987617d3191da043a3993fc80192ea0b26531a29be173c33e258a96ad28",
-      "csvProcurementSha256": "782b7ca5c86f975307f52ee0df8cf20b8e916ad6cfcbd0dd90a9fde9c546e1b5",
+      "csvRetrievedAt": "2026-08-10T22:08:20.209Z",
+      "csvSubsidyFileBytes": 175574500,
+      "csvProcurementFileBytes": 102358206,
+      "csvSubsidySha256": "ac920997258717c99ca62dee8390243b033ff123272c36cb7eb1a22548de99b7",
+      "csvProcurementSha256": "9a4403f9cb3596c47d391e81af9655e64d1961b7188f23b656e720e6a92d3a97",
       "csvTotalSubsidyRows": 545877,
       "csvTotalProcurementRows": 308544,
-      "lastSuccessfulImportAt": "2026-08-10T01:15:13.397Z",
+      "lastSuccessfulImportAt": "2026-08-10T22:08:32.845Z",
       "continuityBaselineRecordCount": 69504,
       "continuityRetainedRecordCount": 69504,
       "continuityRemovedRecordCount": 0,
-      "continuityChangedRecordCount": 0,
+      "continuityChangedRecordCount": 2,
       "continuityChangedRecordLimit": 100,
-      "continuityChangedRecords": [],
+      "continuityChangedRecords": [
+        {
+          "key": "subsidy_published\u001f2026_04_27_20260629_00001400",
+          "oldHash": "be9270c8ef007290341514fc58d85bb3a8a6649e4a4ccf8f657ff2df7fe0ca07",
+          "newHash": "0748f9d127bbde40fd51a749fd7854de0edf2e57409d6942677f21d9b3f392de",
+          "changedFields": [
+            "organization"
+          ]
+        },
+        {
+          "key": "subsidy_published\u001f2026_04_27_20260629_00000452",
+          "oldHash": "3bf527bf6e7295fcf77a96ee4f2f27e6ed76cefc29601ced1d266fe7d34796b3",
+          "newHash": "712f1a61223bb261f98f7cda8f67caeddb216a503f1e45b032f2753bebeb1f2b",
+          "changedFields": [
+            "organization"
+          ]
+        }
+      ],
       "continuityAddedRecordCount": 0,
       "csvSubsidySchemaSha256": "b3f021be2271d0b7404ced03d2fb3c32f4deb54bbc3d67df1ed9a5fd6f53fc49",
       "csvProcurementSchemaSha256": "1cab7eb602079eb5c23531450aea840378124f9c1977c5b750563d6887cc808b",
@@ -64,23 +81,23 @@
         "dataset": "Hojokinjoho",
         "finalUrl": "https://info.gbiz.go.jp/hojin/Download",
         "contentType": "application/octet-stream",
-        "contentLength": 175574920,
+        "contentLength": 175574503,
         "contentEncoding": null,
-        "contentDisposition": "attachment; filename=\"Hojokinjoho_UTF-8_20260810.csv\"",
+        "contentDisposition": "attachment; filename=\"Hojokinjoho_UTF-8_20260811.csv\"",
         "etag": null,
         "lastModified": null,
-        "receivedBytes": 175574917
+        "receivedBytes": 175574500
       },
       "csvProcurementReceipt": {
         "dataset": "Chotatsujoho",
         "finalUrl": "https://info.gbiz.go.jp/hojin/Download",
         "contentType": "application/octet-stream",
-        "contentLength": 102358074,
+        "contentLength": 102358209,
         "contentEncoding": null,
-        "contentDisposition": "attachment; filename=\"Chotatsujoho_UTF-8_20260810.csv\"",
+        "contentDisposition": "attachment; filename=\"Chotatsujoho_UTF-8_20260811.csv\"",
         "etag": null,
         "lastModified": null,
-        "receivedBytes": 102358071
+        "receivedBytes": 102358206
       },
       "missingSourceKeyRows": 0
     }
