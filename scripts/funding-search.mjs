@@ -1,9 +1,24 @@
 export const FUNDING_PAGE_SIZE = 100;
+export const FUNDING_QUERY_MAX_LENGTH = 100;
+export const FUNDING_MAX_PAGE = 10_000;
 export const FUNDING_STAGES = new Set(["all", "contracted", "subsidy_published"]);
+
+export function sanitizeFundingSearchQuery(raw) {
+  let value = String(raw ?? "").trim().slice(0, FUNDING_QUERY_MAX_LENGTH);
+  if (/[\uD800-\uDBFF]$/.test(value)) value = value.slice(0, -1);
+  return value;
+}
+
+export function sanitizeFundingSearchPage(raw) {
+  const value = String(raw ?? "");
+  if (!/^[1-9]\d*$/.test(value)) return 1;
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page <= FUNDING_MAX_PAGE ? page : 1;
+}
 
 export function normalizeFundingSearchParams(searchParams) {
   const query = (searchParams.get("q") ?? "").trim();
-  if (query.length > 100) throw new RangeError("検索語は100文字以内です");
+  if (query.length > FUNDING_QUERY_MAX_LENGTH) throw new RangeError("検索語は100文字以内です");
   const agency = (searchParams.get("agency") ?? "all").trim() || "all";
   if (agency.length > 100) throw new RangeError("公表組織が不正です");
   const stage = searchParams.get("stage") ?? "all";
@@ -13,7 +28,7 @@ export function normalizeFundingSearchParams(searchParams) {
     throw new RangeError("年度が不正です");
   }
   const page = Number(searchParams.get("page") ?? "1");
-  if (!Number.isSafeInteger(page) || page < 1 || page > 10_000) throw new RangeError("ページが不正です");
+  if (!Number.isSafeInteger(page) || page < 1 || page > FUNDING_MAX_PAGE) throw new RangeError("ページが不正です");
   return { query, agency, stage, year, page };
 }
 

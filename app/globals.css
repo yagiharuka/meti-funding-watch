@@ -41,6 +41,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .update-chip i, .health { width: 7px; height: 7px; border-radius: 50%; background: #28a675; box-shadow: 0 0 0 4px rgba(40, 166, 117, .12); }
 .update-chip.loading i { background: #9aa7a1; box-shadow: 0 0 0 4px rgba(154,167,161,.14); }
 .update-chip.unavailable i { background: #d17b22; box-shadow: 0 0 0 4px rgba(209,123,34,.14); }
+.update-chip.watch i, .health.watch { background: #d17b22; box-shadow: 0 0 0 4px rgba(209,123,34,.14); }
 
 .view-tabs {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
@@ -140,6 +141,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .search-field svg { position: absolute; left: 17px; top: 16px; width: 20px; fill: none; stroke: #6c7e77; stroke-width: 1.7; }
 .search-field input { padding: 0 18px 0 49px; }
 .filter-note { max-width: 1440px; margin: -2px auto 14px; color: #635225; font-size: 11px; line-height: 1.7; }
+.update-alert { display: grid; gap: 5px; margin: 18px 0 0; padding: 13px 15px; border: 1px solid #d6b66d; border-left: 4px solid #d17b22; background: #fff9ec; color: #47391c; font-size: 12px; line-height: 1.65; }
+.update-alert a { width: fit-content; color: #075c47; font-weight: 700; }
 .result-bar { display: flex; justify-content: space-between; max-width: 1440px; margin: 0 auto 13px; color: var(--muted); font-size: 11px; }
 .result-bar strong { color: var(--ink); font-size: 15px; }
 .result-bar button { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--green); font-weight: 700; cursor: pointer; }
@@ -181,6 +184,8 @@ td small { display: block; margin-top: 5px; color: #5f716a; font-size: 10px; }
 .source-grid dd { margin: 0; color: #c7d2ce; text-align: right; }
 .source-grid dd small { display: block; margin-top: 3px; color: #9cafaa; font-size: 10px; }
 .source-disclaimer { margin: 18px 0 12px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.1); color: #aebfba; font-size: 11px; line-height: 1.7; }
+.workflow-status-link { display: flex; align-items: center; gap: 10px; width: fit-content; min-height: 44px; margin: 8px 0; color: #d9e6e1; font-size: 11px; font-weight: 700; }
+.workflow-status-link img { display: block; max-width: 190px; }
 
 
 footer { display: flex; align-items: center; gap: 28px; padding: 24px clamp(22px, 5vw, 78px); border-top: 1px solid var(--line); background: #fff; font-size: 11px; color: var(--muted); }

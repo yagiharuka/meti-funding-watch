@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -39,6 +39,21 @@ if (new Set(ids).size !== ids.length) {
   throw new Error("公開releaseの明細IDが重複しています");
 }
 
+const appShell = {};
+const outputDirectory = new URL("../dist-pages/", import.meta.url);
+for (const relativePath of await listFiles(outputDirectory)) {
+  if (relativePath.startsWith("data/") || relativePath === "release.json" || relativePath === "update-status.json") continue;
+  const fileUrl = new URL(relativePath, outputDirectory);
+  const bytes = await readFile(fileUrl);
+  appShell[relativePath] = {
+    sha256: sha256(bytes),
+    bytes: bytes.byteLength,
+  };
+}
+if (!("index.html" in appShell) || !Object.keys(appShell).some((path) => path.startsWith("assets/"))) {
+  throw new Error("公開releaseに画面成果物がありません");
+}
+
 const commitSha = process.env.RELEASE_COMMIT_SHA?.trim()
   || (await execFileAsync("git", ["rev-parse", "HEAD"], {
     cwd: new URL("..", import.meta.url),
@@ -52,6 +67,7 @@ const release = {
   recordCount: ids.length,
   manifestSha256: sha256(manifestText),
   idSetSha256: sha256(`${[...ids].sort().join("\n")}\n`),
+  appShell,
   sourceSnapshots: {
     gbiz: {
       csvRetrievedAt: gbizSource.csvRetrievedAt,
@@ -76,4 +92,15 @@ await writeFile(
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+async function listFiles(directory, prefix = "") {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    const relativePath = `${prefix}${entry.name}`;
+    if (entry.isDirectory()) paths.push(...await listFiles(new URL(`${entry.name}/`, directory), `${relativePath}/`));
+    else if (entry.isFile()) paths.push(relativePath);
+  }
+  return paths.sort();
 }

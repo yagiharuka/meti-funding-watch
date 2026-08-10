@@ -420,7 +420,7 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /取得時CSVの抽出対象行を取込確認/);
   assert.match(pageSource, /https:\/\/yagiharuka\.github\.io\/meti-funding-watch\//);
   assert.match(pageSource, /manifestSha256|idSetSha256/);
-  assert.match(pageSource, /update-chip \$\{dataMode\}/);
+  assert.match(pageSource, /update-chip \$\{updateChipClass\}/);
   assert.match(pageSource, /q: deferredQuery\.trim\(\)/);
   assert.match(pageSource, /funding-search\.worker\.ts/);
   assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
@@ -541,11 +541,13 @@ test("fails closed before replacing records when source counts cannot be reconci
   assert.match(updateSource, /process\.env\.CI === "true"/);
   assert.match(updateWorkflow, /- "scripts\/\*\*"/);
   assert.match(updateWorkflow, /npm run update:data/);
-  assert.match(updateWorkflow, /continue-on-error: \$\{\{ github\.event_name == 'push' \}\}/);
+  assert.match(updateWorkflow, /continue-on-error: true/);
   assert.match(updateWorkflow, /if: steps\.refresh\.outcome == 'success'/);
-  assert.match(updateWorkflow, /npm test/);
+  assert.match(updateWorkflow, /npm run test:pages/);
+  assert.doesNotMatch(updateWorkflow, /run: npm test/);
   assert.match(updateWorkflow, /Rebuild the artifact from the commit that will be published/);
   assert.match(updateWorkflow, /node --test tests\/rendered-html\.test\.mjs/);
+  assert.match(updateWorkflow, /node scripts\/verify-live-pages\.mjs/);
   assert.match(updateWorkflow, /actions\/upload-pages-artifact@[0-9a-f]{40} # v4/);
   assert.match(updateWorkflow, /needs: update/);
   assert.match(updateWorkflow, /actions\/deploy-pages@[0-9a-f]{40} # v4/);

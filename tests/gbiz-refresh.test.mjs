@@ -149,13 +149,16 @@ test("rejects identity changes and corrections above the automatic limit", () =>
   );
 });
 
-test("workflow cannot deploy stale data after a refresh failure", async () => {
+test("workflow publishes only verified prior data with an explicit failure status", async () => {
   const workflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
   assert.match(workflow, /- name: Refresh official data[\s\S]*?run: npm run update:data/);
-  assert.match(
-    workflow,
-    /- name: Stop publication after refresh failure\s+if: steps\.refresh\.outcome != 'success'[\s\S]*?exit 1/,
-  );
+  assert.match(workflow, /continue-on-error: true/);
+  assert.match(workflow, /Confirm failed refresh did not alter verified data/);
+  assert.match(workflow, /git status --porcelain -- data\/funding-data\.json/);
+  assert.match(workflow, /PAGES_UPDATE_OUTCOME:/);
+  assert.match(workflow, /Verify the published release from the live site/);
+  assert.match(workflow, /node scripts\/verify-live-pages\.mjs/);
+  assert.match(workflow, /Fail the workflow unless a fresh release was verified/);
   assert.match(workflow, /Preserve source snapshot and correction evidence/);
   assert.match(workflow, /Attest the verified public release/);
   assert.doesNotMatch(workflow, /uses: actions\/[a-z-]+@v\d/);

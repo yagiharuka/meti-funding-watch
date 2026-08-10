@@ -3,6 +3,15 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
+import {
+  FUNDING_QUERY_MAX_LENGTH,
+  sanitizeFundingSearchPage,
+  sanitizeFundingSearchQuery,
+} from "@/scripts/funding-search.mjs";
+import {
+  evaluatePublicUpdateHealth,
+  validatePublicUpdateStatus,
+} from "@/scripts/pages-update-status.mjs";
 
 type Stage = "contracted" | "subsidy_published";
 
@@ -82,6 +91,7 @@ type DataRelease = {
   recordCount: number;
   manifestSha256: string;
   idSetSha256: string;
+  appShell: Record<string, { sha256: string; bytes: number }>;
   files: Record<string, { sha256: string; bytes: number; rows: number }>;
   sourceSnapshots: {
     gbiz: {
@@ -106,6 +116,24 @@ type FundingWorkerResponse =
   | { type: "ready"; agencies: string[]; releaseCommit: string; generatedAt: string }
   | { type: "result"; requestId: number; result: FundingSearchResult }
   | { type: "error"; requestId?: number; message: string };
+
+type PublicUpdateStatus = {
+  schemaVersion: 1;
+  attempt: {
+    runId: string | null;
+    runAttempt: number | null;
+    attemptedAt: string;
+    outcome: "succeeded" | "failed" | "unknown";
+    runUrl: string | null;
+  };
+  publishedRelease: {
+    commitSha: string;
+    generatedAt: string;
+    lastSuccessfulImportAt: string | null;
+  };
+};
+
+type UpdateHealth = "loading" | "healthy" | "failed" | "stale" | "unknown";
 
 const bundledFundingData = fundingSummary as FundingDataset;
 const pageSize = 100;
@@ -201,10 +229,20 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     || !Number.isSafeInteger(release.recordCount) || (release.recordCount ?? -1) < 0
     || !isSha256(release.manifestSha256)
     || !isSha256(release.idSetSha256)
+    || !release.appShell || typeof release.appShell !== "object"
     || !release.files || typeof release.files !== "object"
     || !release.sourceSnapshots || typeof release.sourceSnapshots !== "object"
   ) {
     throw new Error("公開releaseの形式が不正です");
+  }
+  if (!("index.html" in release.appShell)) throw new Error("公開releaseの画面情報が不正です");
+  for (const [filename, metadata] of Object.entries(release.appShell)) {
+    if (
+      !/^(?:index\.html|adoptions\/index\.html|assets\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\.svg)$/.test(filename)
+      || !metadata || typeof metadata !== "object"
+      || !isSha256(metadata.sha256)
+      || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0
+    ) throw new Error("公開releaseの画面情報が不正です");
   }
   for (const [filename, metadata] of Object.entries(release.files)) {
     if (
@@ -271,14 +309,18 @@ export default function Home() {
   const [dataMode, setDataMode] = useState<"loading" | "github" | "unavailable">("loading");
   const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
   const [release, setRelease] = useState<DataRelease | null>(null);
+  const [publicUpdateStatus, setPublicUpdateStatus] = useState<PublicUpdateStatus | null>(null);
+  const [updateStatusLoaded, setUpdateStatusLoaded] = useState(false);
+  const [statusClock, setStatusClock] = useState(() => Date.now());
   const [detailLoading, setDetailLoading] = useState(true);
   const [searchReady, setSearchReady] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchTotalPages, setSearchTotalPages] = useState(1);
   const [agencies, setAgencies] = useState<string[]>([]);
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
-  const [query, setQuery] = useState(() => initialSearchParam("q", ""));
+  const [query, setQuery] = useState(() => sanitizeFundingSearchQuery(initialSearchParam("q", "")));
   const deferredQuery = useDeferredValue(query);
   const [agency, setAgency] = useState(() => initialSearchParam("agency", "all"));
   const [stage, setStage] = useState(() => {
@@ -291,10 +333,7 @@ export default function Home() {
       ? requested
       : defaultYear;
   });
-  const [page, setPage] = useState(() => {
-    const requested = Number(initialSearchParam("page", "1"));
-    return Number.isSafeInteger(requested) && requested > 0 ? requested - 1 : 0;
-  });
+  const [page, setPage] = useState(() => sanitizeFundingSearchPage(initialSearchParam("page", "1")) - 1);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -357,6 +396,31 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!release) return;
+    const controller = new AbortController();
+    const publicBaseUrl = getPublicBaseUrl();
+    fetch(`${publicBaseUrl}update-status.json`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Update status: ${response.status}`);
+        return validatePublicUpdateStatus(await response.json()) as PublicUpdateStatus;
+      })
+      .then((status) => setPublicUpdateStatus(status))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setPublicUpdateStatus(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setUpdateStatusLoaded(true);
+      });
+    return () => controller.abort();
+  }, [release]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setStatusClock(Date.now()), 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!manifest || !release) return;
     let active = true;
     const worker = new Worker(new URL("./funding-search.worker.ts", import.meta.url), { type: "module" });
@@ -376,7 +440,16 @@ export default function Home() {
         return;
       }
       if (message.type === "error") {
-        if (message.requestId !== undefined && message.requestId !== requestIdRef.current) return;
+        if (message.requestId !== undefined) {
+          if (message.requestId !== requestIdRef.current) return;
+          setDataset((current) => ({ ...current, records: [] }));
+          setSearchTotal(0);
+          setSearchTotalPages(1);
+          setSearchError("検索条件を処理できませんでした。条件を変えてもう一度お試しください。");
+          setDataMode("github");
+          setDetailLoading(false);
+          return;
+        }
         setSearchReady(false);
         setDataset((current) => ({ ...current, records: [] }));
         setSearchTotal(0);
@@ -409,6 +482,7 @@ export default function Home() {
       }));
       setSearchTotal(candidate.totalRecords);
       setSearchTotalPages(candidate.totalPages);
+      setSearchError(null);
       setDataMode("github");
       setDetailLoading(false);
     };
@@ -434,7 +508,7 @@ export default function Home() {
   }, [manifest, release]);
 
   useEffect(() => {
-    if (!searchReady || !workerRef.current || !release) return;
+    if (!searchReady || !workerRef.current || !release || query !== deferredQuery) return;
     const requestId = ++requestIdRef.current;
     const requestedAgency = agency === "all" || agencies.includes(agency) ? agency : "all";
     const parameters = new URLSearchParams({
@@ -449,7 +523,7 @@ export default function Home() {
       requestId,
       parameters: parameters.toString(),
     });
-  }, [agencies, agency, deferredQuery, page, release, searchReady, stage, year]);
+  }, [agencies, agency, deferredQuery, page, query, release, searchReady, stage, year]);
 
   const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
@@ -507,9 +581,40 @@ export default function Home() {
     && Number.isSafeInteger(csvImportedRecordCount)
     && csvImportGap === 0,
   );
+  const updateHealth = (
+    !release || !updateStatusLoaded
+      ? "loading"
+      : evaluatePublicUpdateHealth(publicUpdateStatus, release, statusClock)
+  ) as UpdateHealth;
+  const updateChipClass = dataMode !== "github"
+    ? dataMode
+    : updateHealth === "healthy" ? "github" : updateHealth === "loading" ? "loading" : "watch";
+  const updateChipText = dataMode === "loading"
+    ? "掲載データ読込中"
+    : dataMode === "unavailable"
+      ? "掲載データ取得要確認"
+      : updateHealth === "failed"
+        ? "自動更新失敗"
+        : updateHealth === "stale"
+          ? "自動更新遅延"
+          : updateHealth === "unknown"
+            ? "更新状況未確認"
+            : updateHealth === "loading" ? "更新状況確認中" : "掲載データ読込済み";
+  const updateWarning = updateHealth === "failed"
+    ? "直近の自動更新に失敗しました。現在は前回検証済みのデータを表示しています。"
+    : updateHealth === "stale"
+      ? "最終取込成功から30時間以上経過しています。日次自動更新が遅延している可能性があります。"
+      : updateHealth === "unknown"
+        ? "日次自動更新の状態を確認できません。表示中のデータの検証日時をご確認ください。"
+        : null;
+  const displayedLastSuccess = publicUpdateStatus?.publishedRelease.lastSuccessfulImportAt
+    ?? gbizSource?.lastSuccessfulImportAt
+    ?? dataset.generatedAt;
 
   function markSearchPending() {
+    requestIdRef.current += 1;
     setDataset((current) => ({ ...current, records: [] }));
+    setSearchError(null);
     setDetailLoading(true);
     setDataMode("loading");
   }
@@ -541,9 +646,7 @@ export default function Home() {
           <a href="#records">データ検索</a>
           <a href="#sources">データ更新</a>
         </nav>
-        <span className={`update-chip ${dataMode}`} role="status" aria-live="polite"><i />{
-          dataMode === "github" ? "掲載データ読込済み" : dataMode === "loading" ? "掲載データ読込中" : "掲載データ取得要確認"
-        }</span>
+        <span className={`update-chip ${updateChipClass}`} role="status" aria-live="polite"><i />{updateChipText}</span>
       </header>
 
       <ViewTabs active="gbiz" />
@@ -563,6 +666,15 @@ export default function Home() {
             <strong>{formatTimestamp(gbizSource?.lastSuccessfulImportAt ?? dataset.generatedAt)}</strong>
             <span className="source-count">データ出典：GビズINFO</span>
           </div>
+          {updateWarning && (
+            <p className="update-alert" role="alert">
+              <strong>{updateWarning}</strong>
+              <span>表示中データの最終取込成功：{formatTimestamp(displayedLastSuccess)}</span>
+              {publicUpdateStatus?.attempt.runUrl && (
+                <a href={publicUpdateStatus.attempt.runUrl} target="_blank" rel="noreferrer">実行状況を確認 ↗</a>
+              )}
+            </p>
+          )}
           <div className="hero-actions">
             <a className="primary-action" href="#records">データを検索</a>
             <a className="secondary-action" href="#sources">更新状況を見る</a>
@@ -591,7 +703,7 @@ export default function Home() {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
-              maxLength={100}
+              maxLength={FUNDING_QUERY_MAX_LENGTH}
               placeholder="法人等の名称・法人番号で検索"
               value={query}
               onChange={(event) => { markSearchPending(); setQuery(event.target.value); setPage(0); }}
@@ -628,7 +740,9 @@ export default function Home() {
 
         <div className="result-bar">
           <span role="status" aria-live="polite">
-            {detailLoading ? (
+            {searchError ? (
+              <strong>検索条件エラー</strong>
+            ) : detailLoading ? (
               <strong>明細を読込中</strong>
             ) : (
               <>
@@ -661,8 +775,8 @@ export default function Home() {
           </table>
           {!filteredCommitments.length && (
             <div className="empty-state">
-              <strong>{detailLoading ? "明細データを読み込んでいます" : dataMode === "unavailable" ? "明細データを取得できません" : "該当するレコードがありません"}</strong>
-              <span>{detailLoading ? "少しお待ちください。" : dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "検索語や条件を変えてください。"}</span>
+              <strong>{searchError ? "検索条件を処理できませんでした" : detailLoading ? "明細データを読み込んでいます" : dataMode === "unavailable" ? "明細データを取得できません" : "該当するレコードがありません"}</strong>
+              <span>{searchError ?? (detailLoading ? "少しお待ちください。" : dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "検索語や条件を変えてください。")}</span>
             </div>
           )}
         </div>
@@ -684,7 +798,7 @@ export default function Home() {
         {gbizSource && (
           <div className="source-grid">
             <article>
-              <div><span className={`health ${gbizSource.status}`} />GビズINFO</div>
+              <div><span className={`health ${updateHealth === "healthy" ? "healthy" : "watch"}`} />GビズINFO</div>
               <strong>{gbizSource.recordCount.toLocaleString("ja-JP")}行を収録</strong>
               <dl>
                 <div><dt>取得方式</dt><dd>全件CSVの再取得を毎日試行</dd></div>
@@ -702,6 +816,12 @@ export default function Home() {
                 公式ダッシュボードと全件CSVは別のスナップショットです。両者の差は取込漏れとはみなさず、参考照合として表示します。
                 公開条件は、取得CSVの対象行と本サイト取込行が区分別にも一致することです。
               </p>
+              <a className="workflow-status-link" href="https://github.com/yagiharuka/meti-funding-watch/actions/workflows/update-data.yml?query=event%3Aschedule" target="_blank" rel="noreferrer">
+                {/* The badge is generated by GitHub Actions and is not an optimizable site asset. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="https://github.com/yagiharuka/meti-funding-watch/actions/workflows/update-data.yml/badge.svg?branch=main&event=schedule" alt="日次自動更新ワークフローの最新状態" />
+                <span>日次自動更新の実行履歴 ↗</span>
+              </a>
               <a className="source-link" href="https://info.gbiz.go.jp/hojin/dashboard" target="_blank" rel="noreferrer">GビズINFO公式画面 ↗</a>
             </article>
           </div>

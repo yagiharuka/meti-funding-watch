@@ -72,3 +72,38 @@ test("keeps interactive controls outside the Gbiz live status region", () => {
   assert.match(pageSource, /<div className="result-bar">\s*<span role="status" aria-live="polite">/);
   assert.doesNotMatch(pageSource, /<div className="result-bar" role="status"/);
 });
+
+test("invalidates stale funding searches and keeps request errors recoverable", () => {
+  const pending = pageSource.slice(
+    pageSource.indexOf("function markSearchPending()"),
+    pageSource.indexOf("function clearFilters()"),
+  );
+  assert.ok(
+    pending.indexOf("requestIdRef.current += 1") < pending.indexOf("setDataset"),
+    "the old request must be invalidated before rows are cleared",
+  );
+  assert.match(pageSource, /query !== deferredQuery/);
+  assert.match(pageSource, /\[agencies, agency, deferredQuery, page, query, release/);
+  const requestError = pageSource.slice(
+    pageSource.indexOf('if (message.type === "error")'),
+    pageSource.indexOf("const candidate = message.result"),
+  );
+  assert.match(requestError, /message\.requestId !== undefined/);
+  assert.match(requestError, /setSearchError/);
+  assert.match(requestError, /setDataMode\("github"\)/);
+  assert.ok(requestError.indexOf("setDataMode(\"github\")") < requestError.indexOf("setSearchReady(false)"));
+  assert.match(pageSource, /sanitizeFundingSearchQuery\(initialSearchParam\("q"/);
+  assert.match(pageSource, /sanitizeFundingSearchPage\(initialSearchParam\("page"/);
+});
+
+test("shows update failures and staleness without disabling verified search data", () => {
+  assert.match(pageSource, /update-status\.json/);
+  assert.match(pageSource, /evaluatePublicUpdateHealth/);
+  assert.match(pageSource, /直近の自動更新に失敗しました/);
+  assert.match(pageSource, /最終取込成功から30時間以上経過/);
+  assert.match(pageSource, /日次自動更新の状態を確認できません/);
+  assert.match(pageSource, /updateHealth === "failed"/);
+  assert.match(pageSource, /badge\.svg\?branch=main&event=schedule/);
+  assert.match(pageSource, /setInterval\(\(\) => setStatusClock\(Date\.now\(\)\), 5 \* 60 \* 1000\)/);
+  assert.doesNotMatch(pageSource, /setDataMode\("unavailable"\)[\s\S]{0,100}update-status\.json/);
+});

@@ -8,37 +8,6 @@ const sourceData = JSON.parse(
   await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
 );
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-
-test("renders development preview metadata", async () => {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  const response = await worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
-
-  assert.equal(response.status, 200);
-  assert.match(
-    response.headers.get("content-type") ?? "",
-    /^text\/html\b/i,
-  );
-  assert.match(await response.text(), developmentPreviewMeta);
-});
-
 test("builds a Gbiz-only GitHub Pages artifact", async () => {
   const dataDirectory = new URL("../dist-pages/data/", import.meta.url);
   const publicManifest = JSON.parse(
@@ -89,8 +58,21 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   const release = JSON.parse(
     await readFile(new URL("../dist-pages/release.json", import.meta.url), "utf8"),
   );
+  const updateStatus = JSON.parse(
+    await readFile(new URL("../dist-pages/update-status.json", import.meta.url), "utf8"),
+  );
+  assert.equal(updateStatus.schemaVersion, 1);
+  assert.ok(["succeeded", "failed", "unknown"].includes(updateStatus.attempt.outcome));
+  assert.equal(updateStatus.publishedRelease.commitSha, release.commitSha);
+  assert.equal(updateStatus.publishedRelease.generatedAt, release.generatedAt);
   assert.equal(release.generatedAt, publicManifest.generatedAt);
   assert.equal(release.recordCount, publicIds.length);
+  assert.ok(release.appShell["index.html"]);
+  for (const [filename, metadata] of Object.entries(release.appShell)) {
+    const bytes = await readFile(new URL(`../dist-pages/${filename}`, import.meta.url));
+    assert.equal(bytes.byteLength, metadata.bytes, `${filename} shell bytes`);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), metadata.sha256, `${filename} shell sha`);
+  }
   assert.match(release.sourceSnapshots.gbiz.subsidy.sha256, /^[0-9a-f]{64}$/);
   assert.match(release.sourceSnapshots.gbiz.procurement.sha256, /^[0-9a-f]{64}$/);
   assert.ok(release.sourceSnapshots.gbiz.subsidy.bytes > 0);

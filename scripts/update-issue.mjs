@@ -18,13 +18,14 @@ export function correctionTable(candidates = []) {
     : "訂正候補の詳細は証跡artifactを確認してください。";
 }
 
-export function buildFailureBody({ runUrl, snapshot, failure }) {
+export function buildFailureBody({ runUrl, snapshot, failure, phase = "official-data-refresh", reason }) {
   return [
     "GビズINFOの自動更新を停止しました。検証済みの前回データを維持し、新しいデータは公開していません。",
     "",
     `- 実行: ${runUrl}`,
+    `- 停止段階: ${escapeTable(phase)}`,
     `- 検出日時: ${failure?.failedAt ?? new Date().toISOString()}`,
-    `- 理由: ${escapeTable(failure?.message ?? "更新処理失敗")}`,
+    `- 理由: ${escapeTable(reason ?? failure?.message ?? "更新処理失敗")}`,
     "- 証跡: この実行の `gbiz-source-evidence` artifact",
     "",
     "### 訂正候補",
