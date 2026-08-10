@@ -23,6 +23,7 @@ const pageManifest = JSON.parse(
   await readFile(new URL("../data/pages/manifest.json", import.meta.url), "utf8"),
 );
 const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const fundingWorkerSource = await readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8");
 const adoptionPageSource = await readFile(new URL("../app/adoptions/page.tsx", import.meta.url), "utf8");
 const adoptionSearchSource = await readFile(new URL("../app/adoptions/AdoptionSearch.tsx", import.meta.url), "utf8");
 const adoptionApiSource = await readFile(new URL("../app/api/adoptions/route.ts", import.meta.url), "utf8");
@@ -382,18 +383,14 @@ test("derives the year selector from declared coverage", () => {
   assert.doesNotMatch(pageSource, /distinctYears\(commitments\.map/);
 });
 
-test("starts with all periods and clears stale rows for each chunk batch", () => {
+test("starts with all periods and verifies all static chunks before searching", () => {
   assert.match(pageSource, /const defaultYear = ["']all["'];/);
   assert.doesNotMatch(pageSource, /const initialYear\b/);
-  const chunkEffect = pageSource.slice(
-    pageSource.indexOf("let active = true"),
-    pageSource.indexOf("const commitments = dataset.records"),
-  );
-  assert.match(chunkEffect, /let active = true/);
-  assert.match(chunkEffect, /if \(!active\) return/);
-  assert.match(chunkEffect, /active = false;[\s\S]{0,100}controller\.abort\(\)/);
-  assert.match(pageSource, /function changeYear[\s\S]{0,180}records: \[\]/);
-  assert.match(pageSource, /function clearFilters[\s\S]{0,180}records: \[\]/);
+  assert.match(pageSource, /new Worker\(new URL\("\.\/funding-search\.worker\.ts"/);
+  assert.match(fundingWorkerSource, /await sha256\(bytes\) !== metadata\.sha256/);
+  assert.match(fundingWorkerSource, /rows\.length !== metadata\.rows/);
+  assert.match(fundingWorkerSource, /nextRecords\.length !== message\.release\.recordCount/);
+  assert.match(fundingWorkerSource, /await sha256\(idSetBytes\.buffer\) !== message\.release\.idSetSha256/);
 });
 
 test("validates every published corporate number including its check digit", () => {
@@ -425,8 +422,8 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /manifestSha256|idSetSha256/);
   assert.match(pageSource, /update-chip \$\{dataMode\}/);
   assert.match(pageSource, /q: deferredQuery\.trim\(\)/);
-  assert.match(pageSource, /getFundingSearchUrl\(\)/);
-  assert.doesNotMatch(pageSource, /includesQuery|loadWithConcurrency|chunkCache/);
+  assert.match(pageSource, /funding-search\.worker\.ts/);
+  assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
 
   assert.doesNotMatch(pageSource, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
   assert.doesNotMatch(pageSource, /受取先|支出元・実施機関|契約額/);

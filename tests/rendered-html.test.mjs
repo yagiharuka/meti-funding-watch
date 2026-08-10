@@ -137,6 +137,8 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.match(publicUi, /採択掲載行/);
   assert.match(publicUi, /掲載事業者名/);
   assert.match(publicUi, /meti-funding-watch\.haru620328\.chatgpt\.site\/api\/adoptions/);
+  assert.doesNotMatch(publicUi, /meti-funding-watch\.haru620328\.chatgpt\.site\/api\/funding(?:[?"'`/]|$)/);
+  assert.match(publicUi, /公開明細のID集合がreleaseと一致しません/);
   assert.match(publicUi, /採択は補助金交付の候補者として選定された段階/);
   assert.doesNotMatch(publicUi, /補助金採択者検索を開く/);
   assert.doesNotMatch(publicUi, /_next\/data/);

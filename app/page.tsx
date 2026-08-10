@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
 
@@ -92,17 +92,20 @@ type DataRelease = {
   };
 };
 
-type FundingSearchResponse = {
+type FundingSearchResult = {
   totalRecords: number;
   totalPages: number;
   page: number;
   pageSize: number;
   records: FundingRecord[];
-  agencies: string[];
   releaseCommit: string;
   generatedAt: string;
-  syncedAt: string;
 };
+
+type FundingWorkerResponse =
+  | { type: "ready"; agencies: string[]; releaseCommit: string; generatedAt: string }
+  | { type: "result"; requestId: number; result: FundingSearchResult }
+  | { type: "error"; requestId?: number; message: string };
 
 const bundledFundingData = fundingSummary as FundingDataset;
 const pageSize = 100;
@@ -111,14 +114,7 @@ function getPublicBaseUrl() {
   if (typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site")) {
     return "https://yagiharuka.github.io/meti-funding-watch/";
   }
-  return "";
-}
-
-function getFundingSearchUrl() {
-  if (typeof window !== "undefined" && window.location.hostname === "yagiharuka.github.io") {
-    return "https://meti-funding-watch.haru620328.chatgpt.site/api/funding";
-  }
-  return "/api/funding";
+  return typeof window === "undefined" ? "" : new URL("./", window.location.href).href;
 }
 
 const stageLabels: Record<Stage, string> = {
@@ -276,9 +272,12 @@ export default function Home() {
   const [manifest, setManifest] = useState<DataChunkManifest | null>(null);
   const [release, setRelease] = useState<DataRelease | null>(null);
   const [detailLoading, setDetailLoading] = useState(true);
+  const [searchReady, setSearchReady] = useState(false);
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchTotalPages, setSearchTotalPages] = useState(1);
   const [agencies, setAgencies] = useState<string[]>([]);
+  const workerRef = useRef<Worker | null>(null);
+  const requestIdRef = useRef(0);
   const [query, setQuery] = useState(() => initialSearchParam("q", ""));
   const deferredQuery = useDeferredValue(query);
   const [agency, setAgency] = useState(() => initialSearchParam("agency", "all"));
@@ -359,52 +358,98 @@ export default function Home() {
 
   useEffect(() => {
     if (!manifest || !release) return;
-    const controller = new AbortController();
     let active = true;
+    const worker = new Worker(new URL("./funding-search.worker.ts", import.meta.url), { type: "module" });
+    workerRef.current = worker;
+
+    worker.onmessage = (event: MessageEvent<FundingWorkerResponse>) => {
+      if (!active) return;
+      const message = event.data;
+      if (message.type === "ready") {
+        if (message.releaseCommit !== release.commitSha || message.generatedAt !== release.generatedAt) {
+          setDataMode("unavailable");
+          setDetailLoading(false);
+          return;
+        }
+        setAgencies(message.agencies);
+        setSearchReady(true);
+        return;
+      }
+      if (message.type === "error") {
+        if (message.requestId !== undefined && message.requestId !== requestIdRef.current) return;
+        setSearchReady(false);
+        setDataset((current) => ({ ...current, records: [] }));
+        setSearchTotal(0);
+        setSearchTotalPages(1);
+        setDataMode("unavailable");
+        setDetailLoading(false);
+        return;
+      }
+      if (message.requestId !== requestIdRef.current) return;
+      const candidate = message.result;
+      const records = validateSearchRows(candidate.records);
+      if (
+        candidate.releaseCommit !== release.commitSha
+        || candidate.generatedAt !== release.generatedAt
+        || candidate.pageSize !== pageSize
+        || !Number.isSafeInteger(candidate.totalRecords) || candidate.totalRecords < 0
+        || !Number.isSafeInteger(candidate.totalPages) || candidate.totalPages < 1
+        || !Number.isSafeInteger(candidate.page) || candidate.page < 1 || candidate.page > candidate.totalPages
+        || records.length > pageSize
+      ) {
+        setDataset((current) => ({ ...current, records: [] }));
+        setDataMode("unavailable");
+        setDetailLoading(false);
+        return;
+      }
+      setDataset((current) => ({
+        ...current,
+        generatedAt: manifest.generatedAt,
+        records,
+      }));
+      setSearchTotal(candidate.totalRecords);
+      setSearchTotalPages(candidate.totalPages);
+      setDataMode("github");
+      setDetailLoading(false);
+    };
+    worker.onerror = () => {
+      if (!active) return;
+      setSearchReady(false);
+      setDataset((current) => ({ ...current, records: [] }));
+      setDataMode("unavailable");
+      setDetailLoading(false);
+    };
+    worker.postMessage({
+      type: "initialize",
+      publicBaseUrl: getPublicBaseUrl(),
+      manifest,
+      release,
+    });
+
+    return () => {
+      active = false;
+      workerRef.current = null;
+      worker.terminate();
+    };
+  }, [manifest, release]);
+
+  useEffect(() => {
+    if (!searchReady || !workerRef.current || !release) return;
+    const requestId = ++requestIdRef.current;
+    const requestedAgency = agency === "all" || agencies.includes(agency) ? agency : "all";
     const parameters = new URLSearchParams({
       q: deferredQuery.trim(),
-      agency,
+      agency: requestedAgency,
       stage,
       year,
       page: String(page + 1),
     });
-    fetch(`${getFundingSearchUrl()}?${parameters}`, { cache: "no-store", signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`Funding search: ${response.status}`);
-        const candidate = await response.json() as Partial<FundingSearchResponse>;
-        const records = validateSearchRows(candidate.records);
-        if (
-          candidate.releaseCommit !== release.commitSha
-          || candidate.generatedAt !== release.generatedAt
-          || candidate.pageSize !== pageSize
-          || !Number.isSafeInteger(candidate.totalRecords) || (candidate.totalRecords ?? -1) < 0
-          || !Number.isSafeInteger(candidate.totalPages) || (candidate.totalPages ?? 0) < 1
-          || candidate.page !== page + 1
-          || records.length > pageSize
-          || !Array.isArray(candidate.agencies) || candidate.agencies.some((item) => typeof item !== "string")
-        ) throw new Error("検索結果と公開releaseが一致しません");
-        if (!active) return;
-        setDataset((current) => ({
-          ...current,
-          generatedAt: manifest.generatedAt,
-          records,
-        }));
-        setSearchTotal(candidate.totalRecords ?? 0);
-        setSearchTotalPages(candidate.totalPages ?? 1);
-        setAgencies(candidate.agencies ?? []);
-        setDataMode("github");
-        setDetailLoading(false);
-      })
-      .catch((error: unknown) => {
-        if (!active || (error instanceof DOMException && error.name === "AbortError")) return;
-        setDataMode("unavailable");
-        setDetailLoading(false);
-      });
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [agency, deferredQuery, manifest, page, release, stage, year]);
+    workerRef.current.postMessage({
+      type: "search",
+      requestId,
+      parameters: parameters.toString(),
+    });
+  }, [agencies, agency, deferredQuery, page, release, searchReady, stage, year]);
 
   const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
@@ -463,12 +508,14 @@ export default function Home() {
     && csvImportGap === 0,
   );
 
+  function markSearchPending() {
+    setDataset((current) => ({ ...current, records: [] }));
+    setDetailLoading(true);
+    setDataMode("loading");
+  }
+
   function clearFilters() {
-    if (year !== defaultYear) {
-      setDataset((current) => ({ ...current, records: [] }));
-      setDetailLoading(true);
-      setDataMode("loading");
-    }
+    markSearchPending();
     setQuery("");
     setAgency("all");
     setStage("all");
@@ -477,9 +524,7 @@ export default function Home() {
   }
 
   function changeYear(nextYear: string) {
-    setDataset((current) => ({ ...current, records: [] }));
-    setDetailLoading(true);
-    setDataMode("loading");
+    markSearchPending();
     setAgency("all");
     setYear(nextYear);
     setPage(0);
@@ -546,21 +591,22 @@ export default function Home() {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
+              maxLength={100}
               placeholder="法人等の名称・法人番号で検索"
               value={query}
-              onChange={(event) => { setQuery(event.target.value); setPage(0); setDetailLoading(true); setDataMode("loading"); }}
+              onChange={(event) => { markSearchPending(); setQuery(event.target.value); setPage(0); }}
             />
           </label>
           <label>
             <span className="sr-only">公表組織</span>
-            <select value={effectiveAgency} onChange={(event) => { setAgency(event.target.value); setPage(0); setDetailLoading(true); setDataMode("loading"); }}>
+            <select value={effectiveAgency} onChange={(event) => { markSearchPending(); setAgency(event.target.value); setPage(0); }}>
               <option value="all">すべての公表組織</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
           </label>
           <label>
             <span className="sr-only">GビズINFO掲載区分</span>
-            <select value={stage} onChange={(event) => { setStage(event.target.value); setPage(0); setDetailLoading(true); setDataMode("loading"); }}>
+            <select value={stage} onChange={(event) => { markSearchPending(); setStage(event.target.value); setPage(0); }}>
               <option value="all">すべての掲載区分</option>
               {Object.entries(stageLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
@@ -623,9 +669,9 @@ export default function Home() {
 
         {searchTotal > pageSize && (
           <nav className="pagination" aria-label="検索結果のページ送り">
-            <button disabled={effectivePage === 0} onClick={() => { setPage(Math.max(0, effectivePage - 1)); setDetailLoading(true); setDataMode("loading"); }}>← 前へ</button>
+            <button disabled={effectivePage === 0} onClick={() => { markSearchPending(); setPage(Math.max(0, effectivePage - 1)); }}>← 前へ</button>
             <span>{effectivePage + 1} / {totalPages}</span>
-            <button disabled={effectivePage + 1 >= totalPages} onClick={() => { setPage(Math.min(totalPages - 1, effectivePage + 1)); setDetailLoading(true); setDataMode("loading"); }}>次へ →</button>
+            <button disabled={effectivePage + 1 >= totalPages} onClick={() => { markSearchPending(); setPage(Math.min(totalPages - 1, effectivePage + 1)); }}>次へ →</button>
           </nav>
         )}
       </section>

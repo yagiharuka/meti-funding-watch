@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const fundingWorkerSource = await readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8");
 const adoptionSource = await readFile(new URL("../app/adoptions/AdoptionSearch.tsx", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const pageHtml = await readFile(new URL("../pages-site/index.html", import.meta.url), "utf8");
@@ -54,14 +55,17 @@ test("search state is reflected in the URL", () => {
   assert.match(adoptionSource, /popstate/);
 });
 
-test("verifies the release and loads only paginated server search rows", () => {
+test("verifies the release and searches verified static chunks in a worker", () => {
   assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json`/);
   assert.match(pageSource, /await sha256\(manifestBytes\).*candidateRelease\.manifestSha256/);
   assert.match(pageSource, /sourceSnapshots\.gbiz/);
-  assert.match(pageSource, /getFundingSearchUrl/);
-  assert.match(pageSource, /candidate\.releaseCommit !== release\.commitSha/);
+  assert.match(pageSource, /new Worker\(new URL\("\.\/funding-search\.worker\.ts"/);
+  assert.match(fundingWorkerSource, /message\.release\.files\[filename\]/);
+  assert.match(fundingWorkerSource, /metadata\.bytes/);
+  assert.match(fundingWorkerSource, /metadata\.sha256/);
+  assert.match(fundingWorkerSource, /message\.release\.idSetSha256/);
   assert.match(pageSource, /records\.length > pageSize/);
-  assert.doesNotMatch(pageSource, /loadWithConcurrency|chunkCache|fetchWithRetry/);
+  assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
 });
 
 test("keeps interactive controls outside the Gbiz live status region", () => {

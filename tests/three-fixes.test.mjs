@@ -7,6 +7,8 @@ import { UPDATE_ISSUE_TITLE, buildFailureBody, correctionTable } from "../script
 const workflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
 const searchRoute = await readFile(new URL("../app/api/funding/route.ts", import.meta.url), "utf8");
 const syncRoute = await readFile(new URL("../app/api/funding/sync/route.ts", import.meta.url), "utf8");
+const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const fundingWorkerSource = await readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8");
 
 test("funding search filters and paginates without combining stages", () => {
   const records = Array.from({ length: 105 }, (_, index) => ({ organization: `法人${index}`, corporateNumber: String(index).padStart(13, "0"), sourceAgency: index % 2 ? "NEDO" : "経済産業省", stage: index % 3 ? "contracted" : "subsidy_published", fiscalYear: index < 100 ? 2024 : null }));
@@ -29,11 +31,14 @@ test("correction review produces a deduplicated issue-ready table", () => {
   assert.match(buildFailureBody({ runUrl: "https://github.test/run", snapshot: { correctionCandidates: [] }, failure: { message: "停止" } }), /前回データを維持/);
 });
 
-test("workflow reports failures once and syncs only after verified deploy", () => {
+test("workflow reports failures and deploys GitHub Pages without an external search sync", () => {
   assert.match(workflow, /issues: write/);
   assert.match(workflow, /node scripts\/report-update-status\.mjs/);
-  assert.match(workflow, /sync-search:[\s\S]*needs: \[update, deploy\]/);
-  assert.match(workflow, /audience=meti-funding-watch-sync/);
+  assert.match(workflow, /deploy:[\s\S]*needs: update/);
+  assert.doesNotMatch(workflow, /sync-search:|audience=meti-funding-watch-sync|haru620328\.chatgpt\.site\/api\/funding\/sync/);
+  assert.match(pageSource, /funding-search\.worker\.ts/);
+  assert.match(fundingWorkerSource, /idSetSha256/);
+  assert.doesNotMatch(pageSource, /haru620328\.chatgpt\.site\/api\/funding/);
 });
 
 test("R2 search and OIDC sync fail closed", () => {
