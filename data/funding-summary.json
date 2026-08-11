@@ -1,63 +1,46 @@
 {
-  "generatedAt": "2026-08-10T22:08:32.845Z",
+  "generatedAt": "2026-08-11T22:13:29.373Z",
   "sources": [
     {
       "id": "gbiz",
       "name": "GビズINFO",
-      "recordCount": 69504,
+      "recordCount": 69507,
       "method": "GビズINFO全件CSVを毎日再取得",
       "frequency": "日次確認",
-      "lastChecked": "2026-08-11",
+      "lastChecked": "2026-08-12",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-10T22:08:10.220Z",
-      "dashboardRecordCount": 69518,
+      "dashboardCheckedAt": "2026-08-11T22:13:08.180Z",
+      "dashboardRecordCount": 69521,
       "dashboardSubsidyCount": 51380,
-      "dashboardProcurementCount": 18138,
-      "dashboardMetiSubtotalCount": 68293,
+      "dashboardProcurementCount": 18141,
+      "dashboardMetiSubtotalCount": 68296,
       "dashboardPatentCount": 1225,
-      "csvEligibleRecordCount": 69504,
-      "csvImportedRecordCount": 69504,
+      "csvEligibleRecordCount": 69507,
+      "csvImportedRecordCount": 69507,
       "csvImportGap": 0,
       "csvEligibleSubsidyCount": 51375,
       "csvImportedSubsidyCount": 51375,
-      "csvEligibleProcurementCount": 18129,
-      "csvImportedProcurementCount": 18129,
+      "csvEligibleProcurementCount": 18132,
+      "csvImportedProcurementCount": 18132,
       "dashboardMinusCsvEligibleCount": 14,
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-10T22:08:20.209Z",
+      "csvRetrievedAt": "2026-08-11T22:13:18.687Z",
       "csvSubsidyFileBytes": 175574500,
-      "csvProcurementFileBytes": 102358206,
+      "csvProcurementFileBytes": 102366378,
       "csvSubsidySha256": "ac920997258717c99ca62dee8390243b033ff123272c36cb7eb1a22548de99b7",
-      "csvProcurementSha256": "9a4403f9cb3596c47d391e81af9655e64d1961b7188f23b656e720e6a92d3a97",
+      "csvProcurementSha256": "a29487ce246b08832d4a4d165190ff84a9eae45bb5c9119f7d0e01d72708bcdd",
       "csvTotalSubsidyRows": 545877,
-      "csvTotalProcurementRows": 308544,
-      "lastSuccessfulImportAt": "2026-08-10T22:08:32.845Z",
+      "csvTotalProcurementRows": 308568,
+      "lastSuccessfulImportAt": "2026-08-11T22:13:29.373Z",
       "continuityBaselineRecordCount": 69504,
       "continuityRetainedRecordCount": 69504,
       "continuityRemovedRecordCount": 0,
-      "continuityChangedRecordCount": 2,
+      "continuityChangedRecordCount": 0,
       "continuityChangedRecordLimit": 100,
-      "continuityChangedRecords": [
-        {
-          "key": "subsidy_published\u001f2026_04_27_20260629_00001400",
-          "oldHash": "be9270c8ef007290341514fc58d85bb3a8a6649e4a4ccf8f657ff2df7fe0ca07",
-          "newHash": "0748f9d127bbde40fd51a749fd7854de0edf2e57409d6942677f21d9b3f392de",
-          "changedFields": [
-            "organization"
-          ]
-        },
-        {
-          "key": "subsidy_published\u001f2026_04_27_20260629_00000452",
-          "oldHash": "3bf527bf6e7295fcf77a96ee4f2f27e6ed76cefc29601ced1d266fe7d34796b3",
-          "newHash": "712f1a61223bb261f98f7cda8f67caeddb216a503f1e45b032f2753bebeb1f2b",
-          "changedFields": [
-            "organization"
-          ]
-        }
-      ],
-      "continuityAddedRecordCount": 0,
+      "continuityChangedRecords": [],
+      "continuityAddedRecordCount": 3,
       "csvSubsidySchemaSha256": "b3f021be2271d0b7404ced03d2fb3c32f4deb54bbc3d67df1ed9a5fd6f53fc49",
       "csvProcurementSchemaSha256": "1cab7eb602079eb5c23531450aea840378124f9c1977c5b750563d6887cc808b",
       "csvSubsidyPublisherCounts": {
@@ -69,11 +52,11 @@
       "csvProcurementPublisherCounts": {
         "IPA": 1330,
         "NEDO": 6007,
-        "経済産業省": 9589,
+        "経済産業省": 9592,
         "特許庁": 1203
       },
       "csvSubsidyUnmatchedAgencyDistributionSha256": "3697b14cfda89b3e8a11440850d126a49e881641ec6be8f759818bbddda5aff1",
-      "csvProcurementUnmatchedAgencyDistributionSha256": "76decdf7547cd19bce2417d526b960c86d136c2b3baa033a1656c6f682942124",
+      "csvProcurementUnmatchedAgencyDistributionSha256": "b53a54222bdb471289d3de6e744c328a06144767bad84d7e1b12682069d5cafc",
       "suspiciousUnmatchedAgencyRows": 0,
       "suspiciousUnmatchedAgencies": [],
       "agencyRulesSha256": "eb670af0e97398aac957f029f0bbb2d3ed35f5dd64ed02e9693bdc9532e2377c",
@@ -83,7 +66,7 @@
         "contentType": "application/octet-stream",
         "contentLength": 175574503,
         "contentEncoding": null,
-        "contentDisposition": "attachment; filename=\"Hojokinjoho_UTF-8_20260811.csv\"",
+        "contentDisposition": "attachment; filename=\"Hojokinjoho_UTF-8_20260812.csv\"",
         "etag": null,
         "lastModified": null,
         "receivedBytes": 175574500
@@ -92,12 +75,12 @@
         "dataset": "Chotatsujoho",
         "finalUrl": "https://info.gbiz.go.jp/hojin/Download",
         "contentType": "application/octet-stream",
-        "contentLength": 102358209,
+        "contentLength": 102366381,
         "contentEncoding": null,
-        "contentDisposition": "attachment; filename=\"Chotatsujoho_UTF-8_20260811.csv\"",
+        "contentDisposition": "attachment; filename=\"Chotatsujoho_UTF-8_20260812.csv\"",
         "etag": null,
         "lastModified": null,
-        "receivedBytes": 102358206
+        "receivedBytes": 102366378
       },
       "missingSourceKeyRows": 0
     }
