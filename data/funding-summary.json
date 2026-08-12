@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T02:00:52.410Z",
+  "generatedAt": "2026-08-12T02:03:19.397Z",
   "sources": [
     {
       "id": "gbiz",
@@ -9,7 +9,7 @@
       "frequency": "日次確認",
       "lastChecked": "2026-08-12",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-12T02:00:28.709Z",
+      "dashboardCheckedAt": "2026-08-12T02:02:54.323Z",
       "dashboardRecordCount": 69521,
       "dashboardSubsidyCount": 51380,
       "dashboardProcurementCount": 18141,
@@ -26,14 +26,14 @@
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-12T02:00:39.682Z",
+      "csvRetrievedAt": "2026-08-12T02:03:05.699Z",
       "csvSubsidyFileBytes": 175574500,
       "csvProcurementFileBytes": 102366378,
       "csvSubsidySha256": "ac920997258717c99ca62dee8390243b033ff123272c36cb7eb1a22548de99b7",
       "csvProcurementSha256": "a29487ce246b08832d4a4d165190ff84a9eae45bb5c9119f7d0e01d72708bcdd",
       "csvTotalSubsidyRows": 545877,
       "csvTotalProcurementRows": 308568,
-      "lastSuccessfulImportAt": "2026-08-12T02:00:52.410Z",
+      "lastSuccessfulImportAt": "2026-08-12T02:03:19.397Z",
       "continuityBaselineRecordCount": 69507,
       "continuityRetainedRecordCount": 69507,
       "continuityRemovedRecordCount": 0,
