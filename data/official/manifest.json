@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-12T06:07:18.107Z",
+  "generatedAt": "2026-08-12T06:16:38.350Z",
   "recordCount": 4967,
   "files": {
     "2020": "records-2020.json",
@@ -24,8 +24,8 @@
       2026
     ],
     "sourceDocumentCount": 100,
-    "fallbackSourceDocumentCount": 4,
-    "carryForwardSourceDocumentCount": 2,
+    "fallbackSourceDocumentCount": 0,
+    "carryForwardSourceDocumentCount": 3,
     "attemptedSourceDocumentCount": 100,
     "failedSourceDocumentCount": 0,
     "executors": {
@@ -164,8 +164,8 @@
     "grant_decision": 1885
   },
   "continuity": {
-    "retainedRecordCount": 2790,
-    "addedRecordCount": 2177,
+    "retainedRecordCount": 4967,
+    "addedRecordCount": 0,
     "changedRecordCount": 0,
     "changes": []
   },
@@ -204,28 +204,28 @@
       "bytes": 31863,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2025-competitive-goods",
-      "url": "https://warp.ndl.go.jp/20260602/20260601011816/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
       "primaryUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601011816/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
-      "fallbackUsed": true,
+      "transportUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
+      "fallbackUsed": false,
       "carryForwardUsed": false,
-      "primaryFailureReasonCode": "transient_http",
+      "primaryFailureReasonCode": null,
       "lastSuccessfulRetrievedAt": null,
       "attemptedAt": null,
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "xlsx",
       "discoveryStatus": "linked_from_official_index",
-      "archiveProvider": "国立国会図書館インターネット資料収集保存事業（WARP）",
-      "archiveVerifiedAt": "2026-08-12",
-      "archiveVerification": "Exact WARP URL Full GET; HTTP 200; raw byte length and SHA-256 pinned; strict parser count pinned; normalized rows and sourceKey deep-equal to the previously published live source except sourceDocumentUrl; 4/4 passed",
-      "archiveExpectedBytes": 40902,
-      "archiveExpectedSha256": "1abfd6139ffa54e067f407ea5cfd9411abeb8870c61d658f7384bd487e2e31ae",
-      "archiveExpectedRecordCount": 11,
+      "archiveProvider": null,
+      "archiveVerifiedAt": null,
+      "archiveVerification": null,
+      "archiveExpectedBytes": null,
+      "archiveExpectedSha256": null,
+      "archiveExpectedRecordCount": null,
       "evidenceExpectedMagic": null,
       "evidenceExpectedBytes": null,
       "evidenceExpectedSha256": null,
@@ -240,28 +240,28 @@
       "bytes": 40902,
       "records": 11,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2025-competitive-commission",
-      "url": "https://warp.ndl.go.jp/20260602/20260601011827/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
       "primaryUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601011827/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
-      "fallbackUsed": true,
+      "transportUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
+      "fallbackUsed": false,
       "carryForwardUsed": false,
-      "primaryFailureReasonCode": "transient_http",
+      "primaryFailureReasonCode": null,
       "lastSuccessfulRetrievedAt": null,
       "attemptedAt": null,
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "xlsx",
       "discoveryStatus": "linked_from_official_index",
-      "archiveProvider": "国立国会図書館インターネット資料収集保存事業（WARP）",
-      "archiveVerifiedAt": "2026-08-12",
-      "archiveVerification": "Exact WARP URL Full GET; HTTP 200; raw byte length and SHA-256 pinned; strict parser count pinned; normalized rows and sourceKey deep-equal to the previously published live source except sourceDocumentUrl; 4/4 passed",
-      "archiveExpectedBytes": 64380,
-      "archiveExpectedSha256": "ec9b549e1cbff72473b144c299331b587517123fc84eb70f2bd016e0dc676641",
-      "archiveExpectedRecordCount": 49,
+      "archiveProvider": null,
+      "archiveVerifiedAt": null,
+      "archiveVerification": null,
+      "archiveExpectedBytes": null,
+      "archiveExpectedSha256": null,
+      "archiveExpectedRecordCount": null,
       "evidenceExpectedMagic": null,
       "evidenceExpectedBytes": null,
       "evidenceExpectedSha256": null,
@@ -276,28 +276,28 @@
       "bytes": 64380,
       "records": 49,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2025-discretionary-goods",
-      "url": "https://warp.ndl.go.jp/20260602/20260601011838/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
       "primaryUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601011838/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
-      "fallbackUsed": true,
+      "transportUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
+      "fallbackUsed": false,
       "carryForwardUsed": false,
-      "primaryFailureReasonCode": "transient_http",
+      "primaryFailureReasonCode": null,
       "lastSuccessfulRetrievedAt": null,
       "attemptedAt": null,
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "xlsx",
       "discoveryStatus": "linked_from_official_index",
-      "archiveProvider": "国立国会図書館インターネット資料収集保存事業（WARP）",
-      "archiveVerifiedAt": "2026-08-12",
-      "archiveVerification": "Exact WARP URL Full GET; HTTP 200; raw byte length and SHA-256 pinned; strict parser count pinned; normalized rows and sourceKey deep-equal to the previously published live source except sourceDocumentUrl; 4/4 passed",
-      "archiveExpectedBytes": 27086,
-      "archiveExpectedSha256": "77fa1c6a688b648a3119c1169585618b9fa6e434e2c19d9e8a9709fbcb1a7cbb",
-      "archiveExpectedRecordCount": 17,
+      "archiveProvider": null,
+      "archiveVerifiedAt": null,
+      "archiveVerification": null,
+      "archiveExpectedBytes": null,
+      "archiveExpectedSha256": null,
+      "archiveExpectedRecordCount": null,
       "evidenceExpectedMagic": null,
       "evidenceExpectedBytes": null,
       "evidenceExpectedSha256": null,
@@ -312,28 +312,28 @@
       "bytes": 27086,
       "records": 17,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2025-discretionary-commission",
-      "url": "https://warp.ndl.go.jp/20260602/20260601011850/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
       "primaryUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601011850/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
-      "fallbackUsed": true,
+      "transportUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
+      "fallbackUsed": false,
       "carryForwardUsed": false,
-      "primaryFailureReasonCode": "transient_http",
+      "primaryFailureReasonCode": null,
       "lastSuccessfulRetrievedAt": null,
       "attemptedAt": null,
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "xlsx",
       "discoveryStatus": "linked_from_official_index",
-      "archiveProvider": "国立国会図書館インターネット資料収集保存事業（WARP）",
-      "archiveVerifiedAt": "2026-08-12",
-      "archiveVerification": "Exact WARP URL Full GET; HTTP 200; raw byte length and SHA-256 pinned; strict parser count pinned; normalized rows and sourceKey deep-equal to the previously published live source except sourceDocumentUrl; 4/4 passed",
-      "archiveExpectedBytes": 50337,
-      "archiveExpectedSha256": "4c8d990381b09877e95ec86ef135a4bd1a6ba37a31fa9d8218af6a9985b02259",
-      "archiveExpectedRecordCount": 13,
+      "archiveProvider": null,
+      "archiveVerifiedAt": null,
+      "archiveVerification": null,
+      "archiveExpectedBytes": null,
+      "archiveExpectedSha256": null,
+      "archiveExpectedRecordCount": null,
       "evidenceExpectedMagic": null,
       "evidenceExpectedBytes": null,
       "evidenceExpectedSha256": null,
@@ -348,7 +348,7 @@
       "bytes": 50337,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-competitive-goods",
@@ -384,7 +384,7 @@
       "bytes": 68091,
       "records": 155,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-discretionary-goods",
@@ -420,7 +420,7 @@
       "bytes": 50742,
       "records": 146,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-grant-decisions-h1",
@@ -456,7 +456,7 @@
       "bytes": 13638,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-grant-decisions-h2",
@@ -492,7 +492,7 @@
       "bytes": 22306,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "meti-2025-competitive-goods",
@@ -528,7 +528,7 @@
       "bytes": 83765,
       "records": 130,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "meti-2025-competitive-commission",
@@ -564,7 +564,7 @@
       "bytes": 102816,
       "records": 310,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "meti-2025-competitive-public-works",
@@ -600,7 +600,7 @@
       "bytes": 56675,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "meti-2025-grant-decisions-h2",
@@ -636,7 +636,7 @@
       "bytes": 28915,
       "records": 54,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "anre-2025-competitive-commission-04",
@@ -672,7 +672,7 @@
       "bytes": 29315,
       "records": 56,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "anre-2025-grant-decisions-h2",
@@ -708,7 +708,7 @@
       "bytes": 174750,
       "records": 949,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2020-competitive-goods",
@@ -744,7 +744,7 @@
       "bytes": 76101,
       "records": 157,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2020-competitive-commission",
@@ -780,7 +780,7 @@
       "bytes": 68609,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2020-competitive-public-works",
@@ -816,7 +816,7 @@
       "bytes": 17509,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2020-discretionary-goods",
@@ -852,7 +852,7 @@
       "bytes": 64179,
       "records": 156,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2020-discretionary-commission",
@@ -888,7 +888,7 @@
       "bytes": 27099,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2020-discretionary-public-works",
@@ -924,7 +924,7 @@
       "bytes": 21361,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-competitive-goods",
@@ -960,7 +960,7 @@
       "bytes": 76668,
       "records": 159,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-competitive-commission",
@@ -996,7 +996,7 @@
       "bytes": 30930,
       "records": 15,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-competitive-public-works",
@@ -1032,7 +1032,7 @@
       "bytes": 18015,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-discretionary-goods",
@@ -1068,7 +1068,7 @@
       "bytes": 55954,
       "records": 144,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-discretionary-commission",
@@ -1104,7 +1104,7 @@
       "bytes": 15028,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-discretionary-public-works",
@@ -1140,7 +1140,7 @@
       "bytes": 21911,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-competitive-goods",
@@ -1176,7 +1176,7 @@
       "bytes": 73743,
       "records": 155,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-competitive-commission",
@@ -1212,7 +1212,7 @@
       "bytes": 32367,
       "records": 15,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-competitive-public-works",
@@ -1248,7 +1248,7 @@
       "bytes": 17223,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-discretionary-goods",
@@ -1284,7 +1284,7 @@
       "bytes": 47540,
       "records": 94,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-discretionary-commission",
@@ -1320,7 +1320,7 @@
       "bytes": 15636,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-discretionary-public-works",
@@ -1356,7 +1356,7 @@
       "bytes": 15984,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-competitive-goods",
@@ -1392,7 +1392,7 @@
       "bytes": 72985,
       "records": 165,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-competitive-commission",
@@ -1428,7 +1428,7 @@
       "bytes": 35266,
       "records": 17,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-competitive-public-works",
@@ -1464,7 +1464,7 @@
       "bytes": 14272,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-discretionary-goods",
@@ -1500,7 +1500,7 @@
       "bytes": 55405,
       "records": 100,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-discretionary-commission",
@@ -1536,7 +1536,7 @@
       "bytes": 15546,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-discretionary-public-works",
@@ -1572,7 +1572,7 @@
       "bytes": 16305,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-grant-decisions-h1",
@@ -1608,7 +1608,7 @@
       "bytes": 14084,
       "records": 8,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2021-grant-decisions-h2",
@@ -1644,7 +1644,7 @@
       "bytes": 12591,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-grant-decisions-h1",
@@ -1680,7 +1680,7 @@
       "bytes": 13896,
       "records": 8,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2022-grant-decisions-h2",
@@ -1716,7 +1716,7 @@
       "bytes": 12604,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-grant-decisions-h1",
@@ -1752,7 +1752,7 @@
       "bytes": 13881,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2023-grant-decisions-h2",
@@ -1788,7 +1788,7 @@
       "bytes": 12374,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-grant-decisions-h1",
@@ -1824,7 +1824,7 @@
       "bytes": 13488,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-grant-decisions-h2",
@@ -1860,7 +1860,7 @@
       "bytes": 21134,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-competitive-goods",
@@ -1896,7 +1896,7 @@
       "bytes": 249865,
       "records": 175,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-competitive-commission",
@@ -1932,7 +1932,7 @@
       "bytes": 29393,
       "records": 16,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-competitive-public-works",
@@ -1968,7 +1968,7 @@
       "bytes": 14114,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-discretionary-goods",
@@ -2004,7 +2004,7 @@
       "bytes": 45269,
       "records": 144,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2024-discretionary-commission",
@@ -2040,7 +2040,7 @@
       "bytes": 19044,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-competitive-commission",
@@ -2076,7 +2076,7 @@
       "bytes": 31421,
       "records": 22,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-competitive-public-works",
@@ -2112,7 +2112,7 @@
       "bytes": 25997,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "jpo-2025-discretionary-commission",
@@ -2148,7 +2148,7 @@
       "bytes": 29083,
       "records": 10,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2020-competitive-goods",
@@ -2184,7 +2184,7 @@
       "bytes": 11596,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2020-competitive-commission",
@@ -2192,10 +2192,10 @@
       "primaryUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/koukyounyuusatuitaku2020.html",
       "transportUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/koukyounyuusatuitaku2020.html",
       "fallbackUsed": false,
-      "carryForwardUsed": true,
-      "primaryFailureReasonCode": "transient_http",
-      "lastSuccessfulRetrievedAt": "2026-08-12T05:10:25.942Z",
-      "attemptedAt": "2026-08-12T06:07:18.107Z",
+      "carryForwardUsed": false,
+      "primaryFailureReasonCode": null,
+      "lastSuccessfulRetrievedAt": null,
+      "attemptedAt": null,
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/koukyounyuusatuitaku2020.html",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "html",
@@ -2220,7 +2220,7 @@
       "bytes": 69647,
       "records": 61,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T05:10:25.942Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2020-discretionary-goods",
@@ -2231,7 +2231,7 @@
       "carryForwardUsed": true,
       "primaryFailureReasonCode": "transient_http",
       "lastSuccessfulRetrievedAt": "2026-08-12T02:02:37.744Z",
-      "attemptedAt": "2026-08-12T06:07:18.107Z",
+      "attemptedAt": "2026-08-12T06:16:38.350Z",
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_chouhi_2020.html",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "html",
@@ -2292,7 +2292,7 @@
       "bytes": 46624,
       "records": 31,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2020-grant-decisions",
@@ -2328,7 +2328,7 @@
       "bytes": 59065,
       "records": 121,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2021-competitive-goods",
@@ -2364,7 +2364,7 @@
       "bytes": 9064,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2021-competitive-commission",
@@ -2400,7 +2400,7 @@
       "bytes": 74638,
       "records": 66,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2021-discretionary-goods",
@@ -2436,7 +2436,7 @@
       "bytes": 8885,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2021-discretionary-commission",
@@ -2472,7 +2472,7 @@
       "bytes": 36342,
       "records": 19,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2021-grant-decisions",
@@ -2508,7 +2508,7 @@
       "bytes": 27255,
       "records": 48,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2022-competitive-goods",
@@ -2544,7 +2544,7 @@
       "bytes": 13908,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2022-competitive-commission",
@@ -2580,7 +2580,7 @@
       "bytes": 60133,
       "records": 53,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2022-discretionary-goods",
@@ -2616,7 +2616,7 @@
       "bytes": 12017,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2022-discretionary-commission",
@@ -2652,7 +2652,7 @@
       "bytes": 32556,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2022-grant-decisions",
@@ -2688,7 +2688,7 @@
       "bytes": 33702,
       "records": 61,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2023-competitive-goods",
@@ -2724,7 +2724,7 @@
       "bytes": 11814,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2023-competitive-commission",
@@ -2760,7 +2760,7 @@
       "bytes": 54079,
       "records": 44,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2023-discretionary-goods",
@@ -2796,7 +2796,7 @@
       "bytes": 9548,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2023-discretionary-commission",
@@ -2832,7 +2832,7 @@
       "bytes": 41144,
       "records": 25,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2023-grant-decisions",
@@ -2868,7 +2868,7 @@
       "bytes": 26717,
       "records": 63,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2024-competitive-goods",
@@ -2904,7 +2904,7 @@
       "bytes": 16653,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2024-competitive-commission",
@@ -2940,7 +2940,7 @@
       "bytes": 46900,
       "records": 42,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2024-discretionary-goods",
@@ -2976,7 +2976,7 @@
       "bytes": 20107,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2024-discretionary-commission",
@@ -3012,7 +3012,7 @@
       "bytes": 28999,
       "records": 21,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "smea-2024-grant-decisions",
@@ -3048,7 +3048,7 @@
       "bytes": 14802,
       "records": 21,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "chugoku-2020-competitive-goods",
@@ -3084,7 +3084,7 @@
       "bytes": 31885,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "chugoku-2024-competitive-goods",
@@ -3120,7 +3120,7 @@
       "bytes": 34897,
       "records": 18,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2023-competitive-goods",
@@ -3156,7 +3156,7 @@
       "bytes": 26945,
       "records": 18,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2023-competitive-commission",
@@ -3192,7 +3192,7 @@
       "bytes": 26691,
       "records": 14,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2023-discretionary-goods",
@@ -3228,7 +3228,7 @@
       "bytes": 9894,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2023-discretionary-commission",
@@ -3264,7 +3264,7 @@
       "bytes": 25731,
       "records": 14,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2024-competitive-goods",
@@ -3300,7 +3300,7 @@
       "bytes": 26086,
       "records": 17,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2024-competitive-commission",
@@ -3336,7 +3336,7 @@
       "bytes": 27730,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2025-competitive-goods",
@@ -3372,7 +3372,7 @@
       "bytes": 28656,
       "records": 18,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "hokkaido-2025-grant-decisions",
@@ -3380,10 +3380,10 @@
       "primaryUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2025.htm",
       "transportUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2025.htm",
       "fallbackUsed": false,
-      "carryForwardUsed": false,
-      "primaryFailureReasonCode": null,
-      "lastSuccessfulRetrievedAt": null,
-      "attemptedAt": null,
+      "carryForwardUsed": true,
+      "primaryFailureReasonCode": "transient_http",
+      "lastSuccessfulRetrievedAt": "2026-08-12T06:07:18.107Z",
+      "attemptedAt": "2026-08-12T06:16:38.350Z",
       "originalUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2025.htm",
       "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/hojokin/koufuichiran.htm",
       "format": "html",
@@ -3444,7 +3444,7 @@
       "bytes": 8930,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2025-competitive-goods-202504",
@@ -3480,7 +3480,7 @@
       "bytes": 8902,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2025-competitive-goods-202507",
@@ -3516,7 +3516,7 @@
       "bytes": 9966,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2025-competitive-goods-202510",
@@ -3552,7 +3552,7 @@
       "bytes": 8971,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2025-competitive-commission-202507",
@@ -3588,7 +3588,7 @@
       "bytes": 9966,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2024-discretionary-goods-202404",
@@ -3624,7 +3624,7 @@
       "bytes": 11021,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2025-discretionary-commission-202504",
@@ -3660,7 +3660,7 @@
       "bytes": 18874,
       "records": 12,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "shikoku-2025-grant-decisions-h1",
@@ -3668,10 +3668,10 @@
       "primaryUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202504_202509/202504_202509.html",
       "transportUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202504_202509/202504_202509.html",
       "fallbackUsed": false,
-      "carryForwardUsed": false,
-      "primaryFailureReasonCode": null,
-      "lastSuccessfulRetrievedAt": null,
-      "attemptedAt": null,
+      "carryForwardUsed": true,
+      "primaryFailureReasonCode": "transient_http",
+      "lastSuccessfulRetrievedAt": "2026-08-12T06:07:18.107Z",
+      "attemptedAt": "2026-08-12T06:16:38.350Z",
       "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202504_202509/202504_202509.html",
       "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
       "format": "html",
@@ -3732,7 +3732,7 @@
       "bytes": 157695,
       "records": 260,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     },
     {
       "id": "tohoku-2025-grant-decisions-h2",
@@ -3768,7 +3768,7 @@
       "bytes": 82911,
       "records": 26,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T06:16:38.350Z"
     }
   ],
   "sourceFailures": [],
