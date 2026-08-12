@@ -170,28 +170,6 @@
       "failure": "chugoku-2023-grant-decisions/第１四半期/33行目: 必須値programが空です"
     },
     {
-      "id": "hokkaido-2024-competitive-public-works",
-      "executorId": "hokkaido",
-      "fiscalYear": 2024,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2024fy_kyoso/koji.htm",
-      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/chotatsu/teiketsu.htm",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2024fy_kyoso/koji.htm",
-      "failure": "hokkaido-2024-competitive-public-works: 主表見出しの列数が一致しません (12/15)"
-    },
-    {
-      "id": "hokkaido-2024-discretionary-goods",
-      "executorId": "hokkaido",
-      "fiscalYear": 2024,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2024fy_zuii/buppin.htm",
-      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/chotatsu/teiketsu.htm",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2024fy_zuii/buppin.htm",
-      "failure": "hokkaido-2024-discretionary-goods: 主表見出しの列数が一致しません (16/15)"
-    },
-    {
       "id": "hokkaido-2024-discretionary-commission",
       "executorId": "hokkaido",
       "fiscalYear": 2024,
@@ -200,29 +178,7 @@
       "originalUrl": "https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2024fy_zuii/itaku.htm",
       "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/chotatsu/teiketsu.htm",
       "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2024fy_zuii/itaku.htm",
-      "failure": "hokkaido-2024-discretionary-commission: 主表見出しの列数が一致しません (16/15)"
-    },
-    {
-      "id": "hokkaido-2025-discretionary-goods",
-      "executorId": "hokkaido",
-      "fiscalYear": 2025,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2025fy_zuii/buppin.htm",
-      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/chotatsu/teiketsu.htm",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2025fy_zuii/buppin.htm",
-      "failure": "hokkaido-2025-discretionary-goods: 主表見出しの列数が一致しません (16/15)"
-    },
-    {
-      "id": "hokkaido-2025-discretionary-commission",
-      "executorId": "hokkaido",
-      "fiscalYear": 2025,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2025fy_zuii/itaku.htm",
-      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/chotatsu/teiketsu.htm",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2025fy_zuii/itaku.htm",
-      "failure": "hokkaido-2025-discretionary-commission: 主表見出しの列数が一致しません (16/15)"
+      "failure": "hokkaido-2024-discretionary-commission: 日付が資料年度外です: 2023年4月30日"
     },
     {
       "id": "hokkaido-2026-competitive-goods",
@@ -280,39 +236,6 @@
       "failure": "HTTP 404"
     },
     {
-      "id": "shikoku-2025-competitive-goods-202512",
-      "executorId": "shikoku",
-      "fiscalYear": 2025,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202512/n_u_202512.html",
-      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202512/n_u_202512.html",
-      "failure": "shikoku-2025-competitive-goods-202512: 主表見出しの列数が一致しません (15/14)"
-    },
-    {
-      "id": "shikoku-2021-competitive-goods-202104",
-      "executorId": "shikoku",
-      "fiscalYear": 2021,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202104/n_u_202104.html",
-      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202104/n_u_202104.html",
-      "failure": "shikoku-2021-competitive-goods-202104: 日付を解釈できません: 2021年3月25日（購入） 2021年4月1日（保守）"
-    },
-    {
-      "id": "shikoku-2020-competitive-goods-202103",
-      "executorId": "shikoku",
-      "fiscalYear": 2020,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202103/n_u_202103.html",
-      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202103/n_u_202103.html",
-      "failure": "shikoku-2020-competitive-goods-202103: 日付を解釈できません: 2021年3月25日（購入） 2021年4月1日（保守）"
-    },
-    {
       "id": "shikoku-2026-discretionary-commission-202604",
       "executorId": "shikoku",
       "fiscalYear": 2026,
@@ -333,17 +256,6 @@
       "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
       "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202605/z_i_202605.html",
       "failure": "HTTP 404"
-    },
-    {
-      "id": "shikoku-2021-discretionary-commission-202104",
-      "executorId": "shikoku",
-      "fiscalYear": 2021,
-      "category": "contract_result",
-      "format": "html",
-      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202104/z_i_202104.html",
-      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202104/z_i_202104.html",
-      "failure": "shikoku-2021-discretionary-commission-202104: 日付を解釈できません: 44287"
     }
   ]
 }

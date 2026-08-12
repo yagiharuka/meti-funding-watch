@@ -25,12 +25,12 @@ test("registers only explicit official-index documents for the three structured 
   assert.equal(HOKKAIDO_DOCUMENTS.length, 21);
   assert.equal(SHIKOKU_DOCUMENTS.length, 84);
   assert.equal(REGIONAL_DOCUMENTS.length, 146);
-  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 115);
-  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 31);
+  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 123);
+  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 23);
   assert.equal(REGIONAL_EVIDENCE_RECEIPTS.length, 20);
   assert.equal(REGIONAL_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 554);
-  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.length, 95);
-  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 1_589);
+  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.length, 103);
+  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 1_627);
   assert.equal(new Set(REGIONAL_DOCUMENTS.map((document) => document.id)).size, REGIONAL_DOCUMENTS.length);
   assert.deepEqual(
     [...REGIONAL_OFFICIAL_DOCUMENTS.map((document) => document.id)].sort(),
@@ -107,7 +107,7 @@ test("replays all 20 exact evidence responses through their strict parser", {
   assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
 });
 
-test("replays all 95 committed WARP evidence responses through production ingestion", async () => {
+test("replays all 103 committed WARP evidence responses through production ingestion", async () => {
   const documents = REGIONAL_OFFICIAL_DOCUMENTS.filter((document) => document.archiveProvider);
   const receiptById = new Map(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
   const responseByUrl = new Map();
@@ -124,9 +124,9 @@ test("replays all 95 committed WARP evidence responses through production ingest
     return new Response(buffer, { status: 200, headers: { "content-length": String(buffer.length) } });
   });
   assert.deepEqual(result.sourceFailures, []);
-  assert.equal(result.fetched.length, 95);
+  assert.equal(result.fetched.length, 103);
   const rows = result.fetched.flatMap((item) => item.records);
-  assert.equal(rows.length, 1_589);
+  assert.equal(rows.length, 1_627);
   assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
   assert.ok(rows.every((row) => row.sourceKey && row.sourcePageUrl && row.sourceDocumentUrl));
 });
@@ -154,15 +154,43 @@ test("keeps the exact linked-year gaps visible instead of inventing regional sou
 test("pins every remaining regional candidate and its fail-closed reason", () => {
   assert.equal(regionalGapInventory.schemaVersion, 1);
   assert.equal(regionalGapInventory.capture, "20260602/20260601000000");
-  assert.equal(regionalGapInventory.candidates.length, 31);
+  assert.equal(regionalGapInventory.candidates.length, 23);
   assert.deepEqual(
     regionalGapInventory.candidates.map((item) => item.id).sort(),
     REGIONAL_CANDIDATE_DOCUMENTS.map((document) => document.id).sort(),
   );
   for (const item of regionalGapInventory.candidates) {
     assert.equal(item.transportUrl, `https://warp.ndl.go.jp/${regionalGapInventory.capture}/${item.originalUrl}`);
-    assert.match(item.failure, /HTTP 404|見出し|必須値|日付を解釈|列数/);
+    assert.match(item.failure, /HTTP 404|見出し|必須値|日付を解釈|年度外|列数/);
   }
+});
+
+test("keeps composite and Excel-serial date handling bound to exact Shikoku documents", async () => {
+  const marchDocument = SHIKOKU_DOCUMENTS.find((candidate) => candidate.id === "shikoku-2020-competitive-goods-202103");
+  const aprilDocument = SHIKOKU_DOCUMENTS.find((candidate) => candidate.id === "shikoku-2021-competitive-goods-202104");
+  const serialDocument = SHIKOKU_DOCUMENTS.find((candidate) => candidate.id === "shikoku-2021-discretionary-commission-202104");
+  const compositeRaw = "2021年3月25日（購入） 2021年4月1日（保守）";
+  const marchBuffer = await readFile(new URL("../evidence/official-bootstrap/shikoku-2020-competitive-goods-202103.html", import.meta.url));
+  const aprilBuffer = await readFile(new URL("../evidence/official-bootstrap/shikoku-2021-competitive-goods-202104.html", import.meta.url));
+  const serialBuffer = await readFile(new URL("../evidence/official-bootstrap/shikoku-2021-discretionary-commission-202104.html", import.meta.url));
+
+  const marchRows = parseRegionalOfficialHtml(marchBuffer, marchDocument);
+  const aprilRows = parseRegionalOfficialHtml(aprilBuffer, aprilDocument);
+  const serialRows = parseRegionalOfficialHtml(serialBuffer, serialDocument);
+  assert.equal(marchRows[0].dateRaw, compositeRaw);
+  assert.equal(marchRows[0].date, "2021-03-25");
+  assert.equal(aprilRows.find((row) => row.dateRaw === compositeRaw).date, "2021-04-01");
+  assert.deepEqual([...new Set(serialRows.map((row) => row.date))].sort(), ["2021-04-01", "2021-04-14", "2021-04-21", "2021-04-27"]);
+  assert.ok(serialRows.every((row) => /^44\d{3}$/.test(row.dateRaw)));
+
+  assert.throws(
+    () => parseRegionalOfficialHtml(Buffer.from(marchBuffer.toString().replace("（保守）", "（保守・追記）")), marchDocument),
+    /日付を解釈できません/,
+  );
+  assert.throws(
+    () => parseRegionalOfficialHtml(Buffer.from(serialBuffer.toString().replace("44287", "2021年4月1日")), serialDocument),
+    /日付を解釈できません/,
+  );
 });
 
 test("strictly parses a mapped monthly contract table and preserves null/amount/provenance semantics", () => {

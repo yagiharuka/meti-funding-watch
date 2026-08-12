@@ -156,17 +156,32 @@ const HTML_CONTRACT_COLUMNS_14 = Object.freeze({
 const HTML_CONTRACT_COLUMNS_15 = Object.freeze({
   program: 0, date: 2, organization: 3, corporateNumber: 4, method: 6, amount: 8, notes: 11,
 });
+const HTML_CONTRACT_COLUMNS_12_WORKS = Object.freeze({
+  program: 0, date: 2, organization: 3, corporateNumber: 4, method: 6, amount: 8, notes: 11,
+});
+const HTML_CONTRACT_COLUMNS_16 = Object.freeze({
+  program: 0, date: 2, organization: 3, corporateNumber: 4, method: 6, amount: 8, notes: 12,
+});
 const HTML_GRANT_COLUMNS_10 = Object.freeze({
   program: 1, organization: 2, corporateNumber: 3, amount: 4, date: 7, notes: [5, 6],
 });
 
-function regionalHtmlDocument({ expectedColumnCount, columns, headingTokens, period = null }) {
+function regionalHtmlDocument({
+  expectedColumnCount,
+  columns,
+  headingTokens,
+  period = null,
+  dateParser = null,
+  exactDateMappings = null,
+}) {
   return {
     ...REGIONAL_HTML_BASE,
     expectedColumnCount,
     columns,
     headingTokens,
     ...(period ? { period } : {}),
+    ...(dateParser ? { dateParser } : {}),
+    ...(exactDateMappings ? { exactDateMappings } : {}),
   };
 }
 
@@ -188,10 +203,20 @@ export const HOKKAIDO_DOCUMENTS = Object.freeze([
   ...Object.entries(HOKKAIDO_CONTRACT_PATHS).flatMap(([year, seriesPaths]) => seriesPaths.map((seriesPath) => {
     const [method, type] = seriesPath.split("/");
     const legacyCompetitive = Number(year) === 2023 && method === "kyoso";
+    const compactPublicWorks = Number(year) === 2024 && seriesPath === "kyoso/koji";
+    const expandedDiscretionary = [2024, 2025].includes(Number(year)) && method === "zuii";
+    const expectedColumnCount = compactPublicWorks ? 12 : expandedDiscretionary ? 16 : legacyCompetitive ? 14 : 15;
+    const columns = compactPublicWorks
+      ? HTML_CONTRACT_COLUMNS_12_WORKS
+      : expandedDiscretionary
+        ? HTML_CONTRACT_COLUMNS_16
+        : legacyCompetitive
+          ? HTML_CONTRACT_COLUMNS_14
+          : HTML_CONTRACT_COLUMNS_15;
     return contract(HOKKAIDO, Number(year), HOKKAIDO_SERIES[seriesPath], `hoksa/keiyaku_ichiran/${year}fy_${method}/${type}.htm`, {
       document: regionalHtmlDocument({
-        expectedColumnCount: legacyCompetitive ? 14 : 15,
-        columns: legacyCompetitive ? HTML_CONTRACT_COLUMNS_14 : HTML_CONTRACT_COLUMNS_15,
+        expectedColumnCount,
+        columns,
         headingTokens: [year, method === "kyoso" ? "競争" : "随意", type === "itaku" ? "委託" : type === "koji" ? "公共工事" : "物品"],
       }),
     });
@@ -217,6 +242,17 @@ const SHIKOKU_PATH_PREFIX = Object.freeze({
   discretionaryGoods: "z_u",
   discretionaryCommission: "z_i",
 });
+const SHIKOKU_SPECIAL_DATE_RULES = Object.freeze({
+  "shikoku-2020-competitive-goods-202103": Object.freeze({
+    exactDateMappings: Object.freeze({ "2021年3月25日（購入） 2021年4月1日（保守）": "2021-03-25" }),
+  }),
+  "shikoku-2021-competitive-goods-202104": Object.freeze({
+    exactDateMappings: Object.freeze({ "2021年3月25日（購入） 2021年4月1日（保守）": "2021-04-01" }),
+  }),
+  "shikoku-2021-discretionary-commission-202104": Object.freeze({
+    dateParser: "excel_serial_1900",
+  }),
+});
 
 function fiscalYearFromYearMonth(yearMonth) {
   const year = Math.floor(yearMonth / 100);
@@ -231,7 +267,9 @@ export const SHIKOKU_DOCUMENTS = Object.freeze([
     const prefix = SHIKOKU_PATH_PREFIX[series];
     const month = String(yearMonth).slice(4);
     const isDiscretionary = series.startsWith("discretionary");
-    const hasContractMethodColumn = series === "competitiveGoods" && yearMonth === 202510;
+    const hasContractMethodColumn = series === "competitiveGoods" && [202510, 202512].includes(yearMonth);
+    const id = `shikoku-${fiscalYear}-${CONTRACT_SERIES[series].id}-${yearMonth}`;
+    const specialDateRule = SHIKOKU_SPECIAL_DATE_RULES[id] ?? {};
     return contract(SHIKOKU, fiscalYear, CONTRACT_SERIES[series], `02_soshikiinfos/04_kaikei/01_keiyaku_${prefix}_${yearMonth}/${prefix}_${yearMonth}.html`, {
       suffix: String(yearMonth),
       coverageClaim: fiscalYear === 2026
@@ -242,6 +280,7 @@ export const SHIKOKU_DOCUMENTS = Object.freeze([
         columns: isDiscretionary || hasContractMethodColumn ? HTML_CONTRACT_COLUMNS_15 : HTML_CONTRACT_COLUMNS_14,
         headingTokens: ["契約締結状況", isDiscretionary ? "随意契約" : "競争入札", series.endsWith("Commission") ? "委託契約" : "請負契約", `${fiscalYear - 2018}年度${Number(month)}月`],
         period: `${String(yearMonth).slice(0, 4)}-${month}`,
+        ...specialDateRule,
       }),
     });
   })),
@@ -377,7 +416,7 @@ function validateArchiveEvidenceMap(value, documents, directReceipts) {
     || typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
     throw new Error("地域局archive evidence mapの検証メタデータが不正です");
   }
-  if (!Array.isArray(value.records) || value.records.length !== 95) throw new Error("地域局archive evidence receiptは95資料でなければなりません");
+  if (!Array.isArray(value.records) || value.records.length !== 103) throw new Error("地域局archive evidence receiptは103資料でなければなりません");
   const definitions = new Map(documents.map((document) => [document.id, document]));
   const directIds = new Set(directReceipts.map((receipt) => receipt.id));
   const ids = new Set();
@@ -399,7 +438,7 @@ function validateArchiveEvidenceMap(value, documents, directReceipts) {
     }
     recordCount += receipt.expectedRecordCount;
   }
-  if (recordCount !== 1_589) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
+  if (recordCount !== 1_627) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
 }
 
 export function parseRegionalOfficialHtml(buffer, document) {
@@ -470,10 +509,15 @@ function validateRegionalHtmlDocument(document) {
   if (!isRegisteredIdentity || document.parser !== "regional_html" || document.format !== "html") {
     throw new Error("未登録または変更された地域経済産業局HTML資料です");
   }
-  if (![10, 14, 15].includes(document.expectedColumnCount)) throw new Error(`${document.id}: 列数定義が不正です`);
+  if (![10, 12, 14, 15, 16].includes(document.expectedColumnCount)) throw new Error(`${document.id}: 列数定義が不正です`);
   const indices = Object.values(document.columns).flat();
   if (!indices.every((value) => Number.isInteger(value) && value >= 0 && value < document.expectedColumnCount)) {
     throw new Error(`${document.id}: 列位置定義が不正です`);
+  }
+  const expectedDateRule = SHIKOKU_SPECIAL_DATE_RULES[document.id] ?? {};
+  if (document.dateParser !== expectedDateRule.dateParser
+    || JSON.stringify(document.exactDateMappings) !== JSON.stringify(expectedDateRule.exactDateMappings)) {
+    throw new Error(`${document.id}: 日付解釈ルールが資料定義と一致しません`);
   }
 }
 
@@ -620,7 +664,7 @@ function makeRegionalRecord(cells, ordinal, document, identityOccurrences) {
   for (const field of ["title", "organization", "dateRaw", "amountRaw"]) {
     if (!values[field]) throw new Error(`${document.id}: ${ordinal}行目の必須値${field}が空です`);
   }
-  const date = parseOfficialDate(values.dateRaw);
+  const date = parseRegionalDocumentDate(values.dateRaw, document);
   if (!date) throw new Error(`${document.id}: 日付を解釈できません: ${values.dateRaw}`);
   if (fiscalYearOfDate(date) !== document.fiscalYear) throw new Error(`${document.id}: 日付が資料年度外です: ${values.dateRaw}`);
   if (document.period && !date.startsWith(document.period)) throw new Error(`${document.id}: 月別資料と契約日が一致しません: ${values.dateRaw}`);
@@ -699,6 +743,25 @@ function parseOfficialDate(value) {
   match = raw.match(/^令和([元\d]+)年(\d{1,2})月(\d{1,2})日$/);
   if (match) return validDate(2018 + (match[1] === "元" ? 1 : Number(match[1])), Number(match[2]), Number(match[3]));
   return null;
+}
+
+function parseRegionalDocumentDate(value, document) {
+  const raw = normalizeText(value);
+  if (document.exactDateMappings && Object.hasOwn(document.exactDateMappings, raw)) {
+    return document.exactDateMappings[raw];
+  }
+  if (document.dateParser === "excel_serial_1900") return parseExcelSerialDate(raw);
+  return parseOfficialDate(raw);
+}
+
+function parseExcelSerialDate(value) {
+  if (!/^\d{5}$/.test(value)) return null;
+  const serial = Number(value);
+  const milliseconds = Date.UTC(1899, 11, 30) + serial * 86_400_000;
+  const date = new Date(milliseconds);
+  const year = date.getUTCFullYear();
+  if (year < 2000 || year > 2100) return null;
+  return validDate(year, date.getUTCMonth() + 1, date.getUTCDate());
 }
 
 function validDate(year, month, day) {

@@ -41,7 +41,7 @@ const evidenceDocuments = [
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
 test("binds every receipted production document to one complete evidence receipt", () => {
-  assert.equal(evidenceDocuments.length, 254);
+  assert.equal(evidenceDocuments.length, 262);
   assert.ok(evidenceDocuments.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   for (const document of evidenceDocuments) {
     assert.deepEqual(Object.keys(document.evidenceReceipt).sort(), [
