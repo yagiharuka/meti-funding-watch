@@ -6,6 +6,10 @@ import { promisify } from "node:util";
 
 import ExcelJS from "exceljs";
 import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
+import { METI_ANRE_OFFICIAL_DOCUMENTS } from "./official-meti-anre-history.mjs";
+import { parseOfficialPdf } from "./official-pdf.mjs";
+import { parseRegionalOfficialHtml, REGIONAL_OFFICIAL_DOCUMENTS } from "./official-regional-history.mjs";
+import { REGIONAL_PDF_DOCUMENTS } from "./official-regional-pdf-sources.mjs";
 import { documents as SMEA_HISTORICAL_DOCUMENTS, parseSmeaOfficialHtml } from "./official-smea-history.mjs";
 import { VERIFIED_LIVE_FALLBACK_METADATA, applyVerifiedLiveFallbacks } from "./official-live-fallbacks.mjs";
 import { applyVerifiedWarpCaptures } from "./official-warp-captures.mjs";
@@ -15,7 +19,7 @@ const AUDIT_DIRECTORY = new URL("../.audit/official/", import.meta.url);
 const execFileAsync = promisify(execFile);
 const SMEA_SOURCE_PAGE = "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html";
 const FETCH_HEADERS = {
-  accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream;q=0.9,*/*;q=0.1",
+  accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf;q=0.95,text/html;q=0.9,application/octet-stream;q=0.8,*/*;q=0.1",
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
 };
 const LIVE_FETCH_ATTEMPTS = 3;
@@ -130,8 +134,11 @@ export const OFFICIAL_DOCUMENTS = applyVerifiedLiveFallbacks(applyVerifiedWarpCa
     sourcePageUrl: "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/index.html",
     url: "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/2025/2025_10_03.xlsx",
   },
+  ...METI_ANRE_OFFICIAL_DOCUMENTS,
   ...JPO_HISTORICAL_DOCUMENTS,
   ...SMEA_HISTORICAL_DOCUMENTS,
+  ...REGIONAL_OFFICIAL_DOCUMENTS,
+  ...REGIONAL_PDF_DOCUMENTS,
 ]));
 
 export async function parseOfficialWorkbook(buffer, document) {
@@ -284,7 +291,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       attemptedSourceDocumentCount: OFFICIAL_DOCUMENTS.length,
       failedSourceDocumentCount: sourceFailures.length,
       executors: executorCoverage,
-      note: "検索対象はmanifestに列挙した中小企業庁・特許庁の公式公表資料のうち、取得・形式・継続性を検証できた資料だけです。13執行機関・全年度・全公表区分の全資料ではありません。",
+      note: "検索対象はmanifestに列挙した各執行機関の公式公表資料のうち、取得・形式・継続性を検証できた資料だけです。13執行機関・全年度・全公表区分の全資料ではなく、実支払・再委託・間接補助先も含みません。FY2026は年度途中です。",
     },
     seriesCounts: counts,
     continuity: {
@@ -305,7 +312,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       attemptedAt: carryForward ? generatedAt : null,
       originalUrl: document.originalUrl ?? document.url,
       sourcePageUrl: document.sourcePageUrl,
-      format: document.format === "html" ? "html" : "xlsx",
+      format: sourceFormat(document),
       discoveryStatus: document.discoveryStatus ?? "linked_from_official_index",
       archiveProvider: fallback?.archiveProvider ?? document.archiveProvider ?? null,
       archiveVerifiedAt: fallback?.archiveVerifiedAt ?? document.archiveVerifiedAt ?? null,
@@ -313,6 +320,11 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       archiveExpectedBytes: fallback?.expectedBytes ?? document.archiveExpectedBytes ?? null,
       archiveExpectedSha256: fallback?.expectedSha256 ?? document.archiveExpectedSha256 ?? null,
       archiveExpectedRecordCount: fallback?.expectedRecordCount ?? document.archiveExpectedRecordCount ?? null,
+      evidenceExpectedMagic: document.evidenceReceipt?.expectedMagic ?? null,
+      evidenceExpectedBytes: document.evidenceReceipt?.expectedBytes ?? null,
+      evidenceExpectedSha256: document.evidenceReceipt?.expectedSha256 ?? null,
+      evidenceExpectedRecordCount: document.evidenceReceipt?.expectedRecordCount ?? null,
+      evidenceVerified: Boolean(document.evidenceReceipt),
       coverageClaim: document.coverageClaim ?? "公式資料に掲載された行",
       executorId: document.executorId,
       category: document.category,
@@ -337,7 +349,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   await mkdir(AUDIT_DIRECTORY, { recursive: true });
   for (const item of fetched) {
     if (item.carryForward) continue;
-    await writeFile(new URL(`${item.document.id}.${item.document.format === "html" ? "html" : "xlsx"}`, AUDIT_DIRECTORY), item.buffer);
+    await writeFile(new URL(`${item.document.id}.${sourceFormat(item.document)}`, AUDIT_DIRECTORY), item.buffer);
   }
   await removeObsoleteYearFiles(new Set(Object.values(files)));
   for (const item of Object.values(publicFiles)) {
@@ -373,31 +385,49 @@ export async function fetchOfficialDocuments(
   }
   const fetched = [];
   const sourceFailures = [];
-  for (const document of documents) {
+  for (const [documentIndex, document] of documents.entries()) {
+    const progress = `[official ${documentIndex + 1}/${documents.length}] ${document.id}`;
+    if (!fetchImpl) console.error(`${progress} start`);
     const verifiedArchive = isVerifiedArchiveDocument(document);
     let phase = "fetch";
     try {
       const source = await fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl);
       assertArchiveSourceReceipt(document, source);
+      phase = "evidence";
+      assertOfficialEvidenceSourceReceipt(document, source);
       phase = "parse";
       const records = document.format === "html"
-        ? parseSmeaOfficialHtml(source.buffer, document).map((record) => normalizeSmeaRecord(record, document))
-        : await parseOfficialWorkbook(source.buffer, document);
+        ? (document.parser === "regional_html"
+          ? parseRegionalOfficialHtml(source.buffer, document)
+          : parseSmeaOfficialHtml(source.buffer, document)).map((record) => normalizeHtmlRecord(record, document))
+        : document.format === "pdf"
+          ? await parseOfficialPdf(source.buffer, document)
+          : await parseOfficialWorkbook(source.buffer, document);
       assertArchiveRecordCount(document, records);
+      phase = "evidence";
+      assertOfficialEvidenceRecordCount(document, records);
+      phase = "parse";
       if (source.fallback) assertFallbackRecordsMatchBaseline(document, source.fallback, records, previousRecords);
       fetched.push({ document, ...source, records });
+      if (!fetchImpl) console.error(`${progress} verified ${records.length} rows${source.fallback ? " (fallback)" : ""}`);
     } catch (error) {
       const carryForward = maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById);
       if (carryForward) {
         fetched.push(carryForward);
+        if (!fetchImpl) console.error(`${progress} carry-forward ${carryForward.records.length} rows`);
         continue;
       }
       if (verifiedArchive || document.verifiedFallback || previousDatasetIds.has(document.id)) {
         const message = error instanceof Error ? error.message : "原因不明";
-        const requirement = verifiedArchive ? "検証済みWARP資料" : "前回公開済み資料";
+        const requirement = verifiedArchive
+          ? "検証済みWARP資料"
+          : document.evidenceReceipt
+            ? "検証済み公式資料"
+            : "前回公開済み資料";
         throw new Error(`${document.id}: ${requirement}を再検証できませんでした (${message})`);
       }
       sourceFailures.push(makeSourceFailure(document, phase, error));
+      if (!fetchImpl) console.error(`${progress} omitted ${sourceFailures.at(-1).reasonCode}`);
     }
   }
   return { fetched, sourceFailures };
@@ -408,6 +438,7 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
   const receipt = previousReceiptById.get(document.id);
   const records = previousRecords.filter((record) => record.datasetId === document.id);
   if (!receipt) return null;
+  assertCarryForwardEvidenceReceipt(document, receipt);
   if (receipt.id !== document.id
     || receipt.url !== document.url
     || (receipt.transportUrl ?? document.url) !== document.url
@@ -418,7 +449,7 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
     || receipt.category !== document.category
     || receipt.kind !== document.kind
     || receipt.fiscalYear !== document.fiscalYear
-    || receipt.format !== (document.format === "html" ? "html" : "xlsx")
+    || receipt.format !== sourceFormat(document)
     || receipt.records !== records.length
     || receipt.archiveProvider
     || receipt.fallbackUsed
@@ -541,11 +572,75 @@ function assertArchiveRecordCount(document, records) {
   }
 }
 
+function validateEvidenceReceipt(document) {
+  const receipt = document.evidenceReceipt;
+  if (!receipt) return null;
+  const expectedKeys = ["expectedBytes", "expectedMagic", "expectedRecordCount", "expectedSha256"];
+  if (JSON.stringify(Object.keys(receipt).sort()) !== JSON.stringify(expectedKeys)
+    || typeof receipt.expectedMagic !== "string" || !receipt.expectedMagic
+    || !Number.isSafeInteger(receipt.expectedBytes) || receipt.expectedBytes < 500 || receipt.expectedBytes > 10_000_000
+    || typeof receipt.expectedSha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.expectedSha256)
+    || !Number.isSafeInteger(receipt.expectedRecordCount) || receipt.expectedRecordCount < 0) {
+    throw new Error(`${document.id}: 公式資料の完全なevidence receipt定義がありません`);
+  }
+  const format = sourceFormat(document);
+  const allowedMagic = format === "xlsx" ? ["504b0304"] : format === "pdf" ? ["%PDF-"] : ["html"];
+  if (!allowedMagic.includes(receipt.expectedMagic)) {
+    throw new Error(`${document.id}: evidence receiptのmagicと資料形式が一致しません`);
+  }
+  return receipt;
+}
+
+export function assertOfficialEvidenceSourceReceipt(document, source) {
+  const receipt = validateEvidenceReceipt(document);
+  if (!receipt) return;
+  const magicMatches = receipt.expectedMagic === "html"
+    ? /<!doctype\s+html|<html\b/i.test(source.buffer.subarray(0, Math.min(source.buffer.length, 16_384)).toString("latin1"))
+    : receipt.expectedMagic === "%PDF-"
+      ? source.buffer.subarray(0, 5).toString("ascii") === receipt.expectedMagic
+      : source.buffer.subarray(0, 4).toString("hex") === receipt.expectedMagic;
+  if (!magicMatches) throw new Error(`${document.id}: 応答magicがevidence receiptと一致しません`);
+  if (source.bytes !== receipt.expectedBytes || source.buffer.length !== receipt.expectedBytes) {
+    throw new Error(`${document.id}: 応答バイト数がevidence receiptと一致しません (${source.bytes}/${receipt.expectedBytes})`);
+  }
+  if (source.sha256 !== receipt.expectedSha256 || sha256(source.buffer) !== receipt.expectedSha256) {
+    throw new Error(`${document.id}: 応答SHA-256がevidence receiptと一致しません`);
+  }
+}
+
+export function assertOfficialEvidenceRecordCount(document, records) {
+  const receipt = validateEvidenceReceipt(document);
+  if (receipt && records.length !== receipt.expectedRecordCount) {
+    throw new Error(`${document.id}: 明細数がevidence receiptと一致しません (${records.length}/${receipt.expectedRecordCount})`);
+  }
+}
+
+function assertCarryForwardEvidenceReceipt(document, priorReceipt) {
+  const receipt = validateEvidenceReceipt(document);
+  if (!receipt) return;
+  if (priorReceipt.bytes !== receipt.expectedBytes
+    || priorReceipt.sha256 !== receipt.expectedSha256
+    || priorReceipt.records !== receipt.expectedRecordCount
+    || priorReceipt.evidenceExpectedMagic !== receipt.expectedMagic
+    || priorReceipt.evidenceExpectedBytes !== receipt.expectedBytes
+    || priorReceipt.evidenceExpectedSha256 !== receipt.expectedSha256
+    || priorReceipt.evidenceExpectedRecordCount !== receipt.expectedRecordCount
+    || priorReceipt.evidenceVerified !== true) {
+    throw new Error(`${document.id}: 前回manifestのevidence receipt照合結果が資料定義と一致しません`);
+  }
+}
+
 async function fetchDocument(document, fetchImpl) {
   const localSourceDirectory = process.env.OFFICIAL_SOURCE_DIRECTORY?.trim();
   if (localSourceDirectory) {
     const directoryUrl = pathToFileURL(`${localSourceDirectory.replace(/\/$/, "")}/`);
-    const buffer = await readFile(new URL(`${document.id}.${document.format === "html" ? "html" : "xlsx"}`, directoryUrl));
+    const buffer = await readFile(new URL(`${document.id}.${sourceFormat(document)}`, directoryUrl));
+    return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
+  }
+  const evidenceDirectory = process.env.OFFICIAL_EVIDENCE_DIRECTORY?.trim();
+  if (evidenceDirectory && document.evidenceReceipt) {
+    const directoryUrl = pathToFileURL(`${evidenceDirectory.replace(/\/$/, "")}/`);
+    const buffer = await readFile(new URL(`${document.id}.${sourceFormat(document)}`, directoryUrl));
     return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
   }
   const attempts = isArchivedDocument(document) ? 1 : LIVE_FETCH_ATTEMPTS;
@@ -584,9 +679,9 @@ async function fetchDocumentOnce(document, fetchImpl) {
     if (status >= 300 && status < 400) {
       throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${status}`);
     }
-    if (status < 200 || status >= 300) {
+    if (status !== 200) {
       const error = new Error(`${document.id}: HTTP ${status}`);
-      if (status === 408 || status === 429 || status >= 500) throw markRetryable(error);
+      if (status === 202 || status === 204 || status === 408 || status === 429 || status >= 500) throw markRetryable(error);
       throw error;
     }
     if (buffer.length < 500) {
@@ -613,9 +708,9 @@ async function fetchDocumentOnce(document, fetchImpl) {
     if (response.status >= 300 && response.status < 400) {
       throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${response.status}`);
     }
-    if (!response.ok) {
+    if (response.status !== 200) {
       const error = new Error(`${document.id}: HTTP ${response.status}`);
-      if (response.status === 408 || response.status === 429 || response.status >= 500) throw markRetryable(error);
+      if (response.status === 202 || response.status === 204 || response.status === 408 || response.status === 429 || response.status >= 500) throw markRetryable(error);
       throw error;
     }
     const contentLength = Number(response.headers.get("content-length"));
@@ -678,7 +773,7 @@ function isFallbackEligibleFetchError(error) {
 
 function fetchFailureReasonCode(error) {
   if (/\(0\)$/.test(error?.message ?? "")) return "empty_response";
-  if (/HTTP (?:408|429|5\d\d)$/.test(error?.message ?? "")) return "transient_http";
+  if (/HTTP (?:202|204|408|429|5\d\d)$/.test(error?.message ?? "")) return "transient_http";
   return "fetch_failed";
 }
 
@@ -783,7 +878,7 @@ function parseContractRows(worksheet, header, document) {
     const organization = valueAt(row, header.columns, "契約の相手方の商号又は名称");
     const dateRaw = valueAt(row, header.columns, "契約を締結した日");
     if (
-      normalizeHeader(organization) === "契約の相手方の商号又は名称"
+      ["契約の相手方の商号又は名称", "契約の相手方の商号または名称"].includes(normalizeHeader(organization))
       && normalizeHeader(dateRaw) === "契約を締結した日"
     ) continue;
     const rowValues = officialRowValues(row);
@@ -870,7 +965,7 @@ function officialRowValues(row) {
   return values;
 }
 
-function normalizeSmeaRecord(record, document) {
+function normalizeHtmlRecord(record, document) {
   const sourceKey = record.sourceKey;
   const organization = normalizeText(record.organization);
   const corporateNumberRaw = normalizeText(record.corporateNumberRaw);
@@ -883,7 +978,7 @@ function normalizeSmeaRecord(record, document) {
     datasetId: document.id,
     category: document.category,
     kind: document.kind,
-    amountStage: document.category === "contract_result" ? "契約金額欄の掲載値" : "交付決定額欄の掲載値",
+    amountStage: document.amountStage ?? (document.category === "contract_result" ? "契約金額欄の掲載値" : "交付決定額欄の掲載値"),
     executorId: document.executorId,
     executorName: document.executorName,
     fiscalYear: document.fiscalYear,
@@ -1011,13 +1106,13 @@ function makeSourceFailure(document, phase, error) {
   const message = error instanceof Error ? error.message : "";
   const reasonCode = phase === "fetch"
     ? (/ファイルサイズが不正です \(0\)/.test(message) ? "empty_response" : "fetch_failed")
-    : "parse_failed";
+    : phase === "evidence" ? "evidence_mismatch" : "parse_failed";
   return {
     id: document.id,
     url: document.url,
     originalUrl: document.originalUrl ?? document.url,
     sourcePageUrl: document.sourcePageUrl,
-    format: document.format === "html" ? "html" : "xlsx",
+    format: sourceFormat(document),
     discoveryStatus: document.discoveryStatus ?? "linked_from_official_index",
     archiveProvider: document.archiveProvider ?? null,
     executorId: document.executorId,
@@ -1108,8 +1203,8 @@ function coverageStatus(documents, category) {
   const selected = documents.filter((document) => document.category === category);
   if (!selected.length) return "明細未収録";
   const years = [...new Set(selected.map((document) => document.fiscalYear))].sort((a, b) => a - b);
-  const formats = [...new Set(selected.map((document) => (document.format === "html" ? "HTML" : "XLSX")))];
-  return `${years[0]}${years.length > 1 ? `～${years.at(-1)}` : ""}年度／${selected.length}公式${formats.join("・")}資料を収録（全年度・全区分の完全収録ではありません）`;
+  const formats = [...new Set(selected.map((document) => sourceFormat(document).toUpperCase()))];
+  return `${years.join("・")}年度／${selected.length}公式${formats.join("・")}資料を収録（全年度・全区分の完全収録ではありません）`;
 }
 
 async function removeObsoleteYearFiles(expectedFilenames) {
@@ -1131,6 +1226,12 @@ async function atomicWrite(url, contents) {
   const temporary = new URL(`${fileURLToPath(url)}.tmp`, "file:");
   await writeFile(temporary, contents);
   await rename(temporary, url);
+}
+
+function sourceFormat(document) {
+  if (document.format === "html") return "html";
+  if (document.format === "pdf") return "pdf";
+  return "xlsx";
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;

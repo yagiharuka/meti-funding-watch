@@ -140,7 +140,7 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.match(publicUi, /公式資料の明細検索/);
   assert.match(publicUi, /交付先・契約相手、法人番号、事業名で検索/);
   assert.match(publicUi, /13執行機関・全年度・全公表区分の完全収録ではなく/);
-  assert.match(publicUi, /公式HTMLまたはXLSX/);
+  assert.match(publicUi, /公式HTML・XLSX・文字PDF/);
   assert.match(publicUi, /契約額と交付決定額は段階が異なり/);
   assert.match(publicUi, /事業者名・事業計画名/);
   assert.match(publicUi, /すべての補助金/);

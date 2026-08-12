@@ -38,7 +38,7 @@ jobs:
       refresh_outcome: ${{ steps.refresh.outcome }}
       official_refresh_outcome: ${{ steps.official_refresh.outcome }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
     steps:
@@ -61,6 +61,7 @@ jobs:
       - name: Refresh official detail data
         id: official_refresh
         continue-on-error: true
+        timeout-minutes: 20
         run: npm run update:official
 
       - name: Preserve last verified official detail data after a source failure

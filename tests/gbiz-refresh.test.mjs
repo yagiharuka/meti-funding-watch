@@ -152,6 +152,8 @@ test("rejects identity changes and corrections above the automatic limit", () =>
 test("workflow publishes only verified prior data with an explicit failure status", async () => {
   const workflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
   assert.match(workflow, /- name: Refresh official detail data[\s\S]*?id: official_refresh[\s\S]*?run: npm run update:official/);
+  assert.match(workflow, /jobs:[\s\S]*?update:[\s\S]*?timeout-minutes: 60/);
+  assert.match(workflow, /- name: Refresh official detail data[\s\S]*?id: official_refresh[\s\S]*?continue-on-error: true[\s\S]*?timeout-minutes: 20[\s\S]*?run: npm run update:official/);
   assert.match(workflow, /Preserve last verified official detail data after a source failure[\s\S]*?git restore --source=HEAD -- data\/official/);
   assert.match(workflow, /- name: Refresh Gbiz public data[\s\S]*?id: refresh[\s\S]*?run: npm run update:data/);
   assert.ok(

@@ -3,11 +3,9 @@
   "asOf": "2026-08-12",
   "collectionStatus": {
     "registeredEndpoints": 26,
-    "searchableSeriesCells": 4,
     "fullyReconciledCells": 0,
-    "searchableExecutors": ["smea", "jpo"],
     "status": "partial_detail",
-    "note": "中小企業庁・特許庁の公式HTML・XLSXを年度・区分ごとに明細検索します。掲載行数と対象年度は公式資料manifestから表示し、他の機関・未登録年度・未登録区分は未収録のまま明示します。"
+    "note": "検索可能な機関・系列・掲載行数と対象年度は、検証済み公式資料manifestから表示します。未登録年度・未登録区分は未収録のまま明示します。"
   },
   "series": {
     "contracts": {

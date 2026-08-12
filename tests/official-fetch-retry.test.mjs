@@ -154,6 +154,46 @@ test("stops after three failed live response bodies", async () => {
   assert.equal(result.sourceFailures[0].reasonCode, "fetch_failed");
 });
 
+test("treats HTTP 202 WAF-like responses as transient and carries forward a published source", async () => {
+  const validBytes = await grantWorkbookBytes();
+  const document = grantDocument({
+    id: "waf-202-carry-forward-fixture",
+    sourcePageUrl: "https://www.jpo.go.jp/example/index.html",
+    url: "https://www.jpo.go.jp/example/live.xlsx",
+  });
+  const baseline = (await fetchOfficialDocuments([document], [], async () => new Response(validBytes))).fetched[0].records;
+  const previousReceipt = {
+    id: document.id,
+    url: document.url,
+    originalUrl: document.url,
+    sourcePageUrl: document.sourcePageUrl,
+    format: "xlsx",
+    executorId: document.executorId,
+    category: document.category,
+    kind: document.kind,
+    fiscalYear: document.fiscalYear,
+    sha256: await sha256(validBytes),
+    bytes: validBytes.length,
+    records: baseline.length,
+    retrievedAt: "2026-08-11T00:00:00.000Z",
+  };
+  let calls = 0;
+  const result = await fetchOfficialDocuments(
+    [document], baseline, async () => {
+      calls += 1;
+      return new Response("AWS WAF challenge".padEnd(600), { status: 202 });
+    }, [document.id], [previousReceipt],
+  );
+  assert.equal(calls, 3);
+  assert.equal(result.sourceFailures.length, 0);
+  assert.equal(result.fetched[0].carryForward.primaryFailureReasonCode, "transient_http");
+
+  const firstRun = await fetchOfficialDocuments([document], [], async () =>
+    new Response("AWS WAF challenge".padEnd(600), { status: 202 }));
+  assert.equal(firstRun.fetched.length, 0);
+  assert.equal(firstRun.sourceFailures[0].reasonCode, "fetch_failed");
+});
+
 test("uses an exact verified WARP fallback only after transient live exhaustion and exact baseline equality", async () => {
   const validBytes = await grantWorkbookBytes();
   const sha = await sha256(validBytes);
