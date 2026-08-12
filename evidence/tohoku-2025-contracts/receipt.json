@@ -1,0 +1,750 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-13",
+  "index": {
+    "file": "index.html",
+    "url": "https://warp.ndl.go.jp/20260613/20260601111544/https://www.tohoku.meti.go.jp/kaikei/keiyaku/keiyaku.html",
+    "originalUrl": "https://www.tohoku.meti.go.jp/kaikei/keiyaku/keiyaku.html",
+    "bytes": 51175,
+    "sha256": "25a15d96b581d663a42aad2b2d8e72f821c49c4932aa5828ccc00647b736ccfc",
+    "fiscalYear2025Hrefs": [
+      "pdf/2025/kyoso_itaku_6.pdf",
+      "pdf/2025/kyoso_itaku_5.pdf",
+      "pdf/2025/kyoso_itaku_4.pdf",
+      "pdf/2025/kyoso_itaku_3.pdf",
+      "pdf/2025/kyoso_itaku_2.pdf",
+      "pdf/2025/kyoso_itaku_1.pdf",
+      "pdf/2025/kyoso_bupin_6.pdf",
+      "pdf/2025/kyoso_bupin_5.pdf",
+      "pdf/2025/kyoso_bupin_4.pdf",
+      "pdf/2025/kyoso_bupin_3.pdf",
+      "pdf/2025/kyoso_bupin_2.pdf",
+      "pdf/2025/kyoso_bupin_1.pdf",
+      "pdf/2025/zuii_itaku_5.pdf",
+      "pdf/2025/zuii_itaku_4.pdf",
+      "pdf/2025/zuii_itaku_3.pdf",
+      "pdf/2025/zuii_itaku_2.pdf",
+      "pdf/2025/zuii_itaku_1.pdf",
+      "pdf/2025/zuii_bupin_1.pdf"
+    ]
+  },
+  "documents": [
+    {
+      "id": "tohoku-2025-competitive-goods-1",
+      "file": "kyoso_bupin_1.pdf",
+      "method": "competitive",
+      "kind": "goods",
+      "sequence": 1,
+      "bytes": 78711,
+      "sha256": "eb9d89f59027013d4ea6af08446198cd21b309e182af5204c238cce098153a7a",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        3
+      ],
+      "rows": 3,
+      "positionedTextItems": 93,
+      "headerAnchors": [
+        0.121169,
+        0.209106,
+        0.28209,
+        0.352251,
+        0.432544,
+        0.518632,
+        0.608384,
+        0.656972,
+        0.691851,
+        0.724362,
+        0.755007,
+        0.795128,
+        0.83162,
+        0.864079,
+        0.894355
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-goods-2",
+      "file": "kyoso_bupin_2.pdf",
+      "method": "competitive",
+      "kind": "goods",
+      "sequence": 2,
+      "bytes": 83349,
+      "sha256": "d37fe39fd3f7118113b74a41a84908df0229dc962659b67a08b233df47354234",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        3
+      ],
+      "rows": 3,
+      "positionedTextItems": 82,
+      "headerAnchors": [
+        0.106002,
+        0.205256,
+        0.285809,
+        0.365115,
+        0.444385,
+        0.530522,
+        0.62462,
+        0.678227,
+        0.719608,
+        0.754824,
+        0.783623,
+        0.81285,
+        0.843218,
+        0.879859,
+        0.9141
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-goods-3",
+      "file": "kyoso_bupin_3.pdf",
+      "method": "competitive",
+      "kind": "goods",
+      "sequence": 3,
+      "bytes": 86511,
+      "sha256": "d1c9482f19443d8762b841926d7132f08073316f91f53e55c2c7902b7cc29ac0",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        3
+      ],
+      "rows": 3,
+      "positionedTextItems": 84,
+      "headerAnchors": [
+        0.107927,
+        0.207181,
+        0.282601,
+        0.373028,
+        0.463561,
+        0.553975,
+        0.653776,
+        0.70111,
+        0.73579,
+        0.768439,
+        0.796669,
+        0.822759,
+        0.854125,
+        0.89136,
+        0.92016
+      ],
+      "publicInterestHeader": "公益法人の区",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-goods-4",
+      "file": "kyoso_bupin_4.pdf",
+      "method": "competitive",
+      "kind": "goods",
+      "sequence": 4,
+      "bytes": 67758,
+      "sha256": "42c920d0500ec5c23370fd4415cd933897c00879810175aa283ae9fdd4a29d7a",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        1
+      ],
+      "rows": 1,
+      "positionedTextItems": 50,
+      "headerAnchors": [
+        0.141129,
+        0.249429,
+        0.329267,
+        0.38456,
+        0.437382,
+        0.517624,
+        0.612819,
+        0.666448,
+        0.704351,
+        0.739886,
+        0.768313,
+        0.795531,
+        0.821337,
+        0.851579,
+        0.883266
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区"
+    },
+    {
+      "id": "tohoku-2025-competitive-goods-5",
+      "file": "kyoso_bupin_5.pdf",
+      "method": "competitive",
+      "kind": "goods",
+      "sequence": 5,
+      "bytes": 76399,
+      "sha256": "50cd719b0779ae3a5b23a2b5acc298b19a1f477173a3b7b6f788b39e3c1e6381",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        2
+      ],
+      "rows": 2,
+      "positionedTextItems": 66,
+      "headerAnchors": [
+        0.131048,
+        0.229872,
+        0.310114,
+        0.37589,
+        0.441818,
+        0.530763,
+        0.626529,
+        0.67411,
+        0.707023,
+        0.738071,
+        0.766499,
+        0.795128,
+        0.822144,
+        0.852386,
+        0.883266
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区"
+    },
+    {
+      "id": "tohoku-2025-competitive-goods-6",
+      "file": "kyoso_bupin_6.pdf",
+      "method": "competitive",
+      "kind": "goods",
+      "sequence": 6,
+      "bytes": 84116,
+      "sha256": "72b06fed34be60719787773803b06a4a734a80a3012466170b2bbc876f44b3f5",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        2
+      ],
+      "rows": 2,
+      "positionedTextItems": 72,
+      "headerAnchors": [
+        0.131048,
+        0.227453,
+        0.304872,
+        0.395245,
+        0.483149,
+        0.558182,
+        0.642456,
+        0.69286,
+        0.729603,
+        0.760652,
+        0.78787,
+        0.81287,
+        0.838071,
+        0.86912,
+        0.898589
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-commission-1",
+      "file": "kyoso_itaku_1.pdf",
+      "method": "competitive",
+      "kind": "commission",
+      "sequence": 1,
+      "bytes": 74427,
+      "sha256": "222880d4a5731e1b52cd8069dda97bc5463ce11e1a28faaf2780d01c99d1f46a",
+      "pages": 1,
+      "pageSize": {
+        "width": 1238.29,
+        "height": 875.29,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        1
+      ],
+      "rows": 1,
+      "positionedTextItems": 53,
+      "headerAnchors": [
+        0.100545,
+        0.195045,
+        0.269311,
+        0.339851,
+        0.42153,
+        0.499357,
+        0.581731,
+        0.6369,
+        0.676947,
+        0.712432,
+        0.746082,
+        0.776441,
+        0.804938,
+        0.853108,
+        0.90158
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-commission-2",
+      "file": "kyoso_itaku_2.pdf",
+      "method": "competitive",
+      "kind": "commission",
+      "sequence": 2,
+      "bytes": 68462,
+      "sha256": "59cf8682c12b9399b54e541a09215056376ee4a55607c1d8c6ea9204a0b38749",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        1
+      ],
+      "rows": 1,
+      "positionedTextItems": 51,
+      "headerAnchors": [
+        0.105361,
+        0.211743,
+        0.297001,
+        0.372172,
+        0.450017,
+        0.542712,
+        0.647645,
+        0.703141,
+        0.739497,
+        0.771291,
+        0.79952,
+        0.825611,
+        0.850846,
+        0.882948,
+        0.914742
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-commission-3",
+      "file": "kyoso_itaku_3.pdf",
+      "method": "competitive",
+      "kind": "commission",
+      "sequence": 3,
+      "bytes": 84425,
+      "sha256": "ef303f5f9418340529c27dd5fc28c434f61875ca875e9a73960756ec42be418d",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        3
+      ],
+      "rows": 3,
+      "positionedTextItems": 93,
+      "headerAnchors": [
+        0.105004,
+        0.19385,
+        0.26314,
+        0.347115,
+        0.432552,
+        0.522681,
+        0.617063,
+        0.66397,
+        0.702607,
+        0.737715,
+        0.767085,
+        0.797168,
+        0.835662,
+        0.880144,
+        0.915098
+      ],
+      "publicInterestHeader": "公益法人の区分",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-commission-4",
+      "file": "kyoso_itaku_4.pdf",
+      "method": "competitive",
+      "kind": "commission",
+      "sequence": 4,
+      "bytes": 84958,
+      "sha256": "984e0d51662ffbc2d762d7e395b299ef8e9e69651f73a91a418a7d023dbe7559",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        2
+      ],
+      "rows": 2,
+      "positionedTextItems": 75,
+      "headerAnchors": [
+        0.133266,
+        0.237534,
+        0.317372,
+        0.386979,
+        0.45835,
+        0.53661,
+        0.625924,
+        0.677739,
+        0.715894,
+        0.750974,
+        0.781015,
+        0.808434,
+        0.833837,
+        0.863676,
+        0.894153
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区"
+    },
+    {
+      "id": "tohoku-2025-competitive-commission-5",
+      "file": "kyoso_itaku_5.pdf",
+      "method": "competitive",
+      "kind": "commission",
+      "sequence": 5,
+      "bytes": 88400,
+      "sha256": "a719b9fca1cc9ccbb84d04eee6af42a307958d51d8a9275c1531171c09d29a2e",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        4
+      ],
+      "rows": 4,
+      "positionedTextItems": 106,
+      "headerAnchors": [
+        0.12994,
+        0.23461,
+        0.321304,
+        0.38587,
+        0.446959,
+        0.532073,
+        0.629452,
+        0.680662,
+        0.718011,
+        0.751478,
+        0.779301,
+        0.803696,
+        0.827688,
+        0.85914,
+        0.889214
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-competitive-commission-6",
+      "file": "kyoso_itaku_6.pdf",
+      "method": "competitive",
+      "kind": "commission",
+      "sequence": 6,
+      "bytes": 92693,
+      "sha256": "8aff1c63783db33d3a92ec63bf2140322eae501d8078737c2eb1456a84fd6777",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        4
+      ],
+      "rows": 4,
+      "positionedTextItems": 105,
+      "headerAnchors": [
+        0.131855,
+        0.226848,
+        0.30084,
+        0.378713,
+        0.456737,
+        0.539029,
+        0.627739,
+        0.675118,
+        0.712063,
+        0.745531,
+        0.773353,
+        0.799563,
+        0.826378,
+        0.856418,
+        0.884879
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区"
+    },
+    {
+      "id": "tohoku-2025-discretionary-goods-1",
+      "file": "zuii_bupin_1.pdf",
+      "method": "discretionary",
+      "kind": "goods",
+      "sequence": 1,
+      "bytes": 83749,
+      "sha256": "5c24251a7b5fbc2a0e04e02276c967e260d5ce4bf5caa901a73c9dcf3abcbe7c",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        1
+      ],
+      "rows": 1,
+      "positionedTextItems": 67,
+      "headerAnchors": [
+        0.099088,
+        0.195775,
+        0.275615,
+        0.32908,
+        0.386144,
+        0.442603,
+        0.527433,
+        0.59689,
+        0.63182,
+        0.662758,
+        0.690987,
+        0.722816,
+        0.795813,
+        0.865388,
+        0.893784,
+        0.922441
+      ],
+      "publicInterestHeader": "公益法",
+      "jurisdictionHeader": "所管の区"
+    },
+    {
+      "id": "tohoku-2025-discretionary-commission-1",
+      "file": "zuii_itaku_1.pdf",
+      "method": "discretionary",
+      "kind": "commission",
+      "sequence": 1,
+      "bytes": 142086,
+      "sha256": "9728c8e4bef8796cafe5a4df73a36739bc2d45057b55bc53212a9b119076d7f2",
+      "pages": 3,
+      "pageSize": {
+        "width": 1451.79,
+        "height": 1026.21,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        8,
+        9,
+        5
+      ],
+      "rows": 22,
+      "positionedTextItems": 536,
+      "headerAnchors": [
+        0.110233,
+        0.208579,
+        0.273157,
+        0.338585,
+        0.410554,
+        0.47598,
+        0.584446,
+        0.668257,
+        0.70446,
+        0.732393,
+        0.755335,
+        0.781427,
+        0.80423,
+        0.835729,
+        0.873492,
+        0.90044
+      ],
+      "publicInterestHeader": "公益法人の区分",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-discretionary-commission-2",
+      "file": "zuii_itaku_2.pdf",
+      "method": "discretionary",
+      "kind": "commission",
+      "sequence": 2,
+      "bytes": 85451,
+      "sha256": "7cb785031cea81bac8d64fd2b81169502b6575cf2cb3c233c167d9f5da8789fb",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        1
+      ],
+      "rows": 1,
+      "positionedTextItems": 64,
+      "headerAnchors": [
+        0.106858,
+        0.199696,
+        0.269984,
+        0.330149,
+        0.390493,
+        0.464345,
+        0.581563,
+        0.664683,
+        0.698187,
+        0.729018,
+        0.758673,
+        0.790609,
+        0.818553,
+        0.849064,
+        0.884731,
+        0.91795
+      ],
+      "publicInterestHeader": "公益法人の",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-discretionary-commission-3",
+      "file": "zuii_itaku_3.pdf",
+      "method": "discretionary",
+      "kind": "commission",
+      "sequence": 3,
+      "bytes": 101484,
+      "sha256": "30cadcf10a4ed8c6c3c9c3c3ff53f799467f6a30709555432237e00053dc3ee5",
+      "pages": 1,
+      "pageSize": {
+        "width": 841.68,
+        "height": 595.2,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        3
+      ],
+      "rows": 3,
+      "positionedTextItems": 118,
+      "headerAnchors": [
+        0.104434,
+        0.197415,
+        0.266134,
+        0.345262,
+        0.425566,
+        0.503838,
+        0.621768,
+        0.695193,
+        0.725311,
+        0.753826,
+        0.78291,
+        0.814134,
+        0.838799,
+        0.86218,
+        0.890861,
+        0.918805
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-discretionary-commission-4",
+      "file": "zuii_itaku_4.pdf",
+      "method": "discretionary",
+      "kind": "commission",
+      "sequence": 4,
+      "bytes": 91977,
+      "sha256": "13aa70ec23f76bf81f62252d72fe3d6b14edd9870919cc725cab9d2061cd5ce4",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        1
+      ],
+      "rows": 1,
+      "positionedTextItems": 68,
+      "headerAnchors": [
+        0.129637,
+        0.223824,
+        0.293985,
+        0.343179,
+        0.396052,
+        0.464802,
+        0.5729,
+        0.649311,
+        0.694271,
+        0.737466,
+        0.763878,
+        0.7917,
+        0.813878,
+        0.836862,
+        0.867103,
+        0.893548
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区分"
+    },
+    {
+      "id": "tohoku-2025-discretionary-commission-5",
+      "file": "zuii_itaku_5.pdf",
+      "method": "discretionary",
+      "kind": "commission",
+      "sequence": 5,
+      "bytes": 93413,
+      "sha256": "8071d6c1519e872be9af6755836b74011b727d1ada0c17630987e2156856b448",
+      "pages": 1,
+      "pageSize": {
+        "width": 595.2,
+        "height": 841.68,
+        "tolerance": 0.2
+      },
+      "rowsPerPage": [
+        2
+      ],
+      "rows": 2,
+      "positionedTextItems": 83,
+      "headerAnchors": [
+        0.131048,
+        0.225034,
+        0.294792,
+        0.35709,
+        0.42085,
+        0.483753,
+        0.585198,
+        0.659997,
+        0.692053,
+        0.722144,
+        0.748757,
+        0.777587,
+        0.801781,
+        0.825168,
+        0.853394,
+        0.881048
+      ],
+      "publicInterestHeader": "公益法人",
+      "jurisdictionHeader": "所管の区"
+    }
+  ],
+  "totals": {
+    "documents": 18,
+    "bytes": 1568369,
+    "pages": 20,
+    "rows": 59,
+    "positionedTextItems": 1866
+  }
+}

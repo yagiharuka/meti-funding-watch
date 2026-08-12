@@ -1,3 +1,5 @@
+import { TOHOKU_2025_ADDITIONAL_CONTRACT_DOCUMENTS } from "./official-tohoku-contract-sources.mjs";
+
 const TOHOKU_GRANT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/koho/koshin/kobo/kofu_kettei.html";
 const TOHOKU_CONTRACT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/kaikei/keiyaku/keiyaku.html";
 const TOHOKU_WARP_PREFIX = "https://warp.ndl.go.jp/20260613/20260601111544/";
@@ -420,6 +422,7 @@ const REGIONAL_PDF_DEFINITIONS = [
       expectedPositionedTextItemCount: 53,
     },
   },
+  ...TOHOKU_2025_ADDITIONAL_CONTRACT_DOCUMENTS,
   {
     id: "tohoku-2025-grant-decisions-h1",
     executorId: "tohoku",
@@ -560,9 +563,9 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
     executorId: "tohoku",
     fiscalYear: 2025,
     category: "contract_result",
-    status: "partial_verified_official_file",
-    included: "競争入札（委託費）第1掲載PDF（1行）",
-    missing: "同年度の競争入札（委託費）第2～6掲載PDF、競争入札（物品役務等）第1～6掲載PDF、随意契約（委託費）第1～5掲載PDF、随意契約（物品役務等）第1掲載PDF、および他年度",
+    status: "pilot_fiscal_year_complete",
+    included: "公式目次が列挙する競争入札（委託費・物品役務等）・随意契約（委託費・物品役務等）の18 PDF（59掲載行）",
+    missing: "2024年度以前の契約PDF",
   },
   {
     executorId: "kanto",

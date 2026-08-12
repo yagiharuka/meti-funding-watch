@@ -127,6 +127,9 @@ function validateDocumentDefinition(document) {
     || (schema.bodyMinimumYRatio !== undefined
       && (!Number.isFinite(schema.bodyMinimumYRatio) || schema.bodyMinimumYRatio < 0 || schema.bodyMinimumYRatio >= 0.5))
     || (schema.corporateNumberOmitted !== undefined && typeof schema.corporateNumberOmitted !== "boolean")
+    || (schema.amountMissingSentinels !== undefined
+      && (!Array.isArray(schema.amountMissingSentinels)
+        || schema.amountMissingSentinels.some((value) => typeof value !== "string" || !value.trim())))
     || (schema.cellAssignmentCoordinate !== undefined && !["center", "left"].includes(schema.cellAssignmentCoordinate))
     || (schema.expectedBlankRowsPerPage !== undefined
       && (!Array.isArray(schema.expectedBlankRowsPerPage)
@@ -138,6 +141,7 @@ function validateDocumentDefinition(document) {
     || (schema.normalizeCompatibilityText !== undefined && typeof schema.normalizeCompatibilityText !== "boolean")
     || (schema.recordGranularity !== undefined
       && !["aligned_amount_rows", "date_anchor_rows"].includes(schema.recordGranularity))
+    || (schema.joinDateAnchorFragments !== undefined && typeof schema.joinDateAnchorFragments !== "boolean")
     || (schema.expectedSplitOrdinalFragments !== undefined
       && (!Array.isArray(schema.expectedSplitOrdinalFragments)
         || schema.expectedSplitOrdinalFragments.some((fragment) => !fragment
@@ -369,10 +373,20 @@ function ordinalRowAnchors(items, columns, schema) {
 
 function dateRowAnchors(items, columns, schema, state) {
   const dateColumn = columns.find((column) => column.key === schema.recordMapping.dateColumn);
-  const anchors = items
+  const dateItems = items
     .filter((item) => item.centerY < columns.headerBottom - 0.5)
-    .filter((item) => item.centerX >= dateColumn.left && item.centerX < dateColumn.right)
-    .filter((item) => matchesAllowedDate(compactCell(item.text), schema.allowedDateFormats))
+    .filter((item) => item.centerX >= dateColumn.left && item.centerX < dateColumn.right);
+  const anchors = (schema.joinDateAnchorFragments
+    ? dateItems.filter((item) => {
+      const raw = compactCell(item.text);
+      if (matchesAllowedDate(raw, schema.allowedDateFormats)) return true;
+      if (!/^\d{4}年\d{1,2}月\d{1,2}$/.test(raw)) return false;
+      return dateItems.some((suffix) => compactCell(suffix.text) === "日"
+        && Math.abs(suffix.x - item.x) <= 1
+        && suffix.centerY < item.centerY
+        && item.centerY - suffix.centerY <= Math.max(12, item.height * 1.5));
+    })
+    : dateItems.filter((item) => matchesAllowedDate(compactCell(item.text), schema.allowedDateFormats)))
     .sort((a, b) => b.centerY - a.centerY);
   return anchors.map((anchor) => ({ ...anchor, ordinal: ++state.nextRowNumber }));
 }
@@ -519,7 +533,7 @@ function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffi
   if (date < schema.dateRange.start || date > schema.dateRange.end) {
     throw new Error(`${document.id}/no.${ordinal}: 日付が資料の対象期間外です (${dateRaw})`);
   }
-  const amount = parseStrictAmount(amountRaw, document.id, ordinal);
+  const amount = parseStrictAmount(amountRaw, schema.amountMissingSentinels, document.id, ordinal);
   const corporate = schema.corporateNumberOmitted
     ? { raw: "", numbers: [], anchors: [] }
     : parseCorporateNumbers(corporateNumberCell, schema, document.id, ordinal);
@@ -585,7 +599,8 @@ function matchesAllowedDate(raw, allowedFormats) {
   return allowedFormats.some((format) => DATE_FORMATS[format].test(raw));
 }
 
-function parseStrictAmount(raw, documentId, ordinal) {
+function parseStrictAmount(raw, missingSentinels = [], documentId, ordinal) {
+  if (missingSentinels.map(compactCell).includes(compactCell(raw))) return null;
   if (!/^(?:0|[1-9]\d{0,2}(?:,\d{3})*)$/.test(raw)) {
     throw new Error(`${documentId}/no.${ordinal}: 金額欄の掲載値が不正です (${raw || "空"})`);
   }
