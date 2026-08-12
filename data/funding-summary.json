@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T17:46:32.054Z",
+  "generatedAt": "2026-08-12T17:58:54.372Z",
   "sources": [
     {
       "id": "gbiz",
@@ -9,7 +9,7 @@
       "frequency": "日次確認",
       "lastChecked": "2026-08-13",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-12T17:46:06.125Z",
+      "dashboardCheckedAt": "2026-08-12T17:58:29.088Z",
       "dashboardRecordCount": 69521,
       "dashboardSubsidyCount": 51380,
       "dashboardProcurementCount": 18141,
@@ -26,29 +26,20 @@
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-12T17:46:19.584Z",
+      "csvRetrievedAt": "2026-08-12T17:58:41.986Z",
       "csvSubsidyFileBytes": 175574617,
       "csvProcurementFileBytes": 102365946,
       "csvSubsidySha256": "599e20a666d6f86a7a8b886cd0d1b8a344d71fee17543012337e648c64583393",
       "csvProcurementSha256": "441d001277c8ea0bf943c09f421e7a7dbc4d38aeb01d484443e00d2e28025198",
       "csvTotalSubsidyRows": 545877,
       "csvTotalProcurementRows": 308568,
-      "lastSuccessfulImportAt": "2026-08-12T17:46:32.054Z",
+      "lastSuccessfulImportAt": "2026-08-12T17:58:54.372Z",
       "continuityBaselineRecordCount": 69507,
       "continuityRetainedRecordCount": 69507,
       "continuityRemovedRecordCount": 0,
-      "continuityChangedRecordCount": 1,
+      "continuityChangedRecordCount": 0,
       "continuityChangedRecordLimit": 100,
-      "continuityChangedRecords": [
-        {
-          "key": "subsidy_published\u001f2026_04_27_20260629_00002068",
-          "oldHash": "5c32e66d742a1d88c761762422070cd2b3d3df1c6f21499caa95ea101b2c4445",
-          "newHash": "b64e0db032db5798900563abee2b7c000963a4a8950bf486a7853a0f47f0de17",
-          "changedFields": [
-            "organization"
-          ]
-        }
-      ],
+      "continuityChangedRecords": [],
       "continuityAddedRecordCount": 0,
       "csvSubsidySchemaSha256": "b3f021be2271d0b7404ced03d2fb3c32f4deb54bbc3d67df1ed9a5fd6f53fc49",
       "csvProcurementSchemaSha256": "1cab7eb602079eb5c23531450aea840378124f9c1977c5b750563d6887cc808b",
