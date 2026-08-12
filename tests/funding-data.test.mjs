@@ -27,6 +27,7 @@ const fundingWorkerSource = await readFile(new URL("../app/funding-search.worker
 const adoptionPageSource = await readFile(new URL("../app/adoptions/page.tsx", import.meta.url), "utf8");
 const adoptionSearchSource = await readFile(new URL("../app/adoptions/AdoptionSearch.tsx", import.meta.url), "utf8");
 const adoptionApiSource = await readFile(new URL("../app/api/adoptions/route.ts", import.meta.url), "utf8");
+const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
 const viewTabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const updateSource = await readFile(new URL("../scripts/update-data.mjs", import.meta.url), "utf8");
@@ -465,7 +466,9 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.doesNotMatch(adoptionSearchSource, /法人番号|交付先|受取先|金額列/);
   assert.match(viewTabsSource, /調達（委託を含む）・補助金/);
   assert.doesNotMatch(viewTabsSource, /補助金採択者情報（中小企業庁のみ）|href=.*adoptions\//);
-  assert.match(viewTabsSource, /active === "adoptions" \? "\.\.\/" : "#top"/);
+  assert.match(viewTabsSource, /active === "official"/);
+  assert.match(viewTabsSource, /契約結果・交付決定/);
+  assert.match(officialPageSource, /<ViewTabs active="official"/);
   assert.match(viewTabsSource, /aria-current/);
   assert.doesNotMatch(`${adoptionPageSource}\n${adoptionSearchSource}\n${adoptionApiSource}\n${viewTabsSource}`, /_next\/data|217,?9\d{2}/);
 });

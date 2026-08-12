@@ -156,6 +156,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL("./pages-site/index.html", import.meta.url)),
         adoptions: fileURLToPath(new URL("./pages-site/adoptions/index.html", import.meta.url)),
+        official: fileURLToPath(new URL("./pages-site/official/index.html", import.meta.url)),
       },
     },
   },

@@ -99,21 +99,25 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
 
   const publicIndex = await readFile(new URL("../dist-pages/index.html", import.meta.url), "utf8");
   const adoptionIndex = await readFile(new URL("../dist-pages/adoptions/index.html", import.meta.url), "utf8");
+  const officialIndex = await readFile(new URL("../dist-pages/official/index.html", import.meta.url), "utf8");
   const assetDirectory = new URL("../dist-pages/assets/", import.meta.url);
   const javascriptAssets = (await readdir(assetDirectory))
     .filter((filename) => filename.endsWith(".js"));
   const javascript = (await Promise.all(javascriptAssets.map((filename) =>
     readFile(new URL(filename, assetDirectory), "utf8")))).join("\n");
-  const publicUi = `${publicIndex}\n${adoptionIndex}\n${javascript}`;
+  const publicUi = `${publicIndex}\n${adoptionIndex}\n${officialIndex}\n${javascript}`;
 
   assert.match(publicIndex, /<title>経産省関係の調達（委託を含む）・補助金情報/);
   assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
+  assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\/title>/);
   assert.notEqual(
     publicIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
     adoptionIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
   );
   assert.match(publicUi, /調達（委託を含む）・補助金/);
   assert.match(publicUi, /中小企業庁の補助金採択者情報/);
+  assert.match(publicUi, /執行機関別の公式入口/);
+  assert.match(publicUi, /契約額と交付決定額は段階が異なり/);
   assert.match(publicUi, /事業者名・事業計画名/);
   assert.match(publicUi, /すべての補助金/);
   assert.match(publicUi, /採択掲載行/);

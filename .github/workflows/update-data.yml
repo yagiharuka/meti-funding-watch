@@ -11,6 +11,7 @@ on:
       - "public/**"
       - "scripts/**"
       - "data/source-registry.json"
+      - "data/official-source-registry.json"
       - "tests/**"
       - "package.json"
       - "package-lock.json"
