@@ -31,6 +31,11 @@ const FETCH_HEADERS = {
 const LIVE_FETCH_ATTEMPTS = 3;
 const LIVE_FETCH_BACKOFF_MS = [250, 500];
 export const OFFICIAL_PARSER_REVISION = "official-parser-2026-08-12-regional-pdf-v2";
+export const OFFICIAL_PARSER_MIGRATION = Object.freeze({
+  fromRevision: "official-parser-2026-08-12-archive-carry-v1",
+  toRevision: OFFICIAL_PARSER_REVISION,
+  previousManifestSha256: "14be720b3390b9e77d89ba4e2098aeb2d7fadd71d27ccf893f6276dd6412e0e1",
+});
 
 class OfficialArchiveUnavailableError extends Error {
   constructor(document, status) {
@@ -252,6 +257,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
     fetchImpl,
     previous.sourceDocumentIds,
     previous.sourceDocuments,
+    previous.manifestSha256,
   );
   const candidateRecords = fetched.flatMap((item) => item.records);
   if (!candidateRecords.length) throw new Error("検証できた公式資料明細が0行です");
@@ -387,6 +393,7 @@ export async function fetchOfficialDocuments(
   fetchImpl = null,
   previousSourceDocumentIds = [],
   previousSourceDocuments = [],
+  previousManifestSha256 = null,
 ) {
   if (!Array.isArray(documents) || !Array.isArray(previousRecords)
     || !Array.isArray(previousSourceDocumentIds) || !Array.isArray(previousSourceDocuments)) {
@@ -439,7 +446,14 @@ export async function fetchOfficialDocuments(
       fetched.push({ document, ...source, records });
       if (!fetchImpl) console.error(`${progress} verified ${records.length} rows${source.fallback ? " (fallback)" : ""}`);
     } catch (error) {
-      const carryForward = maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById, phase);
+      const carryForward = maybeCarryForwardDocument(
+        document,
+        error,
+        previousRecords,
+        previousReceiptById,
+        phase,
+        previousManifestSha256,
+      );
       if (carryForward) {
         fetched.push(carryForward);
         if (!fetchImpl) console.error(`${progress} carry-forward ${carryForward.records.length} rows`);
@@ -461,7 +475,14 @@ export async function fetchOfficialDocuments(
   return { fetched, sourceFailures };
 }
 
-function maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById, phase) {
+function maybeCarryForwardDocument(
+  document,
+  error,
+  previousRecords,
+  previousReceiptById,
+  phase,
+  previousManifestSha256,
+) {
   const archiveCarryForward = phase === "fetch"
     && isVerifiedWarpArchiveUrl(document)
     && error instanceof OfficialArchiveUnavailableError;
@@ -473,6 +494,13 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
   const records = previousRecords.filter((record) => record.datasetId === document.id);
   if (!receipt) return null;
   assertCarryForwardEvidenceReceipt(document, receipt);
+  const parserDefinitionMatches = receipt.parserRevision === OFFICIAL_PARSER_REVISION
+    && receipt.definitionSha256 === officialDocumentDefinitionSha256(document);
+  const approvedParserMigration = isApprovedOfficialParserMigration(
+    document,
+    receipt,
+    previousManifestSha256,
+  );
   if (receipt.id !== document.id
     || receipt.url !== document.url
     || (receipt.transportUrl ?? document.url) !== document.url
@@ -486,8 +514,7 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
     || receipt.format !== sourceFormat(document)
     || receipt.discoveryStatus !== (document.discoveryStatus ?? "linked_from_official_index")
     || receipt.coverageClaim !== (document.coverageClaim ?? "公式資料に掲載された行")
-    || receipt.parserRevision !== OFFICIAL_PARSER_REVISION
-    || receipt.definitionSha256 !== officialDocumentDefinitionSha256(document)
+    || (!parserDefinitionMatches && !approvedParserMigration)
     || receipt.records !== records.length
     || receipt.fallbackUsed
     || !Number.isSafeInteger(receipt.bytes) || receipt.bytes < 500 || receipt.bytes > 10_000_000
@@ -1230,11 +1257,21 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-export function officialDocumentDefinitionSha256(document) {
+export function officialDocumentDefinitionSha256(document, parserRevision = OFFICIAL_PARSER_REVISION) {
   return sha256(JSON.stringify(canonicalJsonValue({
-    parserRevision: OFFICIAL_PARSER_REVISION,
+    parserRevision,
     document,
   })));
+}
+
+export function isApprovedOfficialParserMigration(document, receipt, previousManifestSha256) {
+  return previousManifestSha256 === OFFICIAL_PARSER_MIGRATION.previousManifestSha256
+    && OFFICIAL_PARSER_REVISION === OFFICIAL_PARSER_MIGRATION.toRevision
+    && receipt.parserRevision === OFFICIAL_PARSER_MIGRATION.fromRevision
+    && receipt.definitionSha256 === officialDocumentDefinitionSha256(
+      document,
+      OFFICIAL_PARSER_MIGRATION.fromRevision,
+    );
 }
 
 function canonicalJsonValue(value) {
@@ -1248,18 +1285,18 @@ function canonicalJsonValue(value) {
   return value;
 }
 
-async function readJsonIfExists(url, fallback) {
+async function readPreviousOfficialState() {
+  let manifestText;
   try {
-    return JSON.parse(await readFile(url, "utf8"));
+    manifestText = await readFile(new URL("manifest.json", DATA_DIRECTORY), "utf8");
   } catch (error) {
-    if (error?.code === "ENOENT") return fallback;
+    if (error?.code === "ENOENT") return { records: [], sourceDocumentIds: [], sourceDocuments: [], manifestSha256: null };
     throw error;
   }
-}
-
-async function readPreviousOfficialState() {
-  const manifest = await readJsonIfExists(new URL("manifest.json", DATA_DIRECTORY), null);
-  if (!manifest?.files || typeof manifest.files !== "object") return { records: [], sourceDocumentIds: [], sourceDocuments: [] };
+  const manifest = JSON.parse(manifestText);
+  if (!manifest?.files || typeof manifest.files !== "object") {
+    return { records: [], sourceDocumentIds: [], sourceDocuments: [], manifestSha256: sha256(manifestText) };
+  }
   const publicFiles = manifest.publicFiles ?? {};
   const yearEntries = Object.entries(manifest.files);
   const yearRecords = await Promise.all(yearEntries.map(async ([year, filename]) => {
@@ -1297,7 +1334,7 @@ async function readPreviousOfficialState() {
   if (sourceDocumentIds.some((id) => typeof id !== "string" || !id) || new Set(sourceDocumentIds).size !== sourceDocumentIds.length) {
     throw new Error("前回の公式資料manifestに不正または重複した資料IDがあります");
   }
-  return { records, sourceDocumentIds, sourceDocuments };
+  return { records, sourceDocumentIds, sourceDocuments, manifestSha256: sha256(manifestText) };
 }
 
 function coverageStatus(documents, category) {

@@ -20,7 +20,9 @@ import {
   assertOfficialEvidenceRecordCount,
   assertOfficialEvidenceSourceReceipt,
   fetchOfficialDocuments,
+  isApprovedOfficialParserMigration,
   OFFICIAL_DOCUMENTS,
+  OFFICIAL_PARSER_MIGRATION,
   OFFICIAL_PARSER_REVISION,
   officialDocumentDefinitionSha256,
 } from "../scripts/update-official-data.mjs";
@@ -97,6 +99,27 @@ test("uses committed bootstrap evidence only before a source has been published"
     if (previous === undefined) delete process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY;
     else process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY = previous;
   }
+});
+
+test("allows the parser revision transition only for the exact previous public manifest and unchanged definition", () => {
+  const document = METI_ANRE_OFFICIAL_DOCUMENTS[0];
+  const receipt = {
+    parserRevision: OFFICIAL_PARSER_MIGRATION.fromRevision,
+    definitionSha256: officialDocumentDefinitionSha256(document, OFFICIAL_PARSER_MIGRATION.fromRevision),
+  };
+  assert.equal(isApprovedOfficialParserMigration(
+    document,
+    receipt,
+    OFFICIAL_PARSER_MIGRATION.previousManifestSha256,
+  ), true);
+  assert.equal(isApprovedOfficialParserMigration(document, receipt, "0".repeat(64)), false);
+  assert.equal(isApprovedOfficialParserMigration(document, {
+    ...receipt,
+    definitionSha256: "0".repeat(64),
+  }, OFFICIAL_PARSER_MIGRATION.previousManifestSha256), false);
+  assert.equal(isApprovedOfficialParserMigration({ ...document, coverageClaim: `${document.coverageClaim} changed` }, receipt,
+    OFFICIAL_PARSER_MIGRATION.previousManifestSha256), false);
+  assert.equal(OFFICIAL_PARSER_MIGRATION.toRevision, OFFICIAL_PARSER_REVISION);
 });
 
 test("replays all 86 new METI and ANRE archive receipts through the production strict parser", { timeout: 30_000 }, async (t) => {
@@ -221,6 +244,25 @@ test("carries forward a published evidence source after repeated HTTP 202", asyn
   assert.equal(result.sourceFailures.length, 0);
   assert.equal(result.fetched[0].carryForward.primaryFailureReasonCode, "transient_http");
   assert.equal(result.fetched[0].records.length, records.length);
+
+  const migrationReceipt = {
+    ...priorReceipt,
+    parserRevision: OFFICIAL_PARSER_MIGRATION.fromRevision,
+    definitionSha256: officialDocumentDefinitionSha256(document, OFFICIAL_PARSER_MIGRATION.fromRevision),
+  };
+  const migrationResult = await fetchOfficialDocuments(
+    [document], records, async () => new Response("AWS WAF challenge".padEnd(600), { status: 202 }),
+    [document.id], [migrationReceipt], OFFICIAL_PARSER_MIGRATION.previousManifestSha256,
+  );
+  assert.equal(migrationResult.sourceFailures.length, 0);
+  assert.equal(migrationResult.fetched[0].records.length, records.length);
+  await assert.rejects(
+    fetchOfficialDocuments(
+      [document], records, async () => new Response("AWS WAF challenge".padEnd(600), { status: 202 }),
+      [document.id], [migrationReceipt], "0".repeat(64),
+    ),
+    /receiptまたは明細が資料定義と一致しません/,
+  );
 });
 
 test("publishes all receipted sources with their exact audit tuple", () => {
