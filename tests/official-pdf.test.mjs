@@ -6,7 +6,6 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 
 import { parseOfficialPdf } from "../scripts/official-pdf.mjs";
 import {
-  KANTO_GRANT_INDEX_RECEIPT,
   REGIONAL_PDF_COVERAGE_GAPS,
   REGIONAL_PDF_DOCUMENTS,
 } from "../scripts/official-regional-pdf-sources.mjs";
@@ -263,17 +262,11 @@ test("registers Tohoku and the eight official-index Kanto FY2025 grant PDFs with
   assert.ok(kanto.every((source) => source.archiveExpectedBytes === source.pdfSchema.expectedBytes));
   assert.ok(kanto.every((source) => source.archiveExpectedSha256 === source.pdfSchema.expectedSha256));
   assert.ok(kanto.every((source) => source.archiveExpectedRecordCount === source.pdfSchema.expectedRecordCount));
-  assert.deepEqual(KANTO_GRANT_INDEX_RECEIPT, {
-    originalUrl: "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html",
-    archiveUrl: "https://warp.ndl.go.jp/20260613/20260601093442/https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html",
-    expectedBytes: 23_677,
-    expectedSha256: "09ea02e5a55136947de3552b193d7465e6e04e6ad1be2e8421288e2a06ce88bb",
-    verifiedAt: "2026-08-12",
-  });
-  assert.ok(kanto.every((source) => source.discoveryReceipt === KANTO_GRANT_INDEX_RECEIPT));
+  assert.ok(kanto.every((source) => source.discoveryStatus === "archived_official_file"));
+  assert.ok(kanto.every((source) => source.discoveryReceipt === undefined));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.missing.includes("2024年度以前")));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.category === "contract_result" && gap.status === "not_ingested"));
-  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "grant_decision" && gap.missing.includes("令和3～6年度")));
+  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "grant_decision" && gap.missing.includes("目次全件性")));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "contract_result" && gap.status === "not_ingested"));
 });
 

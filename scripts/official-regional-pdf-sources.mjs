@@ -3,14 +3,6 @@ const KANTO_GRANT_SOURCE_PAGE = "https://www.kanto.meti.go.jp/johokokai/kofu_ket
 const KANTO_WARP_PREFIX = "https://warp.ndl.go.jp/20260613/20260601093442/";
 const WARP_PROVIDER = "国立国会図書館インターネット資料収集保存事業（WARP）";
 
-export const KANTO_GRANT_INDEX_RECEIPT = Object.freeze({
-  originalUrl: KANTO_GRANT_SOURCE_PAGE,
-  archiveUrl: `${KANTO_WARP_PREFIX}${KANTO_GRANT_SOURCE_PAGE}`,
-  expectedBytes: 23677,
-  expectedSha256: "09ea02e5a55136947de3552b193d7465e6e04e6ad1be2e8421288e2a06ce88bb",
-  verifiedAt: "2026-08-12",
-});
-
 const KANTO_COLUMNS = Object.freeze([
   ["ordinal", ["番号"]],
   ["program", ["事業名"]],
@@ -49,15 +41,14 @@ function makeKantoGrantDocument({
     kind: `補助金等の交付決定（${period}・${accountLabel}）`,
     amountStage: "交付決定額欄の掲載値",
     format: "pdf",
-    discoveryStatus: "official_index_href_replayed_from_warp_and_byte_pinned",
+    discoveryStatus: "archived_official_file",
     verifiedAt: "2026-08-12",
     sourcePageUrl: KANTO_GRANT_SOURCE_PAGE,
-    discoveryReceipt: KANTO_GRANT_INDEX_RECEIPT,
     originalUrl,
     url: `${KANTO_WARP_PREFIX}${originalUrl}`,
     archiveProvider: WARP_PROVIDER,
     archiveVerifiedAt: "2026-08-12",
-    archiveVerification: "WARP保存済み公式indexに掲載されたhrefを起点に原本をFull GETし、PDF magic・byte数・SHA-256・ページ数・掲載番号を照合",
+    archiveVerification: "WARP保存済み公式PDF原本をFull GETし、PDF magic・byte数・SHA-256・ページ数・掲載番号を照合",
     archiveExpectedBytes: expectedBytes,
     archiveExpectedSha256: expectedSha256,
     archiveExpectedRecordCount: expectedRecordCount,
@@ -374,9 +365,9 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
     executorId: "kanto",
     fiscalYear: 2025,
     category: "grant_decision",
-    status: "latest_fiscal_year_official_index_hrefs_complete",
-    included: "公式目次が令和7年度欄に掲げる上期5・下期3 PDF（計284掲載行）",
-    missing: "令和3～6年度の公式目次PDF（33資料）は未取込",
+    status: "verified_archived_official_files",
+    included: "WARP保存済みの令和7年度上期5・下期3公式PDF（計284掲載行）",
+    missing: "その他の年度・資料は未取込（目次全件性は公開ゲートの保証対象外）",
   },
   {
     executorId: "kanto",
