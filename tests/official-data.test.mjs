@@ -145,6 +145,24 @@ test("converts an unformatted Excel serial date without changing the raw evidenc
   assert.equal(parsed[0].dateRaw, "45757");
 });
 
+test("does not silently rewrite an already-published method during parser expansion", async () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("随意契約");
+  sheet.addRow([
+    "物品役務等の名称及び数量", "契約を締結した日", "契約の相手方の商号又は名称",
+    "契約の相手方の法人番号", "随意契約によることとした会計法令の根拠条文及び理由（企画競争または公募）",
+    "契約金額（円）",
+  ]);
+  sheet.addRow(["案件", "2025年4月1日", "法人A", "6010001030403", "長い法令上の理由", 1_000]);
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const parsed = await parseOfficialWorkbook(buffer, {
+    id: "legacy-method", executorId: "jpo", executorName: "特許庁", fiscalYear: 2025,
+    category: "contract_result", kind: "随意契約（物品・役務等）", amountStage: "契約額",
+    preservePublishedMethod: true, sourcePageUrl: "https://example.test/", url: "https://example.test/a.xlsx",
+  });
+  assert.equal(parsed[0].method, "随意契約（物品・役務等）");
+});
+
 test("fails closed when a previously published official row disappears", () => {
   assert.throws(() => assertOfficialContinuity(records, records.slice(1)), /前回明細が消えました/);
   assert.doesNotThrow(() => assertOfficialContinuity(records, records));

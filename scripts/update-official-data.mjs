@@ -96,6 +96,10 @@ export const OFFICIAL_DOCUMENTS = [
     category: "contract_result",
     kind: "随意契約（物品・役務等）",
     amountStage: "契約金額欄の掲載値",
+    // Preserve the already-published normalization. The source's long legal
+    // reason column can be introduced later only through an explicit,
+    // separately reviewed data migration.
+    preservePublishedMethod: true,
     sourcePageUrl: "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/index.html",
     url: "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/document/2025/2025_ukeoi.xlsx",
   },
@@ -503,7 +507,9 @@ function parseContractRows(worksheet, header, document) {
       corporateNumberRaw: valueAt(row, header.columns, "契約の相手方の法人番号"),
       dateRaw,
       amountRaw: valueAt(row, header.columns, "契約金額円"),
-      method: valueAt(row, header.columns, "一般競争入札指名競争入札の別総合評価の実施") || document.kind,
+      method: document.preservePublishedMethod
+        ? document.kind
+        : valueAt(row, header.columns, "一般競争入札指名競争入札の別総合評価の実施") || document.kind,
       notes: valueAt(row, header.columns, "備考"),
     }));
   }
