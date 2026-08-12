@@ -162,6 +162,10 @@ test("workflow publishes only verified prior data with an explicit failure statu
   assert.match(workflow, /Confirm failed refresh did not alter verified data/);
   assert.match(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages data\/official/);
   assert.match(workflow, /PAGES_UPDATE_OUTCOME:/);
+  assert.match(workflow, /PAGES_OFFICIAL_UPDATE_OUTCOME:/);
+  assert.match(workflow, /EXPECTED_OFFICIAL_OUTCOME:/);
+  assert.match(workflow, /PAGES_OFFICIAL_UPDATE_OUTCOME:.*steps\.official_refresh\.outcome == 'success'.*steps\.refresh\.outcome == 'success'/);
+  assert.match(workflow, /UPDATE_PHASE: gbiz-data-refresh/);
   assert.match(workflow, /Verify the published release from the live site/);
   assert.match(workflow, /node scripts\/verify-live-pages\.mjs/);
   assert.match(workflow, /Fail the workflow unless a fresh release was verified/);

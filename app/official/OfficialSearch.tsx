@@ -15,8 +15,11 @@ type OfficialRecord = {
   date: string | null;
   dateRaw: string;
   organization: string;
+  organizations?: string[];
   corporateNumber: string | null;
+  corporateNumbers?: string[];
   corporateNumberRaw: string;
+  multiplePartyListing?: boolean;
   program: string;
   amount: number | null;
   amountRaw: string;
@@ -54,15 +57,19 @@ export default function OfficialSearch() {
   const [executor, setExecutor] = useState("all");
   const [year, setYear] = useState("all");
   const [page, setPage] = useState(0);
+  const [officialUpdateOutcome, setOfficialUpdateOutcome] = useState<"succeeded" | "failed" | "unknown">("unknown");
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     (async () => {
       try {
-        const [manifestResponse, releaseResponse] = await Promise.all([
+        const [manifestResponse, releaseResponse, updateStatus] = await Promise.all([
           fetch("../data/official/manifest.json", { cache: "no-store", signal: controller.signal }),
           fetch("../release.json", { cache: "no-store", signal: controller.signal }),
+          fetch("../update-status.json", { cache: "no-store", signal: controller.signal })
+            .then(async (response) => response.ok ? response.json() : null)
+            .catch(() => null),
         ]);
         if (!manifestResponse.ok || !releaseResponse.ok) throw new Error("公開データの検証情報を取得できません");
         const manifestText = await manifestResponse.text();
@@ -104,6 +111,7 @@ export default function OfficialSearch() {
         if (!active) return;
         setRecords(loaded);
         setGeneratedAt(manifest.generatedAt);
+        setOfficialUpdateOutcome(readOfficialUpdateOutcome(updateStatus, release.official.generatedAt));
         setError(null);
       } catch (reason) {
         if (!active || (reason instanceof DOMException && reason.name === "AbortError")) return;
@@ -128,7 +136,8 @@ export default function OfficialSearch() {
         if (!terms.length) return true;
         const haystack = normalizeSearch([
           row.organization, row.corporateNumber, row.corporateNumberRaw,
-          row.program, row.executorName, row.kind, row.method,
+          ...(row.organizations ?? []), ...(row.corporateNumbers ?? []),
+          row.program, row.executorName, row.kind, row.method, row.notes,
         ].filter(Boolean).join(" "));
         return terms.every((term) => haystack.includes(term));
       })
@@ -172,6 +181,12 @@ export default function OfficialSearch() {
         <strong>収録範囲：</strong>中小企業庁は競争入札（物品・役務／委託）と補助金等情報、特許庁は物品・役務等（競争／随意）と補助金等情報です。
         中小企業庁の随意契約、特許庁の委託契約・公共工事、他機関・他年度は含みません。
       </p>
+      {officialUpdateOutcome === "failed" && (
+        <p className="official-update-alert" role="alert">
+          <strong>直近の公式資料明細の自動取得に失敗しました。</strong>
+          現在は下記生成日時の、前回検証済みデータを表示しています。
+        </p>
+      )}
       <div className="result-bar">
         <span role="status" aria-live="polite">{loading ? <strong>明細を検証中</strong> : error ? <strong>明細を取得できません</strong> : <><strong>{filtered.length.toLocaleString("ja-JP")}</strong>掲載行{filtered.length > PAGE_SIZE && `（${effectivePage * PAGE_SIZE + 1}–${Math.min((effectivePage + 1) * PAGE_SIZE, filtered.length)}行を表示）`}</>}</span>
         {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
@@ -185,8 +200,12 @@ export default function OfficialSearch() {
             <thead><tr><th scope="col">交付先・契約相手</th><th scope="col">事業名・契約件名</th><th scope="col">執行機関・系列</th><th scope="col">公式掲載値</th><th scope="col">日付・年度</th><th scope="col">原資料</th></tr></thead>
             <tbody>{visible.map((row) => (
               <tr key={row.id}>
-                <td data-label="交付先・契約相手"><strong>{row.organization}</strong><small>{(row.corporateNumber ?? row.corporateNumberRaw) || "法人番号の記載なし"}</small></td>
-                <td data-label="事業名・契約件名"><span className="program-name">{row.program}</span>{row.method && <small>{row.method}</small>}</td>
+                <td data-label="交付先・契約相手">
+                  <strong>{displayOrganizations(row)}</strong>
+                  <small>{displayCorporateNumbers(row)}</small>
+                  {isMultiplePartyListing(row) && <small className="official-multi-party-note">原表の共同1掲載行です。掲載値は法人別に配賦できません。</small>}
+                </td>
+                <td data-label="事業名・契約件名"><span className="program-name">{row.program}</span>{row.method && <small>{row.method}</small>}{row.notes && <small className="official-record-notes">備考：{row.notes}</small>}</td>
                 <td data-label="執行機関・系列">{row.executorName}<small>{row.category === "contract_result" ? "契約結果" : "補助金等の交付決定"}／{row.kind}</small></td>
                 <td className="amount" data-label="公式掲載値">{formatAmount(row)}<small>{row.amountStage}（実支払ではありません）</small></td>
                 <td data-label="日付・年度">{row.date ? formatDate(row.date) : row.dateRaw || "日付の記載なし"}<small>{row.fiscalYear}年度</small></td>
@@ -210,6 +229,8 @@ function validateRecord(row: OfficialRecord) {
     || typeof row.sourceKey !== "string" || !row.sourceKey
     || !["contract_result", "grant_decision"].includes(row.category)
     || typeof row.organization !== "string" || !row.organization
+    || (row.organizations !== undefined && (!Array.isArray(row.organizations) || row.organizations.some((item) => typeof item !== "string" || !item)))
+    || (row.corporateNumbers !== undefined && (!Array.isArray(row.corporateNumbers) || row.corporateNumbers.some((item) => typeof item !== "string" || !/^\d{13}$/.test(item))))
     || typeof row.program !== "string" || !row.program
     || typeof row.executorName !== "string" || !row.executorName
     || !Number.isInteger(row.fiscalYear)
@@ -238,4 +259,30 @@ function formatAmount(row: OfficialRecord) {
 function formatDate(value: string) {
   const [year, month, day] = value.split("-");
   return `${year}年${Number(month)}月${Number(day)}日`;
+}
+
+function isMultiplePartyListing(row: OfficialRecord) {
+  return row.multiplePartyListing === true
+    || (row.organizations?.length ?? 0) > 1
+    || (row.corporateNumbers?.length ?? 0) > 1
+    || (row.corporateNumberRaw.match(/\d{13}/g)?.length ?? 0) > 1;
+}
+
+function displayOrganizations(row: OfficialRecord) {
+  return row.organizations?.length ? row.organizations.join("／") : row.organization;
+}
+
+function displayCorporateNumbers(row: OfficialRecord) {
+  if (row.corporateNumbers?.length) return row.corporateNumbers.join("／");
+  return (row.corporateNumber ?? row.corporateNumberRaw) || "法人番号の記載なし";
+}
+
+function readOfficialUpdateOutcome(value: unknown, generatedAt: string) {
+  if (!value || typeof value !== "object" || !("official" in value)) return "unknown";
+  const official = (value as { official?: { attempt?: { outcome?: unknown }; published?: { generatedAt?: unknown } } }).official;
+  if (
+    !official || official.published?.generatedAt !== generatedAt
+    || !["succeeded", "failed", "unknown"].includes(String(official.attempt?.outcome))
+  ) return "unknown";
+  return official.attempt?.outcome as "succeeded" | "failed" | "unknown";
 }

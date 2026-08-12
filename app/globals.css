@@ -129,6 +129,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .official-coverage-note strong { color: var(--ink); }
 .official-results-table table { min-width: 1080px; }
 .official-search-updated { max-width: 1440px; margin: 16px auto 0; color: var(--muted); font-size: 10px; }
+.official-update-alert { max-width: 1440px; margin: 0 auto 14px; padding: 13px 15px; border-left: 4px solid #d88919; background: #fff8e9; color: #59451f; }
+.official-update-alert strong { display: block; margin-bottom: 3px; color: #2d2414; }
+.official-record-notes { margin-top: 7px; color: #46564f; }
+.official-multi-party-note { margin-top: 7px; color: #7a4a00; font-weight: 700; }
 .official-section { padding: 34px clamp(22px, 5vw, 78px) 76px; }
 .official-section .section-heading.compact { margin-bottom: 22px; }
 .official-section .section-heading.compact h2 { font-size: clamp(28px, 3.5vw, 46px); }

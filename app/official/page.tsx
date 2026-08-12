@@ -14,6 +14,8 @@ const registry = sourceRegistry;
 const manifest = officialManifest;
 
 export default function OfficialSourcesPage() {
+  const smeaRecordCount = manifest.coverage.executors.smea.contractResults.records + manifest.coverage.executors.smea.grantDecisions.records;
+  const jpoRecordCount = manifest.coverage.executors.jpo.contractResults.records + manifest.coverage.executors.jpo.grantDecisions.records;
   return (
     <main>
       <header className="topbar">
@@ -92,7 +94,7 @@ export default function OfficialSourcesPage() {
         <div className="official-limitations">
           <article><strong>契約結果の分母</strong><p>{registry.series.contracts.population}。{registry.series.contracts.notIncluded}は含みません。</p></article>
           <article><strong>交付決定の分母</strong><p>{registry.series.grantDecisions.population}。{registry.series.grantDecisions.notIncluded}は含みません。</p></article>
-          <article><strong>検索できる明細</strong><p>現在は中小企業庁80行、特許庁305行です。機関・年度・契約区分を画面上で限定し、未収録資料はそのまま残します。</p></article>
+          <article><strong>検索できる明細</strong><p>現在は中小企業庁{smeaRecordCount.toLocaleString("ja-JP")}行、特許庁{jpoRecordCount.toLocaleString("ja-JP")}行です。機関・年度・契約区分を画面上で限定し、未収録資料はそのまま残します。</p></article>
         </div>
       </section>
 

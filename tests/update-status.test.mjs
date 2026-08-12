@@ -24,6 +24,9 @@ function status(outcome = "succeeded", successAt = "2026-08-10T00:00:00.000Z") {
     runUrl: "https://github.com/yagiharuka/meti-funding-watch/actions/runs/123",
     release: releaseIdentity,
     lastSuccessfulImportAt: successAt,
+    officialOutcome: outcome,
+    officialAttemptedAt: "2026-08-10T00:30:00.000Z",
+    officialGeneratedAt: "2026-08-10T00:00:00.000Z",
   });
 }
 
@@ -41,6 +44,17 @@ test("rejects untrusted update status links and invalid release bindings", () =>
   assert.equal(validatePublicUpdateStatus(value), value);
   assert.throws(
     () => validatePublicUpdateStatus({ ...value, attempt: { ...value.attempt, runUrl: "https://example.com/123" } }),
+    /形式が不正/,
+  );
+});
+
+test("keeps the official-detail refresh outcome separate from the Gbiz outcome", () => {
+  const value = status();
+  assert.equal(value.attempt.outcome, "succeeded");
+  assert.equal(value.official.attempt.outcome, "succeeded");
+  assert.equal(value.official.published.generatedAt, "2026-08-10T00:00:00.000Z");
+  assert.throws(
+    () => validatePublicUpdateStatus({ ...value, official: { ...value.official, attempt: { ...value.official.attempt, outcome: "partial" } } }),
     /形式が不正/,
   );
 });
@@ -111,6 +125,7 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
     expectedRunId: "123",
     expectedRunAttempt: "1",
     expectedOutcome: "succeeded",
+    expectedOfficialOutcome: "succeeded",
     expectedCommit: releaseIdentity.commitSha,
     fetchImpl,
   });
@@ -122,6 +137,7 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
       expectedRunId: "999",
       expectedRunAttempt: "1",
       expectedOutcome: "succeeded",
+      expectedOfficialOutcome: "succeeded",
       expectedCommit: releaseIdentity.commitSha,
       fetchImpl,
     }),
@@ -133,6 +149,7 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
       expectedRunId: "123",
       expectedRunAttempt: "2",
       expectedOutcome: "succeeded",
+      expectedOfficialOutcome: "succeeded",
       expectedCommit: releaseIdentity.commitSha,
       fetchImpl,
     }),
@@ -145,6 +162,7 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
       expectedRunId: "123",
       expectedRunAttempt: "1",
       expectedOutcome: "succeeded",
+      expectedOfficialOutcome: "succeeded",
       expectedCommit: releaseIdentity.commitSha,
       fetchImpl,
     }),

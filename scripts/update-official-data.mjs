@@ -129,20 +129,41 @@ export function assertOfficialContinuity(previousRecords, candidateRecords) {
   if (!previousRecords.length) return { retained: 0, added: candidateRecords.length, changed: [] };
   const previous = uniqueMap(previousRecords, "前回");
   const candidate = uniqueMap(candidateRecords, "今回");
+  const unmatchedCandidates = new Map(candidate);
+  const candidatesBySemanticHash = new Map();
+  for (const record of candidate.values()) {
+    const hash = semanticHash(record);
+    const bucket = candidatesBySemanticHash.get(hash) ?? [];
+    bucket.push(record);
+    candidatesBySemanticHash.set(hash, bucket);
+  }
+  const unmatchedPrevious = [];
+  for (const oldRecord of previous.values()) {
+    const bucket = candidatesBySemanticHash.get(semanticHash(oldRecord));
+    const exactMatch = bucket?.pop();
+    if (exactMatch) unmatchedCandidates.delete(exactMatch.sourceKey);
+    else unmatchedPrevious.push(oldRecord);
+  }
   const changed = [];
-  for (const [sourceKey, oldRecord] of previous) {
-    const nextRecord = candidate.get(sourceKey);
-    if (!nextRecord) throw new Error(`公式資料の前回明細が消えました: ${sourceKey}`);
+  for (const oldRecord of unmatchedPrevious) {
+    const nextRecord = unmatchedCandidates.get(oldRecord.sourceKey);
+    if (!nextRecord) throw new Error(`公式資料の前回明細が消えました: ${oldRecord.sourceKey}`);
     const oldHash = semanticHash(oldRecord);
     const newHash = semanticHash(nextRecord);
     if (oldHash !== newHash) {
+      const changedFields = semanticFields.filter((field) => JSON.stringify(oldRecord[field] ?? null) !== JSON.stringify(nextRecord[field] ?? null));
+      const changedIdentityFields = changedFields.filter((field) => officialIdentityFields.includes(field));
+      if (changedIdentityFields.length) {
+        throw new Error(`公式資料の識別項目が変わりました: ${oldRecord.sourceKey} (${changedIdentityFields.join(", ")})`);
+      }
       changed.push({
-        sourceKey,
+        sourceKey: oldRecord.sourceKey,
         oldHash,
         newHash,
-        changedFields: semanticFields.filter((field) => JSON.stringify(oldRecord[field] ?? null) !== JSON.stringify(nextRecord[field] ?? null)),
+        changedFields,
       });
     }
+    unmatchedCandidates.delete(nextRecord.sourceKey);
   }
   const changeLimit = Math.max(3, Math.ceil(previous.size * 0.05));
   if (changed.length > changeLimit) {
@@ -150,7 +171,7 @@ export function assertOfficialContinuity(previousRecords, candidateRecords) {
   }
   return {
     retained: previous.size,
-    added: candidate.size - previous.size,
+    added: unmatchedCandidates.size,
     changed,
   };
 }
@@ -364,6 +385,8 @@ function parseContractRows(worksheet, header, document) {
 
 function makeRecord({ document, worksheet, rowNumber, program, organization, corporateNumberRaw, dateRaw, amountRaw, method, notes }) {
   const sourceKey = `${document.id}:${worksheet.name}:${rowNumber}`;
+  const organizations = splitOfficialValues(organization);
+  const corporateNumbers = extractCorporateNumbers(corporateNumberRaw);
   const corporateNumber = normalizeCorporateNumber(corporateNumberRaw);
   const amount = parseAmount(amountRaw);
   const date = parseDate(dateRaw);
@@ -380,8 +403,11 @@ function makeRecord({ document, worksheet, rowNumber, program, organization, cor
     date,
     dateRaw: normalizeText(dateRaw),
     organization: normalizeText(organization),
+    organizations,
     corporateNumber,
+    corporateNumbers,
     corporateNumberRaw: normalizeText(corporateNumberRaw),
+    multiplePartyListing: organizations.length > 1 || corporateNumbers.length > 1,
     program: normalizeText(program),
     amount,
     amountRaw: normalizeText(amountRaw),
@@ -469,6 +495,21 @@ const semanticFields = [
   "category", "kind", "amountStage", "executorId", "fiscalYear", "date", "dateRaw",
   "organization", "corporateNumber", "corporateNumberRaw", "program", "amount", "amountRaw", "method", "notes",
 ];
+const officialIdentityFields = [
+  "category", "executorId", "fiscalYear", "organization", "corporateNumberRaw", "program",
+];
+
+function splitOfficialValues(value) {
+  const values = String(value ?? "")
+    .split(/[\r\n]+/)
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+  return values.length ? values : [normalizeText(value)].filter(Boolean);
+}
+
+function extractCorporateNumbers(value) {
+  return [...new Set(String(value ?? "").match(/\d{13}/g) ?? [])];
+}
 
 function semanticHash(record) {
   return sha256(JSON.stringify(Object.fromEntries(semanticFields.map((field) => [field, record[field] ?? null]))));

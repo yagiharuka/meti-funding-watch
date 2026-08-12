@@ -8,13 +8,14 @@ const registry = JSON.parse(
 const pageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
 const searchSource = await readFile(new URL("../app/official/OfficialSearch.tsx", import.meta.url), "utf8");
 const viewTabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
+const manifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
 test("registers all 13 direct executors and both official source categories", () => {
   assert.equal(registry.schemaVersion, 2);
   assert.equal(registry.executors.length, 13);
   assert.equal(new Set(registry.executors.map((item) => item.id)).size, 13);
   assert.equal(registry.collectionStatus.registeredEndpoints, 26);
-  assert.equal(registry.collectionStatus.searchableRecords, 385);
+  assert.equal("searchableRecords" in registry.collectionStatus, false);
   assert.deepEqual(registry.collectionStatus.searchableExecutors, ["smea", "jpo"]);
   assert.equal(registry.collectionStatus.status, "partial_detail");
 
@@ -52,6 +53,13 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.match(searchSource, /公式資料の明細検索/);
   assert.match(searchSource, /交付先・契約相手、法人番号、事業名で検索/);
   assert.match(searchSource, /中小企業庁の随意契約、特許庁の委託契約・公共工事、他機関・他年度は含みません/);
+  assert.match(searchSource, /備考：/);
+  assert.match(searchSource, /掲載値は法人別に配賦できません/);
+  assert.match(searchSource, /row\.notes/);
+  assert.equal(manifest.recordCount, Object.values(manifest.coverage.executors).reduce(
+    (sum, executor) => sum + executor.contractResults.records + executor.grantDecisions.records,
+    0,
+  ));
   assert.doesNotMatch(searchSource, /合計額|総支払額|実支払額です/);
 });
 

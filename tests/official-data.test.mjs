@@ -14,21 +14,30 @@ const manifest = JSON.parse(await readFile(new URL("../data/official/manifest.js
 const records = (await Promise.all(Object.values(manifest.files).map(async (filename) =>
   JSON.parse(await readFile(new URL(`../data/official/${filename}`, import.meta.url), "utf8"))))).flat();
 
-test("publishes 385 verified 2025 official rows without mixing amount stages", () => {
+test("publishes a reconciled set of verified 2025 official rows without mixing amount stages", () => {
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.recordCount, 385);
-  assert.equal(records.length, 385);
-  assert.equal(new Set(records.map((row) => row.id)).size, 385);
-  assert.equal(new Set(records.map((row) => row.sourceKey)).size, 385);
-  assert.deepEqual(manifest.seriesCounts, { contract_result: 361, grant_decision: 24 });
-  assert.deepEqual(countBy(records, (row) => row.executorId), { smea: 80, jpo: 305 });
+  assert.equal(records.length, manifest.recordCount);
+  assert.equal(new Set(records.map((row) => row.id)).size, records.length);
+  assert.equal(new Set(records.map((row) => row.sourceKey)).size, records.length);
+  assert.deepEqual(manifest.seriesCounts, countBy(records, (row) => row.category));
+  assert.equal(manifest.sourceDocuments.reduce((sum, source) => sum + source.records, 0), records.length);
+  const executorCounts = countBy(records, (row) => row.executorId);
+  for (const [executorId, coverage] of Object.entries(manifest.coverage.executors)) {
+    assert.equal(
+      coverage.contractResults.records + coverage.grantDecisions.records,
+      executorCounts[executorId],
+      `${executorId} coverage must be derived from published rows`,
+    );
+  }
   assert.ok(records.every((row) => row.fiscalYear === 2025));
   assert.ok(records.every((row) => row.amountStage.includes(row.category === "contract_result" ? "契約" : "交付決定")));
   assert.ok(records.every((row) => row.program !== "事業名" && !row.program.includes("物品役務等の 名称及び数量")));
   assert.ok(records.every((row) => row.program !== "交付決定なし"));
   assert.ok(records.some((row) => row.corporateNumber === null && row.corporateNumberRaw));
+  assert.ok(records.some((row) => row.notes.includes("単価")), "amount semantics in official notes must be preserved");
+  assert.ok(records.some((row) => row.multiplePartyListing && row.corporateNumbers.length > 1));
   assert.equal(
-    records.find((row) => row.sourceKey === "jpo-2025-grant-decisions-h1:7fy 4月-9月:10")?.date,
+    records.find((row) => row.datasetId === "jpo-2025-grant-decisions-h1" && row.dateRaw === "45757")?.date,
     "2025-04-10",
     "Excel serial dates must be converted to their displayed calendar date",
   );
@@ -91,6 +100,22 @@ test("converts an unformatted Excel serial date without changing the raw evidenc
 test("fails closed when a previously published official row disappears", () => {
   assert.throws(() => assertOfficialContinuity(records, records.slice(1)), /前回明細が消えました/);
   assert.doesNotThrow(() => assertOfficialContinuity(records, records));
+});
+
+test("tolerates row insertion and reordering only when prior semantics remain intact", () => {
+  const moved = records.map((record, index) => ({
+    ...record,
+    id: `moved-${index}`,
+    sourceKey: `${record.datasetId}:${record.sourceSheet}:${record.sourceRowNumber + 10}`,
+    sourceRowNumber: record.sourceRowNumber + 10,
+  })).reverse();
+  const result = assertOfficialContinuity(records, moved);
+  assert.equal(result.retained, records.length);
+  assert.equal(result.added, 0);
+  assert.equal(result.changed.length, 0);
+
+  const identityChange = moved.map((record, index) => index === 0 ? { ...record, organization: "別法人" } : record);
+  assert.throws(() => assertOfficialContinuity(records, identityChange), /前回明細が消えました|識別項目/);
 });
 
 function countBy(items, key) {

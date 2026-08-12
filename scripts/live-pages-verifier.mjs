@@ -6,6 +6,7 @@ export async function verifyLivePages({
   expectedRunId,
   expectedRunAttempt,
   expectedOutcome,
+  expectedOfficialOutcome = null,
   expectedCommit,
   fetchImpl = fetch,
   cacheBust = Date.now(),
@@ -32,6 +33,9 @@ export async function verifyLivePages({
   if (status.attempt.runId !== String(expectedRunId)) throw new Error("公開更新状態のrun IDが一致しません");
   if (status.attempt.runAttempt !== Number(expectedRunAttempt)) throw new Error("公開更新状態のrun attemptが一致しません");
   if (status.attempt.outcome !== expectedOutcome) throw new Error("公開更新状態の結果が一致しません");
+  if (expectedOfficialOutcome !== null && status.official?.attempt?.outcome !== expectedOfficialOutcome) {
+    throw new Error("公開公式資料更新状態の結果が一致しません");
+  }
   if (
     status.publishedRelease.commitSha !== release.commitSha
     || status.publishedRelease.generatedAt !== release.generatedAt
@@ -41,6 +45,10 @@ export async function verifyLivePages({
   if (!release.official || sha256(officialManifestBytes) !== release.official.manifestSha256) {
     throw new Error("公開公式資料manifestのSHAが一致しません");
   }
+  if (
+    status.official
+    && status.official.published.generatedAt !== release.official.generatedAt
+  ) throw new Error("公開公式資料更新状態とreleaseが同じ世代ではありません");
   const appShellEntries = Object.entries(release.appShell ?? {});
   if (!appShellEntries.some(([path]) => path === "index.html")) throw new Error("公開releaseに画面情報がありません");
   for (const [path, metadata] of appShellEntries) {

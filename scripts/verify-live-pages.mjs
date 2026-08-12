@@ -5,8 +5,9 @@ const baseUrl = process.env.PAGES_URL;
 const expectedRunId = process.env.EXPECTED_RUN_ID;
 const expectedRunAttempt = process.env.EXPECTED_RUN_ATTEMPT;
 const expectedOutcome = process.env.EXPECTED_OUTCOME;
+const expectedOfficialOutcome = process.env.EXPECTED_OFFICIAL_OUTCOME;
 const expectedCommit = process.env.EXPECTED_COMMIT;
-if (!baseUrl || !expectedRunId || !expectedRunAttempt || !expectedOutcome || !expectedCommit) {
+if (!baseUrl || !expectedRunId || !expectedRunAttempt || !expectedOutcome || !expectedOfficialOutcome || !expectedCommit) {
   throw new Error("公開後検証に必要な環境変数がありません");
 }
 
@@ -18,6 +19,7 @@ for (let attempt = 1; attempt <= 12; attempt += 1) {
       expectedRunId,
       expectedRunAttempt,
       expectedOutcome,
+      expectedOfficialOutcome,
       expectedCommit,
       cacheBust: `${expectedRunId}-${attempt}`,
     });
