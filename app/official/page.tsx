@@ -14,8 +14,11 @@ const registry = sourceRegistry;
 const manifest = officialManifest;
 
 export default function OfficialSourcesPage() {
+  const coverage = manifest.coverage as typeof manifest.coverage & { fiscalYears?: number[]; sourceDocumentCount?: number };
   const smeaRecordCount = manifest.coverage.executors.smea.contractResults.records + manifest.coverage.executors.smea.grantDecisions.records;
   const jpoRecordCount = manifest.coverage.executors.jpo.contractResults.records + manifest.coverage.executors.jpo.grantDecisions.records;
+  const years = coverage.fiscalYears ?? [...new Set(Object.values(manifest.coverage.executors).flatMap((item) => item.fiscalYears))].sort();
+  const yearRange = years.length === 1 ? `${years[0]}年度` : `${years[0]}～${years[years.length - 1]}年度`;
   return (
     <main>
       <header className="topbar">
@@ -32,7 +35,7 @@ export default function OfficialSourcesPage() {
         <h1 id="official-title">公式契約結果・補助金交付決定</h1>
         <p className="official-lead">
           公式資料に掲載された直接契約と補助金等の交付決定を、交付先・契約相手、法人番号、事業名から検索できます。
-          現在の検索収録は中小企業庁・特許庁の2025年度資料に限ります。
+          現在の検索収録は中小企業庁・特許庁の{yearRange}に公表された資料の一部です。
         </p>
         <p className="official-warning">
           契約額と交付決定額は段階が異なり、いずれも実支払額ではありません。
@@ -60,8 +63,11 @@ export default function OfficialSourcesPage() {
         </div>
         <p className="catalog-status" role="status">
           <strong>現在の収録状態：</strong>
-          公式入口 {registry.collectionStatus.registeredEndpoints}件を登録／検索可能な公式資料明細 {manifest.recordCount}掲載行。
-          検索収録は2機関・2025年度の7公式XLSXだけです。リンクだけの資料は収録済みと数えていません。
+          公式入口 {registry.collectionStatus.registeredEndpoints}/{registry.collectionStatus.registeredEndpoints}系列を登録／
+          一部でも明細検索できる系列 {registry.collectionStatus.searchableSeriesCells}/{registry.collectionStatus.registeredEndpoints}／
+          全年度・全公表区分を完全照合した系列 {registry.collectionStatus.fullyReconciledCells}/{registry.collectionStatus.registeredEndpoints}。
+          検索可能な公式資料明細は {manifest.recordCount}掲載行です。
+          検索収録は2機関・{yearRange}の{coverage.sourceDocumentCount ?? manifest.sourceDocuments.length}公式資料です。リンクだけの資料は収録済みと数えていません。
         </p>
       </section>
 

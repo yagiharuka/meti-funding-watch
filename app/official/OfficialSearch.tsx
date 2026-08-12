@@ -161,11 +161,11 @@ export default function OfficialSearch() {
     <section className="official-search-section" id="official-records" aria-labelledby="official-search-title">
       <div className="section-heading compact">
         <div><p className="eyebrow">VERIFIED DETAIL SEARCH</p><h2 id="official-search-title">公式資料の明細検索</h2></div>
-        <p>現在は中小企業庁・特許庁の2025年度公式XLSX 7冊だけを検索できます。未収録資料は下の一覧に残します。</p>
+        <p>中小企業庁・特許庁のmanifestに列挙した公式公表資料を検索できます。未収録の機関・年度・区分は下の一覧に残します。</p>
       </div>
       <div className="series-label" aria-label="表示中のデータ系列">
         <strong>直接契約結果・補助金等の交付決定</strong>
-        <span>公式XLSX／2025年度／部分収録</span>
+        <span>公式公表資料／複数年度／部分収録</span>
       </div>
       <div className="filters official-search-filters" aria-label="公式資料明細の検索条件">
         <label className="search-field">
@@ -178,8 +178,8 @@ export default function OfficialSearch() {
         <label><span className="sr-only">年度</span><select value={year} onChange={(event) => updateFilter(() => setYear(event.target.value))}><option value="all">収録年度すべて</option>{years.map((item) => <option key={item} value={item}>{item}年度</option>)}</select></label>
       </div>
       <p className="official-coverage-note">
-        <strong>収録範囲：</strong>中小企業庁は競争入札（物品・役務／委託）と補助金等情報、特許庁は物品・役務等（競争／随意）と補助金等情報です。
-        中小企業庁の随意契約、特許庁の委託契約・公共工事、他機関・他年度は含みません。
+        <strong>収録範囲：</strong>年度・機関・区分ごとに公式HTMLまたはXLSXを取得し、検証できた掲載行だけです。
+        13執行機関・全年度・全公表区分の完全収録ではなく、実支払や下流支出も含みません。
       </p>
       {officialUpdateOutcome === "failed" && (
         <p className="official-update-alert" role="alert">
@@ -196,7 +196,7 @@ export default function OfficialSearch() {
       ) : (
         <div className="records-table official-results-table" role="region" aria-label="公式契約結果・補助金交付決定の明細一覧" tabIndex={0}>
           <table>
-            <caption className="sr-only">中小企業庁・特許庁の公式XLSXから取り込んだ2025年度明細</caption>
+            <caption className="sr-only">中小企業庁・特許庁の公式公表資料から取り込んだ明細</caption>
             <thead><tr><th scope="col">交付先・契約相手</th><th scope="col">事業名・契約件名</th><th scope="col">執行機関・系列</th><th scope="col">公式掲載値</th><th scope="col">日付・年度</th><th scope="col">原資料</th></tr></thead>
             <tbody>{visible.map((row) => (
               <tr key={row.id}>
@@ -209,7 +209,7 @@ export default function OfficialSearch() {
                 <td data-label="執行機関・系列">{row.executorName}<small>{row.category === "contract_result" ? "契約結果" : "補助金等の交付決定"}／{row.kind}</small></td>
                 <td className="amount" data-label="公式掲載値">{formatAmount(row)}<small>{row.amountStage}（実支払ではありません）</small></td>
                 <td data-label="日付・年度">{row.date ? formatDate(row.date) : row.dateRaw || "日付の記載なし"}<small>{row.fiscalYear}年度</small></td>
-                <td data-label="原資料"><a className="source-link" href={row.sourceDocumentUrl} target="_blank" rel="noreferrer" aria-label={`${row.organization}の公式XLSXを新しいタブで開く`}>公式XLSX ↗</a><small>{row.sourceSheet}・{row.sourceRowNumber}行目</small></td>
+                <td data-label="原資料"><a className="source-link" href={row.sourceDocumentUrl} target="_blank" rel="noreferrer" aria-label={`${row.organization}の公式原資料を新しいタブで開く`}>公式原資料 ↗</a><small>{row.sourceSheet}・掲載順{row.sourceRowNumber}</small></td>
               </tr>
             ))}</tbody>
           </table>

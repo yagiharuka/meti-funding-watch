@@ -15,6 +15,8 @@ test("registers all 13 direct executors and both official source categories", ()
   assert.equal(registry.executors.length, 13);
   assert.equal(new Set(registry.executors.map((item) => item.id)).size, 13);
   assert.equal(registry.collectionStatus.registeredEndpoints, 26);
+  assert.equal(registry.collectionStatus.searchableSeriesCells, 4);
+  assert.equal(registry.collectionStatus.fullyReconciledCells, 0);
   assert.equal("searchableRecords" in registry.collectionStatus, false);
   assert.deepEqual(registry.collectionStatus.searchableExecutors, ["smea", "jpo"]);
   assert.equal(registry.collectionStatus.status, "partial_detail");
@@ -52,7 +54,8 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.doesNotMatch(pageSource, /実支払額です|最終受益者です|全件収録済み/);
   assert.match(searchSource, /公式資料の明細検索/);
   assert.match(searchSource, /交付先・契約相手、法人番号、事業名で検索/);
-  assert.match(searchSource, /中小企業庁の随意契約、特許庁の委託契約・公共工事、他機関・他年度は含みません/);
+  assert.match(searchSource, /13執行機関・全年度・全公表区分の完全収録ではなく/);
+  assert.match(searchSource, /公式HTMLまたはXLSX/);
   assert.match(searchSource, /備考：/);
   assert.match(searchSource, /掲載値は法人別に配賦できません/);
   assert.match(searchSource, /row\.notes/);
@@ -60,6 +63,10 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
     (sum, executor) => sum + executor.contractResults.records + executor.grantDecisions.records,
     0,
   ));
+  if (manifest.coverage.fiscalYears) {
+    assert.ok(manifest.coverage.fiscalYears.length > 1);
+    assert.match(pageSource, /manifest\.coverage|coverage\.fiscalYears/);
+  }
   assert.doesNotMatch(searchSource, /合計額|総支払額|実支払額です/);
 });
 

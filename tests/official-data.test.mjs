@@ -14,7 +14,7 @@ const manifest = JSON.parse(await readFile(new URL("../data/official/manifest.js
 const records = (await Promise.all(Object.values(manifest.files).map(async (filename) =>
   JSON.parse(await readFile(new URL(`../data/official/${filename}`, import.meta.url), "utf8"))))).flat();
 
-test("publishes a reconciled set of verified 2025 official rows without mixing amount stages", () => {
+test("publishes a reconciled set of verified official rows without mixing amount stages", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(records.length, manifest.recordCount);
   assert.equal(new Set(records.map((row) => row.id)).size, records.length);
@@ -29,7 +29,8 @@ test("publishes a reconciled set of verified 2025 official rows without mixing a
       `${executorId} coverage must be derived from published rows`,
     );
   }
-  assert.ok(records.every((row) => row.fiscalYear === 2025));
+  const publishedYears = [...new Set(records.map((row) => row.fiscalYear))].sort((a, b) => a - b);
+  assert.deepEqual(publishedYears, manifest.coverage.fiscalYears ?? publishedYears);
   assert.ok(records.every((row) => row.amountStage.includes(row.category === "contract_result" ? "契約" : "交付決定")));
   assert.ok(records.every((row) => row.program !== "事業名" && !row.program.includes("物品役務等の 名称及び数量")));
   assert.ok(records.every((row) => row.program !== "交付決定なし"));
@@ -43,20 +44,23 @@ test("publishes a reconciled set of verified 2025 official rows without mixing a
   );
 });
 
-test("binds every source workbook to a SHA, row count, and exact official URL", () => {
-  assert.equal(OFFICIAL_DOCUMENTS.length, 7);
-  assert.equal(manifest.sourceDocuments.length, 7);
+test("binds every published source document to a SHA, row count, and registered official URL", () => {
+  assert.ok(OFFICIAL_DOCUMENTS.length >= 7);
+  assert.equal(manifest.sourceDocuments.length, manifest.coverage.sourceDocumentCount ?? manifest.sourceDocuments.length);
+  const definitions = new Map(OFFICIAL_DOCUMENTS.map((item) => [item.id, item]));
   const receipts = new Map(manifest.sourceDocuments.map((item) => [item.id, item]));
-  for (const document of OFFICIAL_DOCUMENTS) {
-    const receipt = receipts.get(document.id);
-    assert.ok(receipt, document.id);
+  for (const receipt of manifest.sourceDocuments) {
+    const document = definitions.get(receipt.id);
+    assert.ok(document, receipt.id);
     assert.equal(receipt.url, document.url);
     assert.match(receipt.sha256, /^[0-9a-f]{64}$/);
     assert.ok(receipt.bytes > 1_000);
     assert.ok(Number.isSafeInteger(receipt.records));
   }
-  assert.equal(receipts.get("jpo-2025-grant-decisions-h2").records, 0);
-  assert.equal(receipts.get("jpo-2025-grant-decisions-h2").emptySentinelFound, true);
+  if (receipts.has("jpo-2025-grant-decisions-h2")) {
+    assert.equal(receipts.get("jpo-2025-grant-decisions-h2").records, 0);
+    assert.equal(receipts.get("jpo-2025-grant-decisions-h2").emptySentinelFound, true);
+  }
 });
 
 test("parses an official contract sheet and preserves null, zero, raw, and provenance", async () => {

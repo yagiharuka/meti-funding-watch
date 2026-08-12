@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import ExcelJS from "exceljs";
+import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
+import { documents as SMEA_HISTORICAL_DOCUMENTS, parseSmeaOfficialHtml } from "./official-smea-history.mjs";
 
 const DATA_DIRECTORY = new URL("../data/official/", import.meta.url);
 const AUDIT_DIRECTORY = new URL("../.audit/official/", import.meta.url);
@@ -49,6 +51,44 @@ export const OFFICIAL_DOCUMENTS = [
     sourcePageUrl: SMEA_SOURCE_PAGE,
     url: "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
   },
+  ...[2025, 2026].flatMap((fiscalYear) => [
+    {
+      id: `smea-${fiscalYear}-discretionary-goods`,
+      executorId: "smea",
+      executorName: "中小企業庁",
+      fiscalYear,
+      category: "contract_result",
+      kind: "随意契約（請負契約）",
+      amountStage: "契約額",
+      sourcePageUrl: SMEA_SOURCE_PAGE,
+      url: `https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_${fiscalYear}.xlsx`,
+    },
+    {
+      id: `smea-${fiscalYear}-discretionary-commission`,
+      executorId: "smea",
+      executorName: "中小企業庁",
+      fiscalYear,
+      category: "contract_result",
+      kind: "随意契約（委託契約）",
+      amountStage: "契約額",
+      sourcePageUrl: SMEA_SOURCE_PAGE,
+      url: `https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_${fiscalYear}.xlsx`,
+    },
+  ]),
+  ...[
+    ["competitive-goods", "競争入札（請負契約）", "chouhi_nyuusatu"],
+    ["competitive-commission", "競争入札（委託契約）", "itaku_nyuusatu"],
+  ].map(([suffix, kind, filename]) => ({
+    id: `smea-2026-${suffix}`,
+    executorId: "smea",
+    executorName: "中小企業庁",
+    fiscalYear: 2026,
+    category: "contract_result",
+    kind,
+    amountStage: "契約額",
+    sourcePageUrl: SMEA_SOURCE_PAGE,
+    url: `https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/${filename}_2026.xlsx`,
+  })),
   {
     id: "jpo-2025-competitive-goods",
     executorId: "jpo",
@@ -94,6 +134,8 @@ export const OFFICIAL_DOCUMENTS = [
     sourcePageUrl: "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/index.html",
     url: "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/2025/2025_10_03.xlsx",
   },
+  ...JPO_HISTORICAL_DOCUMENTS,
+  ...SMEA_HISTORICAL_DOCUMENTS,
 ];
 
 export async function parseOfficialWorkbook(buffer, document) {
@@ -103,11 +145,14 @@ export async function parseOfficialWorkbook(buffer, document) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
   if (!workbook.worksheets.length) throw new Error(`${document.id}: ワークシートがありません`);
+  if (document.expectedSheetCount && workbook.worksheets.length !== document.expectedSheetCount) {
+    throw new Error(`${document.id}: ワークシート数が検証済み資料と一致しません (${workbook.worksheets.length}/${document.expectedSheetCount})`);
+  }
 
   const records = [];
   let emptySentinelFound = false;
   for (const worksheet of workbook.worksheets) {
-    const header = findHeader(worksheet, document.category);
+    const header = findHeader(worksheet, document);
     if (!header) throw new Error(`${document.id}/${worksheet.name}: 必須見出しが見つかりません`);
     const parsed = document.category === "grant_decision"
       ? parseGrantRows(worksheet, header, document)
@@ -180,52 +225,64 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   const fetched = [];
   for (const document of OFFICIAL_DOCUMENTS) {
     const source = await fetchDocument(document, fetchImpl);
-    const records = await parseOfficialWorkbook(source.buffer, document);
+    const records = document.format === "html"
+      ? parseSmeaOfficialHtml(source.buffer, document).map((record) => normalizeSmeaRecord(record, document))
+      : await parseOfficialWorkbook(source.buffer, document);
     fetched.push({ document, ...source, records });
   }
 
   const candidateRecords = fetched.flatMap((item) => item.records);
   uniqueMap(candidateRecords, "今回");
-  const previousRecords = await readJsonIfExists(new URL("records-2025.json", DATA_DIRECTORY), []);
+  const previousRecords = await readPreviousOfficialRecords();
   const continuity = assertOfficialContinuity(previousRecords, candidateRecords);
   const generatedAt = now.toISOString();
   const counts = countRecords(candidateRecords);
-  const recordText = `${JSON.stringify(candidateRecords)}\n`;
+  const recordsByYear = Map.groupBy(candidateRecords, (record) => record.fiscalYear);
+  const files = Object.fromEntries(
+    [...recordsByYear.keys()].sort((a, b) => a - b).map((year) => [String(year), `records-${year}.json`]),
+  );
+  const publicFiles = Object.fromEntries(
+    [...recordsByYear.entries()].map(([year, yearRecords]) => {
+      const text = `${JSON.stringify(yearRecords)}\n`;
+      return [String(year), {
+        filename: files[String(year)],
+        sha256: sha256(text),
+        bytes: Buffer.byteLength(text),
+        records: yearRecords.length,
+        text,
+      }];
+    }),
+  );
+  const fiscalYears = [...recordsByYear.keys()].sort((a, b) => a - b);
+  const executorIds = [...new Set(candidateRecords.map((record) => record.executorId))].sort();
+  const executorCoverage = Object.fromEntries(executorIds.map((executorId) => {
+    const executorRecords = candidateRecords.filter((record) => record.executorId === executorId);
+    const executorDocuments = OFFICIAL_DOCUMENTS.filter((document) => document.executorId === executorId);
+    return [executorId, {
+      name: executorRecords[0]?.executorName ?? executorDocuments[0]?.executorName ?? executorId,
+      fiscalYears: [...new Set(executorRecords.map((record) => record.fiscalYear))].sort((a, b) => a - b),
+      contractResults: {
+        records: executorRecords.filter((record) => record.category === "contract_result").length,
+        status: coverageStatus(executorDocuments, "contract_result"),
+      },
+      grantDecisions: {
+        records: executorRecords.filter((record) => record.category === "grant_decision").length,
+        status: coverageStatus(executorDocuments, "grant_decision"),
+      },
+    }];
+  }));
   const manifest = {
     schemaVersion: 1,
     generatedAt,
     recordCount: candidateRecords.length,
-    files: { "2025": "records-2025.json" },
+    files,
     coverage: {
       status: "partial",
-      executorCount: 2,
-      executors: {
-        smea: {
-          name: "中小企業庁",
-          fiscalYears: [2025],
-          contractResults: {
-            records: candidateRecords.filter((record) => record.executorId === "smea" && record.category === "contract_result").length,
-            status: "競争入札の2公式ファイルを収録（随意契約等は未収録）",
-          },
-          grantDecisions: {
-            records: candidateRecords.filter((record) => record.executorId === "smea" && record.category === "grant_decision").length,
-            status: "中小企業庁の2025年度補助金等情報ファイルを収録",
-          },
-        },
-        jpo: {
-          name: "特許庁",
-          fiscalYears: [2025],
-          contractResults: {
-            records: candidateRecords.filter((record) => record.executorId === "jpo" && record.category === "contract_result").length,
-            status: "物品・役務等の競争入札・随意契約を収録（委託契約・公共工事は未収録）",
-          },
-          grantDecisions: {
-            records: candidateRecords.filter((record) => record.executorId === "jpo" && record.category === "grant_decision").length,
-            status: "2025年度の半期2公式ファイルを確認（10月～3月は交付決定なし）",
-          },
-        },
-      },
-      note: "検索対象は中小企業庁と特許庁が公開する2025年度の7つのXLSX明細です。13執行機関・全年度・全契約区分の全資料ではありません。",
+      executorCount: executorIds.length,
+      fiscalYears,
+      sourceDocumentCount: OFFICIAL_DOCUMENTS.length,
+      executors: executorCoverage,
+      note: "検索対象はmanifestに列挙した中小企業庁・特許庁の公式公表資料だけです。13執行機関・全年度・全公表区分の全資料ではありません。",
     },
     seriesCounts: counts,
     continuity: {
@@ -237,7 +294,12 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
     sourceDocuments: fetched.map(({ document, sha256, bytes, records }) => ({
       id: document.id,
       url: document.url,
+      originalUrl: document.originalUrl ?? document.url,
       sourcePageUrl: document.sourcePageUrl,
+      format: document.format === "html" ? "html" : "xlsx",
+      discoveryStatus: document.discoveryStatus ?? "linked_from_official_index",
+      archiveProvider: document.archiveProvider ?? null,
+      coverageClaim: document.coverageClaim ?? "公式資料に掲載された行",
       executorId: document.executorId,
       category: document.category,
       kind: document.kind,
@@ -248,20 +310,23 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       emptySentinelFound: Boolean(records.emptySentinelFound),
       retrievedAt: generatedAt,
     })),
-    publicFile: {
-      filename: "records-2025.json",
-      sha256: sha256(recordText),
-      bytes: Buffer.byteLength(recordText),
-      records: candidateRecords.length,
-    },
+    publicFiles: Object.fromEntries(Object.entries(publicFiles).map(([year, item]) => [year, {
+      filename: item.filename,
+      sha256: item.sha256,
+      bytes: item.bytes,
+      records: item.records,
+    }])),
   };
 
   await mkdir(DATA_DIRECTORY, { recursive: true });
   await mkdir(AUDIT_DIRECTORY, { recursive: true });
   for (const item of fetched) {
-    await writeFile(new URL(`${item.document.id}.xlsx`, AUDIT_DIRECTORY), item.buffer);
+    await writeFile(new URL(`${item.document.id}.${item.document.format === "html" ? "html" : "xlsx"}`, AUDIT_DIRECTORY), item.buffer);
   }
-  await atomicWrite(new URL("records-2025.json", DATA_DIRECTORY), recordText);
+  await removeObsoleteYearFiles(new Set(Object.values(files)));
+  for (const item of Object.values(publicFiles)) {
+    await atomicWrite(new URL(item.filename, DATA_DIRECTORY), item.text);
+  }
   await atomicWrite(new URL("manifest.json", DATA_DIRECTORY), `${JSON.stringify(manifest, null, 2)}\n`);
   return { manifest, records: candidateRecords };
 }
@@ -270,7 +335,7 @@ async function fetchDocument(document, fetchImpl) {
   const localSourceDirectory = process.env.OFFICIAL_SOURCE_DIRECTORY?.trim();
   if (localSourceDirectory) {
     const directoryUrl = pathToFileURL(`${localSourceDirectory.replace(/\/$/, "")}/`);
-    const buffer = await readFile(new URL(`${document.id}.xlsx`, directoryUrl));
+    const buffer = await readFile(new URL(`${document.id}.${document.format === "html" ? "html" : "xlsx"}`, directoryUrl));
     return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
   }
   if (!fetchImpl) {
@@ -279,7 +344,7 @@ async function fetchDocument(document, fetchImpl) {
       "--user-agent", FETCH_HEADERS["user-agent"], "--referer", document.sourcePageUrl, document.url,
     ], { encoding: "buffer", maxBuffer: 12_000_000 });
     const buffer = Buffer.from(stdout);
-    if (buffer.length < 1_000 || buffer.length > 10_000_000) {
+    if (buffer.length < 500 || buffer.length > 10_000_000) {
       throw new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`);
     }
     return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
@@ -305,23 +370,57 @@ async function fetchDocument(document, fetchImpl) {
     throw new Error(`${document.id}: ファイルが上限を超えています`);
   }
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length < 1_000 || buffer.length > 10_000_000) {
+  if (buffer.length < 500 || buffer.length > 10_000_000) {
     throw new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`);
   }
   return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
 }
 
-function findHeader(worksheet, category) {
+const DEFAULT_HEADER_ALIASES = {
+  grant_decision: {
+    "事業名": ["事業名"],
+    "交付先名": ["交付先名", "補助金交付先名"],
+    "法人番号": ["法人番号"],
+    "交付決定額": ["交付決定額", "交付決定額円"],
+    "交付決定日": ["交付決定日"],
+    "支出元会計区分": ["支出元会計区分"],
+    "支出元目名称": ["支出元目名称", "支出元目名"],
+  },
+  contract_result: {
+    "物品役務等の名称及び数量": ["物品役務等の名称及び数量", "公共工事の名称場所期間及び種別"],
+    "契約を締結した日": ["契約を締結した日"],
+    "契約の相手方の商号又は名称": ["契約の相手方の商号又は名称"],
+    "契約の相手方の法人番号": ["契約の相手方の法人番号", "法人番号"],
+    "契約金額円": ["契約金額円", "契約金額"],
+    "一般競争入札指名競争入札の別総合評価の実施": [
+      "一般競争入札指名競争入札の別総合評価の実施",
+      "随意契約によることとした会計法令の根拠条文及び理由企画競争又は公募",
+      "随意契約によることとした会計法令の根拠条文及び理由企画競争または公募",
+    ],
+    "備考": ["備考"],
+  },
+};
+
+function findHeader(worksheet, document) {
+  const aliases = structuredClone(DEFAULT_HEADER_ALIASES[document.category]);
+  for (const [canonical, additions] of Object.entries(document.headerAliases ?? {})) {
+    aliases[canonical] = [...new Set([...(aliases[canonical] ?? []), ...additions.map(normalizeHeader)])];
+  }
   for (let rowNumber = 1; rowNumber <= Math.min(30, worksheet.rowCount); rowNumber += 1) {
     const row = worksheet.getRow(rowNumber);
-    const columns = new Map();
+    const observed = new Map();
     row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
       const key = normalizeHeader(cellToString(cell.value));
-      if (key) columns.set(key, columnNumber);
+      if (key) observed.set(key, columnNumber);
     });
-    const required = category === "grant_decision"
+    const required = document.category === "grant_decision"
       ? ["事業名", "交付先名", "法人番号", "交付決定額", "交付決定日"]
       : ["物品役務等の名称及び数量", "契約を締結した日", "契約の相手方の商号又は名称", "契約の相手方の法人番号", "契約金額円"];
+    const columns = new Map();
+    for (const [canonical, candidates] of Object.entries(aliases)) {
+      const column = candidates.map(normalizeHeader).map((key) => observed.get(key)).find(Boolean);
+      if (column) columns.set(canonical, column);
+    }
     if (required.every((key) => columns.has(key))) return { rowNumber, columns };
   }
   return null;
@@ -362,9 +461,10 @@ function parseContractRows(worksheet, header, document) {
     const row = worksheet.getRow(rowNumber);
     const program = valueAt(row, header.columns, "物品役務等の名称及び数量");
     const organization = valueAt(row, header.columns, "契約の相手方の商号又は名称");
+    const dateRaw = valueAt(row, header.columns, "契約を締結した日");
     if (
-      normalizeHeader(program) === "物品役務等の名称及び数量"
-      && normalizeHeader(organization) === "契約の相手方の商号又は名称"
+      normalizeHeader(organization) === "契約の相手方の商号又は名称"
+      && normalizeHeader(dateRaw) === "契約を締結した日"
     ) continue;
     if (!program || !organization) continue;
     records.push(makeRecord({
@@ -374,7 +474,7 @@ function parseContractRows(worksheet, header, document) {
       program,
       organization,
       corporateNumberRaw: valueAt(row, header.columns, "契約の相手方の法人番号"),
-      dateRaw: valueAt(row, header.columns, "契約を締結した日"),
+      dateRaw,
       amountRaw: valueAt(row, header.columns, "契約金額円"),
       method: valueAt(row, header.columns, "一般競争入札指名競争入札の別総合評価の実施") || document.kind,
       notes: valueAt(row, header.columns, "備考"),
@@ -420,6 +520,43 @@ function makeRecord({ document, worksheet, rowNumber, program, organization, cor
   };
 }
 
+function normalizeSmeaRecord(record, document) {
+  const sourceKey = record.sourceKey;
+  const organization = normalizeText(record.organization);
+  const corporateNumberRaw = normalizeText(record.corporateNumberRaw);
+  const corporateNumbers = extractCorporateNumbers(corporateNumberRaw);
+  const notes = [record.notes, record.accountRaw, record.budgetItemRaw]
+    .map(normalizeText).filter(Boolean).join("／");
+  return {
+    id: `official-${sha256(sourceKey).slice(0, 20)}`,
+    sourceKey,
+    datasetId: document.id,
+    category: document.category,
+    kind: document.kind,
+    amountStage: document.category === "contract_result" ? "契約金額欄の掲載値" : "交付決定額欄の掲載値",
+    executorId: document.executorId,
+    executorName: document.executorName,
+    fiscalYear: document.fiscalYear,
+    date: record.date,
+    dateRaw: normalizeText(record.dateRaw),
+    organization,
+    organizations: [organization],
+    corporateNumber: record.corporateNumber,
+    corporateNumbers,
+    corporateNumberRaw,
+    multiplePartyListing: corporateNumbers.length > 1,
+    program: normalizeText(record.title),
+    amount: record.amount,
+    amountRaw: normalizeText(record.amountRaw),
+    method: normalizeText(record.methodRaw) || document.kind,
+    notes,
+    sourcePageUrl: document.sourcePageUrl,
+    sourceDocumentUrl: document.url,
+    sourceSheet: normalizeText(record.sourcePeriodRaw) || `掲載順${record.sourceOrdinal}`,
+    sourceRowNumber: record.sourceOrdinal,
+  };
+}
+
 function valueAt(row, columns, key) {
   const column = columns.get(key);
   return column ? cellToString(row.getCell(column).value) : "";
@@ -440,7 +577,7 @@ function normalizeHeader(value) {
   return normalizeText(value)
     .replace(/[\s\n\r　]/g, "")
     .replace(/[（）()]/g, "")
-    .replace(/[・]/g, "");
+    .replace(/[・、，,]/g, "");
 }
 
 function normalizeText(value) {
@@ -492,11 +629,11 @@ function formatDate(date) {
 }
 
 const semanticFields = [
-  "category", "kind", "amountStage", "executorId", "fiscalYear", "date", "dateRaw",
+  "datasetId", "category", "kind", "amountStage", "executorId", "fiscalYear", "date", "dateRaw",
   "organization", "corporateNumber", "corporateNumberRaw", "program", "amount", "amountRaw", "method", "notes",
 ];
 const officialIdentityFields = [
-  "category", "executorId", "fiscalYear", "organization", "corporateNumberRaw", "program",
+  "datasetId", "category", "executorId", "fiscalYear", "organization", "corporateNumberRaw", "program",
 ];
 
 function splitOfficialValues(value) {
@@ -545,6 +682,40 @@ async function readJsonIfExists(url, fallback) {
   } catch (error) {
     if (error?.code === "ENOENT") return fallback;
     throw error;
+  }
+}
+
+async function readPreviousOfficialRecords() {
+  const manifest = await readJsonIfExists(new URL("manifest.json", DATA_DIRECTORY), null);
+  if (!manifest?.files || typeof manifest.files !== "object") return [];
+  return (await Promise.all(Object.values(manifest.files).map((filename) => {
+    if (!/^records-\d{4}\.json$/.test(filename)) {
+      throw new Error(`前回の公式資料manifestに許可されていないファイルがあります: ${filename}`);
+    }
+    return readJsonIfExists(new URL(filename, DATA_DIRECTORY), []);
+  }))).flat();
+}
+
+function coverageStatus(documents, category) {
+  const selected = documents.filter((document) => document.category === category);
+  if (!selected.length) return "明細未収録";
+  const years = [...new Set(selected.map((document) => document.fiscalYear))].sort((a, b) => a - b);
+  const formats = [...new Set(selected.map((document) => (document.format === "html" ? "HTML" : "XLSX")))];
+  return `${years[0]}${years.length > 1 ? `～${years.at(-1)}` : ""}年度／${selected.length}公式${formats.join("・")}資料を収録（全年度・全区分の完全収録ではありません）`;
+}
+
+async function removeObsoleteYearFiles(expectedFilenames) {
+  let entries = [];
+  try {
+    entries = await readdir(DATA_DIRECTORY);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+  for (const filename of entries) {
+    if (/^records-\d{4}\.json$/.test(filename) && !expectedFilenames.has(filename)) {
+      await unlink(new URL(filename, DATA_DIRECTORY));
+    }
   }
 }
 
