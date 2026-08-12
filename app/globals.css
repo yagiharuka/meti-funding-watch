@@ -127,6 +127,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .official-search-section .section-heading.compact h2 { font-size: clamp(28px, 3.5vw, 46px); }
 .official-coverage-note { max-width: 1440px; margin: -2px auto 14px; padding: 14px 16px; border-left: 3px solid var(--amber); background: #fffaf0; color: #5e563f; font-size: 11px; line-height: 1.75; }
 .official-coverage-note strong { color: var(--ink); }
+.official-ingestion-summary { display: grid; gap: 4px; max-width: 1400px; margin: -18px 20px 26px; padding: 15px 18px; border: 1px solid #d6b66d; border-left: 5px solid #d88919; border-radius: 12px; background: #fff8e9; color: #59451f; line-height: 1.65; }
+.official-ingestion-summary strong { color: #2d2414; font-size: 14px; }
+.official-ingestion-summary span { font-size: 12px; font-weight: 700; }
+.official-ingestion-summary small { color: #6a5630; font-size: 12px; }
+@media (min-width: 1440px) { .official-ingestion-summary { margin-right: auto; margin-left: auto; } }
 .official-results-table table { min-width: 1080px; }
 .official-search-updated { max-width: 1440px; margin: 16px auto 0; color: var(--muted); font-size: 10px; }
 .official-update-alert { max-width: 1440px; margin: 0 auto 14px; padding: 13px 15px; border-left: 4px solid #d88919; background: #fff8e9; color: #59451f; }

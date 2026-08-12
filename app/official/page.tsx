@@ -23,12 +23,26 @@ type SourceFailure = {
 };
 
 export default function OfficialSourcesPage() {
-  const coverage = manifest.coverage as typeof manifest.coverage & { fiscalYears?: number[]; sourceDocumentCount?: number };
+  const coverage = manifest.coverage as typeof manifest.coverage & {
+    fiscalYears?: number[];
+    sourceDocumentCount?: number;
+    attemptedSourceDocumentCount?: number;
+    failedSourceDocumentCount?: number;
+  };
   const sourceFailures = ((manifest as typeof manifest & { sourceFailures?: SourceFailure[] }).sourceFailures ?? []);
   const smeaRecordCount = manifest.coverage.executors.smea.contractResults.records + manifest.coverage.executors.smea.grantDecisions.records;
   const jpoRecordCount = manifest.coverage.executors.jpo.contractResults.records + manifest.coverage.executors.jpo.grantDecisions.records;
   const years = coverage.fiscalYears ?? [...new Set(Object.values(manifest.coverage.executors).flatMap((item) => item.fiscalYears))].sort();
-  const yearRange = years.length === 1 ? `${years[0]}年度` : `${years[0]}～${years[years.length - 1]}年度`;
+  const yearList = `${years.join("・")}年度`;
+  const attemptedYears = [...new Set([
+    ...manifest.sourceDocuments.map((source) => source.fiscalYear),
+    ...sourceFailures.map((failure) => failure.fiscalYear),
+  ])].sort();
+  const missingYears = attemptedYears.filter((year) => !years.includes(year));
+  const attemptedSourceCount = coverage.attemptedSourceDocumentCount
+    ?? (coverage.sourceDocumentCount ?? manifest.sourceDocuments.length) + sourceFailures.length;
+  const verifiedSourceCount = coverage.sourceDocumentCount ?? manifest.sourceDocuments.length;
+  const failedSourceCount = coverage.failedSourceDocumentCount ?? sourceFailures.length;
   return (
     <main>
       <header className="topbar">
@@ -45,13 +59,22 @@ export default function OfficialSourcesPage() {
         <h1 id="official-title">公式契約結果・補助金交付決定</h1>
         <p className="official-lead">
           公式資料に掲載された直接契約と補助金等の交付決定を、交付先・契約相手、法人番号、事業名から検索できます。
-          現在の検索収録は中小企業庁・特許庁の{yearRange}に公表された資料の一部です。
+          現在の検索収録は中小企業庁・特許庁の{yearList}に公表された資料の一部です。
         </p>
         <p className="official-warning">
           契約額と交付決定額は段階が異なり、いずれも実支払額ではありません。
           GビズINFOの掲載値とも合算しません。再委託先、間接補助先、基金・所管法人からの下流支出は、この一覧では網羅しません。
         </p>
       </section>
+
+      <aside className="official-ingestion-summary" aria-labelledby="official-ingestion-title">
+        <strong id="official-ingestion-title">部分収録：候補URL {attemptedSourceCount}件のうち、資料を取得・検証できたもの {verifiedSourceCount}件</strong>
+        <span>
+          未取得候補 {failedSourceCount}件／全年度・全区分を完全照合済み {registry.collectionStatus.fullyReconciledCells}/{registry.collectionStatus.registeredEndpoints}系列。
+          {missingYears.length > 0 && `${missingYears.join("・")}年度の検索明細は現在ありません。`}
+        </span>
+        <small>日次更新は登録済みURLを再取得します。新年度・新URL・新機関は自動発見せず、確認・検証後に追加します。</small>
+      </aside>
 
       <OfficialSearch />
 
@@ -73,11 +96,11 @@ export default function OfficialSourcesPage() {
         </div>
         <p className="catalog-status" role="status">
           <strong>現在の収録状態：</strong>
-          公式入口 {registry.collectionStatus.registeredEndpoints}/{registry.collectionStatus.registeredEndpoints}系列を登録／
+          公式入口リンク {registry.collectionStatus.registeredEndpoints}件（明細収録の分母ではありません）／
           一部でも明細検索できる系列 {registry.collectionStatus.searchableSeriesCells}/{registry.collectionStatus.registeredEndpoints}／
           全年度・全公表区分を完全照合した系列 {registry.collectionStatus.fullyReconciledCells}/{registry.collectionStatus.registeredEndpoints}。
           検索可能な公式資料明細は {manifest.recordCount}掲載行です。
-          検索収録は2機関・{yearRange}の{coverage.sourceDocumentCount ?? manifest.sourceDocuments.length}公式資料です。リンクだけの資料は収録済みと数えていません。
+          検索収録は{coverage.executorCount}機関・{yearList}の{verifiedSourceCount}公式資料です。リンクだけの資料は収録済みと数えていません。
         </p>
         {sourceFailures.length > 0 && (
           <details className="official-source-failures">

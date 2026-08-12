@@ -50,6 +50,15 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.match(pageSource, /GビズINFOの掲載値とも合算しません/);
   assert.match(pageSource, /リンクだけの資料は収録済みと数えていません/);
   assert.match(pageSource, /取得・形式検証できず未収録の候補資料/);
+  assert.match(pageSource, /部分収録：候補URL/);
+  assert.match(pageSource, /資料を取得・検証できたもの/);
+  assert.match(pageSource, /未取得候補/);
+  assert.match(pageSource, /全年度・全区分を完全照合済み/);
+  assert.match(pageSource, /missingYears\.join\("・"\)/);
+  assert.match(pageSource, /新年度・新URL・新機関は自動発見せず/);
+  assert.match(pageSource, /明細収録の分母ではありません/);
+  assert.match(pageSource, /years\.join\("・"\)/);
+  assert.doesNotMatch(pageSource, /years\[0\].*years\[years\.length - 1\]/s);
   assert.match(pageSource, /失敗した新規候補を0件資料とは扱わず/);
   assert.match(pageSource, /前回公開済み資料の再検証に失敗した場合は、公式明細全体の更新を停止/);
   assert.match(pageSource, /明細未収録/);
