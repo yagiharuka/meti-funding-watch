@@ -6,15 +6,17 @@ const registry = JSON.parse(
   await readFile(new URL("../data/official-source-registry.json", import.meta.url), "utf8"),
 );
 const pageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
+const searchSource = await readFile(new URL("../app/official/OfficialSearch.tsx", import.meta.url), "utf8");
 const viewTabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
 
 test("registers all 13 direct executors and both official source categories", () => {
-  assert.equal(registry.schemaVersion, 1);
+  assert.equal(registry.schemaVersion, 2);
   assert.equal(registry.executors.length, 13);
   assert.equal(new Set(registry.executors.map((item) => item.id)).size, 13);
   assert.equal(registry.collectionStatus.registeredEndpoints, 26);
-  assert.equal(registry.collectionStatus.searchableRecords, 0);
-  assert.equal(registry.collectionStatus.status, "catalog_only");
+  assert.equal(registry.collectionStatus.searchableRecords, 385);
+  assert.deepEqual(registry.collectionStatus.searchableExecutors, ["smea", "jpo"]);
+  assert.equal(registry.collectionStatus.status, "partial_detail");
 
   const expected = [
     "meti", "anre", "smea", "jpo", "hokkaido", "tohoku", "kanto",
@@ -43,10 +45,14 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.match(registry.series.contracts.notIncluded, /実支払/);
   assert.match(registry.series.grantDecisions.notIncluded, /実支払/);
   assert.match(pageSource, /GビズINFOの掲載値とも合算しません/);
-  assert.match(pageSource, /リンクを登録しただけの資料を「収録済み」とは数えていません/);
+  assert.match(pageSource, /リンクだけの資料は収録済みと数えていません/);
   assert.match(pageSource, /明細未収録/);
   assert.match(pageSource, /再委託先、間接補助先、基金・所管法人からの下流支出/);
   assert.doesNotMatch(pageSource, /実支払額です|最終受益者です|全件収録済み/);
+  assert.match(searchSource, /公式資料の明細検索/);
+  assert.match(searchSource, /交付先・契約相手、法人番号、事業名で検索/);
+  assert.match(searchSource, /中小企業庁の随意契約、特許庁の委託契約・公共工事、他機関・他年度は含みません/);
+  assert.doesNotMatch(searchSource, /合計額|総支払額|実支払額です/);
 });
 
 test("adds the official catalog as a separate visible tab without restoring Mirasapo", () => {

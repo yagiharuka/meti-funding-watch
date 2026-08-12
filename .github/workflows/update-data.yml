@@ -57,7 +57,19 @@ jobs:
         id: attempt
         run: echo "attempted_at=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_OUTPUT"
 
-      - name: Refresh official data
+      - name: Refresh official detail data
+        id: official_refresh
+        continue-on-error: true
+        run: npm run update:official
+
+      - name: Preserve last verified official detail data after a source failure
+        if: steps.official_refresh.outcome != 'success'
+        run: |
+          echo "::warning::公式資料明細の取得に失敗したため、前回の検証済み明細を維持します。"
+          git restore --source=HEAD -- data/official
+          test -z "$(git status --porcelain -- data/official)"
+
+      - name: Refresh Gbiz public data
         id: refresh
         continue-on-error: true
         run: npm run update:data
@@ -67,7 +79,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gbiz-source-evidence-${{ github.run_id }}
-          path: .audit/gbiz
+          path: |
+            .audit/gbiz
+            .audit/official
           if-no-files-found: warn
           retention-days: 90
 
@@ -86,10 +100,8 @@ jobs:
       - name: Confirm failed refresh did not alter verified data
         if: steps.refresh.outcome != 'success'
         run: |
-          if [[ -n "$(git status --porcelain -- data/funding-data.json data/funding-summary.json data/pages)" ]]; then
-            echo "::error::Failed refresh altered verified data; refusing to publish a status release."
-            exit 1
-          fi
+          git restore --source=HEAD -- data/funding-data.json data/funding-summary.json data/pages data/official
+          test -z "$(git status --porcelain -- data/funding-data.json data/funding-summary.json data/pages data/official)"
 
       - name: Verify data and GitHub Pages build
         run: npm run test:pages
@@ -97,13 +109,13 @@ jobs:
       - name: Commit changed data
         if: steps.refresh.outcome == 'success'
         run: |
-          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages; then
+          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages data/official; then
             echo "No data changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- data/funding-data.json data/funding-summary.json data/pages
+          git add -A -- data/funding-data.json data/funding-summary.json data/pages data/official
           git commit -m "chore(data): refresh official funding data"
           git push
 

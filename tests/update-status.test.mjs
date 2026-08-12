@@ -51,6 +51,13 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
     generatedAt: releaseIdentity.generatedAt,
     commitments: { 2026: "commitments-2026.json" },
   }, null, 2)}\n`;
+  const officialRowsText = `${JSON.stringify([{ id: "official-1" }])}\n`;
+  const officialManifestText = `${JSON.stringify({
+    schemaVersion: 1,
+    generatedAt: releaseIdentity.generatedAt,
+    recordCount: 1,
+    files: { 2025: "records-2025.json" },
+  }, null, 2)}\n`;
   const release = {
     schemaVersion: 1,
     ...releaseIdentity,
@@ -70,11 +77,26 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
         rows: 1,
       },
     },
+    official: {
+      generatedAt: releaseIdentity.generatedAt,
+      recordCount: 1,
+      manifestSha256: sha256(officialManifestText),
+      idSetSha256: sha256("official-1\n"),
+      files: {
+        "records-2025.json": {
+          sha256: sha256(officialRowsText),
+          bytes: Buffer.byteLength(officialRowsText),
+          rows: 1,
+        },
+      },
+    },
   };
   const bodies = new Map([
     ["release.json", `${JSON.stringify(release)}\n`],
     ["update-status.json", `${JSON.stringify(status())}\n`],
     ["data/manifest.json", manifestText],
+    ["data/official/manifest.json", officialManifestText],
+    ["data/official/records-2025.json", officialRowsText],
     ["data/commitments-2026.json", rowsText],
     ["index.html", "<main>verified</main>\n"],
   ]);
@@ -93,6 +115,7 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
     fetchImpl,
   });
   assert.equal(verified.recordCount, 1);
+  assert.equal(verified.officialRecordCount, 1);
   await assert.rejects(
     verifyLivePages({
       baseUrl: "https://example.test/meti-funding-watch/",

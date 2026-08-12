@@ -151,10 +151,16 @@ test("rejects identity changes and corrections above the automatic limit", () =>
 
 test("workflow publishes only verified prior data with an explicit failure status", async () => {
   const workflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
-  assert.match(workflow, /- name: Refresh official data[\s\S]*?run: npm run update:data/);
+  assert.match(workflow, /- name: Refresh official detail data[\s\S]*?id: official_refresh[\s\S]*?run: npm run update:official/);
+  assert.match(workflow, /Preserve last verified official detail data after a source failure[\s\S]*?git restore --source=HEAD -- data\/official/);
+  assert.match(workflow, /- name: Refresh Gbiz public data[\s\S]*?id: refresh[\s\S]*?run: npm run update:data/);
+  assert.ok(
+    workflow.indexOf("Refresh official detail data") < workflow.indexOf("Refresh Gbiz public data"),
+    "an official-source failure must not prevent the independent Gbiz refresh attempt",
+  );
   assert.match(workflow, /continue-on-error: true/);
   assert.match(workflow, /Confirm failed refresh did not alter verified data/);
-  assert.match(workflow, /git status --porcelain -- data\/funding-data\.json/);
+  assert.match(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages data\/official/);
   assert.match(workflow, /PAGES_UPDATE_OUTCOME:/);
   assert.match(workflow, /Verify the published release from the live site/);
   assert.match(workflow, /node scripts\/verify-live-pages\.mjs/);

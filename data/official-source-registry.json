@@ -1,11 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "asOf": "2026-08-12",
   "collectionStatus": {
     "registeredEndpoints": 26,
-    "searchableRecords": 0,
-    "status": "catalog_only",
-    "note": "公式資料の入口を登録した段階です。各資料の明細はまだ当サイトの検索データに取り込んでいません。"
+    "searchableRecords": 385,
+    "searchableExecutors": ["smea", "jpo"],
+    "status": "partial_detail",
+    "note": "中小企業庁・特許庁の2025年度公式XLSX 7冊から385掲載行を検索できます。他の機関・年度・契約区分は未収録です。"
   },
   "series": {
     "contracts": {

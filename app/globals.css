@@ -122,6 +122,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .official-hero h1 { max-width: 900px; margin: 0; font-size: clamp(32px, 4.6vw, 62px); line-height: 1.12; letter-spacing: -.05em; }
 .official-lead { max-width: 840px; margin: 24px 0 0; color: #40534c; font-size: clamp(14px, 1.3vw, 18px); line-height: 1.9; }
 .official-warning { max-width: 920px; margin: 22px 0 0; padding: 16px 18px; border-left: 4px solid var(--amber); background: #fffaf0; color: #5e563f; font-size: 13px; line-height: 1.8; }
+.official-search-section { padding: 0 clamp(22px, 5vw, 78px) 76px; }
+.official-search-section .section-heading.compact { margin-bottom: 22px; }
+.official-search-section .section-heading.compact h2 { font-size: clamp(28px, 3.5vw, 46px); }
+.official-coverage-note { max-width: 1440px; margin: -2px auto 14px; padding: 14px 16px; border-left: 3px solid var(--amber); background: #fffaf0; color: #5e563f; font-size: 11px; line-height: 1.75; }
+.official-coverage-note strong { color: var(--ink); }
+.official-results-table table { min-width: 1080px; }
+.official-search-updated { max-width: 1440px; margin: 16px auto 0; color: var(--muted); font-size: 10px; }
 .official-section { padding: 34px clamp(22px, 5vw, 78px) 76px; }
 .official-section .section-heading.compact { margin-bottom: 22px; }
 .official-section .section-heading.compact h2 { font-size: clamp(28px, 3.5vw, 46px); }
@@ -273,6 +280,7 @@ footer a { color: var(--green); font-weight: 700; }
   .records-table .amount, .records-table .amount small { text-align: left; white-space: normal; }
   .records-table .source-link, .adoption-records .source-link { display: inline-flex; align-items: center; min-height: 44px; white-space: normal; }
   .official-hero { padding-top: 48px; }
+  .official-search-section { padding-bottom: 58px; }
   .official-section { padding-bottom: 58px; }
   .population-matrix, .official-source-table { overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
   .population-matrix table, .population-matrix thead, .population-matrix tbody, .population-matrix tr, .population-matrix th, .population-matrix td,

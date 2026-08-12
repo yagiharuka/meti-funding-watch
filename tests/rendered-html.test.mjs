@@ -18,9 +18,10 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
 
   const publicDataFiles = (await readdir(dataDirectory)).sort();
   assert.ok(publicDataFiles.includes("manifest.json"));
+  assert.ok(publicDataFiles.includes("official"));
   assert.ok(publicDataFiles.some((filename) => filename.startsWith("commitments-")));
   assert.ok(publicDataFiles.every((filename) =>
-    filename === "manifest.json" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)));
+    filename === "manifest.json" || filename === "official" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)));
   assert.ok(!publicDataFiles.some((filename) => /^(?:payments|programs)-/.test(filename)));
   const publicIds = [];
   const allowedFields = new Set([
@@ -96,6 +97,25 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
     assert.equal(metadata.bytes, (await stat(fileUrl)).size);
     assert.equal(metadata.rows, JSON.parse(text).length);
   }
+  const officialDirectory = new URL("official/", dataDirectory);
+  const officialManifestText = await readFile(new URL("manifest.json", officialDirectory), "utf8");
+  const officialManifest = JSON.parse(officialManifestText);
+  const officialIds = [];
+  assert.equal(release.official.manifestSha256, sha256(officialManifestText));
+  assert.equal(release.official.generatedAt, officialManifest.generatedAt);
+  for (const [filename, metadata] of Object.entries(release.official.files)) {
+    const fileUrl = new URL(filename, officialDirectory);
+    const text = await readFile(fileUrl, "utf8");
+    const rows = JSON.parse(text);
+    assert.equal(metadata.sha256, sha256(text));
+    assert.equal(metadata.bytes, (await stat(fileUrl)).size);
+    assert.equal(metadata.rows, rows.length);
+    officialIds.push(...rows.map((row) => row.id));
+  }
+  assert.equal(officialIds.length, officialManifest.recordCount);
+  assert.equal(officialIds.length, release.official.recordCount);
+  assert.equal(new Set(officialIds).size, officialIds.length);
+  assert.equal(release.official.idSetSha256, sha256(`${[...officialIds].sort().join("\n")}\n`));
 
   const publicIndex = await readFile(new URL("../dist-pages/index.html", import.meta.url), "utf8");
   const adoptionIndex = await readFile(new URL("../dist-pages/adoptions/index.html", import.meta.url), "utf8");
@@ -117,6 +137,9 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.match(publicUi, /調達（委託を含む）・補助金/);
   assert.match(publicUi, /中小企業庁の補助金採択者情報/);
   assert.match(publicUi, /執行機関別の公式入口/);
+  assert.match(publicUi, /公式資料の明細検索/);
+  assert.match(publicUi, /交付先・契約相手、法人番号、事業名で検索/);
+  assert.match(publicUi, /中小企業庁の随意契約、特許庁の委託契約・公共工事/);
   assert.match(publicUi, /契約額と交付決定額は段階が異なり/);
   assert.match(publicUi, /事業者名・事業計画名/);
   assert.match(publicUi, /すべての補助金/);

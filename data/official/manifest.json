@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-12T00:41:39.297Z",
+  "recordCount": 385,
+  "files": {
+    "2025": "records-2025.json"
+  },
+  "coverage": {
+    "status": "partial",
+    "executorCount": 2,
+    "executors": {
+      "smea": {
+        "name": "中小企業庁",
+        "fiscalYears": [
+          2025
+        ],
+        "contractResults": {
+          "records": 60,
+          "status": "競争入札の2公式ファイルを収録（随意契約等は未収録）"
+        },
+        "grantDecisions": {
+          "records": 20,
+          "status": "中小企業庁の2025年度補助金等情報ファイルを収録"
+        }
+      },
+      "jpo": {
+        "name": "特許庁",
+        "fiscalYears": [
+          2025
+        ],
+        "contractResults": {
+          "records": 301,
+          "status": "物品・役務等の競争入札・随意契約を収録（委託契約・公共工事は未収録）"
+        },
+        "grantDecisions": {
+          "records": 4,
+          "status": "2025年度の半期2公式ファイルを確認（10月～3月は交付決定なし）"
+        }
+      }
+    },
+    "note": "検索対象は中小企業庁と特許庁が公開する2025年度の7つのXLSX明細です。13執行機関・全年度・全契約区分の全資料ではありません。"
+  },
+  "seriesCounts": {
+    "contract_result": 361,
+    "grant_decision": 24
+  },
+  "continuity": {
+    "retainedRecordCount": 385,
+    "addedRecordCount": 0,
+    "changedRecordCount": 1,
+    "changes": [
+      {
+        "sourceKey": "jpo-2025-grant-decisions-h1:7fy 4月-9月:10",
+        "oldHash": "6851de4c2b73d2a963863e6b0513a9878fdd47525e8de32efebab8e4390cbf43",
+        "newHash": "dc13d17679225d38b9728401e74dc35d9ee21ed36f2cc2bf58a3a89134666f7f",
+        "changedFields": [
+          "date"
+        ]
+      }
+    ]
+  },
+  "sourceDocuments": [
+    {
+      "id": "smea-2025-grant-decisions",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/hojyokin/2025.xlsx",
+      "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
+      "executorId": "smea",
+      "category": "grant_decision",
+      "kind": "補助金等の交付決定",
+      "fiscalYear": 2025,
+      "sha256": "cb0cfb43e9cb6f8cc647f4866c9f68151d8f1f5d6dc0bea1459bf3aa44de11e9",
+      "bytes": 31863,
+      "records": 20,
+      "emptySentinelFound": false,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    },
+    {
+      "id": "smea-2025-competitive-goods",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
+      "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
+      "executorId": "smea",
+      "category": "contract_result",
+      "kind": "競争入札（物品・役務等）",
+      "fiscalYear": 2025,
+      "sha256": "1abfd6139ffa54e067f407ea5cfd9411abeb8870c61d658f7384bd487e2e31ae",
+      "bytes": 40902,
+      "records": 11,
+      "emptySentinelFound": false,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    },
+    {
+      "id": "smea-2025-competitive-commission",
+      "url": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
+      "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
+      "executorId": "smea",
+      "category": "contract_result",
+      "kind": "競争入札（委託費）",
+      "fiscalYear": 2025,
+      "sha256": "ec9b549e1cbff72473b144c299331b587517123fc84eb70f2bd016e0dc676641",
+      "bytes": 64380,
+      "records": 49,
+      "emptySentinelFound": false,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    },
+    {
+      "id": "jpo-2025-competitive-goods",
+      "url": "https://www.jpo.go.jp/news/chotatsu/rakusatu/kyosonyusatu/document/2025/2025_ukeoi.xlsx",
+      "sourcePageUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/kyosonyusatu/index.html",
+      "executorId": "jpo",
+      "category": "contract_result",
+      "kind": "競争入札（物品・役務等）",
+      "fiscalYear": 2025,
+      "sha256": "217422306b6d254090621bb4f13dae2c5abd8f0681dc06c4236077ccd6130b11",
+      "bytes": 68091,
+      "records": 155,
+      "emptySentinelFound": false,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    },
+    {
+      "id": "jpo-2025-discretionary-goods",
+      "url": "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/document/2025/2025_ukeoi.xlsx",
+      "sourcePageUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/index.html",
+      "executorId": "jpo",
+      "category": "contract_result",
+      "kind": "随意契約（物品・役務等）",
+      "fiscalYear": 2025,
+      "sha256": "824c2a296f682e872b3abfa64c839b7a22166dcce032e2c8ad942625774fb8e9",
+      "bytes": 50742,
+      "records": 146,
+      "emptySentinelFound": false,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    },
+    {
+      "id": "jpo-2025-grant-decisions-h1",
+      "url": "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/2025/2025_04_09.xlsx",
+      "sourcePageUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/index.html",
+      "executorId": "jpo",
+      "category": "grant_decision",
+      "kind": "補助金等の交付決定（4月～9月）",
+      "fiscalYear": 2025,
+      "sha256": "ae94857ca1ae4e3817f4f062a41f7ebba9bf537297d07fb9d302780eed84e08b",
+      "bytes": 13638,
+      "records": 4,
+      "emptySentinelFound": false,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    },
+    {
+      "id": "jpo-2025-grant-decisions-h2",
+      "url": "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/2025/2025_10_03.xlsx",
+      "sourcePageUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/index.html",
+      "executorId": "jpo",
+      "category": "grant_decision",
+      "kind": "補助金等の交付決定（10月～3月）",
+      "fiscalYear": 2025,
+      "sha256": "3e16812a04f3bb51b8a217be24e0946f2fbc1ce188abf0711ca27a6116d71b92",
+      "bytes": 22306,
+      "records": 0,
+      "emptySentinelFound": true,
+      "retrievedAt": "2026-08-12T00:41:39.297Z"
+    }
+  ],
+  "publicFile": {
+    "filename": "records-2025.json",
+    "sha256": "a5b9a39507b80945fc0846eb51f84a169b8795db2e048a272087725a6214d7cd",
+    "bytes": 391562,
+    "records": 385
+  }
+}
