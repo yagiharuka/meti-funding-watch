@@ -22,7 +22,7 @@ type SourceFailure = {
   reasonCode: "empty_response" | "fetch_failed" | "parse_failed" | "evidence_mismatch";
 };
 
-type FallbackFailureReason = SourceFailure["reasonCode"] | "transient_http";
+type FallbackFailureReason = SourceFailure["reasonCode"] | "transient_http" | "archive_http_403";
 
 type SourceDocument = (typeof manifest.sourceDocuments)[number] & {
   primaryUrl?: string;
@@ -168,12 +168,12 @@ export default function OfficialSourcesPage() {
         )}
         {carryForwardSources.length > 0 && (
           <details className="official-source-failures">
-            <summary>ライブ取得失敗後に前回検証済み明細を継続使用：{carryForwardSources.length}件</summary>
-            <p>今回のライブ取得は完了していません。前回公開manifestと明細ファイルのハッシュ・行数、資料ID・原本URL・資料別明細数を再検証し、前回の明細を変更せず掲載しています。新しい内容を取得済みとは扱いません。</p>
+            <summary>資料取得失敗後に前回検証済み明細を継続使用：{carryForwardSources.length}件</summary>
+            <p>今回の資料取得は完了していません。前回公開manifestと明細ファイルのハッシュ・行数、資料ID・原本URL・資料定義・資料別明細数を再検証し、前回の明細を変更せず掲載しています。新しい内容を取得済みとは扱いません。</p>
             <ul>
               {carryForwardSources.map((source) => (
                 <li key={source.id}>
-                  <a href={source.primaryUrl ?? source.originalUrl} target="_blank" rel="noreferrer">{executorName(source.executorId)}・{source.fiscalYear}年度・{source.kind}（ライブURL）↗</a>
+                  <a href={source.primaryUrl ?? source.originalUrl} target="_blank" rel="noreferrer">{executorName(source.executorId)}・{source.fiscalYear}年度・{source.kind}（{source.archiveProvider ? "保存資料URL" : "ライブURL"}）↗</a>
                   <span>{fallbackFailureLabel(source.primaryFailureReasonCode)}／最終正常取得 {formatJapaneseTimestamp(source.lastSuccessfulRetrievedAt)}／前回明細を継続</span>
                 </li>
               ))}
@@ -246,6 +246,7 @@ function executorName(executorId: string) {
 }
 
 function fallbackFailureLabel(reason: FallbackFailureReason | null | undefined) {
+  if (reason === "archive_http_403") return "WARP保存資料がHTTP 403";
   if (reason === "empty_response") return "ライブURLが0バイト応答";
   if (reason === "transient_http") return "ライブURLが一時的なHTTPエラー";
   return "ライブURLの取得に失敗";

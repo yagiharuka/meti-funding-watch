@@ -16,6 +16,8 @@ import {
   assertOfficialEvidenceSourceReceipt,
   fetchOfficialDocuments,
   OFFICIAL_DOCUMENTS,
+  OFFICIAL_PARSER_REVISION,
+  officialDocumentDefinitionSha256,
 } from "../scripts/update-official-data.mjs";
 
 const evidenceDocuments = [
@@ -145,6 +147,10 @@ test("carries forward a published evidence source after repeated HTTP 202", asyn
     originalUrl: document.url,
     sourcePageUrl: document.sourcePageUrl,
     format: "xlsx",
+    discoveryStatus: document.discoveryStatus ?? "linked_from_official_index",
+    coverageClaim: document.coverageClaim ?? "公式資料に掲載された行",
+    parserRevision: OFFICIAL_PARSER_REVISION,
+    definitionSha256: officialDocumentDefinitionSha256(document),
     executorId: document.executorId,
     category: document.category,
     kind: document.kind,

@@ -3,7 +3,11 @@ import test from "node:test";
 
 import ExcelJS from "exceljs";
 
-import { fetchOfficialDocuments } from "../scripts/update-official-data.mjs";
+import {
+  fetchOfficialDocuments,
+  OFFICIAL_PARSER_REVISION,
+  officialDocumentDefinitionSha256,
+} from "../scripts/update-official-data.mjs";
 
 test("retries a transient empty live response twice and then parses the third response", async () => {
   const document = grantDocument({
@@ -101,6 +105,117 @@ test("requires a committed verified WARP capture and enforces its byte, hash, an
   assert.equal(valid.sourceFailures.length, 0);
 });
 
+test("carries a pinned published WARP source only for an archive HTTP 403", async () => {
+  const validBytes = await grantWorkbookBytes();
+  const expectedSha256 = await sha256(validBytes);
+  const originalUrl = "https://www.jpo.go.jp/example/archive.xlsx";
+  const archived = grantDocument({
+    id: "archive-403-carry-fixture",
+    sourcePageUrl: "https://www.jpo.go.jp/example/index.html",
+    originalUrl,
+    url: `https://warp.ndl.go.jp/20260101/20260101000000/${originalUrl}`,
+    archiveProvider: "国立国会図書館インターネット資料収集保存事業（WARP）",
+    archiveVerifiedAt: "2026-08-12",
+    archiveVerification: "exact archive fixture",
+    archiveExpectedBytes: validBytes.length,
+    archiveExpectedSha256: expectedSha256,
+    archiveExpectedRecordCount: 1,
+    discoveryStatus: "archived_official_file",
+    coverageClaim: "fixture one-row archive",
+  });
+  const first = await fetchOfficialDocuments([archived], [], async () => new Response(validBytes));
+  const baseline = first.fetched[0].records;
+  const previousReceipt = archiveReceipt(archived, validBytes, baseline.length);
+
+  let calls = 0;
+  const carried = await fetchOfficialDocuments(
+    [archived], baseline, async () => {
+      calls += 1;
+      return new Response("forbidden".padEnd(600), { status: 403 });
+    }, [archived.id], [previousReceipt],
+  );
+  assert.equal(calls, 1, "a pinned WARP capture is attempted once");
+  assert.equal(carried.sourceFailures.length, 0);
+  assert.deepEqual(carried.fetched[0].records, baseline);
+  assert.deepEqual(carried.fetched[0].carryForward, {
+    primaryFailureReasonCode: "archive_http_403",
+    lastSuccessfulRetrievedAt: previousReceipt.retrievedAt,
+    emptySentinelFound: false,
+  });
+  assert.equal(carried.fetched[0].sha256, archived.archiveExpectedSha256);
+  assert.equal(carried.fetched[0].bytes, archived.archiveExpectedBytes);
+
+  const repeatedReceipt = {
+    ...previousReceipt,
+    carryForwardUsed: true,
+    primaryFailureReasonCode: "archive_http_403",
+    lastSuccessfulRetrievedAt: previousReceipt.retrievedAt,
+    attemptedAt: "2026-08-12T01:00:00.000Z",
+  };
+  const repeated = await fetchOfficialDocuments(
+    [archived], baseline, async () => new Response("forbidden".padEnd(600), { status: 403 }),
+    [archived.id], [repeatedReceipt],
+  );
+  assert.equal(repeated.fetched[0].carryForward.lastSuccessfulRetrievedAt, previousReceipt.retrievedAt);
+
+  await assert.rejects(
+    fetchOfficialDocuments([archived], [], async () => new Response("forbidden".padEnd(600), { status: 403 })),
+    /検証済みWARP資料を再検証できません/,
+    "a first-seen archive must never be carried without prior evidence",
+  );
+});
+
+test("never carries a WARP archive after non-403 fetch or post-fetch verification failures", async () => {
+  const validBytes = await grantWorkbookBytes();
+  const expectedSha256 = await sha256(validBytes);
+  const originalUrl = "https://www.jpo.go.jp/example/archive.xlsx";
+  const archived = grantDocument({
+    id: "archive-carry-refusal-fixture",
+    sourcePageUrl: "https://www.jpo.go.jp/example/index.html",
+    originalUrl,
+    url: `https://warp.ndl.go.jp/20260101/20260101000000/${originalUrl}`,
+    archiveProvider: "国立国会図書館インターネット資料収集保存事業（WARP）",
+    archiveVerifiedAt: "2026-08-12",
+    archiveVerification: "exact archive fixture",
+    archiveExpectedBytes: validBytes.length,
+    archiveExpectedSha256: expectedSha256,
+    archiveExpectedRecordCount: 1,
+    discoveryStatus: "archived_official_file",
+    coverageClaim: "fixture one-row archive",
+  });
+  const baseline = (await fetchOfficialDocuments([archived], [], async () => new Response(validBytes))).fetched[0].records;
+  const receipt = archiveReceipt(archived, validBytes, baseline.length);
+  const attempt = (document, response, priorReceipt = receipt) => fetchOfficialDocuments(
+    [document], baseline, async () => response(), [archived.id], [priorReceipt],
+  );
+
+  for (const response of [
+    () => new Response("missing".padEnd(600), { status: 404 }),
+    () => new Response(null, { status: 302, headers: { location: archived.url } }),
+    () => new Response(new Uint8Array(validBytes.length).fill(1), { status: 200 }),
+    () => new Response(Buffer.concat([Buffer.from("PK\u0003\u0004"), Buffer.alloc(600)]), { status: 200 }),
+  ]) {
+    await assert.rejects(attempt(archived, response));
+  }
+
+  for (const mutation of [
+    { sourcePageUrl: "https://www.jpo.go.jp/example/changed-index.html" },
+    { coverageClaim: "changed coverage" },
+    { kind: "changed kind" },
+    { fiscalYear: 2024 },
+    { headerAliases: { "事業名": ["changed header"] } },
+    { archiveExpectedSha256: "0".repeat(64) },
+  ]) {
+    const changed = { ...archived, ...mutation };
+    await assert.rejects(
+      fetchOfficialDocuments(
+        [changed], baseline, async () => new Response("forbidden".padEnd(600), { status: 403 }),
+        [changed.id], [receipt],
+      ),
+    );
+  }
+});
+
 test("retries a transient live response-body failure and succeeds on the third body", async () => {
   const document = grantDocument({
     id: "live-body-retry-fixture",
@@ -168,6 +283,10 @@ test("treats HTTP 202 WAF-like responses as transient and carries forward a publ
     originalUrl: document.url,
     sourcePageUrl: document.sourcePageUrl,
     format: "xlsx",
+    discoveryStatus: "linked_from_official_index",
+    coverageClaim: "公式資料に掲載された行",
+    parserRevision: OFFICIAL_PARSER_REVISION,
+    definitionSha256: officialDocumentDefinitionSha256(document),
     executorId: document.executorId,
     category: document.category,
     kind: document.kind,
@@ -288,6 +407,10 @@ test("carries forward exact prior rows and receipt only after transient live exh
     originalUrl: document.url,
     sourcePageUrl: document.sourcePageUrl,
     format: "xlsx",
+    discoveryStatus: "linked_from_official_index",
+    coverageClaim: "公式資料に掲載された行",
+    parserRevision: OFFICIAL_PARSER_REVISION,
+    definitionSha256: officialDocumentDefinitionSha256(document),
     executorId: document.executorId,
     category: document.category,
     kind: document.kind,
@@ -333,6 +456,9 @@ test("carries forward exact prior rows and receipt only after transient live exh
     records: 0,
     emptySentinelFound: true,
     carryForwardUsed: true,
+    definitionSha256: officialDocumentDefinitionSha256(zeroDocument),
+    lastSuccessfulRetrievedAt: previousReceipt.retrievedAt,
+    attemptedAt: "2026-08-12T00:00:00.000Z",
   };
   const repeatedZero = await fetchOfficialDocuments(
     [zeroDocument], [], async () => new Response(new Uint8Array()), [zeroDocument.id], [zeroReceipt],
@@ -389,6 +515,44 @@ function grantDocument(overrides) {
     amountStage: "交付決定額",
     format: "xlsx",
     ...overrides,
+  };
+}
+
+function archiveReceipt(document, bytes, records) {
+  return {
+    id: document.id,
+    url: document.url,
+    primaryUrl: document.url,
+    transportUrl: document.url,
+    fallbackUsed: false,
+    carryForwardUsed: false,
+    originalUrl: document.originalUrl,
+    sourcePageUrl: document.sourcePageUrl,
+    format: document.format,
+    discoveryStatus: document.discoveryStatus,
+    archiveProvider: document.archiveProvider,
+    archiveVerifiedAt: document.archiveVerifiedAt,
+    archiveVerification: document.archiveVerification,
+    archiveExpectedBytes: document.archiveExpectedBytes,
+    archiveExpectedSha256: document.archiveExpectedSha256,
+    archiveExpectedRecordCount: document.archiveExpectedRecordCount,
+    evidenceExpectedMagic: null,
+    evidenceExpectedBytes: null,
+    evidenceExpectedSha256: null,
+    evidenceExpectedRecordCount: null,
+    evidenceVerified: false,
+    parserRevision: OFFICIAL_PARSER_REVISION,
+    definitionSha256: officialDocumentDefinitionSha256(document),
+    coverageClaim: document.coverageClaim,
+    executorId: document.executorId,
+    category: document.category,
+    kind: document.kind,
+    fiscalYear: document.fiscalYear,
+    sha256: document.archiveExpectedSha256,
+    bytes: bytes.length,
+    records,
+    emptySentinelFound: false,
+    retrievedAt: "2026-08-11T00:00:00.000Z",
   };
 }
 

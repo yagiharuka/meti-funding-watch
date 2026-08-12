@@ -25,6 +25,15 @@ const FETCH_HEADERS = {
 };
 const LIVE_FETCH_ATTEMPTS = 3;
 const LIVE_FETCH_BACKOFF_MS = [250, 500];
+export const OFFICIAL_PARSER_REVISION = "official-parser-2026-08-12-archive-carry-v1";
+
+class OfficialArchiveUnavailableError extends Error {
+  constructor(document, status) {
+    super(`${document.id}: WARP保存資料を一時取得できません (HTTP ${status})`);
+    this.name = "OfficialArchiveUnavailableError";
+    this.status = status;
+  }
+}
 
 export const OFFICIAL_DOCUMENTS = applyVerifiedLiveFallbacks(applyVerifiedWarpCaptures([
   {
@@ -327,6 +336,8 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       evidenceExpectedSha256: document.evidenceReceipt?.expectedSha256 ?? null,
       evidenceExpectedRecordCount: document.evidenceReceipt?.expectedRecordCount ?? null,
       evidenceVerified: Boolean(document.evidenceReceipt),
+      parserRevision: OFFICIAL_PARSER_REVISION,
+      definitionSha256: officialDocumentDefinitionSha256(document),
       coverageClaim: document.coverageClaim ?? "公式資料に掲載された行",
       executorId: document.executorId,
       category: document.category,
@@ -394,6 +405,7 @@ export async function fetchOfficialDocuments(
     let phase = "fetch";
     try {
       const source = await fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl);
+      phase = "archive_receipt";
       assertArchiveSourceReceipt(document, source);
       phase = "evidence";
       assertOfficialEvidenceSourceReceipt(document, source);
@@ -413,7 +425,7 @@ export async function fetchOfficialDocuments(
       fetched.push({ document, ...source, records });
       if (!fetchImpl) console.error(`${progress} verified ${records.length} rows${source.fallback ? " (fallback)" : ""}`);
     } catch (error) {
-      const carryForward = maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById);
+      const carryForward = maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById, phase);
       if (carryForward) {
         fetched.push(carryForward);
         if (!fetchImpl) console.error(`${progress} carry-forward ${carryForward.records.length} rows`);
@@ -435,8 +447,14 @@ export async function fetchOfficialDocuments(
   return { fetched, sourceFailures };
 }
 
-function maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById) {
-  if (document.archiveProvider || document.verifiedFallback || !isFallbackEligibleFetchError(error)) return null;
+function maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById, phase) {
+  const archiveCarryForward = phase === "fetch"
+    && isVerifiedWarpArchiveUrl(document)
+    && error instanceof OfficialArchiveUnavailableError;
+  const liveCarryForward = !document.archiveProvider
+    && !document.verifiedFallback
+    && isFallbackEligibleFetchError(error);
+  if (!archiveCarryForward && !liveCarryForward) return null;
   const receipt = previousReceiptById.get(document.id);
   const records = previousRecords.filter((record) => record.datasetId === document.id);
   if (!receipt) return null;
@@ -452,13 +470,35 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
     || receipt.kind !== document.kind
     || receipt.fiscalYear !== document.fiscalYear
     || receipt.format !== sourceFormat(document)
+    || receipt.discoveryStatus !== (document.discoveryStatus ?? "linked_from_official_index")
+    || receipt.coverageClaim !== (document.coverageClaim ?? "公式資料に掲載された行")
+    || receipt.parserRevision !== OFFICIAL_PARSER_REVISION
+    || receipt.definitionSha256 !== officialDocumentDefinitionSha256(document)
     || receipt.records !== records.length
-    || receipt.archiveProvider
     || receipt.fallbackUsed
     || !Number.isSafeInteger(receipt.bytes) || receipt.bytes < 500 || receipt.bytes > 10_000_000
     || typeof receipt.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.sha256)
     || typeof receipt.retrievedAt !== "string" || Number.isNaN(Date.parse(receipt.retrievedAt))) {
     throw new Error(`${document.id}: 前回検証済み資料のreceiptまたは明細が資料定義と一致しません`);
+  }
+  if (archiveCarryForward) {
+    if (receipt.archiveProvider !== document.archiveProvider
+      || receipt.archiveVerifiedAt !== document.archiveVerifiedAt
+      || receipt.archiveVerification !== document.archiveVerification
+      || receipt.archiveExpectedBytes !== document.archiveExpectedBytes
+      || receipt.archiveExpectedSha256 !== document.archiveExpectedSha256
+      || receipt.archiveExpectedRecordCount !== document.archiveExpectedRecordCount
+      || receipt.bytes !== document.archiveExpectedBytes
+      || receipt.sha256 !== document.archiveExpectedSha256
+      || receipt.records !== document.archiveExpectedRecordCount) {
+      throw new Error(`${document.id}: 前回manifestのWARP receiptが現在の検証済み定義と一致しません`);
+    }
+  } else if (receipt.archiveProvider) {
+    throw new Error(`${document.id}: 前回検証済み資料のreceiptまたは明細が資料定義と一致しません`);
+  }
+  if (receipt.carryForwardUsed && (receipt.lastSuccessfulRetrievedAt !== receipt.retrievedAt
+    || typeof receipt.attemptedAt !== "string" || Number.isNaN(Date.parse(receipt.attemptedAt)))) {
+    throw new Error(`${document.id}: 前回の継続使用receiptの取得時刻が不正です`);
   }
   if ((records.length === 0 && (!document.emptySentinel || receipt.emptySentinelFound !== true))
     || (records.length > 0 && receipt.emptySentinelFound === true)) {
@@ -473,7 +513,7 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
       || record.kind !== document.kind
       || record.amountStage !== (document.amountStage ?? (document.category === "contract_result" ? "契約金額欄の掲載値" : "交付決定額欄の掲載値"))
       || record.executorName !== document.executorName
-      || record.sourceDocumentUrl !== document.url) {
+      || record.sourceDocumentUrl !== expectedRecordSourceDocumentUrl(document)) {
       throw new Error(`${document.id}: 前回検証済み明細の識別項目が資料定義と一致しません`);
     }
   }
@@ -488,6 +528,10 @@ function maybeCarryForwardDocument(document, error, previousRecords, previousRec
       emptySentinelFound: Boolean(receipt.emptySentinelFound),
     },
   };
+}
+
+function expectedRecordSourceDocumentUrl(document) {
+  return document.format === "pdf" ? (document.originalUrl ?? document.url) : document.url;
 }
 
 async function fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl) {
@@ -682,6 +726,9 @@ async function fetchDocumentOnce(document, fetchImpl) {
       throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${status}`);
     }
     if (status !== 200) {
+      if (status === 403 && isVerifiedWarpArchiveUrl(document)) {
+        throw new OfficialArchiveUnavailableError(document, status);
+      }
       const error = new Error(`${document.id}: HTTP ${status}`);
       if (status === 202 || status === 204 || status === 408 || status === 429 || status >= 500) throw markRetryable(error);
       throw error;
@@ -711,6 +758,9 @@ async function fetchDocumentOnce(document, fetchImpl) {
       throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${response.status}`);
     }
     if (response.status !== 200) {
+      if (response.status === 403 && isVerifiedWarpArchiveUrl(document)) {
+        throw new OfficialArchiveUnavailableError(document, response.status);
+      }
       const error = new Error(`${document.id}: HTTP ${response.status}`);
       if (response.status === 202 || response.status === 204 || response.status === 408 || response.status === 429 || response.status >= 500) throw markRetryable(error);
       throw error;
@@ -746,6 +796,16 @@ function isArchivedDocument(document) {
   return Boolean(document.archiveProvider || document.url.startsWith("https://warp.ndl.go.jp/"));
 }
 
+function isVerifiedWarpArchiveUrl(document) {
+  if (!isVerifiedArchiveDocument(document)) return false;
+  try {
+    const url = new URL(document.url);
+    return url.protocol === "https:" && url.hostname === "warp.ndl.go.jp";
+  } catch {
+    return false;
+  }
+}
+
 function markRetryable(error) {
   const candidate = error instanceof Error ? error : new Error("公式資料の取得に失敗しました");
   if (!Object.hasOwn(candidate, "officialFetchRetryable")) {
@@ -774,6 +834,7 @@ function isFallbackEligibleFetchError(error) {
 }
 
 function fetchFailureReasonCode(error) {
+  if (error instanceof OfficialArchiveUnavailableError) return "archive_http_403";
   if (/\(0\)$/.test(error?.message ?? "")) return "empty_response";
   if (/HTTP (?:202|204|408|429|5\d\d)$/.test(error?.message ?? "")) return "transient_http";
   return "fetch_failed";
@@ -1147,6 +1208,24 @@ function countRecords(records) {
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+export function officialDocumentDefinitionSha256(document) {
+  return sha256(JSON.stringify(canonicalJsonValue({
+    parserRevision: OFFICIAL_PARSER_REVISION,
+    document,
+  })));
+}
+
+function canonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+      .map(([key, item]) => [key, canonicalJsonValue(item)]));
+  }
+  return value;
 }
 
 async function readJsonIfExists(url, fallback) {

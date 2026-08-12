@@ -64,8 +64,9 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.match(pageSource, /carryForwardSourceDocumentCount/);
   assert.match(pageSource, /carryForwardSourceCount !== carryForwardSources\.length/);
   assert.match(pageSource, /source\.fallbackUsed && source\.carryForwardUsed/);
-  assert.match(pageSource, /ライブ取得失敗後に前回検証済み明細を継続使用/);
-  assert.match(pageSource, /前回公開manifestと明細ファイルのハッシュ・行数、資料ID・原本URL・資料別明細数を再検証/);
+  assert.match(pageSource, /資料取得失敗後に前回検証済み明細を継続使用/);
+  assert.match(pageSource, /前回公開manifestと明細ファイルのハッシュ・行数、資料ID・原本URL・資料定義・資料別明細数を再検証/);
+  assert.match(pageSource, /WARP保存資料がHTTP 403/);
   assert.match(pageSource, /新しい内容を取得済みとは扱いません/);
   assert.match(pageSource, /最終正常取得/);
   assert.match(pageSource, /function fallbackFailureLabel/);

@@ -6,8 +6,10 @@ import ExcelJS from "exceljs";
 
 import {
   OFFICIAL_DOCUMENTS,
+  OFFICIAL_PARSER_REVISION,
   assertOfficialContinuity,
   fetchOfficialDocuments,
+  officialDocumentDefinitionSha256,
   parseOfficialWorkbook,
 } from "../scripts/update-official-data.mjs";
 
@@ -89,6 +91,8 @@ test("binds every published source document to a SHA, row count, and registered 
       assert.equal(receipt.url, expectedTransportUrl, `${receipt.id}: compatibility URL must be the actual transport`);
     }
     assert.match(receipt.sha256, /^[0-9a-f]{64}$/);
+    assert.equal(receipt.parserRevision, OFFICIAL_PARSER_REVISION, `${receipt.id}: parser revision drifted`);
+    assert.equal(receipt.definitionSha256, officialDocumentDefinitionSha256(document), `${receipt.id}: definition digest drifted`);
     assert.ok(receipt.bytes > 1_000);
     assert.ok(Number.isSafeInteger(receipt.records));
     if (receipt.fallbackUsed) {
@@ -101,12 +105,22 @@ test("binds every published source document to a SHA, row count, and registered 
       assert.equal(receipt.sha256, document.verifiedFallback.expectedSha256);
       assert.equal(receipt.records, document.verifiedFallback.expectedRecordCount);
     } else if (receipt.carryForwardUsed) {
-      assert.ok(["empty_response", "transient_http", "fetch_failed"].includes(receipt.primaryFailureReasonCode));
+      assert.ok(["empty_response", "transient_http", "fetch_failed", "archive_http_403"].includes(receipt.primaryFailureReasonCode));
       assert.equal(receipt.retrievedAt, receipt.lastSuccessfulRetrievedAt);
       assert.match(receipt.lastSuccessfulRetrievedAt, /^\d{4}-\d{2}-\d{2}T/);
       assert.match(receipt.attemptedAt, /^\d{4}-\d{2}-\d{2}T/);
       assert.notEqual(receipt.retrievedAt, receipt.attemptedAt);
-      assert.equal(receipt.archiveProvider, null);
+      if (document.archiveProvider) {
+        assert.equal(receipt.archiveProvider, document.archiveProvider);
+        assert.equal(receipt.archiveExpectedBytes, document.archiveExpectedBytes);
+        assert.equal(receipt.archiveExpectedSha256, document.archiveExpectedSha256);
+        assert.equal(receipt.archiveExpectedRecordCount, document.archiveExpectedRecordCount);
+        assert.equal(receipt.bytes, document.archiveExpectedBytes);
+        assert.equal(receipt.sha256, document.archiveExpectedSha256);
+        assert.equal(receipt.records, document.archiveExpectedRecordCount);
+      } else {
+        assert.equal(receipt.archiveProvider, null);
+      }
     } else if (receipt.archiveExpectedSha256) {
       assert.equal(receipt.archiveExpectedBytes, document.archiveExpectedBytes);
       assert.equal(receipt.archiveExpectedSha256, document.archiveExpectedSha256);
