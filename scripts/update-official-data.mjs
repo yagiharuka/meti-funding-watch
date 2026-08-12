@@ -176,6 +176,7 @@ export async function parseOfficialWorkbook(buffer, document) {
   if (document.expectedSheetCount && workbook.worksheets.length !== document.expectedSheetCount) {
     throw new Error(`${document.id}: ワークシート数が検証済み資料と一致しません (${workbook.worksheets.length}/${document.expectedSheetCount})`);
   }
+  assertExpectedNonRecordRows(workbook, document);
 
   const records = [];
   let emptySentinelFound = false;
@@ -959,6 +960,7 @@ function parseGrantRows(worksheet, header, document) {
     }
     const rowValues = officialRowValues(row);
     if (rowValues.every((value) => !normalizeText(value))) continue;
+    if (isExpectedNonRecordRow(document, worksheet.name, rowNumber)) continue;
     if (isKnownOfficialTableFootnote(rowValues, { program, organization, dateRaw: valueAt(row, header.columns, "交付決定日") })) continue;
     assertRequiredOfficialRowValues({ document, worksheet, rowNumber, program, organization, dateRaw: valueAt(row, header.columns, "交付決定日") });
     records.push(makeRecord({
@@ -993,6 +995,7 @@ function parseContractRows(worksheet, header, document) {
     ) continue;
     const rowValues = officialRowValues(row);
     if (rowValues.every((value) => !normalizeText(value))) continue;
+    if (isExpectedNonRecordRow(document, worksheet.name, rowNumber)) continue;
     if (isKnownOfficialTableFootnote(rowValues, { program, organization, dateRaw })) continue;
     assertRequiredOfficialRowValues({ document, worksheet, rowNumber, program, organization, dateRaw });
     records.push(makeRecord({
@@ -1060,6 +1063,36 @@ function assertRequiredOfficialRowValues({ document, worksheet, rowNumber, progr
       throw new Error(`${document.id}/${worksheet.name}/${rowNumber}行目: 必須値${field}が空です`);
     }
   }
+}
+
+function assertExpectedNonRecordRows(workbook, document) {
+  const definitions = document.expectedNonRecordRows ?? [];
+  if (!Array.isArray(definitions)) throw new Error(`${document.id}: 非明細行定義が配列ではありません`);
+  const keys = new Set();
+  for (const definition of definitions) {
+    const key = `${definition?.sheetName ?? ""}:${definition?.rowNumber ?? ""}`;
+    if (keys.has(key)
+      || typeof definition?.sheetName !== "string" || !definition.sheetName
+      || !Number.isSafeInteger(definition.rowNumber) || definition.rowNumber < 1
+      || !Array.isArray(definition.cells) || !definition.cells.length) {
+      throw new Error(`${document.id}: 非明細行定義が不正です (${key})`);
+    }
+    keys.add(key);
+    const worksheet = workbook.getWorksheet(definition.sheetName);
+    if (!worksheet) throw new Error(`${document.id}: 非明細行のシートが見つかりません (${definition.sheetName})`);
+    const observed = [];
+    worksheet.getRow(definition.rowNumber).eachCell((cell, column) => {
+      observed.push({ column, value: cellToString(cell.value) });
+    });
+    if (JSON.stringify(observed) !== JSON.stringify(definition.cells)) {
+      throw new Error(`${document.id}/${definition.sheetName}/${definition.rowNumber}行目: 固定した非明細行と一致しません`);
+    }
+  }
+}
+
+function isExpectedNonRecordRow(document, sheetName, rowNumber) {
+  return (document.expectedNonRecordRows ?? []).some((definition) =>
+    definition.sheetName === sheetName && definition.rowNumber === rowNumber);
 }
 
 function isKnownOfficialTableFootnote(rowValues, { program, organization, dateRaw }) {

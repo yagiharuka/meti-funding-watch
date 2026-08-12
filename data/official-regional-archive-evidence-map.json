@@ -1,0 +1,863 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-12",
+  "capture": "20260602/20260601000000",
+  "verification": "Full GET from the exact official-index URL through a fixed WARP capture, strict parser success, SHA-256/bytes/recordCount receipt",
+  "records": [
+    {
+      "id": "chugoku-2020-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0204_r0303itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0204_r0303itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 18377,
+      "expectedSha256": "bd98eba6c74afbe52020ed28dc9357fe009ef7b8dea9adf6a82633a2c90b5ee2",
+      "expectedRecordCount": 11
+    },
+    {
+      "id": "chugoku-2020-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0204_r0303itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0204_r0303itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 30476,
+      "expectedSha256": "73c46c8a49783704d0d0773768d43189cfaac9568107394e09b2b5994b2b1207",
+      "expectedRecordCount": 49
+    },
+    {
+      "id": "chugoku-2020-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0204_r0303buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0204_r0303buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 14957,
+      "expectedSha256": "edd9cd71cfa9cc1d41202164baf25c72596f4ba8170fc1059eb34b98f3090f7e",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "chugoku-2021-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_r0403itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_r0403itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 21958,
+      "expectedSha256": "bd67c7069010863f3fc19ec1f7e1f9f565f0da44471e41646ea17256f3192733",
+      "expectedRecordCount": 11
+    },
+    {
+      "id": "chugoku-2021-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_r0403buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_r0403buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 24023,
+      "expectedSha256": "be8900bf525a425e21b9dee6190ff0a316d396aa786402653b7fdce024cfd4ff",
+      "expectedRecordCount": 10
+    },
+    {
+      "id": "chugoku-2021-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0304_10itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0304_10itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 25566,
+      "expectedSha256": "76e19706e4f9752918d5ac2eb2dfc436b2d503a41f2aa3d5145a2ae120ac85fe",
+      "expectedRecordCount": 40
+    },
+    {
+      "id": "chugoku-2021-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0304_10buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0304_10buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 11867,
+      "expectedSha256": "94705cf70e0ee8d7bd125b9a8c6f71a6797e26420652c9313f826d012f6967c9",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "chugoku-2022-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 25063,
+      "expectedSha256": "fe5856b48712770924858c32c34b4a63884e6c534448241bf720544ebdd2a13a",
+      "expectedRecordCount": 11
+    },
+    {
+      "id": "chugoku-2022-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 26860,
+      "expectedSha256": "bfb140658f2bde3dd8857f7e5f0c4ab4c22b9f646e80ed9b38ce479dfc1a1ee0",
+      "expectedRecordCount": 16
+    },
+    {
+      "id": "chugoku-2022-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0404_r0503itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0404_r0503itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 22907,
+      "expectedSha256": "84b9a10dfd2afcfa1f4e97e4e5b2d7934c34bba32f9bf12987ec872a416ab49f",
+      "expectedRecordCount": 38
+    },
+    {
+      "id": "chugoku-2022-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0404_06buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0404_06buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 11638,
+      "expectedSha256": "dccfb5ba47345dd81b10e09b32e1f711bb7efaab2f542aec1c2f30b7c0d4968d",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "chugoku-2023-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0504_09itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0504_09itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 18659,
+      "expectedSha256": "9760f56667e499f0762c50553ac6382d34f0841a601aa74bbfffc913f81bf993",
+      "expectedRecordCount": 10
+    },
+    {
+      "id": "chugoku-2023-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0504_r0603buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0504_r0603buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 26813,
+      "expectedSha256": "54138b0e650519674cfbc4d139f09183d68ebfc39c8bf645b614f902d4d0dc6c",
+      "expectedRecordCount": 10
+    },
+    {
+      "id": "chugoku-2023-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_12itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_12itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 27503,
+      "expectedSha256": "16ab8a59a51debd8d8e3610301e8c175f4a4675b0387255adfde644855e67d35",
+      "expectedRecordCount": 38
+    },
+    {
+      "id": "chugoku-2023-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_06buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_06buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 12400,
+      "expectedSha256": "263b247bb1b9779d788143ccf12283e16580acb977b28bd2b45b34d527755a31",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "chugoku-2024-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0604_10itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0604_10itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 25092,
+      "expectedSha256": "8ec34ff81b49bc6d95d245e10ab0f1b92173a32f253054f6074b30a74731460a",
+      "expectedRecordCount": 13
+    },
+    {
+      "id": "chugoku-2024-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0604_10itaku.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0604_10itaku.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 33636,
+      "expectedSha256": "f2a9474a56593eebc3aab9b626ca76221d6794790ef2af94bf7c424107bb7951",
+      "expectedRecordCount": 27
+    },
+    {
+      "id": "chugoku-2024-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0604_07buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0604_07buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 16049,
+      "expectedSha256": "1911345662da5379bfa6cd5fc78aa778d3f3f719a346a7b28b611915fcb65e40",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "chugoku-2024-grant-decisions-part-1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0604_r0609kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0604_r0609kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 36735,
+      "expectedSha256": "d760790c8cdab38e3c5a6852ac2e89ad5b5e8986040431bbc60d895bca4339ee",
+      "expectedRecordCount": 149
+    },
+    {
+      "id": "chugoku-2024-grant-decisions-part-2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0610_r0703kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0610_r0703kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 100583,
+      "expectedSha256": "2cc3138c4f66ba978c6fee2ad8229ea86e3259be2a6c9228fad8b6d2a5f9e398",
+      "expectedRecordCount": 12
+    },
+    {
+      "id": "chugoku-2025-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0704_r0802buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0704_r0802buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 31146,
+      "expectedSha256": "eaa83cbe09c445973ac34c19edcb7101ae80995dcae993bb3e9dca108b242fea",
+      "expectedRecordCount": 13
+    },
+    {
+      "id": "chugoku-2025-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0704_r0712buppin.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0704_r0712buppin.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 22353,
+      "expectedSha256": "c24e18491bb9f7ddecd859ce5d45f61c38bc78facf0f9a718843cc7b127cb854",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "hokkaido-2022-grant-decisions",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2022.htm",
+      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2022.htm",
+      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/hojokin/koufuichiran.htm",
+      "expectedBytes": 68604,
+      "expectedSha256": "c2a6e9a1b14a60e17ebe32c5bb9bc8c57c58fc18e649ab095a4726fc830daa80",
+      "expectedRecordCount": 152
+    },
+    {
+      "id": "hokkaido-2023-grant-decisions",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2023.htm",
+      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2023.htm",
+      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/hojokin/koufuichiran.htm",
+      "expectedBytes": 60344,
+      "expectedSha256": "99ac8d4f3e12e5d9bcfd330d3cd409418abd077d469f9a6ea3a027f8a284c293",
+      "expectedRecordCount": 120
+    },
+    {
+      "id": "hokkaido-2024-grant-decisions",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2024.htm",
+      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2024.htm",
+      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/hojokin/koufuichiran.htm",
+      "expectedBytes": 53542,
+      "expectedSha256": "ff9dc7444ff36bc5d803ba0b00535c466667d6873141d429286d79e8dd53d1d6",
+      "expectedRecordCount": 121
+    },
+    {
+      "id": "hokkaido-2025-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2025fy_kyoso/itaku.htm",
+      "originalUrl": "https://www.hkd.meti.go.jp/hoksa/keiyaku_ichiran/2025fy_kyoso/itaku.htm",
+      "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/chotatsu/teiketsu.htm",
+      "expectedBytes": 27839,
+      "expectedSha256": "42d14381e7f53698befe4dc88a6ec8b992958b17f863440a7ca6e104b5b43553",
+      "expectedRecordCount": 17
+    },
+    {
+      "id": "shikoku-2020-discretionary-commission-202004",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202004/z_i_202004.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202004/z_i_202004.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 23886,
+      "expectedSha256": "ef24adbe997ef14fc8c179a84e54e3f3beeed13da9205dd2af5a6938dbf24dec",
+      "expectedRecordCount": 14
+    },
+    {
+      "id": "shikoku-2020-discretionary-commission-202005",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202005/z_i_202005.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202005/z_i_202005.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 16781,
+      "expectedSha256": "231af9bec77c99e641ae7a81162e1d3898c74d057f8975cfc13af5883c115681",
+      "expectedRecordCount": 5
+    },
+    {
+      "id": "shikoku-2020-discretionary-commission-202006",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202006/z_i_202006.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202006/z_i_202006.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 19007,
+      "expectedSha256": "a1a66587fa566ec6ff9c786d38d0aac5748f480d1723c9c963c8b0f3563968c9",
+      "expectedRecordCount": 8
+    },
+    {
+      "id": "shikoku-2020-discretionary-commission-202008",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202008/z_i_202008.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202008/z_i_202008.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13361,
+      "expectedSha256": "8f613384032bd5fb1e7430fd9b3ad1385da0036916066816524b8a51ac5e686d",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2020-discretionary-goods-202004",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202004/z_u_202004.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202004/z_u_202004.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12470,
+      "expectedSha256": "90c924255a996545f0faf28bfec00626dadab9bd7f400d80ede6b86943a6119e",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2020-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202004-202009/202004-202009.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202004-202009/202004-202009.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 53525,
+      "expectedSha256": "00f4d407ed12bffd9db8d01af6d05deab9d86d2a7a12d8134fd8285f258b0016",
+      "expectedRecordCount": 82
+    },
+    {
+      "id": "shikoku-2020-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202010-202103/202010-202103.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202010-202103/202010-202103.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 23910,
+      "expectedSha256": "f34c88688adab8fd280e16f3c5683b0ca82c64073504245cbe0c334cf8dbbd9a",
+      "expectedRecordCount": 26
+    },
+    {
+      "id": "shikoku-2021-competitive-commission-202108",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202108/n_i_202108.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202108/n_i_202108.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 14018,
+      "expectedSha256": "e3f028fea645cb9df83557b3c3187c69340f90da93857b18868aa43573849f4f",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "shikoku-2021-competitive-commission-202109",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202109/n_i_202109.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202109/n_i_202109.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11736,
+      "expectedSha256": "fa5e5e8eec9889c36dbf8d5622a6ebfaa9282cbe8ac7b1403f0a6f78d6d66686",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-competitive-commission-202110",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202110/n_i_202110.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202110/n_i_202110.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12887,
+      "expectedSha256": "f20cca90a3bc0729a67e831a1563cdbbf230045807a32bdae0ce51a583e7a017",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2021-competitive-commission-202112",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202112/n_i_202112.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202112/n_i_202112.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12250,
+      "expectedSha256": "bec6718533872f9738959d95a02ebcabb46833546934c91cddf9a80c960f5bee",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-competitive-goods-202107",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202107/n_u_202107.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202107/n_u_202107.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11762,
+      "expectedSha256": "23ca3bb74707b8252847b8fa5d508bba9f74354acdd927336fb483411aef9233",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-competitive-goods-202108",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202108/n_u_202108.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202108/n_u_202108.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11798,
+      "expectedSha256": "82a6a5e0ae7fba1437e18dfeb946022eb71925f0d5a96fa4a3982fee248d666d",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-competitive-goods-202109",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202109/n_u_202109.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202109/n_u_202109.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13221,
+      "expectedSha256": "20cd59b7952bd2516fbf181c2f269523e36156e176d23dc1069c7cba75d74f1a",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2021-discretionary-commission-202105",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202105/z_i_202105.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202105/z_i_202105.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12391,
+      "expectedSha256": "e9d19035b6e774eb743be28076b73ba80a350c58e2c1b377cbbc14ea11d5ea39",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-discretionary-commission-202106",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202106/z_i_202106.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202106/z_i_202106.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 17011,
+      "expectedSha256": "7e8cc6e7566d5e68cf47d89e287e9bf6d2611be78fb9f09c2de0ea9b9199994d",
+      "expectedRecordCount": 5
+    },
+    {
+      "id": "shikoku-2021-discretionary-commission-202107",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202107/z_i_202107.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202107/z_i_202107.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12198,
+      "expectedSha256": "77ba62488ebd9b15517e8d4c562998d66d7a92e251a77d06f61277f86fc26926",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-discretionary-commission-202109",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202109/z_i_202109.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202109/z_i_202109.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13345,
+      "expectedSha256": "e843f5d232672156058d00d874b29901a9a9521d4b4227b9793f257f7bdfb2f8",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2021-discretionary-commission-202110",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202110/z_i_202110.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202110/z_i_202110.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12582,
+      "expectedSha256": "58262c811f801e35868281cea6bbe92eb945ecfceeaf5bb94540bc7a72e9b0ab",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2021-discretionary-goods-202104",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202104/z_u_202104.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202104/z_u_202104.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13329,
+      "expectedSha256": "6d62790cf0062b6f1a7f1ee4808a32bcfb110d14d5e4465cb31eed18b97e6409",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2021-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202104-202109/202104-202109.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202104-202109/202104-202109.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 50753,
+      "expectedSha256": "6a433d4732ca313938bea87c319e49664b6e8cd08a26e29f93eb9d91c4f9f5e8",
+      "expectedRecordCount": 76
+    },
+    {
+      "id": "shikoku-2021-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202110-202203/202110-202203.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202110-202203/202110-202203.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 19116,
+      "expectedSha256": "6b99f05a0c12d873231481348338d3bd554df9e9076957a05d6fba98aa893b47",
+      "expectedRecordCount": 17
+    },
+    {
+      "id": "shikoku-2022-competitive-commission-202208",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202208/n_i_202208.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202208/n_i_202208.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13564,
+      "expectedSha256": "177b44fbce7aad85514031b21d530fe2a3afa6ff8457feea6b23684fe9eccc5f",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2022-competitive-commission-202209",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202209/n_i_202209.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202209/n_i_202209.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12183,
+      "expectedSha256": "96cef760704677176b72cc7e085f16a9f94074d71a051ee0b54c9ad8ffc98e1a",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2022-competitive-commission-202211",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202211/n_i_202211.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202211/n_i_202211.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12888,
+      "expectedSha256": "6542f31111b662bb47bcce01f57f64cee1fe31f44b198f63cabd4bb794d1643c",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2022-competitive-goods-202204",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202204/n_u_202204.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202204/n_u_202204.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12624,
+      "expectedSha256": "00aa2b6f921bcce6c7c7fcf01871e0adca3622a20dd91067f57acb46fc69bb5d",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2022-competitive-goods-202207",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202207/n_u_202207.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202207/n_u_202207.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11986,
+      "expectedSha256": "7063ca9bcd78473584d02d6aedd46134d32956d01bdee51198e962ce6733cb31",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2022-competitive-goods-202209",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202209/n_u_202209.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202209/n_u_202209.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13099,
+      "expectedSha256": "59151a3e08544dd7aac2dfbaa4d6af99ad15fbd6947efeb3796b6aa23da2aada",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2022-competitive-goods-202301",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202301/n_u_202301.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202301/n_u_202301.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12327,
+      "expectedSha256": "acf8df8b7f4143506e1626f936b48664b90af2ddd720f76f3abca0be015f1719",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2022-competitive-goods-202302",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202302/n_u_202302.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202302/n_u_202302.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12354,
+      "expectedSha256": "b54d3fcd6f1e284475ff6b493bc7b9d7c7bd1b5a580b4ff5790426448ab15fbc",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2022-discretionary-commission-202204",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202204/z_i_202204.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202204/z_i_202204.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 37557,
+      "expectedSha256": "98acc684c73e73c4e9e00e7be76a58160587f1ee079cdd11a4f5be73f4261bbc",
+      "expectedRecordCount": 25
+    },
+    {
+      "id": "shikoku-2022-discretionary-commission-202205",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202205/z_i_202205.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202205/z_i_202205.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13605,
+      "expectedSha256": "29228c29781438adfe0fe1f8c41ebdc8fb0bdbf062cfac30ab924d8594e69bcb",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2022-discretionary-commission-202206",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202206/z_i_202206.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202206/z_i_202206.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 15800,
+      "expectedSha256": "c0f97b721dea2437bd2c8ad0a7afc059a2f3006f435f75383808c7aa66e7e2cc",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "shikoku-2022-discretionary-commission-202208",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202208/z_i_202208.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202208/z_i_202208.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13714,
+      "expectedSha256": "501a3d73e9634ae0bdbce14ce7032d4033d7b31a56515d6adc2be25934265fef",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2022-discretionary-goods-202204",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202204/z_u_202204.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202204/z_u_202204.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13327,
+      "expectedSha256": "5f611b8a8d0eb8756abf651f766fee1f9c1e9f1e7765a4a6492b2a38f977ab46",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2022-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202204-202209/202204-202209.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202204-202209/202204-202209.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 47128,
+      "expectedSha256": "c32b231303fece49450c09444019261d20df15aa4cfdd619e1fbce6cc65a8cdb",
+      "expectedRecordCount": 84
+    },
+    {
+      "id": "shikoku-2022-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202210_202303/202210_202303.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202210_202303/202210_202303.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 17283,
+      "expectedSha256": "ccee824a66e06228e0019bb678b3bc8e60411cd13e8faee9c6bc0b5547610df9",
+      "expectedRecordCount": 15
+    },
+    {
+      "id": "shikoku-2023-competitive-commission-202307",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202307/n_i_202307.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202307/n_i_202307.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12886,
+      "expectedSha256": "6a5ce85b36b302946e8f76751c3be73c7eb3b39ccf908812a170f7a613fd38fe",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2023-competitive-commission-202308",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202308/n_i_202308.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202308/n_i_202308.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12176,
+      "expectedSha256": "7865e5171a908156f3e2a3ce54dedc8270ed152f35298233c1a30fe40e8ab572",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2023-competitive-commission-202309",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202309/n_i_202309.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202309/n_i_202309.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13067,
+      "expectedSha256": "08f7b9d7fd8a9a4a3a3d5858de48f5272ff7e6c54727b8865737b07e889424e5",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2023-competitive-goods-202304",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202304/n_u_202304.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202304/n_u_202304.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13503,
+      "expectedSha256": "9a2e6e3cffaa5e7217de2cce6addd9497a75b82fcde4c2aad216594281ae4837",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2023-competitive-goods-202307",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202307/n_u_202307.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202307/n_u_202307.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13342,
+      "expectedSha256": "6740e2cb81f7eee29e96fed0382dca1e10c2c66f335ddde3a86a6109e901c00f",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2023-competitive-goods-202308",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202308/n_u_202308.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202308/n_u_202308.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12634,
+      "expectedSha256": "2877d5ac4583c8651459f87860473022c63a2f1a2d1f53c5bcc2839dc69c2e09",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2023-competitive-goods-202310",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202310/n_u_202310.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202310/n_u_202310.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12029,
+      "expectedSha256": "62d8ae8a49d9b05db950eac8f4101a1819a75bbf2b6d6e70c6f546be8ac5dadb",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2023-competitive-goods-202312",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202312/n_u_202312.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202312/n_u_202312.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11977,
+      "expectedSha256": "87b070c5dafee6c877492e687807949ad0921db7aa1cbc19bdf17ab7dcffc33a",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2023-discretionary-commission-202304",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202304/z_i_202304.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202304/z_i_202304.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 31716,
+      "expectedSha256": "9857c6e692e40021d1d2a106b8b790f5356b0f6d04f37883ebc9bff064395924",
+      "expectedRecordCount": 24
+    },
+    {
+      "id": "shikoku-2023-discretionary-commission-202305",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202305/z_i_202305.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202305/z_i_202305.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13332,
+      "expectedSha256": "5632841769c9e2e4059126d0b4ffcc0c64be458a56d909738edb38b1bff34d90",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2023-discretionary-commission-202306",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202306/z_i_202306.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202306/z_i_202306.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12901,
+      "expectedSha256": "ed2554297f7a61ada98103ad73fa91d91537f228c95504f833ac58c18202bbf8",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2023-discretionary-goods-202304",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202304/z_u_202304.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_u_202304/z_u_202304.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13553,
+      "expectedSha256": "e6ddc475ac0d261cfabb9ccc58e71c2493abd6a92e5f64b00fa04cabd7b6e8a9",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2023-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202304_202309/202304_202309.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202304_202309/202304_202309.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 48175,
+      "expectedSha256": "fce5b9b13a941b995a69091fad90ef72978f6d7670e993032662986182b7f089",
+      "expectedRecordCount": 83
+    },
+    {
+      "id": "shikoku-2023-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202310_202403/202310_202403.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202310_202403/202310_202403.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 15569,
+      "expectedSha256": "01478e0959a42fa884e1101542e17c59fe69f68fa2ca7d42a19e6d8c2bd74ec3",
+      "expectedRecordCount": 12
+    },
+    {
+      "id": "shikoku-2024-competitive-commission-202408",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202408/n_i_202408.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202408/n_i_202408.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13571,
+      "expectedSha256": "32b69a83d28b0ee51958240a3c2d0d45110db3e85f00703856781684504bde85",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2024-competitive-commission-202410",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202410/n_i_202410.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_i_202410/n_i_202410.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13620,
+      "expectedSha256": "3f287442fa91b3eef4aa4ae0aae385ac5e4a1e98d6c7c167a96ba18d37e778ba",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2024-competitive-goods-202404",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202404/n_u_202404.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202404/n_u_202404.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12636,
+      "expectedSha256": "524a621cc2715fff252a9d16eeb65c38f45738f6448a09eae4f69b5f026ac8b5",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2024-competitive-goods-202406",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202406/n_u_202406.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202406/n_u_202406.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12007,
+      "expectedSha256": "1fd04c6330b5fdb6a8fb8785e20708f3e9ff7c3f255d9036c85a41e7c4495cfa",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2024-competitive-goods-202407",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202407/n_u_202407.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202407/n_u_202407.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12871,
+      "expectedSha256": "17ef4dbfac592170a6d822927ad092832b0ae6356bc465bfc204edd30d180788",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2024-competitive-goods-202409",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202409/n_u_202409.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202409/n_u_202409.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11959,
+      "expectedSha256": "c097a39f1551a91291c53bd31445949b6ed3647039fbbe998e289c794a02f6b2",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2024-competitive-goods-202501",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202501/n_u_202501.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202501/n_u_202501.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12010,
+      "expectedSha256": "1e7aa408b7a8262c5b344e0596e505186a64d3fa0f76da85b8aa27e19554e830",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2024-competitive-goods-202502",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202502/n_u_202502.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_n_u_202502/n_u_202502.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 11968,
+      "expectedSha256": "287cee2dec1e5013f96b8cb9fa4131bdf603dc305ac435405793af31f26d3868",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2024-discretionary-commission-202404",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202404/z_i_202404.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202404/z_i_202404.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 22297,
+      "expectedSha256": "48f748b1028243faf7777e326c5f60268e4fe3ed11aa99e7ff9e8fcaad5c6026",
+      "expectedRecordCount": 12
+    },
+    {
+      "id": "shikoku-2024-discretionary-commission-202405",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202405/z_i_202405.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202405/z_i_202405.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 15312,
+      "expectedSha256": "dd925ee7a1fdb3f7e5434d87c0c582c7bd4eff4bcf2f16f3cd684ab5c4cfbc0b",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "shikoku-2024-discretionary-commission-202407",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202407/z_i_202407.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202407/z_i_202407.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12825,
+      "expectedSha256": "55e3f2782da74f44cc043bc5b39d61e1868bdb117347e634b80c3fab8d52944d",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2024-discretionary-commission-202408",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202408/z_i_202408.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202408/z_i_202408.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13540,
+      "expectedSha256": "1a1a67f42718255b370ffb9655b9f213a59955a31a58d0bda4ab9655e884b220",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2024-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202404_202409/202404_202409.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202404_202409/202404_202409.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 48190,
+      "expectedSha256": "d9bc4f14e66fb1f3790cd4ee6156852a49d80b25abbe342f004e50993fc52729",
+      "expectedRecordCount": 99
+    },
+    {
+      "id": "shikoku-2024-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202410_202503/202410_202503.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202410_202503/202410_202503.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 15121,
+      "expectedSha256": "d29c1f7c95f5637e0830d8c52a124b4423abc8cfcdc1df605801e7d69ac0e2ff",
+      "expectedRecordCount": 14
+    },
+    {
+      "id": "shikoku-2025-discretionary-commission-202505",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202505/z_i_202505.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202505/z_i_202505.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 13842,
+      "expectedSha256": "bfe04dcfebf897f5ab094014531fc9bf5b08d6295e093ccfc6cad055ed9c75e9",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "shikoku-2025-discretionary-commission-202506",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202506/z_i_202506.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202506/z_i_202506.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 14579,
+      "expectedSha256": "9182a9e2f9591fde89559be216c01c21a7cfd2dff593d60baa80a90b0e0f9e44",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "shikoku-2025-discretionary-commission-202507",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202507/z_i_202507.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/01_keiyaku_z_i_202507/z_i_202507.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/keiyaku_index.html",
+      "expectedBytes": 12746,
+      "expectedSha256": "e483cb890d87b2d6ba5ee175818d65fdb4f4e8f7961c992385dbfd2c2436fe2a",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "shikoku-2025-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202510_202603/202510_202603.html",
+      "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202510_202603/202510_202603.html",
+      "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
+      "expectedBytes": 14842,
+      "expectedSha256": "c98cdd30fb231992137fce4d0fbfb2b5bbe9f62c07b3712f7f21890b59fb0b28",
+      "expectedRecordCount": 13
+    }
+  ]
+}

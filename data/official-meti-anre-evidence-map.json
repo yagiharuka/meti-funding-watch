@@ -5,6 +5,24 @@
   "capture": "20260602/20260601000000",
   "records": [
     {
+      "id": "anre-2024-discretionary-goods-04",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2024/04.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2024/04.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2024/",
+      "expectedBytes": 23095,
+      "expectedSha256": "aa2bdd44af7f8f9c43dca04e189209696dc5d674f0fa4a6b0fe51f5a180ac44c",
+      "expectedRecordCount": 15
+    },
+    {
+      "id": "meti-2025-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2504_2509.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2504_2509.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 40241,
+      "expectedSha256": "b7a670a3a3a5e3e3d37c18dece3008bbe698210bdf37c3018a4ab664ecfb26f2",
+      "expectedRecordCount": 151
+    },
+    {
       "id": "anre-2023-grant-decisions-h1",
       "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/2023_4-9.xlsx",
       "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/2023_4-9.xlsx",

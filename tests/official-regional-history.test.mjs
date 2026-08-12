@@ -8,6 +8,7 @@ import {
   HOKKAIDO_DOCUMENTS,
   parseRegionalOfficialHtml,
   regionalSourceIdentityUrl,
+  REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS,
   REGIONAL_CANDIDATE_DOCUMENTS,
   REGIONAL_DOCUMENTS,
   REGIONAL_EVIDENCE_RECEIPTS,
@@ -17,20 +18,23 @@ import {
 import { fetchOfficialDocuments, OFFICIAL_DOCUMENTS, parseOfficialWorkbook } from "../scripts/update-official-data.mjs";
 
 const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
+const regionalGapInventory = JSON.parse(await readFile(new URL("../data/official-regional-gap-inventory.json", import.meta.url), "utf8"));
 
 test("registers only explicit official-index documents for the three structured regional bureaus", () => {
   assert.equal(CHUGOKU_DOCUMENTS.length, 41);
   assert.equal(HOKKAIDO_DOCUMENTS.length, 21);
   assert.equal(SHIKOKU_DOCUMENTS.length, 84);
   assert.equal(REGIONAL_DOCUMENTS.length, 146);
-  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 20);
-  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 126);
+  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 115);
+  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 31);
   assert.equal(REGIONAL_EVIDENCE_RECEIPTS.length, 20);
   assert.equal(REGIONAL_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 554);
+  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.length, 95);
+  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 1_589);
   assert.equal(new Set(REGIONAL_DOCUMENTS.map((document) => document.id)).size, REGIONAL_DOCUMENTS.length);
   assert.deepEqual(
     [...REGIONAL_OFFICIAL_DOCUMENTS.map((document) => document.id)].sort(),
-    [...REGIONAL_EVIDENCE_RECEIPTS.map((receipt) => receipt.id)].sort(),
+    [...REGIONAL_EVIDENCE_RECEIPTS, ...REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS].map((receipt) => receipt.id).sort(),
   );
   assert.ok(REGIONAL_OFFICIAL_DOCUMENTS.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   assert.ok(REGIONAL_CANDIDATE_DOCUMENTS.every((document) => !OFFICIAL_DOCUMENTS.includes(document)));
@@ -54,12 +58,22 @@ test("registers only explicit official-index documents for the three structured 
 
 test("binds every production regional source to one complete evidence receipt", () => {
   const receiptById = new Map(REGIONAL_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
-  for (const document of REGIONAL_OFFICIAL_DOCUMENTS) {
+  for (const document of REGIONAL_OFFICIAL_DOCUMENTS.filter((candidate) => !candidate.archiveProvider)) {
     const receipt = receiptById.get(document.id);
     assert.equal(receipt.url, document.url);
     assert.ok(Number.isSafeInteger(receipt.expectedBytes) && receipt.expectedBytes >= 500);
     assert.match(receipt.expectedSha256, /^[0-9a-f]{64}$/);
     assert.ok(Number.isSafeInteger(receipt.expectedRecordCount) && receipt.expectedRecordCount >= 1);
+  }
+  const archiveReceiptById = new Map(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
+  for (const document of REGIONAL_OFFICIAL_DOCUMENTS.filter((candidate) => candidate.archiveProvider)) {
+    const receipt = archiveReceiptById.get(document.id);
+    assert.equal(receipt.url, document.url);
+    assert.equal(receipt.originalUrl, document.originalUrl);
+    assert.equal(receipt.sourcePageUrl, document.sourcePageUrl);
+    assert.equal(receipt.expectedBytes, document.archiveExpectedBytes);
+    assert.equal(receipt.expectedSha256, document.archiveExpectedSha256);
+    assert.equal(receipt.expectedRecordCount, document.archiveExpectedRecordCount);
   }
 });
 
@@ -68,7 +82,8 @@ test("replays all 20 exact evidence responses through their strict parser", {
 }, async () => {
   const receiptById = new Map(REGIONAL_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
   const responseByUrl = new Map();
-  for (const document of REGIONAL_OFFICIAL_DOCUMENTS) {
+  const directDocuments = REGIONAL_OFFICIAL_DOCUMENTS.filter((document) => !document.archiveProvider);
+  for (const document of directDocuments) {
     const extension = document.format === "html" ? "html" : "xlsx";
     const buffer = await readFile(`${process.env.REGIONAL_EVIDENCE_DIRECTORY}/${document.id}.${extension}`);
     const receipt = receiptById.get(document.id);
@@ -80,7 +95,7 @@ test("replays all 20 exact evidence responses through their strict parser", {
     assert.equal(rows.length, receipt.expectedRecordCount, document.id);
     responseByUrl.set(document.url, buffer);
   }
-  const result = await fetchOfficialDocuments(REGIONAL_OFFICIAL_DOCUMENTS, [], async (url) => {
+  const result = await fetchOfficialDocuments(directDocuments, [], async (url) => {
     const buffer = responseByUrl.get(url);
     return new Response(buffer, { status: 200, headers: { "content-length": String(buffer.length) } });
   });
@@ -90,6 +105,30 @@ test("replays all 20 exact evidence responses through their strict parser", {
   assert.equal(rows.length, 554);
   assert.ok(rows.every((row) => row.sourceKey && row.id && row.sourcePageUrl && row.sourceDocumentUrl));
   assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
+});
+
+test("replays all 95 committed WARP evidence responses through production ingestion", async () => {
+  const documents = REGIONAL_OFFICIAL_DOCUMENTS.filter((document) => document.archiveProvider);
+  const receiptById = new Map(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
+  const responseByUrl = new Map();
+  for (const document of documents) {
+    const extension = document.format === "html" ? "html" : "xlsx";
+    const buffer = await readFile(new URL(`../evidence/official-bootstrap/${document.id}.${extension}`, import.meta.url));
+    const receipt = receiptById.get(document.id);
+    assert.equal(buffer.length, receipt.expectedBytes, document.id);
+    assert.equal(createHash("sha256").update(buffer).digest("hex"), receipt.expectedSha256, document.id);
+    responseByUrl.set(document.url, buffer);
+  }
+  const result = await fetchOfficialDocuments(documents, [], async (url) => {
+    const buffer = responseByUrl.get(url);
+    return new Response(buffer, { status: 200, headers: { "content-length": String(buffer.length) } });
+  });
+  assert.deepEqual(result.sourceFailures, []);
+  assert.equal(result.fetched.length, 95);
+  const rows = result.fetched.flatMap((item) => item.records);
+  assert.equal(rows.length, 1_589);
+  assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
+  assert.ok(rows.every((row) => row.sourceKey && row.sourcePageUrl && row.sourceDocumentUrl));
 });
 
 test("keeps the exact linked-year gaps visible instead of inventing regional source URLs", () => {
@@ -110,6 +149,20 @@ test("keeps the exact linked-year gaps visible instead of inventing regional sou
     assert.equal(categories(SHIKOKU_DOCUMENTS, "shikoku", year, "grant_decision").length, 2);
   }
   assert.equal(categories(SHIKOKU_DOCUMENTS, "shikoku", 2026, "grant_decision").length, 0);
+});
+
+test("pins every remaining regional candidate and its fail-closed reason", () => {
+  assert.equal(regionalGapInventory.schemaVersion, 1);
+  assert.equal(regionalGapInventory.capture, "20260602/20260601000000");
+  assert.equal(regionalGapInventory.candidates.length, 31);
+  assert.deepEqual(
+    regionalGapInventory.candidates.map((item) => item.id).sort(),
+    REGIONAL_CANDIDATE_DOCUMENTS.map((document) => document.id).sort(),
+  );
+  for (const item of regionalGapInventory.candidates) {
+    assert.equal(item.transportUrl, `https://warp.ndl.go.jp/${regionalGapInventory.capture}/${item.originalUrl}`);
+    assert.match(item.failure, /HTTP 404|見出し|必須値|日付を解釈|列数/);
+  }
 });
 
 test("strictly parses a mapped monthly contract table and preserves null/amount/provenance semantics", () => {

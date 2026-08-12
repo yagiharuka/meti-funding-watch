@@ -41,7 +41,7 @@ const evidenceDocuments = [
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
 test("binds every receipted production document to one complete evidence receipt", () => {
-  assert.equal(evidenceDocuments.length, 157);
+  assert.equal(evidenceDocuments.length, 254);
   assert.ok(evidenceDocuments.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   for (const document of evidenceDocuments) {
     assert.deepEqual(Object.keys(document.evidenceReceipt).sort(), [
@@ -122,9 +122,9 @@ test("allows the parser revision transition only for the exact previous public m
   assert.equal(OFFICIAL_PARSER_MIGRATION.toRevision, OFFICIAL_PARSER_REVISION);
 });
 
-test("replays all 86 new METI and ANRE archive receipts through the production strict parser", { timeout: 30_000 }, async (t) => {
+test("replays all 88 METI and ANRE archive receipts through the production strict parser", { timeout: 30_000 }, async (t) => {
   const fixtureDirectory = process.env.OFFICIAL_METI_ANRE_EVIDENCE_DIRECTORY?.trim();
-  if (!fixtureDirectory) return t.skip("set OFFICIAL_METI_ANRE_EVIDENCE_DIRECTORY to the exact 86 archived XLSX files");
+  if (!fixtureDirectory) return t.skip("set OFFICIAL_METI_ANRE_EVIDENCE_DIRECTORY to the exact 88 archived XLSX files");
   const receiptIds = new Set(METI_ANRE_ARCHIVE_RECEIPTS.map((receipt) => receipt.id));
   const documents = METI_ANRE_OFFICIAL_DOCUMENTS.filter((document) => receiptIds.has(document.id));
   const byUrl = new Map(documents.map((document) => [document.url, document]));
@@ -134,8 +134,8 @@ test("replays all 86 new METI and ANRE archive receipts through the production s
     return new Response(await readFile(join(fixtureDirectory, `${document.id}.xlsx`)));
   });
   assert.deepEqual(result.sourceFailures, []);
-  assert.equal(result.fetched.length, 86);
-  assert.equal(result.fetched.flatMap((item) => item.records).length, 6_997);
+  assert.equal(result.fetched.length, 88);
+  assert.equal(result.fetched.flatMap((item) => item.records).length, 7_163);
 });
 
 test("rejects magic and byte tampering before parsing", () => {

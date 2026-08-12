@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const EVIDENCE_MAP_URL = new URL("../data/official-regional-evidence-map.json", import.meta.url);
+const ARCHIVE_EVIDENCE_MAP_URL = new URL("../data/official-regional-archive-evidence-map.json", import.meta.url);
+const ARCHIVE_PROVIDER = "国立国会図書館インターネット資料収集保存事業（WARP）";
+const ARCHIVE_CAPTURE = "20260602/20260601000000";
 
 const CHUGOKU_CONTRACTS_INDEX = "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html";
 const CHUGOKU_GRANTS_INDEX = "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html";
@@ -268,13 +271,25 @@ const ALL_REGIONAL_DOCUMENTS = Object.freeze([
 
 const rawEvidenceMap = JSON.parse(readFileSync(EVIDENCE_MAP_URL, "utf8"));
 validateEvidenceMap(rawEvidenceMap, ALL_REGIONAL_DOCUMENTS);
+const rawArchiveEvidenceMap = JSON.parse(readFileSync(ARCHIVE_EVIDENCE_MAP_URL, "utf8"));
+validateArchiveEvidenceMap(rawArchiveEvidenceMap, ALL_REGIONAL_DOCUMENTS, rawEvidenceMap.records);
 export const REGIONAL_EVIDENCE_METADATA = Object.freeze({
   schemaVersion: rawEvidenceMap.schemaVersion,
   verifiedAt: rawEvidenceMap.verifiedAt,
   verification: rawEvidenceMap.verification,
 });
 export const REGIONAL_EVIDENCE_RECEIPTS = Object.freeze(rawEvidenceMap.records.map((record) => Object.freeze({ ...record })));
-const VERIFIED_REGIONAL_IDS = new Set(REGIONAL_EVIDENCE_RECEIPTS.map((record) => record.id));
+export const REGIONAL_ARCHIVE_EVIDENCE_METADATA = Object.freeze({
+  schemaVersion: rawArchiveEvidenceMap.schemaVersion,
+  verifiedAt: rawArchiveEvidenceMap.verifiedAt,
+  capture: rawArchiveEvidenceMap.capture,
+  verification: rawArchiveEvidenceMap.verification,
+});
+export const REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS = Object.freeze(rawArchiveEvidenceMap.records.map((record) => Object.freeze({ ...record })));
+const VERIFIED_REGIONAL_IDS = new Set([
+  ...REGIONAL_EVIDENCE_RECEIPTS.map((record) => record.id),
+  ...REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.map((record) => record.id),
+]);
 
 // Only the documents whose exact response and strict-parser result have a
 // committed evidence receipt are eligible for production ingestion. The rest
@@ -282,8 +297,9 @@ const VERIFIED_REGIONAL_IDS = new Set(REGIONAL_EVIDENCE_RECEIPTS.map((record) =>
 // searchable in the public manifest.
 const evidenceReceiptById = new Map(REGIONAL_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
 export const REGIONAL_OFFICIAL_DOCUMENTS = Object.freeze(
-  ALL_REGIONAL_DOCUMENTS
-    .filter((document) => VERIFIED_REGIONAL_IDS.has(document.id))
+  [
+    ...ALL_REGIONAL_DOCUMENTS
+      .filter((document) => evidenceReceiptById.has(document.id))
     .map((document) => Object.freeze({
       ...document,
       evidenceReceipt: Object.freeze({
@@ -293,6 +309,28 @@ export const REGIONAL_OFFICIAL_DOCUMENTS = Object.freeze(
         expectedRecordCount: evidenceReceiptById.get(document.id).expectedRecordCount,
       }),
     })),
+    ...REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.map((receipt) => {
+      const document = ALL_REGIONAL_DOCUMENTS.find((candidate) => candidate.id === receipt.id);
+      return Object.freeze({
+        ...document,
+        url: receipt.url,
+        originalUrl: receipt.originalUrl,
+        discoveryStatus: "archived_official_file",
+        archiveProvider: ARCHIVE_PROVIDER,
+        archiveVerifiedAt: REGIONAL_ARCHIVE_EVIDENCE_METADATA.verifiedAt,
+        archiveVerification: REGIONAL_ARCHIVE_EVIDENCE_METADATA.verification,
+        archiveExpectedBytes: receipt.expectedBytes,
+        archiveExpectedSha256: receipt.expectedSha256,
+        archiveExpectedRecordCount: receipt.expectedRecordCount,
+        evidenceReceipt: Object.freeze({
+          expectedMagic: document.format === "html" ? "html" : "504b0304",
+          expectedBytes: receipt.expectedBytes,
+          expectedSha256: receipt.expectedSha256,
+          expectedRecordCount: receipt.expectedRecordCount,
+        }),
+      });
+    }),
+  ],
 );
 export const REGIONAL_CANDIDATE_DOCUMENTS = Object.freeze(
   ALL_REGIONAL_DOCUMENTS.filter((document) => !VERIFIED_REGIONAL_IDS.has(document.id)),
@@ -329,6 +367,39 @@ function validateEvidenceMap(value, documents) {
       throw new Error(`地域局evidence receiptのbytes/SHA/recordCountが不正です: ${receipt.id}`);
     }
   }
+}
+
+function validateArchiveEvidenceMap(value, documents, directReceipts) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("地域局archive evidence mapがオブジェクトではありません");
+  const exactTopKeys = ["capture", "records", "schemaVersion", "verification", "verifiedAt"];
+  if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(exactTopKeys)
+    || value.schemaVersion !== 1 || value.verifiedAt !== "2026-08-12" || value.capture !== ARCHIVE_CAPTURE
+    || typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
+    throw new Error("地域局archive evidence mapの検証メタデータが不正です");
+  }
+  if (!Array.isArray(value.records) || value.records.length !== 95) throw new Error("地域局archive evidence receiptは95資料でなければなりません");
+  const definitions = new Map(documents.map((document) => [document.id, document]));
+  const directIds = new Set(directReceipts.map((receipt) => receipt.id));
+  const ids = new Set();
+  let recordCount = 0;
+  for (const receipt of value.records) {
+    const exactReceiptKeys = ["expectedBytes", "expectedRecordCount", "expectedSha256", "id", "originalUrl", "sourcePageUrl", "url"];
+    if (JSON.stringify(Object.keys(receipt).sort()) !== JSON.stringify(exactReceiptKeys)) throw new Error(`${receipt?.id ?? "(なし)"}: 地域局archive evidence receiptのキーが不正です`);
+    const document = definitions.get(receipt.id);
+    if (!document || ids.has(receipt.id) || directIds.has(receipt.id)
+      || receipt.originalUrl !== document.url || receipt.sourcePageUrl !== document.sourcePageUrl
+      || receipt.url !== `https://warp.ndl.go.jp/${ARCHIVE_CAPTURE}/${receipt.originalUrl}`) {
+      throw new Error(`${receipt.id}: 地域局archive evidence receiptの資料定義または公式URLが不正です`);
+    }
+    ids.add(receipt.id);
+    if (!Number.isSafeInteger(receipt.expectedBytes) || receipt.expectedBytes < 500 || receipt.expectedBytes > 10_000_000
+      || typeof receipt.expectedSha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.expectedSha256)
+      || !Number.isSafeInteger(receipt.expectedRecordCount) || receipt.expectedRecordCount < 1) {
+      throw new Error(`${receipt.id}: 地域局archive evidence receiptのbytes/SHA/recordCountが不正です`);
+    }
+    recordCount += receipt.expectedRecordCount;
+  }
+  if (recordCount !== 1_589) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
 }
 
 export function parseRegionalOfficialHtml(buffer, document) {

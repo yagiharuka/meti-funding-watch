@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import ExcelJS from "exceljs";
@@ -20,15 +21,15 @@ import { OFFICIAL_DOCUMENTS, parseOfficialWorkbook } from "../scripts/update-off
 const ids = new Set(METI_ANRE_CANDIDATE_DOCUMENTS.map((document) => document.id));
 const productionIds = new Set(METI_ANRE_OFFICIAL_DOCUMENTS.map((document) => document.id));
 
-test("keeps the 94-URL inventory separate and registers exactly 92 receipted workbooks", () => {
+test("keeps the 94-URL inventory separate and registers all 94 receipted workbooks", () => {
   assert.equal(METI_CANDIDATE_DOCUMENTS.length, 38);
   assert.equal(ANRE_CANDIDATE_DOCUMENTS.length, 56);
   assert.equal(METI_ANRE_CANDIDATE_DOCUMENTS.length, 94);
   assert.equal(METI_OFFICIAL_DOCUMENTS.length, 4);
   assert.equal(ANRE_OFFICIAL_DOCUMENTS.length, 2);
-  assert.equal(METI_ANRE_OFFICIAL_DOCUMENTS.length, 92);
-  assert.equal(METI_ANRE_ARCHIVE_RECEIPTS.length, 86);
-  assert.equal(METI_ANRE_UNVERIFIED_CANDIDATES.length, 2);
+  assert.equal(METI_ANRE_OFFICIAL_DOCUMENTS.length, 94);
+  assert.equal(METI_ANRE_ARCHIVE_RECEIPTS.length, 88);
+  assert.equal(METI_ANRE_UNVERIFIED_CANDIDATES.length, 0);
   assert.equal(ids.size, METI_ANRE_CANDIDATE_DOCUMENTS.length);
   assert.equal(new Set(METI_ANRE_CANDIDATE_DOCUMENTS.map((document) => document.url)).size, METI_ANRE_CANDIDATE_DOCUMENTS.length);
   assert.ok(Object.isFrozen(METI_ANRE_CANDIDATE_DOCUMENTS));
@@ -121,12 +122,9 @@ test("pins parser receipts for the six native XLSX shapes inspected in this incr
   }
 });
 
-test("pins 86 archived Full-GET receipts and leaves only the two fail-closed candidates out", () => {
-  assert.equal(METI_ANRE_ARCHIVE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 6_997);
-  assert.deepEqual(METI_ANRE_UNVERIFIED_CANDIDATES.map((document) => document.id).sort(), [
-    "anre-2024-discretionary-goods-04",
-    "meti-2025-grant-decisions-h1",
-  ]);
+test("pins 88 archived Full-GET receipts and leaves no candidate unverified", () => {
+  assert.equal(METI_ANRE_ARCHIVE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 7_163);
+  assert.deepEqual(METI_ANRE_UNVERIFIED_CANDIDATES, []);
   for (const receipt of METI_ANRE_ARCHIVE_RECEIPTS) {
     assert.ok(ids.has(receipt.id), receipt.id);
     assert.ok(productionIds.has(receipt.id), receipt.id);
@@ -135,6 +133,31 @@ test("pins 86 archived Full-GET receipts and leaves only the two fail-closed can
     assert.ok(Number.isSafeInteger(receipt.expectedBytes) && receipt.expectedBytes > 10_000);
     assert.match(receipt.expectedSha256, /^[0-9a-f]{64}$/);
     assert.ok(Number.isSafeInteger(receipt.expectedRecordCount) && receipt.expectedRecordCount > 0);
+  }
+});
+
+test("parses the two previously blocked workbooks only with their exact non-record rows", async () => {
+  const fixtures = [
+    ["meti-2025-grant-decisions-h1", 151, 158],
+    ["anre-2024-discretionary-goods-04", 15, 4],
+  ];
+  for (const [id, expectedRecords, excludedRow] of fixtures) {
+    const definition = METI_ANRE_OFFICIAL_DOCUMENTS.find((document) => document.id === id);
+    const buffer = await readFile(new URL(`../evidence/official-bootstrap/${id}.xlsx`, import.meta.url));
+    const records = await parseOfficialWorkbook(buffer, definition);
+    assert.equal(records.length, expectedRecords, id);
+    assert.ok(records.every((record) => record.sourceRowNumber !== excludedRow), id);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const nonRecord = definition.expectedNonRecordRows[0];
+    workbook.getWorksheet(nonRecord.sheetName).getCell(nonRecord.rowNumber, nonRecord.cells[0].column).value += "変更";
+    const changed = Buffer.from(await workbook.xlsx.writeBuffer());
+    await assert.rejects(
+      () => parseOfficialWorkbook(changed, definition),
+      /固定した非明細行と一致しません/,
+      id,
+    );
   }
 });
 
@@ -193,9 +216,8 @@ test("parses ANRE's repeated grant headers, Japanese-era dates, and joint recipi
   assert.match(parsed[0].notes, /エネルギー対策特別会計/);
 });
 
-test("states the archive and FY2026 work still required instead of claiming completion", () => {
+test("states the remaining historical and FY2026 work instead of claiming completion", () => {
   assert.deepEqual(METI_ANRE_REGISTRY_GAPS, [
-    "候補URL94資料のうち、実バイトと厳密parse receiptが未検証の2資料",
     "経済産業省本省のFY2020契約結果",
     "経済産業省本省のFY2020・FY2021補助金等交付決定",
     "資源エネルギー庁のFY2020～FY2023月別契約結果",

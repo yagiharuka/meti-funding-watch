@@ -38,6 +38,31 @@ const PUBLIC_WORKS_HEADER_ALIASES = Object.freeze({
   "契約の相手方の商号又は名称": Object.freeze(["契約の相手方の商号または名称"]),
 });
 
+const METI_2025_GRANT_H1_NON_RECORD_ROWS = Object.freeze([
+  Object.freeze({
+    sheetName: "補助金等の情報",
+    rowNumber: 158,
+    cells: Object.freeze([
+      Object.freeze({
+        column: 2,
+        value: "（注）交付先名の公表により、機密情報の漏洩につながる恐れがあるため、非公表としている。",
+      }),
+    ]),
+  }),
+]);
+
+const ANRE_2024_DISCRETIONARY_GOODS_04_NON_RECORD_ROWS = Object.freeze([
+  Object.freeze({
+    sheetName: "04月随契（物品等）",
+    rowNumber: 4,
+    cells: Object.freeze([
+      Object.freeze({ column: 14, value: "公益法人の区分" }),
+      Object.freeze({ column: 15, value: "国所管、\n都道府県\n所管の区分" }),
+      Object.freeze({ column: 16, value: "応札・\n応募者数" }),
+    ]),
+  }),
+]);
+
 const METI_CONTRACT_SHEET_COUNTS = Object.freeze({
   2021: Object.freeze({ "competitive-public-works": 4, "discretionary-public-works": 3 }),
   2022: Object.freeze({ "competitive-public-works": 1, "discretionary-commission": 11, "discretionary-public-works": 1 }),
@@ -97,6 +122,9 @@ function metiGrantDocument(fiscalYear, half) {
     expectedSheetCount: 1,
     multiplePartyPolicy: "one_official_row",
     verifiedAt: VERIFIED_AT,
+    ...(fiscalYear === 2025 && half === "h1"
+      ? { expectedNonRecordRows: METI_2025_GRANT_H1_NON_RECORD_ROWS }
+      : {}),
   });
 }
 
@@ -174,6 +202,9 @@ function anreContractDocument(fiscalYear, series, month) {
     expectedSheetCount: 1,
     multiplePartyPolicy: "one_official_row",
     verifiedAt: VERIFIED_AT,
+    ...(fiscalYear === 2024 && series.id === "discretionary-goods" && month === "04"
+      ? { expectedNonRecordRows: ANRE_2024_DISCRETIONARY_GOODS_04_NON_RECORD_ROWS }
+      : {}),
   });
 }
 
@@ -340,7 +371,6 @@ export const METI_ANRE_UNVERIFIED_CANDIDATES = Object.freeze(
 );
 
 export const METI_ANRE_REGISTRY_GAPS = Object.freeze([
-  "候補URL94資料のうち、実バイトと厳密parse receiptが未検証の2資料",
   "経済産業省本省のFY2020契約結果",
   "経済産業省本省のFY2020・FY2021補助金等交付決定",
   "資源エネルギー庁のFY2020～FY2023月別契約結果",
@@ -356,7 +386,7 @@ function validateEvidenceMap(value, documents) {
     || typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
     throw new Error("本省・資源エネルギー庁evidence mapの検証メタデータが不正です");
   }
-  if (!Array.isArray(value.records) || value.records.length !== 86) throw new Error("本省・資源エネルギー庁evidence receiptは86資料でなければなりません");
+  if (!Array.isArray(value.records) || value.records.length !== 88) throw new Error("本省・資源エネルギー庁evidence receiptは88資料でなければなりません");
   const definitions = new Map(documents.map((document) => [document.id, document]));
   const ids = new Set();
   let recordCount = 0;
@@ -376,10 +406,8 @@ function validateEvidenceMap(value, documents) {
     }
     recordCount += receipt.expectedRecordCount;
   }
-  if (recordCount !== 6_997) throw new Error(`本省・資源エネルギー庁evidence receiptの明細数が不正です: ${recordCount}`);
+  if (recordCount !== 7_163) throw new Error(`本省・資源エネルギー庁evidence receiptの明細数が不正です: ${recordCount}`);
   for (const excludedId of [
-    "meti-2025-grant-decisions-h1",
-    "anre-2024-discretionary-goods-04",
     ...Object.keys(METI_ANRE_SCHEMA_RECEIPTS),
   ]) {
     if (ids.has(excludedId)) throw new Error(`${excludedId}: 新規archive receiptへ重複または未検証資料が混入しています`);
