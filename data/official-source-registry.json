@@ -98,7 +98,9 @@
       "id": "okinawa",
       "name": "沖縄総合事務局（経済産業部）",
       "contracts": "https://www.ogb.go.jp/soumu/soumu_tyouta.html",
-      "grantDecisions": "https://www.ogb.go.jp/keisan/3842/saitaku/f_03/014671"
+      "grantDecisions": "https://www.ogb.go.jp/keisan/3842/saitaku/f_03/014671",
+      "contractScopeNote": "総合事務局全体XLSXは経済産業部を行単位で識別できず、共通調達も配賦不能のため明細未収録",
+      "grantScopeNote": "経済産業部PDFのFY2020～FY2024を収録。原資料に法人番号欄なし。FY2025以降は統合資料の索引リンクなし"
     }
   ]
 }

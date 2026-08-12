@@ -195,8 +195,16 @@ export default function OfficialSourcesPage() {
               {registry.executors.map((executor) => (
                 <tr key={executor.id}>
                   <th scope="row" data-label="執行機関">{executor.name}</th>
-                  <td data-label="契約結果"><a className="source-link" href={executor.contracts} target="_blank" rel="noreferrer" aria-label={`${executor.name}の契約結果を新しいタブで開く`}>公式契約結果 ↗</a><small>金額段階：契約額</small></td>
-                  <td data-label="補助金等の交付決定"><a className="source-link" href={executor.grantDecisions} target="_blank" rel="noreferrer" aria-label={`${executor.name}の補助金等交付決定を新しいタブで開く`}>公式交付決定 ↗</a><small>金額段階：交付決定額</small></td>
+                  <td data-label="契約結果">
+                    <a className="source-link" href={executor.contracts} target="_blank" rel="noreferrer" aria-label={`${executor.name}の契約結果を新しいタブで開く`}>公式契約結果 ↗</a>
+                    <small>金額段階：契約額</small>
+                    {"contractScopeNote" in executor && <small>{executor.contractScopeNote}</small>}
+                  </td>
+                  <td data-label="補助金等の交付決定">
+                    <a className="source-link" href={executor.grantDecisions} target="_blank" rel="noreferrer" aria-label={`${executor.name}の補助金等交付決定を新しいタブで開く`}>公式交付決定 ↗</a>
+                    <small>金額段階：交付決定額</small>
+                    {"grantScopeNote" in executor && <small>{executor.grantScopeNote}</small>}
+                  </td>
                   <td data-label="検索収録">{executor.id in manifest.coverage.executors ? (() => {
                     const detail = manifest.coverage.executors[executor.id as keyof typeof manifest.coverage.executors];
                     return <>

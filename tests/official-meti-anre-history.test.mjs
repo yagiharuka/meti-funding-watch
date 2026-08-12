@@ -6,6 +6,7 @@ import ExcelJS from "exceljs";
 import {
   ANRE_OFFICIAL_DOCUMENTS,
   ANRE_CANDIDATE_DOCUMENTS,
+  METI_ANRE_ARCHIVE_RECEIPTS,
   METI_ANRE_CANDIDATE_DOCUMENTS,
   METI_ANRE_OFFICIAL_DOCUMENTS,
   METI_ANRE_REGISTRY_GAPS,
@@ -19,14 +20,15 @@ import { OFFICIAL_DOCUMENTS, parseOfficialWorkbook } from "../scripts/update-off
 const ids = new Set(METI_ANRE_CANDIDATE_DOCUMENTS.map((document) => document.id));
 const productionIds = new Set(METI_ANRE_OFFICIAL_DOCUMENTS.map((document) => document.id));
 
-test("keeps the 94-URL inventory separate and registers only six receipted workbooks", () => {
+test("keeps the 94-URL inventory separate and registers exactly 92 receipted workbooks", () => {
   assert.equal(METI_CANDIDATE_DOCUMENTS.length, 38);
   assert.equal(ANRE_CANDIDATE_DOCUMENTS.length, 56);
   assert.equal(METI_ANRE_CANDIDATE_DOCUMENTS.length, 94);
   assert.equal(METI_OFFICIAL_DOCUMENTS.length, 4);
   assert.equal(ANRE_OFFICIAL_DOCUMENTS.length, 2);
-  assert.equal(METI_ANRE_OFFICIAL_DOCUMENTS.length, 6);
-  assert.equal(METI_ANRE_UNVERIFIED_CANDIDATES.length, 88);
+  assert.equal(METI_ANRE_OFFICIAL_DOCUMENTS.length, 92);
+  assert.equal(METI_ANRE_ARCHIVE_RECEIPTS.length, 86);
+  assert.equal(METI_ANRE_UNVERIFIED_CANDIDATES.length, 2);
   assert.equal(ids.size, METI_ANRE_CANDIDATE_DOCUMENTS.length);
   assert.equal(new Set(METI_ANRE_CANDIDATE_DOCUMENTS.map((document) => document.url)).size, METI_ANRE_CANDIDATE_DOCUMENTS.length);
   assert.ok(Object.isFrozen(METI_ANRE_CANDIDATE_DOCUMENTS));
@@ -66,15 +68,24 @@ test("keeps the 94-URL inventory separate and registers only six receipted workb
   );
 
   const updaterIds = new Set(OFFICIAL_DOCUMENTS.map((document) => document.id));
-  assert.deepEqual([...productionIds].sort(), Object.keys(METI_ANRE_SCHEMA_RECEIPTS).sort());
+  assert.deepEqual(
+    [...productionIds].sort(),
+    [...Object.keys(METI_ANRE_SCHEMA_RECEIPTS), ...METI_ANRE_ARCHIVE_RECEIPTS.map((receipt) => receipt.id)].sort(),
+  );
   assert.ok([...productionIds].every((id) => updaterIds.has(id)));
   assert.ok(METI_ANRE_UNVERIFIED_CANDIDATES.every((document) => !updaterIds.has(document.id)));
-  assert.ok(METI_ANRE_OFFICIAL_DOCUMENTS.every((document) =>
+  assert.ok([...METI_OFFICIAL_DOCUMENTS, ...ANRE_OFFICIAL_DOCUMENTS].every((document) =>
     document.discoveryStatus === "full_get_and_strict_parse_verified"
     && document.evidenceReceipt.expectedMagic === METI_ANRE_SCHEMA_RECEIPTS[document.id].magic
     && document.evidenceReceipt.expectedBytes === METI_ANRE_SCHEMA_RECEIPTS[document.id].bytes
     && document.evidenceReceipt.expectedSha256 === METI_ANRE_SCHEMA_RECEIPTS[document.id].sha256
     && document.evidenceReceipt.expectedRecordCount === METI_ANRE_SCHEMA_RECEIPTS[document.id].records));
+  assert.ok(METI_ANRE_OFFICIAL_DOCUMENTS.slice(6).every((document) =>
+    document.discoveryStatus === "archived_official_file"
+    && document.archiveProvider.includes("WARP")
+    && document.url.startsWith("https://warp.ndl.go.jp/20260602/20260601000000/")
+    && document.originalUrl.startsWith(`https://www.${document.executorId === "meti" ? "meti" : "enecho.meti"}.go.jp/`)
+    && document.evidenceReceipt.expectedSha256 === document.archiveExpectedSha256));
 });
 
 test("keeps every candidate official, typed, and separate from G Biz INFO", () => {
@@ -107,6 +118,23 @@ test("pins parser receipts for the six native XLSX shapes inspected in this incr
     assert.ok(Number.isSafeInteger(receipt.bytes) && receipt.bytes > 10_000, id);
     assert.match(receipt.sha256, /^[0-9a-f]{64}$/, id);
     assert.ok(Number.isSafeInteger(receipt.records) && receipt.records > 0, id);
+  }
+});
+
+test("pins 86 archived Full-GET receipts and leaves only the two fail-closed candidates out", () => {
+  assert.equal(METI_ANRE_ARCHIVE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 6_997);
+  assert.deepEqual(METI_ANRE_UNVERIFIED_CANDIDATES.map((document) => document.id).sort(), [
+    "anre-2024-discretionary-goods-04",
+    "meti-2025-grant-decisions-h1",
+  ]);
+  for (const receipt of METI_ANRE_ARCHIVE_RECEIPTS) {
+    assert.ok(ids.has(receipt.id), receipt.id);
+    assert.ok(productionIds.has(receipt.id), receipt.id);
+    assert.equal(receipt.url, `https://warp.ndl.go.jp/20260602/20260601000000/${receipt.originalUrl}`);
+    assert.ok(receipt.sourcePageUrl.startsWith("https://www."));
+    assert.ok(Number.isSafeInteger(receipt.expectedBytes) && receipt.expectedBytes > 10_000);
+    assert.match(receipt.expectedSha256, /^[0-9a-f]{64}$/);
+    assert.ok(Number.isSafeInteger(receipt.expectedRecordCount) && receipt.expectedRecordCount > 0);
   }
 });
 
@@ -167,7 +195,7 @@ test("parses ANRE's repeated grant headers, Japanese-era dates, and joint recipi
 
 test("states the archive and FY2026 work still required instead of claiming completion", () => {
   assert.deepEqual(METI_ANRE_REGISTRY_GAPS, [
-    "候補URL94資料のうち、実バイトと厳密parse receiptが未検証の88資料",
+    "候補URL94資料のうち、実バイトと厳密parse receiptが未検証の2資料",
     "経済産業省本省のFY2020契約結果",
     "経済産業省本省のFY2020・FY2021補助金等交付決定",
     "資源エネルギー庁のFY2020～FY2023月別契約結果",

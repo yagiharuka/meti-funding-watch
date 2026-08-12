@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import ExcelJS from "exceljs";
 import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
 import { METI_ANRE_OFFICIAL_DOCUMENTS } from "./official-meti-anre-history.mjs";
+import { OKINAWA_GRANT_DOCUMENTS } from "./official-okinawa-sources.mjs";
 import { parseOfficialPdf } from "./official-pdf.mjs";
 import { parseRegionalOfficialHtml, REGIONAL_OFFICIAL_DOCUMENTS } from "./official-regional-history.mjs";
 import { REGIONAL_PDF_DOCUMENTS } from "./official-regional-pdf-sources.mjs";
@@ -139,6 +140,7 @@ export const OFFICIAL_DOCUMENTS = applyVerifiedLiveFallbacks(applyVerifiedWarpCa
   ...SMEA_HISTORICAL_DOCUMENTS,
   ...REGIONAL_OFFICIAL_DOCUMENTS,
   ...REGIONAL_PDF_DOCUMENTS,
+  ...OKINAWA_GRANT_DOCUMENTS,
 ]));
 
 export async function parseOfficialWorkbook(buffer, document) {

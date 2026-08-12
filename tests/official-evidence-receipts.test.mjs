@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import test from "node:test";
 
-import { METI_ANRE_OFFICIAL_DOCUMENTS } from "../scripts/official-meti-anre-history.mjs";
+import {
+  METI_ANRE_ARCHIVE_RECEIPTS,
+  METI_ANRE_OFFICIAL_DOCUMENTS,
+} from "../scripts/official-meti-anre-history.mjs";
 import { REGIONAL_OFFICIAL_DOCUMENTS } from "../scripts/official-regional-history.mjs";
 import { REGIONAL_PDF_DOCUMENTS } from "../scripts/official-regional-pdf-sources.mjs";
+import { OKINAWA_GRANT_DOCUMENTS } from "../scripts/official-okinawa-sources.mjs";
 import {
   assertOfficialEvidenceRecordCount,
   assertOfficialEvidenceSourceReceipt,
@@ -17,12 +22,13 @@ const evidenceDocuments = [
   ...METI_ANRE_OFFICIAL_DOCUMENTS,
   ...REGIONAL_OFFICIAL_DOCUMENTS,
   ...REGIONAL_PDF_DOCUMENTS,
+  ...OKINAWA_GRANT_DOCUMENTS,
 ];
 
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
-test("binds every phase-2 production document to one complete evidence receipt", () => {
-  assert.equal(evidenceDocuments.length, 26);
+test("binds every receipted production document to one complete evidence receipt", () => {
+  assert.equal(evidenceDocuments.length, 130);
   assert.ok(evidenceDocuments.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   for (const document of evidenceDocuments) {
     assert.deepEqual(Object.keys(document.evidenceReceipt).sort(), [
@@ -40,6 +46,22 @@ test("keeps the deterministic evidence override limited to receipted documents",
   );
   assert.match(updaterSource, /evidenceDirectory && document\.evidenceReceipt/);
   assert.match(updaterSource, /OFFICIAL_EVIDENCE_DIRECTORY/);
+});
+
+test("replays all 86 new METI and ANRE archive receipts through the production strict parser", { timeout: 30_000 }, async (t) => {
+  const fixtureDirectory = process.env.OFFICIAL_METI_ANRE_EVIDENCE_DIRECTORY?.trim();
+  if (!fixtureDirectory) return t.skip("set OFFICIAL_METI_ANRE_EVIDENCE_DIRECTORY to the exact 86 archived XLSX files");
+  const receiptIds = new Set(METI_ANRE_ARCHIVE_RECEIPTS.map((receipt) => receipt.id));
+  const documents = METI_ANRE_OFFICIAL_DOCUMENTS.filter((document) => receiptIds.has(document.id));
+  const byUrl = new Map(documents.map((document) => [document.url, document]));
+  const result = await fetchOfficialDocuments(documents, [], async (url) => {
+    const document = byUrl.get(String(url));
+    assert.ok(document, `unexpected evidence URL: ${url}`);
+    return new Response(await readFile(join(fixtureDirectory, `${document.id}.xlsx`)));
+  });
+  assert.deepEqual(result.sourceFailures, []);
+  assert.equal(result.fetched.length, 86);
+  assert.equal(result.fetched.flatMap((item) => item.records).length, 6_997);
 });
 
 test("rejects magic and byte tampering before parsing", () => {
@@ -146,9 +168,9 @@ test("carries forward a published evidence source after repeated HTTP 202", asyn
   assert.equal(result.fetched[0].records.length, records.length);
 });
 
-test("publishes all 26 receipted phase-2 sources with their exact audit tuple", () => {
-  assert.equal(publishedManifest.coverage.attemptedSourceDocumentCount, 100);
-  assert.equal(publishedManifest.coverage.sourceDocumentCount, 100);
+test("publishes all 130 receipted sources with their exact audit tuple", () => {
+  assert.equal(publishedManifest.coverage.attemptedSourceDocumentCount, OFFICIAL_DOCUMENTS.length);
+  assert.equal(publishedManifest.coverage.sourceDocumentCount, OFFICIAL_DOCUMENTS.length);
   assert.equal(publishedManifest.coverage.failedSourceDocumentCount, 0);
   assert.deepEqual(publishedManifest.sourceFailures, []);
   const publishedById = new Map(publishedManifest.sourceDocuments.map((source) => [source.id, source]));

@@ -79,7 +79,8 @@ test("pins exact full-response integrity and strict parser receipts for every ca
 });
 
 test("requires receipts for all 59 archived documents while keeping the 9 existing archives outside map50", () => {
-  const archived = OFFICIAL_DOCUMENTS.filter((document) => document.archiveProvider);
+  const archived = OFFICIAL_DOCUMENTS.filter((document) =>
+    document.archiveProvider && ["jpo", "smea"].includes(document.executorId));
   const existingArchives = archived.filter((document) => !captureIds.has(document.id));
   assert.equal(archived.length, 59);
   assert.equal(existingArchives.length, 9);
@@ -133,7 +134,7 @@ test("fails closed if a verified capture is missing or no longer matches its par
     ]) delete original[field];
     return original;
   });
-  assert.equal(applyVerifiedWarpCaptures(originals).filter((item) => item.archiveVerifiedAt).length, 50);
+  assert.equal(applyVerifiedWarpCaptures(originals).filter((item) => captureIds.has(item.id) && item.archiveVerifiedAt).length, 50);
   assert.throws(
     () => applyVerifiedWarpCaptures(originals.filter((item) => item.id !== VERIFIED_WARP_CAPTURES[0].id)),
     /対応する定義がありません/,

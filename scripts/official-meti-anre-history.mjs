@@ -8,7 +8,12 @@
  * list claims payment, downstream-recipient, or all-year coverage.
  */
 
+import { readFileSync } from "node:fs";
+
 const VERIFIED_AT = "2026-08-12";
+const ARCHIVE_CAPTURE = "20260602/20260601000000";
+const ARCHIVE_PROVIDER = "国立国会図書館インターネット資料収集保存事業（WARP）";
+const EVIDENCE_MAP_URL = new URL("../data/official-meti-anre-evidence-map.json", import.meta.url);
 
 const METI_EXECUTOR = Object.freeze({
   executorId: "meti",
@@ -31,6 +36,14 @@ const METI_CONTRACT_SERIES = Object.freeze([
 
 const PUBLIC_WORKS_HEADER_ALIASES = Object.freeze({
   "契約の相手方の商号又は名称": Object.freeze(["契約の相手方の商号または名称"]),
+});
+
+const METI_CONTRACT_SHEET_COUNTS = Object.freeze({
+  2021: Object.freeze({ "competitive-public-works": 4, "discretionary-public-works": 3 }),
+  2022: Object.freeze({ "competitive-public-works": 1, "discretionary-commission": 11, "discretionary-public-works": 1 }),
+  2023: Object.freeze({ "competitive-public-works": 4, "discretionary-commission": 11, "discretionary-public-works": 2 }),
+  2024: Object.freeze({ "competitive-public-works": 4, "discretionary-goods": 11, "discretionary-public-works": 3 }),
+  2025: Object.freeze({ "discretionary-commission": 10 }),
 });
 
 function metiContractPage(fiscalYear) {
@@ -57,7 +70,7 @@ function metiContractDocument(fiscalYear, series) {
     format: "xlsx",
     discoveryStatus: "linked_from_live_year_page",
     coverageClaim: "本省の公式年度XLSXに掲載された直接契約行",
-    expectedSheetCount: 12,
+    expectedSheetCount: METI_CONTRACT_SHEET_COUNTS[fiscalYear]?.[series.id] ?? 12,
     multiplePartyPolicy: "one_official_row",
     verifiedAt: VERIFIED_AT,
     ...(series.publicWorks ? { headerAliases: PUBLIC_WORKS_HEADER_ALIASES } : {}),
@@ -139,6 +152,13 @@ const ANRE_CONTRACT_SERIES = Object.freeze([
 
 function anreContractDocument(fiscalYear, series, month) {
   const base = `https://www.enecho.meti.go.jp/appli/conclusion/${series.directory}/${fiscalYear}`;
+  const filename = fiscalYear === 2024 && series.id === "competitive-goods" && month === "06"
+    ? "ippankyousou_chouhi_202406.xlsx"
+    : fiscalYear === 2024 && series.id === "competitive-goods" && month === "09"
+      ? "09ippannkyousou_chouhi_202409.xlsx"
+      : fiscalYear === 2024 && series.id === "discretionary-goods" && month === "10"
+        ? "zuiikeiyaku_cyouhi_202410.xlsx"
+        : `${month}.xlsx`;
   return Object.freeze({
     ...ANRE_EXECUTOR,
     id: `anre-${fiscalYear}-${series.id}-${month}`,
@@ -147,7 +167,7 @@ function anreContractDocument(fiscalYear, series, month) {
     kind: `${series.kind}（${Number(month)}月公表分）`,
     amountStage: "契約金額欄の掲載値",
     sourcePageUrl: `${base}/`,
-    url: `${base}/${month}.xlsx`,
+    url: `${base}/${filename}`,
     format: "xlsx",
     discoveryStatus: "linked_from_live_year_page",
     coverageClaim: "資源エネルギー庁の公式月別XLSXに掲載された直接契約行",
@@ -163,7 +183,9 @@ function anreGrantDocument(fiscalYear, half) {
   // The FY2023 files use a hyphen between months; later files use an underscore.
   const halfSlug = fiscalYear === 2023
     ? (firstHalf ? "4-9" : "10-3")
-    : (firstHalf ? "4_9" : "10_3");
+    : fiscalYear === 2024 && !firstHalf
+      ? "10-3"
+      : (firstHalf ? "4_9" : "10_3");
   return Object.freeze({
     ...ANRE_EXECUTOR,
     id: `anre-${fiscalYear}-grant-decisions-${half}`,
@@ -242,6 +264,16 @@ export const METI_ANRE_SCHEMA_RECEIPTS = Object.freeze({
   }),
 });
 
+const rawEvidenceMap = JSON.parse(readFileSync(EVIDENCE_MAP_URL, "utf8"));
+validateEvidenceMap(rawEvidenceMap, METI_ANRE_CANDIDATE_DOCUMENTS);
+export const METI_ANRE_EVIDENCE_METADATA = Object.freeze({
+  schemaVersion: rawEvidenceMap.schemaVersion,
+  verifiedAt: rawEvidenceMap.verifiedAt,
+  verification: rawEvidenceMap.verification,
+  capture: rawEvidenceMap.capture,
+});
+export const METI_ANRE_ARCHIVE_RECEIPTS = Object.freeze(rawEvidenceMap.records.map((record) => Object.freeze({ ...record })));
+
 const candidateById = new Map(METI_ANRE_CANDIDATE_DOCUMENTS.map((document) => [document.id, document]));
 const verifiedDocument = (id) => {
   const document = candidateById.get(id);
@@ -278,17 +310,78 @@ export const ANRE_OFFICIAL_DOCUMENTS = Object.freeze([
 export const METI_ANRE_OFFICIAL_DOCUMENTS = Object.freeze([
   ...METI_OFFICIAL_DOCUMENTS,
   ...ANRE_OFFICIAL_DOCUMENTS,
+  ...METI_ANRE_ARCHIVE_RECEIPTS.map((receipt) => {
+    const document = candidateById.get(receipt.id);
+    return Object.freeze({
+      ...document,
+      url: receipt.url,
+      originalUrl: receipt.originalUrl,
+      discoveryStatus: "archived_official_file",
+      archiveProvider: ARCHIVE_PROVIDER,
+      archiveVerifiedAt: METI_ANRE_EVIDENCE_METADATA.verifiedAt,
+      archiveVerification: METI_ANRE_EVIDENCE_METADATA.verification,
+      archiveExpectedBytes: receipt.expectedBytes,
+      archiveExpectedSha256: receipt.expectedSha256,
+      archiveExpectedRecordCount: receipt.expectedRecordCount,
+      evidenceReceipt: Object.freeze({
+        expectedMagic: "504b0304",
+        expectedBytes: receipt.expectedBytes,
+        expectedSha256: receipt.expectedSha256,
+        expectedRecordCount: receipt.expectedRecordCount,
+      }),
+    });
+  }),
 ]);
 
 export const METI_ANRE_UNVERIFIED_CANDIDATES = Object.freeze(
-  METI_ANRE_CANDIDATE_DOCUMENTS.filter((document) => !METI_ANRE_SCHEMA_RECEIPTS[document.id]),
+  METI_ANRE_CANDIDATE_DOCUMENTS.filter((document) =>
+    !METI_ANRE_SCHEMA_RECEIPTS[document.id]
+    && !METI_ANRE_ARCHIVE_RECEIPTS.some((receipt) => receipt.id === document.id)),
 );
 
 export const METI_ANRE_REGISTRY_GAPS = Object.freeze([
-  "候補URL94資料のうち、実バイトと厳密parse receiptが未検証の88資料",
+  "候補URL94資料のうち、実バイトと厳密parse receiptが未検証の2資料",
   "経済産業省本省のFY2020契約結果",
   "経済産業省本省のFY2020・FY2021補助金等交付決定",
   "資源エネルギー庁のFY2020～FY2023月別契約結果",
   "資源エネルギー庁のFY2020～FY2022補助金等交付決定",
   "FY2026は年度途中で、本省・資源エネルギー庁の全公表系列を検証できていないため未登録",
 ]);
+
+function validateEvidenceMap(value, documents) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("本省・資源エネルギー庁evidence mapがオブジェクトではありません");
+  const exactTopKeys = ["capture", "records", "schemaVersion", "verification", "verifiedAt"];
+  if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(exactTopKeys)) throw new Error("本省・資源エネルギー庁evidence mapのキーが不正です");
+  if (value.schemaVersion !== 1 || value.verifiedAt !== VERIFIED_AT || value.capture !== ARCHIVE_CAPTURE
+    || typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
+    throw new Error("本省・資源エネルギー庁evidence mapの検証メタデータが不正です");
+  }
+  if (!Array.isArray(value.records) || value.records.length !== 86) throw new Error("本省・資源エネルギー庁evidence receiptは86資料でなければなりません");
+  const definitions = new Map(documents.map((document) => [document.id, document]));
+  const ids = new Set();
+  let recordCount = 0;
+  for (const receipt of value.records) {
+    const exactReceiptKeys = ["expectedBytes", "expectedRecordCount", "expectedSha256", "id", "originalUrl", "sourcePageUrl", "url"];
+    if (JSON.stringify(Object.keys(receipt).sort()) !== JSON.stringify(exactReceiptKeys)) throw new Error(`${receipt?.id ?? "(なし)"}: evidence receiptのキーが不正です`);
+    const document = definitions.get(receipt.id);
+    if (!document || ids.has(receipt.id) || receipt.originalUrl !== document.url || receipt.sourcePageUrl !== document.sourcePageUrl
+      || receipt.url !== `https://warp.ndl.go.jp/${ARCHIVE_CAPTURE}/${receipt.originalUrl}`) {
+      throw new Error(`${receipt.id}: evidence receiptの資料定義または公式URLが不正です`);
+    }
+    ids.add(receipt.id);
+    if (!Number.isSafeInteger(receipt.expectedBytes) || receipt.expectedBytes < 500 || receipt.expectedBytes > 10_000_000
+      || typeof receipt.expectedSha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.expectedSha256)
+      || !Number.isSafeInteger(receipt.expectedRecordCount) || receipt.expectedRecordCount < 1) {
+      throw new Error(`${receipt.id}: evidence receiptのbytes/SHA/recordCountが不正です`);
+    }
+    recordCount += receipt.expectedRecordCount;
+  }
+  if (recordCount !== 6_997) throw new Error(`本省・資源エネルギー庁evidence receiptの明細数が不正です: ${recordCount}`);
+  for (const excludedId of [
+    "meti-2025-grant-decisions-h1",
+    "anre-2024-discretionary-goods-04",
+    ...Object.keys(METI_ANRE_SCHEMA_RECEIPTS),
+  ]) {
+    if (ids.has(excludedId)) throw new Error(`${excludedId}: 新規archive receiptへ重複または未検証資料が混入しています`);
+  }
+}

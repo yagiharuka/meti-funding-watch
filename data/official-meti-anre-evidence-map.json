@@ -1,0 +1,782 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-12",
+  "verification": "Full GET of exact WARP response bytes plus production strict parser replay; official original URL and source-page URL retained separately.",
+  "capture": "20260602/20260601000000",
+  "records": [
+    {
+      "id": "anre-2023-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/2023_4-9.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/2023_4-9.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/",
+      "expectedBytes": 32095,
+      "expectedSha256": "bc804d257a254424175cad6cf1c7d0619f97c92fb932dd8e194a7624c425de39",
+      "expectedRecordCount": 230
+    },
+    {
+      "id": "anre-2023-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/2023_10-3.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/2023_10-3.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2023/",
+      "expectedBytes": 76509,
+      "expectedSha256": "666d97e72f56c67714344279586f1989b967144b26705088bb3d913f39fb087d",
+      "expectedRecordCount": 882
+    },
+    {
+      "id": "anre-2024-competitive-commission-01",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/01.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/01.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 13134,
+      "expectedSha256": "13c03b67a41b626069eeced10e8f939c2191e9b042099677e57094e51f0a7515",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2024-competitive-commission-02",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/02.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/02.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 14388,
+      "expectedSha256": "3e883b6c25cba4467bfa760ec1330121cb3fc59f15b0415e360b7d34f7d41f97",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "anre-2024-competitive-commission-03",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/03.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/03.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 21635,
+      "expectedSha256": "55e03dfe23b676db0b628a47f03499169cb6195b9071287196f9936d71d92468",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "anre-2024-competitive-commission-04",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/04.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/04.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 24603,
+      "expectedSha256": "5fe20f6e0174ad83c8bacb088c0cf43144dcd94ed4b66f6ca3c7e90362439842",
+      "expectedRecordCount": 41
+    },
+    {
+      "id": "anre-2024-competitive-commission-05",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/05.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/05.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 17109,
+      "expectedSha256": "5a0d4287f3a1f812055255a047bcbc733d829d5b9874e528765420205b21dbdb",
+      "expectedRecordCount": 14
+    },
+    {
+      "id": "anre-2024-competitive-commission-06",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/06.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/06.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 17864,
+      "expectedSha256": "00be742fff2b9fe89e363b1ea8e9dbd6dd6680c88b9f41fe2f3450e1da9c09f1",
+      "expectedRecordCount": 15
+    },
+    {
+      "id": "anre-2024-competitive-commission-07",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/07.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/07.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 17079,
+      "expectedSha256": "d9577f09930328cc4dfbe80ef0a2a69aa82b353cf9a0e484f15451b92609b9fa",
+      "expectedRecordCount": 12
+    },
+    {
+      "id": "anre-2024-competitive-commission-08",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/08.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/08.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 16824,
+      "expectedSha256": "88304b7fbbbc08715aaf78ea021d0384ccc4bba83211630b27090a17edf4b570",
+      "expectedRecordCount": 10
+    },
+    {
+      "id": "anre-2024-competitive-commission-09",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/09.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/09.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 17654,
+      "expectedSha256": "71761e50aa11bada7f56243cd7254ee62545dadb68f5f7e573f1e4fcbf2122b4",
+      "expectedRecordCount": 15
+    },
+    {
+      "id": "anre-2024-competitive-commission-10",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/10.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/10.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 18003,
+      "expectedSha256": "0a6223854cef023eaca99883099a005649baaa23cfab12ffc7ebd1abf01b5bc5",
+      "expectedRecordCount": 14
+    },
+    {
+      "id": "anre-2024-competitive-commission-11",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/11.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/11.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 14574,
+      "expectedSha256": "093b0b3c20801c5b7492798fc33ce7da2f4713d06a81a5e1a948b74a1113f58d",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "anre-2024-competitive-commission-12",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/12.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/12.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2024/",
+      "expectedBytes": 16053,
+      "expectedSha256": "2f997eb13e7438ebd59109b6f35a98cec4d789caa1f6439aeabe17ceed2d40a3",
+      "expectedRecordCount": 9
+    },
+    {
+      "id": "anre-2024-competitive-goods-04",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/04.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/04.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/",
+      "expectedBytes": 16657,
+      "expectedSha256": "a8eb7e101597f399e9c08a477376884ce9c5f475bd36787aa65092ccdcbebd18",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "anre-2024-competitive-goods-06",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/ippankyousou_chouhi_202406.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/ippankyousou_chouhi_202406.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/",
+      "expectedBytes": 15586,
+      "expectedSha256": "66a643370edb2f75b0bb150575f701711764057e98a3bfb164f164413e29a68c",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2024-competitive-goods-09",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/09ippannkyousou_chouhi_202409.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/09ippannkyousou_chouhi_202409.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2024/",
+      "expectedBytes": 15394,
+      "expectedSha256": "d611ba91a85754171ed697ac9d821293377ef5412f01e9b39ce72836de1126d8",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2024-discretionary-commission-03",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/03.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/03.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 20941,
+      "expectedSha256": "7b9dc21b6f965af0d18b9ca47af01ac1cb7e117848700ead3f85578fbd10d0dc",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2024-discretionary-commission-04",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/04.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/04.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 25042,
+      "expectedSha256": "f0228467fd8969d5baa4fe6944e1b4d7e653ac4726ed612665feb81a6735c234",
+      "expectedRecordCount": 39
+    },
+    {
+      "id": "anre-2024-discretionary-commission-05",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/05.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/05.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 14644,
+      "expectedSha256": "edb54d5c3337ef9d6397765f6caf31029fa1056a4e9a57beaf32bd216da0c0cf",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "anre-2024-discretionary-commission-06",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/06.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/06.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 14348,
+      "expectedSha256": "8db1eb2239047b22fe584337f31dc0d0236aeff67760991d9753a94f2d3e4e55",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "anre-2024-discretionary-commission-07",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/07.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/07.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 15553,
+      "expectedSha256": "ec8ccad8f271b63d67812c9c14f18d4161d2e3678b656c7400df10cb52fc731a",
+      "expectedRecordCount": 7
+    },
+    {
+      "id": "anre-2024-discretionary-commission-08",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/08.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/08.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 14932,
+      "expectedSha256": "8020c74fd2079b424e4ac87c208d0d8e7b2b993acd3f0bd1024ab9927c880ee9",
+      "expectedRecordCount": 5
+    },
+    {
+      "id": "anre-2024-discretionary-commission-09",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/09.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/09.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 12837,
+      "expectedSha256": "e3ee75613750ce9197883ae68d3dcd59a6528f934adbaff7accd7845c5a16451",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "anre-2024-discretionary-commission-12",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/12.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/12.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2024/",
+      "expectedBytes": 13617,
+      "expectedSha256": "e45c9f572a6a7818f2dffc168c00a40bea0c67de3b5e8077f7172469defaa3a5",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2024-discretionary-goods-10",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2024/zuiikeiyaku_cyouhi_202410.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2024/zuiikeiyaku_cyouhi_202410.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2024/",
+      "expectedBytes": 15759,
+      "expectedSha256": "a4c648ef6a7ee4b1d84eb9e2c8eaf473a7f8a387937100c7d2b77b93c8df9a8b",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2024-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2024/2024_4_9.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2024/2024_4_9.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2024/",
+      "expectedBytes": 37142,
+      "expectedSha256": "1fb9e45d5121d5e46061d6d950713297b665987392de9f68975cf73166fcf4ca",
+      "expectedRecordCount": 262
+    },
+    {
+      "id": "anre-2024-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2024/2024_10-3.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2024/2024_10-3.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2024/",
+      "expectedBytes": 207152,
+      "expectedSha256": "e8bf223377d25097caadc877647c4546a0f768e22be4bdcfac03ffc8865cc03a",
+      "expectedRecordCount": 915
+    },
+    {
+      "id": "anre-2025-competitive-commission-01",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/01.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/01.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 12814,
+      "expectedSha256": "cb1fe0339150b4e1148591e3fe7c56575e2d8e521786ca7e1b3283456b5f1af0",
+      "expectedRecordCount": 5
+    },
+    {
+      "id": "anre-2025-competitive-commission-02",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/02.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/02.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 21048,
+      "expectedSha256": "1a382a908d1a38536a681829e5c016f87d7481ea11713106df62a0a0d8289872",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "anre-2025-competitive-commission-05",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/05.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/05.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 21719,
+      "expectedSha256": "a2b9fc45c67db256a4c0232f9f630ea27de6b50afedc0ec78370087d683bf552",
+      "expectedRecordCount": 13
+    },
+    {
+      "id": "anre-2025-competitive-commission-06",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/06.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/06.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 21515,
+      "expectedSha256": "a0ce1c1cf46032f83489d1e7c1cef33ff8679106ce780b9509899ae3e1b67f63",
+      "expectedRecordCount": 12
+    },
+    {
+      "id": "anre-2025-competitive-commission-07",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/07.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/07.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 21297,
+      "expectedSha256": "c8d524651a9d981d6dcb60fc1e3046fbd2d0b3565b0c79659fa02ecda62e2385",
+      "expectedRecordCount": 9
+    },
+    {
+      "id": "anre-2025-competitive-commission-08",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/08.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/08.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 21230,
+      "expectedSha256": "a88ce4d931c2782f5c366709d0d9c4d7d42349cff7cbe6689e3763e9fd9e7193",
+      "expectedRecordCount": 8
+    },
+    {
+      "id": "anre-2025-competitive-commission-09",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/09.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/09.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 21686,
+      "expectedSha256": "dc7626379aeb01c11f6aaa734e8441d7fe5fd4b959971b9eed768e9a7bba8aec",
+      "expectedRecordCount": 12
+    },
+    {
+      "id": "anre-2025-competitive-commission-10",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/10.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/10.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 26041,
+      "expectedSha256": "ebbb8aa4491257fe56d582fcc40c6528fbf3e18deabb0ee66cc2916493d19024",
+      "expectedRecordCount": 16
+    },
+    {
+      "id": "anre-2025-competitive-commission-11",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/11.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/11.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 23612,
+      "expectedSha256": "84e001db1563665d8e076f809da49f0f9aaf8332239f6f93bdd567b9be266e2b",
+      "expectedRecordCount": 10
+    },
+    {
+      "id": "anre-2025-competitive-commission-12",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/12.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/12.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_itaku/2025/",
+      "expectedBytes": 20766,
+      "expectedSha256": "fb88c8b122ae41046e743e8de06397f909b4c90c724946c88fb2da337016db2e",
+      "expectedRecordCount": 7
+    },
+    {
+      "id": "anre-2025-competitive-goods-04",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/04.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/04.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/",
+      "expectedBytes": 20827,
+      "expectedSha256": "b574d62a9a2da4f20666f0edaf0bdec9220b79d25a86bf0ae7011beac597536f",
+      "expectedRecordCount": 5
+    },
+    {
+      "id": "anre-2025-competitive-goods-06",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/06.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/06.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/",
+      "expectedBytes": 22294,
+      "expectedSha256": "ed928b5dcd70ab5e8c9f98187eb372caf5feca682b61b97c42a5a546dc03c050",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "anre-2025-competitive-goods-11",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/11.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/11.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/ippankyousou_chouhi/2025/",
+      "expectedBytes": 21349,
+      "expectedSha256": "a68566cc4063857d1612405af0fd895d399780f2eabb8e0cfe1fcebdc91d7ebb",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-discretionary-commission-04",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/04.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/04.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 25987,
+      "expectedSha256": "3d7314dc5cf6631c065d6232f1953516ab8a6aba166b5fb561bcf322a6d61542",
+      "expectedRecordCount": 28
+    },
+    {
+      "id": "anre-2025-discretionary-commission-05",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/05.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/05.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 22005,
+      "expectedSha256": "4e7ebb73696e36f913729fca5464ddeb4f8c19aa01c7cc66f551dcec7a251a56",
+      "expectedRecordCount": 9
+    },
+    {
+      "id": "anre-2025-discretionary-commission-06",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/06.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/06.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 19986,
+      "expectedSha256": "d6c71d323aa1256c2ef442e54e3e6354fbfa5d97542a0a4537ed21e0b7be9f2b",
+      "expectedRecordCount": 2
+    },
+    {
+      "id": "anre-2025-discretionary-commission-07",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/07.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/07.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 22465,
+      "expectedSha256": "285e7d04cfc408f5ec7d357e1db05afbdcbf54994745850e7975b51b910076d2",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "anre-2025-discretionary-commission-08",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/08.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/08.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 19982,
+      "expectedSha256": "f6e13b851e4601ca0450ccf5e87c9d35adc0d48390e4130998240b0233d6f2aa",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-discretionary-commission-10",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/10.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/10.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 22889,
+      "expectedSha256": "eab0ce2fb0ab2aadb81d1b00ce98f53bc77f6df766e43928d83b05fc94113dc4",
+      "expectedRecordCount": 4
+    },
+    {
+      "id": "anre-2025-discretionary-commission-11",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/11.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/11.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_itaku/2025/",
+      "expectedBytes": 20049,
+      "expectedSha256": "a7fe592f8c0fe9a7a864f6b9a4128c5e1201b39d3f3fbdae1f34d9680aba3cd8",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-discretionary-goods-01",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/01.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/01.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/",
+      "expectedBytes": 21671,
+      "expectedSha256": "d018d62034c4ba13cadf43fd5b5be9329e0da983e09e3eb2dcbca42cc2491162",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-discretionary-goods-02",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/02.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/02.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/",
+      "expectedBytes": 21763,
+      "expectedSha256": "29c9c068e9d2a39b4ec5c54634a95bfdccec8fc73a91ec336433907cde6c8024",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-discretionary-goods-03",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/03.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/03.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/",
+      "expectedBytes": 21512,
+      "expectedSha256": "6c333746622c9df0252085faaba13a21c570a4112e457b03f6fc846b1f6c41db",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-discretionary-goods-10",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/10.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/10.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/zuiikeiyaku_chouhi/2025/",
+      "expectedBytes": 19697,
+      "expectedSha256": "43c5eb5de33d7493864196356ec7a83dcf9df78e02c2fd018cabda8882984044",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "anre-2025-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2025/2025_4_9.xlsx",
+      "originalUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2025/2025_4_9.xlsx",
+      "sourcePageUrl": "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2025/",
+      "expectedBytes": 51365,
+      "expectedSha256": "0c0fc1d58e2fb8169c2b8f92f8198c07a4589c4aaaa71f0ff0e01c1e86c53386",
+      "expectedRecordCount": 288
+    },
+    {
+      "id": "meti-2021-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_R3.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_R3.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R3Contract.html",
+      "expectedBytes": 104321,
+      "expectedSha256": "c49d4c42faa5c4c04ae47530a753b5f1a762731a1d6568d0737487f0451692a0",
+      "expectedRecordCount": 349
+    },
+    {
+      "id": "meti-2021-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R3.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R3.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R3Contract.html",
+      "expectedBytes": 62754,
+      "expectedSha256": "39cd4f931c139654e93828bb1386725ce377f04a15a1f9c50b66215ce623da68",
+      "expectedRecordCount": 147
+    },
+    {
+      "id": "meti-2021-competitive-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_R3.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_R3.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R3Contract.html",
+      "expectedBytes": 18005,
+      "expectedSha256": "e4761ed1d99c67a09b1bdb150e6846f296de6b949e1ee96042d78e849c31c215",
+      "expectedRecordCount": 5
+    },
+    {
+      "id": "meti-2021-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_R3.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_R3.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R3Contract.html",
+      "expectedBytes": 84176,
+      "expectedSha256": "ce5eab92448b1885daaaaf554db59950447348dce7be8a2b97660a17c25eddf9",
+      "expectedRecordCount": 149
+    },
+    {
+      "id": "meti-2021-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_R3.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_R3.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R3Contract.html",
+      "expectedBytes": 75945,
+      "expectedSha256": "4baf1c86da79ea32291ad284b5058b83b8875e416fad5852a6afdb0e26937454",
+      "expectedRecordCount": 144
+    },
+    {
+      "id": "meti-2021-discretionary-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_R3.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_R3.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R3Contract.html",
+      "expectedBytes": 15498,
+      "expectedSha256": "c1ba0c26c3ccaba837f58a13105e5d6e6afbcda2fd25dc152c28f405eeb08b8a",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "meti-2022-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_R4.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_R4.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R4Contract.html",
+      "expectedBytes": 108633,
+      "expectedSha256": "d785b4330301cd7037affd03b1a335380000688a5e63050234691c6dfb55f313",
+      "expectedRecordCount": 340
+    },
+    {
+      "id": "meti-2022-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R4.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R4.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R4Contract.html",
+      "expectedBytes": 54807,
+      "expectedSha256": "a95577c12d3e4312d9da0537a7286191203db51ec15b768f50f1e7dc95af9300",
+      "expectedRecordCount": 104
+    },
+    {
+      "id": "meti-2022-competitive-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_R4.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_R4.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R4Contract.html",
+      "expectedBytes": 11163,
+      "expectedSha256": "6c18a0dbb55645b0299b525592f2e960625414a60186fe9d56e138dcb4c2c032",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "meti-2022-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_R4.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_R4.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R4Contract.html",
+      "expectedBytes": 81710,
+      "expectedSha256": "b04e37be1db80adb44f58af7ed4827773899125954eec3a5dac3b4cb44bb9f9b",
+      "expectedRecordCount": 158
+    },
+    {
+      "id": "meti-2022-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_R4.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_R4.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R4Contract.html",
+      "expectedBytes": 74904,
+      "expectedSha256": "d11ea60c58254c3268f19110ff4c820ad7553b4eb3bfd2527e10e0fa15940141",
+      "expectedRecordCount": 137
+    },
+    {
+      "id": "meti-2022-discretionary-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_R4.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_R4.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/R4Contract.html",
+      "expectedBytes": 11375,
+      "expectedSha256": "0df0c5dd226497cf98f91b612151831aaa619504ca42f472c89afa3a0df251a6",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "meti-2022-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2204_2209.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2204_2209.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 39727,
+      "expectedSha256": "7b1c9d12e696a32e6a33a6f3da10305924f107f5c40ab4a0dc0f5e0e34328228",
+      "expectedRecordCount": 186
+    },
+    {
+      "id": "meti-2022-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2210_2303.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2210_2303.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 23137,
+      "expectedSha256": "c195d52f10022811560e714b69cddc073cede062bcc2e7f06774b84616b3c222",
+      "expectedRecordCount": 86
+    },
+    {
+      "id": "meti-2023-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_R5.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_R5.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r5contract.html",
+      "expectedBytes": 109236,
+      "expectedSha256": "5d6f9fc2bfbc958641b43fb43ef2071a13aed4087fa4f6d65a3e987ef6404bfc",
+      "expectedRecordCount": 331
+    },
+    {
+      "id": "meti-2023-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R5.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R5.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r5contract.html",
+      "expectedBytes": 61471,
+      "expectedSha256": "4e354f1cf3128cb9365ccc5fea638d670b7bfec3c71d02127aeacca76cf7c31e",
+      "expectedRecordCount": 136
+    },
+    {
+      "id": "meti-2023-competitive-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_R5.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_R5.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r5contract.html",
+      "expectedBytes": 18891,
+      "expectedSha256": "74519d3d8737956bdc0033a6d212bc563d205a8559fb65b1c6f177ffe53633f5",
+      "expectedRecordCount": 6
+    },
+    {
+      "id": "meti-2023-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_R5.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_R5.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r5contract.html",
+      "expectedBytes": 83676,
+      "expectedSha256": "e26c44e909e0f1cbf3ddf74e7bf2ba593f04d130dc9cbc831f2d7ad21405ae15",
+      "expectedRecordCount": 154
+    },
+    {
+      "id": "meti-2023-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_R5.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_R5.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r5contract.html",
+      "expectedBytes": 78101,
+      "expectedSha256": "f3328fbc9351e9d13d8a3ef2c42c1ca81a9887d2458e2856dc4c0ac991c72fb1",
+      "expectedRecordCount": 140
+    },
+    {
+      "id": "meti-2023-discretionary-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_R5.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_R5.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r5contract.html",
+      "expectedBytes": 14064,
+      "expectedSha256": "2f88f91464b2777ab3c19f5ab674b6e39a9eb9a6fd48741a8594395cd5f5de11",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "meti-2023-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2304_2309.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2304_2309.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 29356,
+      "expectedSha256": "08cf3728d6d35eb3c36b3b9b2696abcd70f433b7c2f347d99e43baf75220fd58",
+      "expectedRecordCount": 155
+    },
+    {
+      "id": "meti-2023-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2310_2403.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2310_2403.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 20364,
+      "expectedSha256": "759f7d15d2bfca0f041797b16934023afadb3f8158bdc1ac27db07b1776d8603",
+      "expectedRecordCount": 71
+    },
+    {
+      "id": "meti-2024-competitive-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_r6.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_bid_r6.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r6contract.html",
+      "expectedBytes": 90653,
+      "expectedSha256": "60d9606b6812e3a9e50f1a30a348ce40861d2e3636970a86e4ba5b9307c2fdd3",
+      "expectedRecordCount": 309
+    },
+    {
+      "id": "meti-2024-competitive-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_r6.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_r6.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r6contract.html",
+      "expectedBytes": 66180,
+      "expectedSha256": "284d784c656be1bda5c66bf99882a4dac21dae18843bcf3988f66ab5f2d1f6d6",
+      "expectedRecordCount": 150
+    },
+    {
+      "id": "meti-2024-competitive-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_r6.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_bid_r6.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r6contract.html",
+      "expectedBytes": 18529,
+      "expectedSha256": "d9c1adf349e3c3a0b57cc8764dc193527ca30c00b6e0885932f00ecc5be88791",
+      "expectedRecordCount": 6
+    },
+    {
+      "id": "meti-2024-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_r6.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_r6.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r6contract.html",
+      "expectedBytes": 65576,
+      "expectedSha256": "82ece07fb53790ac3cfe4c63fda789284aa6fb0643ac395f057b3b0abc7f1152",
+      "expectedRecordCount": 127
+    },
+    {
+      "id": "meti-2024-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_r6.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_r6.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r6contract.html",
+      "expectedBytes": 62687,
+      "expectedSha256": "77787a0fba32a0eb485940abbff4fb98c82451a5f68cd51040532eb18305ff8a",
+      "expectedRecordCount": 133
+    },
+    {
+      "id": "meti-2024-discretionary-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_r6.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_r6.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r6contract.html",
+      "expectedBytes": 16034,
+      "expectedSha256": "86df499e8b1a03d87983c0ab797e477a6750fec3cd135561feca7636fb18eee4",
+      "expectedRecordCount": 3
+    },
+    {
+      "id": "meti-2024-grant-decisions-h1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2404_2409.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2404_2409.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 28894,
+      "expectedSha256": "b84f0a3f342095c64b35ee33351127c9aebf140ef84f12fc05d510a1337e6324",
+      "expectedRecordCount": 159
+    },
+    {
+      "id": "meti-2024-grant-decisions-h2",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/subs2410_2503.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/subs2410_2503.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/publicoffer/index_result_info.html",
+      "expectedBytes": 21621,
+      "expectedSha256": "f08c4c55ce2c18e1e4645dc5a030feffb8cdbf2711eaeb9c878b47f83ce56dc8",
+      "expectedRecordCount": 104
+    },
+    {
+      "id": "meti-2025-discretionary-commission",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_r7.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/itaku_zuikei_r7.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r7contract.html",
+      "expectedBytes": 75116,
+      "expectedSha256": "457042ca78dc7da763708ffca8eef18da2f450e72db72c3ccee08e74f1353b54",
+      "expectedRecordCount": 116
+    },
+    {
+      "id": "meti-2025-discretionary-goods",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_r7.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/buppin_zuikei_r7.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r7contract.html",
+      "expectedBytes": 88525,
+      "expectedSha256": "81262ac41870a5473257f6e1ae78b37363185c82b14ee86196552bc2a262305a",
+      "expectedRecordCount": 142
+    },
+    {
+      "id": "meti-2025-discretionary-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_r7.xlsx",
+      "originalUrl": "https://www.meti.go.jp/information_2/downloadfiles/kouji_zuikei_r7.xlsx",
+      "sourcePageUrl": "https://www.meti.go.jp/information_2/data/r7contract.html",
+      "expectedBytes": 60640,
+      "expectedSha256": "528df2e2c496a69b4a50698db81b35ae29720de2bd7b009899e5d50a65e82f72",
+      "expectedRecordCount": 1
+    }
+  ]
+}

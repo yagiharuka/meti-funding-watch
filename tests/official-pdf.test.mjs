@@ -5,7 +5,11 @@ import test from "node:test";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 
 import { parseOfficialPdf } from "../scripts/official-pdf.mjs";
-import { REGIONAL_PDF_COVERAGE_GAPS, REGIONAL_PDF_DOCUMENTS } from "../scripts/official-regional-pdf-sources.mjs";
+import {
+  KANTO_GRANT_INDEX_RECEIPT,
+  REGIONAL_PDF_COVERAGE_GAPS,
+  REGIONAL_PDF_DOCUMENTS,
+} from "../scripts/official-regional-pdf-sources.mjs";
 
 const COLUMN_DEFINITIONS = [
   { key: "ordinal", leftRatio: 0.02, headerAliases: ["No"] },
@@ -197,8 +201,35 @@ test("can pin an immutable PDF byte-for-byte with SHA-256", async () => {
   );
 });
 
-test("registers both Tohoku FY2025 grant PDFs without overstating institution or historical coverage", () => {
-  assert.equal(REGIONAL_PDF_DOCUMENTS.length, 2);
+test("reuses only first-page headers when a pinned multipage schema explicitly requires it", async () => {
+  const buffer = await makeFixturePdf({ continuationPage: true });
+  const document = fixtureDocument({ pdfSchema: {
+    expectedPageCount: 2,
+    expectedRowsPerPage: [2, 1],
+    expectedRecordCount: 3,
+    expectedRowNumbers: { start: 1, end: 3 },
+    headersOnFirstPageOnly: true,
+    requiredPageText: [],
+    requiredFirstPageText: ["Verified Table"],
+  } });
+  const records = await parseOfficialPdf(buffer, document);
+  assert.deepEqual(records.map((record) => record.sourceRowNumber), [1, 2, 3]);
+  assert.equal(records[2].sourceSheet, "PDF 2/2");
+  await assert.rejects(
+    parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: {
+      expectedPageCount: 2,
+      expectedRowsPerPage: [2, 1],
+      expectedRecordCount: 3,
+      expectedRowNumbers: { start: 1, end: 3 },
+      requiredPageText: [],
+      requiredFirstPageText: ["Verified Table"],
+    } })),
+    /見出しを一意に特定できません/,
+  );
+});
+
+test("registers Tohoku and the eight official-index Kanto FY2025 grant PDFs without overstating coverage", () => {
+  assert.equal(REGIONAL_PDF_DOCUMENTS.length, 10);
   const h1 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h1");
   const h2 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h2");
   assert.ok(h1);
@@ -208,6 +239,7 @@ test("registers both Tohoku FY2025 grant PDFs without overstating institution or
   assert.equal(h1.pdfSchema.expectedPageCount, 8);
   assert.deepEqual(h1.pdfSchema.expectedRowsPerPage, [33, 36, 36, 36, 37, 37, 37, 8]);
   assert.equal(h1.pdfSchema.expectedRecordCount, 260);
+  assert.equal(h1.pdfSchema.normalizeCompatibilityText, undefined);
   assert.equal(h1.pdfSchema.expectedBytes, 157_695);
   assert.match(h1.pdfSchema.expectedSha256, /^[0-9a-f]{64}$/);
   assert.deepEqual(h1.pdfSchema.expectedRowNumbers, { start: 1, end: 260 });
@@ -219,8 +251,30 @@ test("registers both Tohoku FY2025 grant PDFs without overstating institution or
   assert.match(h2.pdfSchema.expectedSha256, /^[0-9a-f]{64}$/);
   assert.deepEqual(h2.pdfSchema.expectedRowNumbers, { start: 1, end: 26 });
   assert.match(h2.coverageClaim, /26行/);
+  const kanto = REGIONAL_PDF_DOCUMENTS.filter((source) => source.executorId === "kanto");
+  assert.equal(kanto.length, 8);
+  assert.equal(kanto.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 284);
+  assert.equal(kanto.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 21);
+  assert.ok(kanto.every((source) => source.url.startsWith("https://warp.ndl.go.jp/20260613/20260601093442/https://www.kanto.meti.go.jp/")));
+  assert.ok(kanto.every((source) => source.originalUrl.startsWith("https://www.kanto.meti.go.jp/johokokai/data/7fy_")));
+  assert.ok(kanto.every((source) => source.sourcePageUrl === "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html"));
+  assert.ok(kanto.every((source) => source.amountStage === "交付決定額欄の掲載値"));
+  assert.ok(kanto.every((source) => source.pdfSchema.normalizeCompatibilityText === true));
+  assert.ok(kanto.every((source) => source.archiveExpectedBytes === source.pdfSchema.expectedBytes));
+  assert.ok(kanto.every((source) => source.archiveExpectedSha256 === source.pdfSchema.expectedSha256));
+  assert.ok(kanto.every((source) => source.archiveExpectedRecordCount === source.pdfSchema.expectedRecordCount));
+  assert.deepEqual(KANTO_GRANT_INDEX_RECEIPT, {
+    originalUrl: "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html",
+    archiveUrl: "https://warp.ndl.go.jp/20260613/20260601093442/https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html",
+    expectedBytes: 23_677,
+    expectedSha256: "09ea02e5a55136947de3552b193d7465e6e04e6ad1be2e8421288e2a06ce88bb",
+    verifiedAt: "2026-08-12",
+  });
+  assert.ok(kanto.every((source) => source.discoveryReceipt === KANTO_GRANT_INDEX_RECEIPT));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.missing.includes("2024年度以前")));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.category === "contract_result" && gap.status === "not_ingested"));
+  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "grant_decision" && gap.missing.includes("令和3～6年度")));
+  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "contract_result" && gap.status === "not_ingested"));
 });
 
 async function makeFixturePdf(options = {}) {
@@ -282,5 +336,19 @@ async function makeFixturePdf(options = {}) {
     }
   }
   if (options.extraBlankPage) pdf.addPage([1_000, 700]);
+  if (options.continuationPage) {
+    const continuation = pdf.addPage([1_000, 700]);
+    const drawContinuation = (text, x, y, size = 10) => continuation.drawText(String(text), { x, y, size, font });
+    drawContinuation("3", 30, 535);
+    drawContinuation("Continuation Program", 80, 535, 9);
+    drawContinuation("Continuation Org", 270, 535, 9);
+    drawContinuation("1234567890123", 425, 535, 7);
+    drawContinuation("99,000", 555, 535, 8);
+    drawContinuation("General", 670, 535, 8);
+    drawContinuation("Other item", 760, 535, 8);
+    drawContinuation("2026/2/20", 850, 535, 8);
+    drawContinuation("N/A", 920, 535, 7);
+    drawContinuation("N/A", 965, 535, 7);
+  }
   return Buffer.from(await pdf.save({ useObjectStreams: false }));
 }

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-12",
+  "scope": "収録中の8執行機関についてFY2020以降の公式目次と検証済みmanifestを差分化。FY2026は年度途中。",
+  "executors": [
+    {
+      "id": "meti",
+      "registered": "契約 FY2021～FY2025の6区分、交付決定 FY2022～FY2024の両半期とFY2025下半期",
+      "blockedCandidates": [
+        "FY2025交付決定上半期：公式表末尾の非明細注記が必須列を満たさず、専用の注記規則を未固定のためfail-closed"
+      ],
+      "outsideCandidateInventory": "FY2020契約、FY2020～FY2021交付決定、FY2026（年度途中）"
+    },
+    {
+      "id": "anre",
+      "registered": "月別契約 FY2024～FY2025の公式目次リンク49資料、交付決定 FY2023～FY2025の両半期",
+      "blockedCandidates": [
+        "FY2024随意契約（庁費）4月：2段見出しの継続行を通常明細と区別する専用規則を未固定のためfail-closed"
+      ],
+      "outsideCandidateInventory": "FY2020～FY2023月別契約、FY2020～FY2022交付決定、FY2026（年度途中）"
+    },
+    {
+      "id": "jpo",
+      "registered": "契約 FY2020～FY2025、交付決定 FY2021～FY2025",
+      "blockedCandidates": [],
+      "outsideCandidateInventory": "FY2020交付決定、FY2026（年度途中）"
+    },
+    {
+      "id": "smea",
+      "registered": "契約・交付決定 FY2020～FY2025",
+      "blockedCandidates": [],
+      "outsideCandidateInventory": "FY2026（年度途中）"
+    },
+    {
+      "id": "hokkaido",
+      "registered": "契約 FY2023～FY2025の7資料、交付決定 FY2025",
+      "blockedCandidates": [
+        "公式目次候補13資料：未receiptまたは年度・列構造のstrict parse未確定"
+      ],
+      "outsideCandidateInventory": "FY2020～FY2021、FY2026は年度途中"
+    },
+    {
+      "id": "tohoku",
+      "registered": "交付決定 FY2025の両半期PDF",
+      "blockedCandidates": [],
+      "outsideCandidateInventory": "契約 FY2020以降、交付決定 FY2020～FY2024、FY2026は年度途中"
+    },
+    {
+      "id": "chugoku",
+      "registered": "契約 FY2020・FY2024の2資料",
+      "blockedCandidates": [
+        "公式目次候補39資料：未receipt、退役href、または複数表・注記のstrict parse未確定"
+      ],
+      "outsideCandidateInventory": "FY2026は年度途中"
+    },
+    {
+      "id": "shikoku",
+      "registered": "契約 FY2024～FY2026の7月次資料、交付決定 FY2025上半期",
+      "blockedCandidates": [
+        "公式目次候補76資料：未receipt、退役href、または年度・列構造のstrict parse未確定"
+      ],
+      "outsideCandidateInventory": "FY2026は年度途中であり未公表月を0件とはみなさない"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+name: Discover new official source links
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 20 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/discover-official-sources.yml"
+      - "scripts/official-*.mjs"
+      - "data/official-source-registry.json"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: official-source-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Discover new official source links
+        id: discovery
+        continue-on-error: true
+        run: npm run discover:official
+
+      - name: Preserve official source discovery evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: official-source-discovery-${{ github.run_id }}
+          path: .audit/official-discovery/report.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Report candidates or unreachable official entrances
+        if: steps.discovery.outcome == 'success'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: node scripts/report-official-discovery.mjs
+
+      - name: Warn when discovery itself failed
+        if: steps.discovery.outcome != 'success'
+        run: echo "::warning::公式資料リンクの探索処理に失敗しました。公開データは変更していません。"

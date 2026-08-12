@@ -1,4 +1,224 @@
 const TOHOKU_GRANT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/koho/koshin/kobo/kofu_kettei.html";
+const KANTO_GRANT_SOURCE_PAGE = "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html";
+const KANTO_WARP_PREFIX = "https://warp.ndl.go.jp/20260613/20260601093442/";
+const WARP_PROVIDER = "国立国会図書館インターネット資料収集保存事業（WARP）";
+
+export const KANTO_GRANT_INDEX_RECEIPT = Object.freeze({
+  originalUrl: KANTO_GRANT_SOURCE_PAGE,
+  archiveUrl: `${KANTO_WARP_PREFIX}${KANTO_GRANT_SOURCE_PAGE}`,
+  expectedBytes: 23677,
+  expectedSha256: "09ea02e5a55136947de3552b193d7465e6e04e6ad1be2e8421288e2a06ce88bb",
+  verifiedAt: "2026-08-12",
+});
+
+const KANTO_COLUMNS = Object.freeze([
+  ["ordinal", ["番号"]],
+  ["program", ["事業名"]],
+  ["organization", ["交付先名"]],
+  ["corporateNumber", ["法人番号"]],
+  ["amount", ["交付決定額"]],
+  ["account", ["支出元会計区分"]],
+  ["budgetItem", ["支出元(目)名称", "支出元目名称"]],
+  ["date", ["交付決定日"]],
+  ["publicInterestClass", ["公益法人の区分", "公益法人の"]],
+  ["jurisdictionClass", ["国所管、都道府県所管", "国所管、都道府", "国所管、都"]],
+]);
+
+function makeKantoColumns(pageWidth, leftPoints) {
+  if (leftPoints.length !== KANTO_COLUMNS.length) throw new Error("関東PDFの列境界数が不正です");
+  return KANTO_COLUMNS.map(([key, headerAliases], index) => ({
+    key,
+    headerAliases,
+    leftRatio: leftPoints[index] / pageWidth,
+  }));
+}
+
+function makeKantoGrantDocument({
+  id, filename, period, accountLabel, expectedBytes, expectedSha256,
+  expectedPageCount, expectedRowsPerPage, expectedRecordCount,
+  expectedPositionedTextItemCount, pageWidth, pageHeight, leftPoints,
+}) {
+  const originalUrl = `https://www.kanto.meti.go.jp/johokokai/data/${filename}`;
+  const isFirstHalf = period === "4月～9月";
+  return {
+    id,
+    executorId: "kanto",
+    executorName: "関東経済産業局",
+    fiscalYear: 2025,
+    category: "grant_decision",
+    kind: `補助金等の交付決定（${period}・${accountLabel}）`,
+    amountStage: "交付決定額欄の掲載値",
+    format: "pdf",
+    discoveryStatus: "official_index_href_replayed_from_warp_and_byte_pinned",
+    verifiedAt: "2026-08-12",
+    sourcePageUrl: KANTO_GRANT_SOURCE_PAGE,
+    discoveryReceipt: KANTO_GRANT_INDEX_RECEIPT,
+    originalUrl,
+    url: `${KANTO_WARP_PREFIX}${originalUrl}`,
+    archiveProvider: WARP_PROVIDER,
+    archiveVerifiedAt: "2026-08-12",
+    archiveVerification: "WARP保存済み公式indexに掲載されたhrefを起点に原本をFull GETし、PDF magic・byte数・SHA-256・ページ数・掲載番号を照合",
+    archiveExpectedBytes: expectedBytes,
+    archiveExpectedSha256: expectedSha256,
+    archiveExpectedRecordCount: expectedRecordCount,
+    coverageClaim: `令和7年度${period}・${accountLabel}の文字PDF全${expectedPageCount}ページに掲載された${expectedRecordCount}行`,
+    pdfSchema: {
+      schemaVersion: 1,
+      extractionMode: "positioned_text_only",
+      normalizeCompatibilityText: true,
+      expectedBytes,
+      expectedSha256,
+      expectedPageCount,
+      expectedPageSize: { width: pageWidth, height: pageHeight, tolerance: 0.2 },
+      expectedRowsPerPage,
+      expectedRecordCount,
+      expectedRowNumbers: { start: 1, end: expectedRecordCount },
+      headersOnFirstPageOnly: expectedPageCount > 1,
+      requiredPageText: [],
+      requiredFirstPageText: ["令和7年度補助金等の情報開示", "関東経済産業局", accountLabel],
+      columns: makeKantoColumns(pageWidth, leftPoints),
+      recordMapping: {
+        ordinalColumn: "ordinal",
+        programColumn: "program",
+        organizationColumn: "organization",
+        corporateNumberColumn: "corporateNumber",
+        amountColumn: "amount",
+        dateColumn: "date",
+        notesColumns: ["account", "budgetItem"],
+      },
+      allowedDateFormats: ["reiwa_ymd_ja"],
+      dateRange: isFirstHalf
+        ? { start: "2025-04-01", end: "2025-09-30" }
+        : { start: "2025-10-01", end: "2026-03-31" },
+      corporateNumberMissingSentinels: ["-", "－", "法人番号なし"],
+      minimumPositionedTextItems: expectedPositionedTextItemCount,
+      expectedPositionedTextItemCount,
+    },
+  };
+}
+
+const KANTO_2025_GRANT_DEFINITIONS = [
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h1-energy-grant",
+    filename: "7fy_kamihanki_ene_kofukin.pdf",
+    period: "4月～9月",
+    accountLabel: "エネルギー需給勘定（交付金）",
+    expectedBytes: 243447,
+    expectedSha256: "ce74862587c7e1d2739117b1e9ddd9b5b9f0cf9792b6b11384562ff17418c00f",
+    expectedPageCount: 2,
+    expectedRowsPerPage: [17, 2],
+    expectedRecordCount: 19,
+    expectedPositionedTextItemCount: 223,
+    pageWidth: 595.2,
+    pageHeight: 841.68,
+    leftPoints: [55, 70, 170, 210, 265, 305, 360, 440, 480, 515],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h1-energy-subsidy",
+    filename: "7fy_kamihanki_ene_hojyokin.pdf",
+    period: "4月～9月",
+    accountLabel: "エネルギー需給勘定（補助金）",
+    expectedBytes: 328524,
+    expectedSha256: "180418f0fb261b099fcb2e1ecfcd85a824f67dc02296383c446fa61fbc653aea",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [7],
+    expectedRecordCount: 7,
+    expectedPositionedTextItemCount: 94,
+    pageWidth: 595.2,
+    pageHeight: 841.68,
+    leftPoints: [55, 70, 175, 205, 250, 285, 335, 420, 465, 505],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h1-general-subsidy",
+    filename: "7fy_kamihanki_ippan_hojyokin.pdf",
+    period: "4月～9月",
+    accountLabel: "一般会計（補助金）",
+    expectedBytes: 1254376,
+    expectedSha256: "c2a41fa686221930adf7b29d8a22ab88ffe7964d3f07c2c3c5378814081c1d44",
+    expectedPageCount: 9,
+    expectedRowsPerPage: [16, 18, 18, 18, 18, 18, 18, 18, 8],
+    expectedRecordCount: 150,
+    expectedPositionedTextItemCount: 1671,
+    pageWidth: 595.2,
+    pageHeight: 841.68,
+    leftPoints: [52, 68, 170, 255, 295, 335, 370, 435, 475, 505],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h1-power-development-grant",
+    filename: "7fy_kamihanki_dengen_kofukin.pdf",
+    period: "4月～9月",
+    accountLabel: "電源開発促進勘定（交付金）",
+    expectedBytes: 634457,
+    expectedSha256: "baf620845a34e7ee07eafeee85d72f95bff81f0b52c2ecce1b827b21082f5977",
+    expectedPageCount: 5,
+    expectedRowsPerPage: [20, 21, 21, 21, 1],
+    expectedRecordCount: 84,
+    expectedPositionedTextItemCount: 937,
+    pageWidth: 595.2,
+    pageHeight: 841.68,
+    leftPoints: [53, 70, 195, 232, 285, 315, 365, 425, 470, 505],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h1-patent-subsidy",
+    filename: "7fy_kamihanki_tokkyo_hojyokin.pdf",
+    period: "4月～9月",
+    accountLabel: "特許特別会計（補助金）",
+    expectedBytes: 309920,
+    expectedSha256: "27bb2321a06c2207e3e211d7d7e4d3b23d4e49570a357489a40e7e816c2ce3bb",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [13],
+    expectedRecordCount: 13,
+    expectedPositionedTextItemCount: 158,
+    pageWidth: 595.2,
+    pageHeight: 841.68,
+    leftPoints: [52, 65, 150, 235, 295, 325, 350, 420, 460, 500],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h2-energy-grant",
+    filename: "7fy_shimohanki_ene_kofukin.pdf",
+    period: "10月～3月",
+    accountLabel: "エネルギー需給勘定（交付金）",
+    expectedBytes: 126011,
+    expectedSha256: "325696d4f8c12a251479b1a26556c9bb4e5a5d976dffb2bf40d3d6301ea280c4",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [1],
+    expectedRecordCount: 1,
+    expectedPositionedTextItemCount: 28,
+    pageWidth: 595.22,
+    pageHeight: 842,
+    leftPoints: [50, 60, 145, 235, 280, 310, 350, 415, 455, 495],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h2-general-subsidy",
+    filename: "7fy_shimohanki_ippan_hojyokin.pdf",
+    period: "10月～3月",
+    accountLabel: "一般会計（補助金）",
+    expectedBytes: 151174,
+    expectedSha256: "61fe23dcb1a7bb69b58f6e0c1874a584adce6c4f3073054981f39f5519142014",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [8],
+    expectedRecordCount: 8,
+    expectedPositionedTextItemCount: 104,
+    pageWidth: 595.22,
+    pageHeight: 842,
+    leftPoints: [52, 65, 155, 235, 278, 310, 345, 410, 455, 495],
+  }),
+  makeKantoGrantDocument({
+    id: "kanto-2025-grant-decisions-h2-power-development-grant",
+    filename: "7fy_shimohanki_dengen_kofukin.pdf",
+    period: "10月～3月",
+    accountLabel: "電源開発促進勘定（交付金）",
+    expectedBytes: 136087,
+    expectedSha256: "e6f1cd81a624122b3ba82feb4fa7d12cb438277579ab72e87882aa935a463e69",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [2],
+    expectedRecordCount: 2,
+    expectedPositionedTextItemCount: 42,
+    pageWidth: 595.22,
+    pageHeight: 842,
+    leftPoints: [50, 60, 145, 235, 285, 315, 365, 435, 478, 515],
+  }),
+];
 
 /**
  * Regional PDF sources are intentionally enumerated one document at a time.
@@ -120,6 +340,7 @@ const REGIONAL_PDF_DEFINITIONS = [
       expectedPositionedTextItemCount: 278,
     },
   },
+  ...KANTO_2025_GRANT_DEFINITIONS,
 ];
 
 export const REGIONAL_PDF_DOCUMENTS = Object.freeze(REGIONAL_PDF_DEFINITIONS.map((document) => Object.freeze({
@@ -148,5 +369,21 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
     status: "not_ingested",
     included: "なし",
     missing: "競争・随意、物品役務・委託・公共工事の月次PDF",
+  },
+  {
+    executorId: "kanto",
+    fiscalYear: 2025,
+    category: "grant_decision",
+    status: "latest_fiscal_year_official_index_hrefs_complete",
+    included: "公式目次が令和7年度欄に掲げる上期5・下期3 PDF（計284掲載行）",
+    missing: "令和3～6年度の公式目次PDF（33資料）は未取込",
+  },
+  {
+    executorId: "kanto",
+    fiscalYear: 2025,
+    category: "contract_result",
+    status: "not_ingested",
+    included: "なし",
+    missing: "公式目次で確認した令和4～7年度の競争・随意、物品役務・委託PDF（16資料）",
   },
 ];

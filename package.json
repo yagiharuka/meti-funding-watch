@@ -14,8 +14,9 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "update:data": "node scripts/update-data.mjs",
     "update:official": "node scripts/update-official-data.mjs",
+    "discover:official": "node scripts/official-source-discovery.mjs",
     "test": "npm run build && npm run test:pages && node --test tests/sites-rendered-html.test.mjs",
-    "test:pages": "npm run build:pages && node --test tests/funding-data.test.mjs tests/gbiz-refresh.test.mjs tests/mirasapo-search.test.mjs tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-fetch-retry.test.mjs tests/official-jpo-history.test.mjs tests/official-meti-anre-history.test.mjs tests/official-pdf.test.mjs tests/official-regional-history.test.mjs tests/official-smea-history.test.mjs tests/official-sources.test.mjs tests/official-warp-captures.test.mjs tests/rendered-html.test.mjs tests/three-fixes.test.mjs tests/ui-accuracy.test.mjs tests/update-status.test.mjs",
+    "test:pages": "npm run build:pages && node --test tests/funding-data.test.mjs tests/gbiz-refresh.test.mjs tests/mirasapo-search.test.mjs tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-fetch-retry.test.mjs tests/official-jpo-history.test.mjs tests/official-meti-anre-history.test.mjs tests/official-okinawa-sources.test.mjs tests/official-pdf.test.mjs tests/official-regional-history.test.mjs tests/official-smea-history.test.mjs tests/official-source-discovery.test.mjs tests/official-sources.test.mjs tests/official-warp-captures.test.mjs tests/rendered-html.test.mjs tests/three-fixes.test.mjs tests/ui-accuracy.test.mjs tests/update-status.test.mjs",
     "validate:artifact": "bash scripts/validate-artifact.sh",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern dist-pages --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
