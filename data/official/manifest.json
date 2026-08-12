@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-12T00:41:39.297Z",
+  "generatedAt": "2026-08-12T00:46:27.049Z",
   "recordCount": 385,
   "files": {
     "2025": "records-2025.json"
@@ -47,17 +47,8 @@
   "continuity": {
     "retainedRecordCount": 385,
     "addedRecordCount": 0,
-    "changedRecordCount": 1,
-    "changes": [
-      {
-        "sourceKey": "jpo-2025-grant-decisions-h1:7fy 4月-9月:10",
-        "oldHash": "6851de4c2b73d2a963863e6b0513a9878fdd47525e8de32efebab8e4390cbf43",
-        "newHash": "dc13d17679225d38b9728401e74dc35d9ee21ed36f2cc2bf58a3a89134666f7f",
-        "changedFields": [
-          "date"
-        ]
-      }
-    ]
+    "changedRecordCount": 0,
+    "changes": []
   },
   "sourceDocuments": [
     {
@@ -72,7 +63,7 @@
       "bytes": 31863,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     },
     {
       "id": "smea-2025-competitive-goods",
@@ -86,7 +77,7 @@
       "bytes": 40902,
       "records": 11,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     },
     {
       "id": "smea-2025-competitive-commission",
@@ -100,7 +91,7 @@
       "bytes": 64380,
       "records": 49,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     },
     {
       "id": "jpo-2025-competitive-goods",
@@ -114,7 +105,7 @@
       "bytes": 68091,
       "records": 155,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     },
     {
       "id": "jpo-2025-discretionary-goods",
@@ -128,7 +119,7 @@
       "bytes": 50742,
       "records": 146,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     },
     {
       "id": "jpo-2025-grant-decisions-h1",
@@ -142,7 +133,7 @@
       "bytes": 13638,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     },
     {
       "id": "jpo-2025-grant-decisions-h2",
@@ -156,7 +147,7 @@
       "bytes": 22306,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T00:41:39.297Z"
+      "retrievedAt": "2026-08-12T00:46:27.049Z"
     }
   ],
   "publicFile": {
