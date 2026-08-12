@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "asOf": "2026-08-12",
+  "asOf": "2026-08-13",
   "capture": "20260602/20260601000000",
   "scope": "公式目次で定義済みだが固定WARP原本のstrict parseまたは取得を通過していない地域局候補。FY2026は年度途中。",
   "candidates": [
@@ -104,17 +104,6 @@
       "failure": "HTTP 404"
     },
     {
-      "id": "chugoku-2020-grant-decisions-part-1",
-      "executorId": "chugoku",
-      "fiscalYear": 2020,
-      "category": "grant_decision",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_04-06_kofukettei.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_04-06_kofukettei.xlsx",
-      "failure": "chugoku-2020-grant-decisions-part-1/R2.04-06/78行目: 必須値programが空です"
-    },
-    {
       "id": "chugoku-2020-grant-decisions-part-2",
       "executorId": "chugoku",
       "fiscalYear": 2020,
@@ -124,50 +113,6 @@
       "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
       "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_07-09_kofukettei.xlsx",
       "failure": "chugoku-2020-grant-decisions-part-2/R2.07-09/14行目: 日付を解釈できません: －"
-    },
-    {
-      "id": "chugoku-2020-grant-decisions-part-3",
-      "executorId": "chugoku",
-      "fiscalYear": 2020,
-      "category": "grant_decision",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_10-12_kofukettei.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_10-12_kofukettei.xlsx",
-      "failure": "chugoku-2020-grant-decisions-part-3/R2.10-12/16行目: 必須値programが空です"
-    },
-    {
-      "id": "chugoku-2021-grant-decisions",
-      "executorId": "chugoku",
-      "fiscalYear": 2021,
-      "category": "grant_decision",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r3_04-12_kofukettei.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r3_04-12_kofukettei.xlsx",
-      "failure": "chugoku-2021-grant-decisions/第１四半期/43行目: 必須値programが空です"
-    },
-    {
-      "id": "chugoku-2022-grant-decisions",
-      "executorId": "chugoku",
-      "fiscalYear": 2022,
-      "category": "grant_decision",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r4_04-12_kofukettei.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r4_04-12_kofukettei.xlsx",
-      "failure": "chugoku-2022-grant-decisions/第１四半期/31行目: 必須値programが空です"
-    },
-    {
-      "id": "chugoku-2023-grant-decisions",
-      "executorId": "chugoku",
-      "fiscalYear": 2023,
-      "category": "grant_decision",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0504_r0603kofukettei.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0504_r0603kofukettei.xlsx",
-      "failure": "chugoku-2023-grant-decisions/第１四半期/33行目: 必須値programが空です"
     },
     {
       "id": "hokkaido-2024-discretionary-commission",

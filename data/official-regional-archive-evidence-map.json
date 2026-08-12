@@ -930,6 +930,51 @@
       "expectedBytes": 12620,
       "expectedSha256": "20c9760d407ccf297e662a17df3dad2c13bfef6da24b8329a29e23b4c20b9ab8",
       "expectedRecordCount": 2
+    },
+    {
+      "id": "chugoku-2020-grant-decisions-part-1",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_04-06_kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_04-06_kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 30595,
+      "expectedSha256": "09d4600173e4f152b966366231292015ea903d90a3c6f90eafa38ff42ee9f265",
+      "expectedRecordCount": 161
+    },
+    {
+      "id": "chugoku-2020-grant-decisions-part-3",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_10-12_kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r2_10-12_kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 15966,
+      "expectedSha256": "94ce3529e68fe230a452513ebdde0c46d818fdbe310a888c9e62d6df50d502f1",
+      "expectedRecordCount": 26
+    },
+    {
+      "id": "chugoku-2021-grant-decisions",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r3_04-12_kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r3_04-12_kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 44133,
+      "expectedSha256": "0aab7851e10a706c844d6b06fc41e148a9feca4aa9e1ce868f676601c89dcf9e",
+      "expectedRecordCount": 194
+    },
+    {
+      "id": "chugoku-2022-grant-decisions",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r4_04-12_kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r4_04-12_kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 44791,
+      "expectedSha256": "15ae464b553f67c360c76be298b8ab324f94d7da67316947dd230722385d4430",
+      "expectedRecordCount": 177
+    },
+    {
+      "id": "chugoku-2023-grant-decisions",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0504_r0603kofukettei.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/hojyokinkofu/r0504_r0603kofukettei.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/hojyokinkofu.html",
+      "expectedBytes": 39813,
+      "expectedSha256": "0ed4bec718bce4c00ba849ad03726c6bb1dab1ad013abdbee23961b609a122a6",
+      "expectedRecordCount": 175
     }
   ]
 }

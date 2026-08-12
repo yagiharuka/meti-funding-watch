@@ -131,18 +131,68 @@ const CHUGOKU_GRANT_PATHS = Object.freeze({
   2020: ["r2_04-06_kofukettei.xlsx", "r2_07-09_kofukettei.xlsx", "r2_10-12_kofukettei.xlsx"],
 });
 
+function chugokuGrantTableBoundaries(definitions) {
+  return Object.freeze(definitions.flatMap(([sheetName, rowNumber, value]) => [
+    Object.freeze({ sheetName, rowNumber, cells: Object.freeze([Object.freeze({ column: 1, value })]) }),
+    Object.freeze({ sheetName, rowNumber: rowNumber + 1, cells: Object.freeze([Object.freeze({ column: 11, value: "(単位：円)" })]) }),
+  ]));
+}
+
+// These are exact, document-bound layout rows between account-specific tables.
+// They are never inferred from arbitrary workbook text: both the position and
+// value must still match before the parser is allowed to skip either row.
+const CHUGOKU_GRANT_NON_RECORD_ROWS = Object.freeze({
+  "chugoku-2020-grant-decisions-part-1": chugokuGrantTableBoundaries([
+    ["R2.04-06", 78, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["R2.04-06", 97, "エネルギー対策特別会計（電源開発促進勘定）"],
+    ["R2.04-06", 195, "特許特別会計"],
+  ]),
+  "chugoku-2020-grant-decisions-part-3": chugokuGrantTableBoundaries([
+    ["R2.10-12", 16, "エネルギー対策特別会計（電源開発促進勘定）"],
+  ]),
+  "chugoku-2021-grant-decisions": chugokuGrantTableBoundaries([
+    ["第１四半期", 43, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第１四半期", 54, "エネルギー対策特別会計（電源開発促進勘定）"],
+    ["第１四半期", 154, "特許特別会計"],
+    ["第２四半期", 22, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第２四半期", 40, "エネルギー対策特別会計（電源開発促進勘定）"],
+    ["第３四半期", 21, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第３四半期", 33, "エネルギー対策特別会計（電源開発促進勘定）"],
+  ]),
+  "chugoku-2022-grant-decisions": chugokuGrantTableBoundaries([
+    ["第１四半期", 31, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第１四半期", 59, "エネルギー対策特別会計（電源開発促進勘定）"],
+    ["第１四半期", 159, "特許特別会計"],
+    ["第２四半期", 25, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第３四半期", 19, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第３四半期", 29, "エネルギー対策特別会計（電源開発促進勘定）"],
+  ]),
+  "chugoku-2023-grant-decisions": chugokuGrantTableBoundaries([
+    ["第１四半期", 33, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第１四半期", 57, "エネルギー対策特別会計（電源開発促進勘定）"],
+    ["第１四半期", 162, "特許特別会計"],
+    ["第２四半期", 21, "特許特別会計"],
+    ["第３四半期", 18, "エネルギー対策特別会計（エネルギー需給勘定）"],
+    ["第３四半期", 29, "エネルギー対策特別会計（電源開発促進勘定）"],
+  ]),
+});
+
 export const CHUGOKU_DOCUMENTS = Object.freeze([
   ...Object.entries(CHUGOKU_CONTRACT_PATHS).flatMap(([year, paths]) => Object.entries(paths).map(([series, path]) =>
     contract(CHUGOKU, Number(year), CONTRACT_SERIES[series], path),
   )),
-  ...Object.entries(CHUGOKU_GRANT_PATHS).flatMap(([year, paths]) => paths.map((path, index) =>
-    grant(CHUGOKU, Number(year), `nyusatu/file/hojyokinkofu/${path}`, {
-      suffix: paths.length > 1 ? `part-${index + 1}` : "",
+  ...Object.entries(CHUGOKU_GRANT_PATHS).flatMap(([year, paths]) => paths.map((path, index) => {
+    const suffix = paths.length > 1 ? `part-${index + 1}` : "";
+    const id = `chugoku-${year}-grant-decisions${suffix ? `-${suffix}` : ""}`;
+    const expectedNonRecordRows = CHUGOKU_GRANT_NON_RECORD_ROWS[id];
+    return grant(CHUGOKU, Number(year), `nyusatu/file/hojyokinkofu/${path}`, {
+      suffix,
       coverageClaim: Number(year) <= 2022
         ? "公式目次に残る期間の補助金等交付決定行（FY2020は4月～12月、FY2021・FY2022は4月～12月）"
         : "公式資料に掲載された補助金等の交付決定行",
-    }),
-  )),
+      ...(expectedNonRecordRows ? { document: { expectedNonRecordRows } } : {}),
+    });
+  })),
 ]);
 
 const REGIONAL_HTML_BASE = Object.freeze({
@@ -416,7 +466,7 @@ function validateArchiveEvidenceMap(value, documents, directReceipts) {
     || typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
     throw new Error("地域局archive evidence mapの検証メタデータが不正です");
   }
-  if (!Array.isArray(value.records) || value.records.length !== 103) throw new Error("地域局archive evidence receiptは103資料でなければなりません");
+  if (!Array.isArray(value.records) || value.records.length !== 108) throw new Error("地域局archive evidence receiptは108資料でなければなりません");
   const definitions = new Map(documents.map((document) => [document.id, document]));
   const directIds = new Set(directReceipts.map((receipt) => receipt.id));
   const ids = new Set();
@@ -438,7 +488,7 @@ function validateArchiveEvidenceMap(value, documents, directReceipts) {
     }
     recordCount += receipt.expectedRecordCount;
   }
-  if (recordCount !== 1_627) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
+  if (recordCount !== 2_360) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
 }
 
 export function parseRegionalOfficialHtml(buffer, document) {
