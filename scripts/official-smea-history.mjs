@@ -7,6 +7,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { assertVerifiedWarpReplacement } from "./official-warp-captures.mjs";
 
 const BASE_URL = "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/";
 
@@ -41,7 +42,10 @@ const CONTRACT_SERIES = [
     procurementMethod: "discretionary",
     expenseClass: "commission",
     kind: "随意契約（委託費の類）",
-    filename: (year) => `zuikei_itaku_${year}.html`,
+    // FY2020 was published with the legacy .htm extension; later years use
+    // .html.  Treating the FY2020 path as .html replays a different archived
+    // page, so the extension is part of the fail-closed source identity.
+    filename: (year) => `zuikei_itaku_${year}.${year === 2020 ? "htm" : "html"}`,
   },
 ];
 
@@ -121,6 +125,23 @@ const GRANT_HEADERS = new Map([
   ["支出元会計区分", "accountRaw"],
   ["支出元目名", "budgetItemRaw"],
   ["交付決定日", "dateRaw"],
+]);
+
+// The FY2021 discretionary-commission source has one malformed row whose
+// final, optional "応札・応募者数" td is absent.  Accept only the exact 14-cell
+// row observed in that official source: the document ID, expected table width,
+// missing final field, semantic anchors, and every normalized present cell are
+// pinned.  This must never become generic row padding because an omitted
+// required cell would otherwise shift every following value into the wrong
+// column while still appearing to be a one-cell-short row.
+const ALLOWED_SHORT_ROWS = new Map([
+  ["smea-2021-discretionary-commission", Object.freeze({
+    expectedWidth: 15,
+    missingField: "bidderCountRaw",
+    title: "事業復活支援金事務事業",
+    dateRaw: "2021年12月21日",
+    normalizedPresentCellsSha256: "a2d4716c5ade53b71daeb40fa59435f4f6a76a5e9fb7a8a5c30ccaa0ae0c8ae8",
+  })],
 ]);
 
 const EMPTY_RESULT_PATTERN = /^(?:(\d{4})年)?(\d{1,2})月の(?:競争入札|随意契約)(?:は)?(?:ございません|ありません)[。．]?$/;
@@ -226,8 +247,12 @@ function makeRecord({ document, ordinal, values, sourceRowNumber, periodRaw, exp
   }
   const corporateNumber = normalizeCorporateNumber(values.corporateNumberRaw);
   const amount = parseAmount(values.amountRaw);
+  // Archive replay URLs are transport locations, not source identity.  Keep
+  // IDs stable when an already-published live official document moves to its
+  // exact allowlisted WARP capture.
+  const sourceIdentityUrl = document.originalUrl ?? document.url;
   const identityHash = createHash("sha256").update(JSON.stringify([
-    document.url,
+    sourceIdentityUrl,
     document.category,
     values.dateRaw,
     values.organization,
@@ -283,6 +308,9 @@ function parseTable(table, headerMap, requiredColumns, document) {
   const headerDepth = detectHeaderDepth(rows);
   if (headerDepth < 1 || headerDepth > 2) throw new Error(`${document.id}: 表見出しの段数が不正です`);
   const width = Math.max(...grid.map((row) => row.length));
+  if (grid.slice(0, headerDepth).some((row) => row.length !== width)) {
+    throw new Error(`${document.id}: 表見出しの列数が一致しません`);
+  }
   const columns = [];
   const seenFields = new Set();
   for (let column = 0; column < width; column += 1) {
@@ -302,10 +330,30 @@ function parseTable(table, headerMap, requiredColumns, document) {
     const row = grid[index];
     const values = Object.fromEntries(columns.map((field, column) => [field, normalizeText(row[column]?.text ?? "")]));
     if (Object.values(values).every((value) => !value)) continue;
-    if (columns.some((_, column) => !row[column])) throw new Error(`${document.id}: ${index + 1}行目の列数が不足しています`);
+    const missingColumns = columns.flatMap((field, column) => row[column] ? [] : [{ field, column }]);
+    if (missingColumns.length && !isAllowedShortRow({ document, row, values, columns, missingColumns })) {
+      throw new Error(`${document.id}: ${index + 1}行目の列数が不足しています`);
+    }
     parsedRows.push(values);
   }
   return { rows: parsedRows };
+}
+
+function isAllowedShortRow({ document, row, values, columns, missingColumns }) {
+  const allowance = ALLOWED_SHORT_ROWS.get(document.id);
+  if (!allowance
+    || columns.length !== allowance.expectedWidth
+    || row.length !== allowance.expectedWidth - 1
+    || missingColumns.length !== 1
+    || missingColumns[0].column !== allowance.expectedWidth - 1
+    || missingColumns[0].field !== allowance.missingField
+    || values.title !== allowance.title
+    || values.dateRaw !== allowance.dateRaw) {
+    return false;
+  }
+  const normalizedPresentCells = row.map((cell) => normalizeText(cell.text));
+  const digest = createHash("sha256").update(JSON.stringify(normalizedPresentCells)).digest("hex");
+  return digest === allowance.normalizedPresentCellsSha256;
 }
 
 function detectHeaderDepth(rows) {
@@ -344,9 +392,8 @@ function buildGrid(rows, document) {
     grid.push(output);
   }
   if (pending.size) throw new Error(`${document.id}: rowspanが表の末尾を越えています`);
-  const width = Math.max(...grid.map((row) => row.length));
-  if (grid.some((row) => row.length !== width || Array.from({ length: width }, (_, column) => row[column]).some((cell) => !cell))) {
-    throw new Error(`${document.id}: 表のrowspan/colspan解決後の列数が一致しません`);
+  if (grid.some((row) => Array.from({ length: row.length }, (_, column) => row[column]).some((cell) => !cell))) {
+    throw new Error(`${document.id}: 表のrowspan/colspan解決後に内部欠損があります`);
   }
   return grid;
 }
@@ -358,8 +405,13 @@ function parseSpan(raw, document, label) {
 }
 
 function validateDocument(document) {
-  if (!document || !documents.some((candidate) => candidate.id === document.id && candidate.url === document.url)) {
-    throw new Error("未登録の中小企業庁過年度文書です");
+  const original = document && documents.find((candidate) => candidate.id === document.id);
+  if (!original) throw new Error("未登録の中小企業庁過年度文書です");
+  if (document === original) return;
+  try {
+    assertVerifiedWarpReplacement(document, original);
+  } catch {
+    throw new Error("未登録または許可されていない中小企業庁過年度文書です");
   }
 }
 
@@ -410,7 +462,22 @@ function validateGrantPeriod(raw, document) {
 function decodeHtmlBuffer(value) {
   const buffer = Buffer.isBuffer(value) ? value : value instanceof Uint8Array ? Buffer.from(value) : null;
   if (!buffer || buffer.length < 100) throw new Error("中小企業庁HTMLの応答が空または短すぎます");
-  const text = buffer.toString("utf8");
+  const header = buffer.subarray(0, Math.min(buffer.length, 8_192)).toString("latin1");
+  const declaredCharset = header.match(/<meta\b[^>]*\bcharset\s*=\s*["']?\s*([A-Za-z0-9._-]+)/i)?.[1]?.toLowerCase()
+    ?? header.match(/<meta\b[^>]*\bcontent\s*=\s*["'][^"']*charset\s*=\s*([A-Za-z0-9._-]+)/i)?.[1]?.toLowerCase()
+    ?? null;
+  const encoding = ["utf-8", "utf8"].includes(declaredCharset)
+    ? "utf-8"
+    : ["shift_jis", "shift-jis", "sjis", "x-sjis", "windows-31j", "cp932"].includes(declaredCharset)
+      ? "shift_jis"
+      : null;
+  if (!encoding) throw new Error(`中小企業庁HTMLの文字コードが未宣言または未対応です: ${declaredCharset ?? "(未宣言)"}`);
+  let text;
+  try {
+    text = new TextDecoder(encoding, { fatal: true }).decode(buffer);
+  } catch {
+    throw new Error(`中小企業庁HTMLを${encoding}として厳密に復号できません`);
+  }
   if (!/<!doctype\s+html|<html\b/i.test(text)) throw new Error("中小企業庁HTMLの文書シグネチャがありません");
   if (/指定されたページまたはファイルは存在しません|Please Enable JavaScript|JavaScript is disabled|captcha-form|awsWaf|challenge-container|verify that you(?:'|’)re not a robot/i.test(text)) {
     throw new Error("中小企業庁HTMLがエラーまたはWAF応答です");
@@ -422,6 +489,8 @@ function decodeHtmlBuffer(value) {
 
 function parseOfficialDate(raw) {
   let match = raw.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+  if (match) return validDate(Number(match[1]), Number(match[2]), Number(match[3]));
+  match = raw.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
   if (match) return validDate(Number(match[1]), Number(match[2]), Number(match[3]));
   match = raw.match(/^令和([元\d]+)年(\d{1,2})月(\d{1,2})日$/);
   if (match) return validDate(2018 + (match[1] === "元" ? 1 : Number(match[1])), Number(match[2]), Number(match[3]));

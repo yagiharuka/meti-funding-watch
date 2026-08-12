@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-12",
+  "verification": "Exact WARP URL Full GET; HTTP 200; raw byte length and SHA-256 pinned; strict parser count pinned; normalized rows and sourceKey deep-equal to the previously published live source except sourceDocumentUrl; 4/4 passed",
+  "records": [
+    {
+      "id": "smea-2025-competitive-goods",
+      "capture": "20260602/20260601011816",
+      "url": "https://warp.ndl.go.jp/20260602/20260601011816/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
+      "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_nyuusatu_2025.xlsx",
+      "expectedBytes": 40902,
+      "expectedSha256": "1abfd6139ffa54e067f407ea5cfd9411abeb8870c61d658f7384bd487e2e31ae",
+      "expectedRecordCount": 11
+    },
+    {
+      "id": "smea-2025-competitive-commission",
+      "capture": "20260602/20260601011827",
+      "url": "https://warp.ndl.go.jp/20260602/20260601011827/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
+      "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
+      "expectedBytes": 64380,
+      "expectedSha256": "ec9b549e1cbff72473b144c299331b587517123fc84eb70f2bd016e0dc676641",
+      "expectedRecordCount": 49
+    },
+    {
+      "id": "smea-2025-discretionary-goods",
+      "capture": "20260602/20260601011838",
+      "url": "https://warp.ndl.go.jp/20260602/20260601011838/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
+      "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/chouhi_zuikei_2025.xlsx",
+      "expectedBytes": 27086,
+      "expectedSha256": "77fa1c6a688b648a3119c1169585618b9fa6e434e2c19d9e8a9709fbcb1a7cbb",
+      "expectedRecordCount": 17
+    },
+    {
+      "id": "smea-2025-discretionary-commission",
+      "capture": "20260602/20260601011850",
+      "url": "https://warp.ndl.go.jp/20260602/20260601011850/https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
+      "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_2025.xlsx",
+      "expectedBytes": 50337,
+      "expectedSha256": "4c8d990381b09877e95ec86ef135a4bd1a6ba37a31fa9d8218af6a9985b02259",
+      "expectedRecordCount": 13
+    }
+  ]
+}

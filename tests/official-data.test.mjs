@@ -59,18 +59,97 @@ test("binds every published source document to a SHA, row count, and registered 
     manifest.sourceDocuments.length + sourceFailures.length,
     manifest.coverage.attemptedSourceDocumentCount ?? manifest.sourceDocuments.length,
   );
+  const fallbackReceipts = manifest.sourceDocuments.filter((receipt) => receipt.fallbackUsed);
+  assert.equal(
+    manifest.coverage.fallbackSourceDocumentCount ?? fallbackReceipts.length,
+    fallbackReceipts.length,
+    "fallback count must be derived from the published source receipts",
+  );
+  const carryForwardReceipts = manifest.sourceDocuments.filter((receipt) => receipt.carryForwardUsed);
+  assert.equal(
+    manifest.coverage.carryForwardSourceDocumentCount ?? carryForwardReceipts.length,
+    carryForwardReceipts.length,
+    "carry-forward count must be derived from the published source receipts",
+  );
+  assert.ok(manifest.sourceDocuments.every((receipt) => !(receipt.fallbackUsed && receipt.carryForwardUsed)));
   for (const receipt of manifest.sourceDocuments) {
     const document = definitions.get(receipt.id);
     assert.ok(document, receipt.id);
-    assert.equal(receipt.url, document.url);
+    assert.equal(
+      receipt.originalUrl ?? receipt.url,
+      document.originalUrl ?? document.url,
+      `${receipt.id}: official source identity changed`,
+    );
+    if (Object.hasOwn(receipt, "primaryUrl")) {
+      assert.equal(receipt.primaryUrl, document.url, `${receipt.id}: primary URL changed`);
+    }
+    const expectedTransportUrl = receipt.fallbackUsed ? document.verifiedFallback?.url : document.url;
+    if (Object.hasOwn(receipt, "transportUrl")) {
+      assert.equal(receipt.transportUrl, expectedTransportUrl, `${receipt.id}: transport URL changed`);
+      assert.equal(receipt.url, expectedTransportUrl, `${receipt.id}: compatibility URL must be the actual transport`);
+    }
     assert.match(receipt.sha256, /^[0-9a-f]{64}$/);
     assert.ok(receipt.bytes > 1_000);
     assert.ok(Number.isSafeInteger(receipt.records));
+    if (receipt.fallbackUsed) {
+      assert.ok(document.verifiedFallback, `${receipt.id}: fallback receipt has no allowlisted definition`);
+      assert.ok(["empty_response", "transient_http", "fetch_failed"].includes(receipt.primaryFailureReasonCode));
+      assert.equal(receipt.archiveExpectedBytes, document.verifiedFallback.expectedBytes);
+      assert.equal(receipt.archiveExpectedSha256, document.verifiedFallback.expectedSha256);
+      assert.equal(receipt.archiveExpectedRecordCount, document.verifiedFallback.expectedRecordCount);
+      assert.equal(receipt.bytes, document.verifiedFallback.expectedBytes);
+      assert.equal(receipt.sha256, document.verifiedFallback.expectedSha256);
+      assert.equal(receipt.records, document.verifiedFallback.expectedRecordCount);
+    } else if (receipt.carryForwardUsed) {
+      assert.ok(["empty_response", "transient_http", "fetch_failed"].includes(receipt.primaryFailureReasonCode));
+      assert.equal(receipt.retrievedAt, receipt.lastSuccessfulRetrievedAt);
+      assert.match(receipt.lastSuccessfulRetrievedAt, /^\d{4}-\d{2}-\d{2}T/);
+      assert.match(receipt.attemptedAt, /^\d{4}-\d{2}-\d{2}T/);
+      assert.notEqual(receipt.retrievedAt, receipt.attemptedAt);
+      assert.equal(receipt.archiveProvider, null);
+    } else if (receipt.archiveExpectedSha256) {
+      assert.equal(receipt.archiveExpectedBytes, document.archiveExpectedBytes);
+      assert.equal(receipt.archiveExpectedSha256, document.archiveExpectedSha256);
+      assert.equal(receipt.archiveExpectedRecordCount, document.archiveExpectedRecordCount);
+    }
+    if (document.archiveProvider && receipt.url === document.url) {
+      assert.equal(receipt.bytes, document.archiveExpectedBytes, `${receipt.id}: existing archive byte receipt changed`);
+      assert.equal(receipt.sha256, document.archiveExpectedSha256, `${receipt.id}: existing archive SHA changed`);
+      assert.equal(receipt.records, document.archiveExpectedRecordCount, `${receipt.id}: existing archive row count changed`);
+    }
   }
   if (receipts.has("jpo-2025-grant-decisions-h2")) {
     assert.equal(receipts.get("jpo-2025-grant-decisions-h2").records, 0);
     assert.equal(receipts.get("jpo-2025-grant-decisions-h2").emptySentinelFound, true);
   }
+});
+
+test("archiving the three published JPO sources must preserve every semantic field and source identity", { timeout: 30_000 }, async (t) => {
+  const fixtureDirectory = process.env.OFFICIAL_ARCHIVE_EQUIVALENCE_DIRECTORY?.trim();
+  if (!fixtureDirectory) return t.skip("set OFFICIAL_ARCHIVE_EQUIVALENCE_DIRECTORY to the exact archived JPO source files");
+  const ids = [
+    "jpo-2020-competitive-goods",
+    "jpo-2020-competitive-commission",
+    "jpo-2020-competitive-public-works",
+  ];
+  const expected = records.filter((row) => ids.includes(row.datasetId));
+  assert.equal(expected.length, 162, "baseline must contain all three previously published JPO sources");
+  const selected = OFFICIAL_DOCUMENTS.filter((document) => ids.includes(document.id));
+  assert.equal(selected.length, ids.length);
+
+  const { fetched, sourceFailures } = await fetchOfficialDocuments(selected, [], null, []);
+  assert.deepEqual(sourceFailures, []);
+  const candidate = fetched.flatMap((item) => item.records);
+  assert.equal(candidate.length, expected.length);
+  const ignoredTransportFields = new Set(["sourceDocumentUrl"]);
+  const normalize = (row) => Object.fromEntries(Object.entries(row)
+    .filter(([field]) => !ignoredTransportFields.has(field))
+    .sort(([left], [right]) => left.localeCompare(right)));
+  assert.deepEqual(
+    candidate.map(normalize).sort((left, right) => left.sourceKey.localeCompare(right.sourceKey)),
+    expected.map(normalize).sort((left, right) => left.sourceKey.localeCompare(right.sourceKey)),
+    "WARP replay may change only the transport URL; sourceKey, id, and all normalized semantics must remain exact",
+  );
 });
 
 test("publishes other new documents while never dropping a previously published source", async () => {
@@ -79,7 +158,7 @@ test("publishes other new documents while never dropping a previously published 
     category: "contract_result", kind: "競争入札", amountStage: "契約額", format: "xlsx",
     sourcePageUrl: "https://example.test/index.html", url: "https://example.test/empty.xlsx",
   };
-  const valid = { ...unavailable, id: "new-valid-source", url: "https://example.test/valid.xlsx" };
+  const valid = { ...unavailable, id: "new-valid-source", fiscalYear: 2025, url: "https://example.test/valid.xlsx" };
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("fixture");
   sheet.addRow(["事業名", "交付先名", "法人番号", "交付決定額", "交付決定日"]);
@@ -143,6 +222,123 @@ test("converts an unformatted Excel serial date without changing the raw evidenc
   });
   assert.equal(parsed[0].date, "2025-04-10");
   assert.equal(parsed[0].dateRaw, "45757");
+});
+
+test("accepts only an exact repeated official zero-result sentinel row", async () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("10月-3月");
+  sheet.addRow(["事業名", "交付先名", "法人番号", "交付決定額", "交付決定日"]);
+  sheet.addRow(Array(5).fill("交付決定なし"));
+  const document = {
+    id: "zero-sentinel-fixture", executorId: "jpo", executorName: "特許庁", fiscalYear: 2025,
+    category: "grant_decision", kind: "補助金等の交付決定", amountStage: "交付決定額",
+    emptySentinel: "交付決定なし", sourcePageUrl: "https://example.test/", url: "https://example.test/a.xlsx",
+  };
+  const parsed = await parseOfficialWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()), document);
+  assert.equal(parsed.length, 0);
+  assert.equal(parsed.emptySentinelFound, true);
+
+  sheet.getRow(2).getCell(5).value = "想定外";
+  await assert.rejects(
+    parseOfficialWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()), document),
+    /0件表記の行に想定外の値/,
+  );
+});
+
+test("fails closed on a nonblank XLSX row with missing required values or an invalid fiscal-year date", async () => {
+  const document = {
+    id: "strict-row-fixture", executorId: "jpo", executorName: "特許庁", fiscalYear: 2025,
+    category: "grant_decision", kind: "補助金等の交付決定", amountStage: "交付決定額",
+    sourcePageUrl: "https://example.test/", url: "https://example.test/a.xlsx",
+  };
+  const workbookBytes = async (...rows) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("fixture");
+    sheet.addRow(["事業名", "交付先名", "法人番号", "交付決定額", "交付決定日"]);
+    sheet.addRow([]);
+    for (const row of rows) sheet.addRow(row);
+    return Buffer.from(await workbook.xlsx.writeBuffer());
+  };
+
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes(["", "法人A", "6010001030403", "1,000", "2025年4月1日"]), document),
+    /必須値programが空/,
+  );
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes(["補助事業", "", "6010001030403", "1,000", "2025年4月1日"]), document),
+    /必須値organizationが空/,
+  );
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes(["補助事業", "法人A", "6010001030403", "1,000", "不明"]), document),
+    /日付を解釈できません/,
+  );
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes(["補助事業", "法人A", "6010001030403", "1,000", "2024年4月1日"]), document),
+    /日付が資料年度外/,
+  );
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes(
+      ["補助事業", "法人A", "6010001030403", "1,000", "2025年4月1日"],
+      ["", "", "", "", "", "予期しない欄外値"],
+    ), document),
+    /必須値programが空/,
+    "a nonblank cell outside the mapped columns must not make a row look blank",
+  );
+
+  const january = await parseOfficialWorkbook(
+    await workbookBytes(["補助事業", "法人A", "6010001030403", "", "2026年1月5日"]),
+    document,
+  );
+  assert.equal(january.length, 1, "a truly blank row is allowed and ignored");
+  assert.equal(january[0].date, "2026-01-05");
+  assert.equal(january[0].amount, null, "a missing amount remains allowed and explicit");
+
+  const footnote = await parseOfficialWorkbook(
+    await workbookBytes(
+      ["補助事業", "法人A", "6010001030403", "1,000", "2025年4月1日"],
+      ["※公益法人の区分において、「公財」は「公益財団法人」をいう。", "", "", "", ""],
+    ),
+    document,
+  );
+  assert.equal(footnote.length, 1, "the exact official table footnote is structural text, not a data row");
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes(
+      ["補助事業", "法人A", "6010001030403", "1,000", "2025年4月1日"],
+      ["※別の注記", "", "", "", ""],
+    ), document),
+    /必須値organizationが空/,
+    "an arbitrary single-cell note must not be silently skipped",
+  );
+});
+
+test("accepts only an isolated exact grant zero-result sentinel", async () => {
+  const document = {
+    id: "zero-sentinel-fixture", executorId: "jpo", executorName: "特許庁", fiscalYear: 2025,
+    category: "grant_decision", kind: "補助金等の交付決定", amountStage: "交付決定額",
+    emptySentinel: "交付決定なし", sourcePageUrl: "https://example.test/", url: "https://example.test/a.xlsx",
+  };
+  const workbookBytes = async (rows) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("fixture");
+    sheet.addRow(["事業名", "交付先名", "法人番号", "交付決定額", "交付決定日"]);
+    for (const row of rows) sheet.addRow(row);
+    return Buffer.from(await workbook.xlsx.writeBuffer());
+  };
+
+  const zero = await parseOfficialWorkbook(await workbookBytes([["交付決定なし"]]), document);
+  assert.equal(zero.length, 0);
+  assert.equal(zero.emptySentinelFound, true);
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes([["交付決定なし", "想定外"]]), document),
+    /0件表記の行に想定外の値/,
+  );
+  await assert.rejects(
+    parseOfficialWorkbook(await workbookBytes([
+      ["交付決定なし"],
+      ["補助事業", "法人A", "6010001030403", "1,000", "2025年4月1日"],
+    ]), document),
+    /0件表記と交付決定明細が混在/,
+  );
 });
 
 test("does not silently rewrite an already-published method during parser expansion", async () => {

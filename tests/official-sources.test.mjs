@@ -51,8 +51,25 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.match(pageSource, /リンクだけの資料は収録済みと数えていません/);
   assert.match(pageSource, /取得・形式検証できず未収録の候補資料/);
   assert.match(pageSource, /部分収録：候補URL/);
-  assert.match(pageSource, /資料を取得・検証できたもの/);
+  assert.match(pageSource, /検索に使用する資料/);
+  assert.match(pageSource, /今回取得・検証/);
+  assert.match(pageSource, /前回検証済み明細を継続/);
   assert.match(pageSource, /未取得候補/);
+  assert.match(pageSource, /fallbackSourceDocumentCount/);
+  assert.match(pageSource, /ライブ取得に失敗し、前回公開明細との完全一致を検証したWARP保存資料を使用/);
+  assert.match(pageSource, /ライブ取得失敗後に検証済みWARP保存資料を使用/);
+  assert.match(pageSource, /取得バイト・SHA-256・明細数と、前回公開した全明細の内容・識別子が一致した場合だけ使用/);
+  assert.match(pageSource, /fallbackSourceCount !== fallbackSources\.length/);
+  assert.match(pageSource, /carryForwardSourceDocumentCount/);
+  assert.match(pageSource, /carryForwardSourceCount !== carryForwardSources\.length/);
+  assert.match(pageSource, /source\.fallbackUsed && source\.carryForwardUsed/);
+  assert.match(pageSource, /ライブ取得失敗後に前回検証済み明細を継続使用/);
+  assert.match(pageSource, /前回公開manifestと明細ファイルのハッシュ・行数、資料ID・原本URL・資料別明細数を再検証/);
+  assert.match(pageSource, /新しい内容を取得済みとは扱いません/);
+  assert.match(pageSource, /最終正常取得/);
+  assert.match(pageSource, /function fallbackFailureLabel/);
+  assert.match(pageSource, /ライブURLが0バイト応答/);
+  assert.doesNotMatch(pageSource, /sourceFailureLabel\(source\.primaryFailureReasonCode/);
   assert.match(pageSource, /全年度・全区分を完全照合済み/);
   assert.match(pageSource, /missingYears\.join\("・"\)/);
   assert.match(pageSource, /新年度・新URL・新機関は自動発見せず/);
@@ -75,6 +92,10 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
     (sum, executor) => sum + executor.contractResults.records + executor.grantDecisions.records,
     0,
   ));
+  const fallbackSources = (manifest.sourceDocuments ?? []).filter((source) => source.fallbackUsed);
+  assert.equal(manifest.coverage.fallbackSourceDocumentCount ?? fallbackSources.length, fallbackSources.length);
+  const carryForwardSources = (manifest.sourceDocuments ?? []).filter((source) => source.carryForwardUsed);
+  assert.equal(manifest.coverage.carryForwardSourceDocumentCount ?? carryForwardSources.length, carryForwardSources.length);
   if (manifest.coverage.fiscalYears) {
     assert.ok(manifest.coverage.fiscalYears.length > 1);
     assert.match(pageSource, /manifest\.coverage|coverage\.fiscalYears/);

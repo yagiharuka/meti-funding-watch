@@ -1,9 +1,9 @@
 /**
  * JPO workbooks whose official XLSX URLs were checked on 2026-08-12.
  *
- * This is deliberately only a document registry.  It is not imported by the
- * production updater yet: adding a workbook here must not silently widen the
- * published dataset before its parser and continuity checks are wired in.
+ * This registry is imported by the production updater.  Every addition must
+ * therefore remain fail-closed behind the strict workbook parser, source
+ * receipt checks where archived, and published-data continuity checks.
  * Deleted year pages are never used as provenance links.  When an older XLSX
  * still exists but its year page no longer does, sourcePageUrl points to the
  * live category index and discoveryStatus records that limitation.
@@ -112,6 +112,42 @@ const CONTRACT_EXPECTED_SHEETS = Object.freeze({
   "2025-discretionary-commission": 3,
 });
 
+// These nine exact WARP workbooks were already in the published dataset before
+// the broader historical replay map was introduced.  Pin the raw response and
+// strict-parser receipts from the last verified committed manifest so every
+// archived source, not only a newly substituted one, is mandatory and
+// reproducible.  They intentionally remain outside the 50-entry replacement
+// allowlist because their exact WARP URLs are already part of this registry.
+const ARCHIVED_CONTRACT_RECEIPTS = Object.freeze({
+  "2022-discretionary-goods": Object.freeze({
+    bytes: 47_540, sha256: "7983e6e50dad36e3d464fb477fbcbf27959ed92022e48765e744fac4d1874a81", records: 94,
+  }),
+  "2022-discretionary-commission": Object.freeze({
+    bytes: 15_636, sha256: "44b10ee3ec396ee0c6c0094d4e45d8ae4a57e92848da3f67471127954240c0c0", records: 4,
+  }),
+  "2022-discretionary-publicWorks": Object.freeze({
+    bytes: 15_984, sha256: "e59a391309d24aecb2dc92f70e471869b86d9d1f138adf78b3efdd4a05da0edd", records: 1,
+  }),
+  "2023-competitive-goods": Object.freeze({
+    bytes: 72_985, sha256: "d07e116503db7bf2fe537af3293970d8180899864627c12070871f9969cf6a10", records: 165,
+  }),
+  "2023-competitive-commission": Object.freeze({
+    bytes: 35_266, sha256: "564b58ae9a044d9900ec5ebbba2e6350cdf4a0b431dc587ed9ab4b170c43309d", records: 17,
+  }),
+  "2023-competitive-publicWorks": Object.freeze({
+    bytes: 14_272, sha256: "b8253e7f7d3f2994b6916ba4a6ca7cefb0105127b9bd6146a7d35333954dfdf8", records: 1,
+  }),
+  "2023-discretionary-goods": Object.freeze({
+    bytes: 55_405, sha256: "0e07f9eeb94090fed18bb4ea1dc248522cddbac57b2b6fbf5c9c5b4ba980f4c5", records: 100,
+  }),
+  "2023-discretionary-commission": Object.freeze({
+    bytes: 15_546, sha256: "5e53ce50144c87c280e4da3476d89937ff5b872bfdb10eb2b1f80a66d3b40c3f", records: 5,
+  }),
+  "2023-discretionary-publicWorks": Object.freeze({
+    bytes: 16_305, sha256: "1cf0e9ed8effbb9919342bb129904241f0a8530144f8cfa760d63fa53e1daca5", records: 1,
+  }),
+});
+
 function liveYearPage(contractClass, fiscalYear) {
   const directory = contractClass === "competitive" ? "kyosonyusatu" : "zuikeyaku";
   return `https://www.jpo.go.jp/news/chotatsu/rakusatu/${directory}/${fiscalYear}.html`;
@@ -138,6 +174,11 @@ function contractDocument(fiscalYear, contractClass, subjectClass, options = {})
     url: options.url ?? originalUrl,
     ...(options.url ? { originalUrl } : {}),
     ...(options.archiveProvider ? { archiveProvider: options.archiveProvider } : {}),
+    ...(options.archiveExpectedBytes ? {
+      archiveExpectedBytes: options.archiveExpectedBytes,
+      archiveExpectedSha256: options.archiveExpectedSha256,
+      archiveExpectedRecordCount: options.archiveExpectedRecordCount,
+    } : {}),
     format: "xlsx",
     contractSubjectHeaders: options.contractSubjectHeaders ?? SUBJECT_HEADERS[subjectClass],
     headerAliases: CONTRACT_HEADER_ALIASES,
@@ -155,12 +196,18 @@ function contractDocument(fiscalYear, contractClass, subjectClass, options = {})
 function archivedContractDocument(fiscalYear, contractClass, subjectClass, capture, pageCapture, options = {}) {
   const directory = contractClass === "competitive" ? "kyosonyusatu" : "zuikeyaku";
   const originalPath = `https://www.jpo.go.jp/news/chotatsu/rakusatu/${directory}`;
+  const receiptKey = `${fiscalYear}-${contractClass}-${subjectClass}`;
+  const receipt = ARCHIVED_CONTRACT_RECEIPTS[receiptKey];
+  if (!receipt) throw new Error(`検証済みJPO WARP receiptがありません: ${receiptKey}`);
   return contractDocument(fiscalYear, contractClass, subjectClass, {
     ...options,
     url: `https://warp.ndl.go.jp/${capture}/${originalPath}/document/${fiscalYear}/${fiscalYear}_${SUBJECT_SLUGS[subjectClass]}.xlsx`,
     sourcePageUrl: `https://warp.ndl.go.jp/${pageCapture}/${originalPath}/${fiscalYear}.html`,
     discoveryStatus: "archived_official_file",
     archiveProvider: "国立国会図書館インターネット資料収集保存事業（WARP）",
+    archiveExpectedBytes: receipt.bytes,
+    archiveExpectedSha256: receipt.sha256,
+    archiveExpectedRecordCount: receipt.records,
   });
 }
 

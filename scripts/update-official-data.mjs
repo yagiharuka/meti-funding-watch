@@ -7,6 +7,8 @@ import { promisify } from "node:util";
 import ExcelJS from "exceljs";
 import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
 import { documents as SMEA_HISTORICAL_DOCUMENTS, parseSmeaOfficialHtml } from "./official-smea-history.mjs";
+import { VERIFIED_LIVE_FALLBACK_METADATA, applyVerifiedLiveFallbacks } from "./official-live-fallbacks.mjs";
+import { applyVerifiedWarpCaptures } from "./official-warp-captures.mjs";
 
 const DATA_DIRECTORY = new URL("../data/official/", import.meta.url);
 const AUDIT_DIRECTORY = new URL("../.audit/official/", import.meta.url);
@@ -16,8 +18,10 @@ const FETCH_HEADERS = {
   accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream;q=0.9,*/*;q=0.1",
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
 };
+const LIVE_FETCH_ATTEMPTS = 3;
+const LIVE_FETCH_BACKOFF_MS = [250, 500];
 
-export const OFFICIAL_DOCUMENTS = [
+export const OFFICIAL_DOCUMENTS = applyVerifiedLiveFallbacks(applyVerifiedWarpCaptures([
   {
     id: "smea-2025-grant-decisions",
     executorId: "smea",
@@ -128,7 +132,7 @@ export const OFFICIAL_DOCUMENTS = [
   },
   ...JPO_HISTORICAL_DOCUMENTS,
   ...SMEA_HISTORICAL_DOCUMENTS,
-];
+]));
 
 export async function parseOfficialWorkbook(buffer, document) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 4 || buffer.subarray(0, 4).toString("hex") !== "504b0304") {
@@ -220,11 +224,15 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
     previous.records,
     fetchImpl,
     previous.sourceDocumentIds,
+    previous.sourceDocuments,
   );
   const candidateRecords = fetched.flatMap((item) => item.records);
   if (!candidateRecords.length) throw new Error("検証できた公式資料明細が0行です");
   uniqueMap(candidateRecords, "今回");
   const continuity = assertOfficialContinuity(previous.records, candidateRecords);
+  if (continuity.changed.length) {
+    throw new Error(`公式資料の既存明細が変更されました: ${continuity.changed.length}件`);
+  }
   const generatedAt = now.toISOString();
   const counts = countRecords(candidateRecords);
   const recordsByYear = Map.groupBy(candidateRecords, (record) => record.fiscalYear);
@@ -271,6 +279,8 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       executorCount: executorIds.length,
       fiscalYears,
       sourceDocumentCount: fetched.length,
+      fallbackSourceDocumentCount: fetched.filter((item) => item.fallback).length,
+      carryForwardSourceDocumentCount: fetched.filter((item) => item.carryForward).length,
       attemptedSourceDocumentCount: OFFICIAL_DOCUMENTS.length,
       failedSourceDocumentCount: sourceFailures.length,
       executors: executorCoverage,
@@ -283,14 +293,26 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       changedRecordCount: continuity.changed.length,
       changes: continuity.changed,
     },
-    sourceDocuments: fetched.map(({ document, sha256, bytes, records }) => ({
+    sourceDocuments: fetched.map(({ document, sha256, bytes, records, fallback, carryForward }) => ({
       id: document.id,
-      url: document.url,
+      url: fallback?.url ?? document.url,
+      primaryUrl: document.url,
+      transportUrl: fallback?.url ?? document.url,
+      fallbackUsed: Boolean(fallback),
+      carryForwardUsed: Boolean(carryForward),
+      primaryFailureReasonCode: fallback?.primaryFailureReasonCode ?? carryForward?.primaryFailureReasonCode ?? null,
+      lastSuccessfulRetrievedAt: carryForward?.lastSuccessfulRetrievedAt ?? null,
+      attemptedAt: carryForward ? generatedAt : null,
       originalUrl: document.originalUrl ?? document.url,
       sourcePageUrl: document.sourcePageUrl,
       format: document.format === "html" ? "html" : "xlsx",
       discoveryStatus: document.discoveryStatus ?? "linked_from_official_index",
-      archiveProvider: document.archiveProvider ?? null,
+      archiveProvider: fallback?.archiveProvider ?? document.archiveProvider ?? null,
+      archiveVerifiedAt: fallback?.archiveVerifiedAt ?? document.archiveVerifiedAt ?? null,
+      archiveVerification: fallback?.archiveVerification ?? document.archiveVerification ?? null,
+      archiveExpectedBytes: fallback?.expectedBytes ?? document.archiveExpectedBytes ?? null,
+      archiveExpectedSha256: fallback?.expectedSha256 ?? document.archiveExpectedSha256 ?? null,
+      archiveExpectedRecordCount: fallback?.expectedRecordCount ?? document.archiveExpectedRecordCount ?? null,
       coverageClaim: document.coverageClaim ?? "公式資料に掲載された行",
       executorId: document.executorId,
       category: document.category,
@@ -299,8 +321,8 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       sha256,
       bytes,
       records: records.length,
-      emptySentinelFound: Boolean(records.emptySentinelFound),
-      retrievedAt: generatedAt,
+      emptySentinelFound: carryForward?.emptySentinelFound ?? Boolean(records.emptySentinelFound),
+      retrievedAt: carryForward?.lastSuccessfulRetrievedAt ?? generatedAt,
     })),
     sourceFailures: sourceFailures.map((failure) => ({ ...failure, attemptedAt: generatedAt })),
     publicFiles: Object.fromEntries(Object.entries(publicFiles).map(([year, item]) => [year, {
@@ -314,6 +336,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   await mkdir(DATA_DIRECTORY, { recursive: true });
   await mkdir(AUDIT_DIRECTORY, { recursive: true });
   for (const item of fetched) {
+    if (item.carryForward) continue;
     await writeFile(new URL(`${item.document.id}.${item.document.format === "html" ? "html" : "xlsx"}`, AUDIT_DIRECTORY), item.buffer);
   }
   await removeObsoleteYearFiles(new Set(Object.values(files)));
@@ -324,8 +347,15 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   return { manifest, records: candidateRecords };
 }
 
-export async function fetchOfficialDocuments(documents, previousRecords, fetchImpl = null, previousSourceDocumentIds = []) {
-  if (!Array.isArray(documents) || !Array.isArray(previousRecords) || !Array.isArray(previousSourceDocumentIds)) {
+export async function fetchOfficialDocuments(
+  documents,
+  previousRecords,
+  fetchImpl = null,
+  previousSourceDocumentIds = [],
+  previousSourceDocuments = [],
+) {
+  if (!Array.isArray(documents) || !Array.isArray(previousRecords)
+    || !Array.isArray(previousSourceDocumentIds) || !Array.isArray(previousSourceDocuments)) {
     throw new Error("公式資料の取得対象と前回明細には配列が必要です");
   }
   const definitions = new Map();
@@ -337,29 +367,178 @@ export async function fetchOfficialDocuments(documents, previousRecords, fetchIm
     ...previousRecords.map((record) => record.datasetId).filter(Boolean),
     ...previousSourceDocumentIds,
   ]);
+  const previousReceiptById = new Map(previousSourceDocuments.map((source) => [source.id, source]));
   for (const id of previousDatasetIds) {
     if (!definitions.has(id)) throw new Error(`前回公開済み資料の定義がなくなりました: ${id}`);
   }
   const fetched = [];
   const sourceFailures = [];
   for (const document of documents) {
+    const verifiedArchive = isVerifiedArchiveDocument(document);
     let phase = "fetch";
     try {
-      const source = await fetchDocument(document, fetchImpl);
+      const source = await fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl);
+      assertArchiveSourceReceipt(document, source);
       phase = "parse";
       const records = document.format === "html"
         ? parseSmeaOfficialHtml(source.buffer, document).map((record) => normalizeSmeaRecord(record, document))
         : await parseOfficialWorkbook(source.buffer, document);
+      assertArchiveRecordCount(document, records);
+      if (source.fallback) assertFallbackRecordsMatchBaseline(document, source.fallback, records, previousRecords);
       fetched.push({ document, ...source, records });
     } catch (error) {
-      if (previousDatasetIds.has(document.id)) {
+      const carryForward = maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById);
+      if (carryForward) {
+        fetched.push(carryForward);
+        continue;
+      }
+      if (verifiedArchive || document.verifiedFallback || previousDatasetIds.has(document.id)) {
         const message = error instanceof Error ? error.message : "原因不明";
-        throw new Error(`${document.id}: 前回公開済み資料を再検証できませんでした (${message})`);
+        const requirement = verifiedArchive ? "検証済みWARP資料" : "前回公開済み資料";
+        throw new Error(`${document.id}: ${requirement}を再検証できませんでした (${message})`);
       }
       sourceFailures.push(makeSourceFailure(document, phase, error));
     }
   }
   return { fetched, sourceFailures };
+}
+
+function maybeCarryForwardDocument(document, error, previousRecords, previousReceiptById) {
+  if (document.archiveProvider || document.verifiedFallback || !isFallbackEligibleFetchError(error)) return null;
+  const receipt = previousReceiptById.get(document.id);
+  const records = previousRecords.filter((record) => record.datasetId === document.id);
+  if (!receipt) return null;
+  if (receipt.id !== document.id
+    || receipt.url !== document.url
+    || (receipt.transportUrl ?? document.url) !== document.url
+    || (receipt.primaryUrl ?? receipt.originalUrl) !== document.url
+    || receipt.originalUrl !== (document.originalUrl ?? document.url)
+    || receipt.sourcePageUrl !== document.sourcePageUrl
+    || receipt.executorId !== document.executorId
+    || receipt.category !== document.category
+    || receipt.kind !== document.kind
+    || receipt.fiscalYear !== document.fiscalYear
+    || receipt.format !== (document.format === "html" ? "html" : "xlsx")
+    || receipt.records !== records.length
+    || receipt.archiveProvider
+    || receipt.fallbackUsed
+    || !Number.isSafeInteger(receipt.bytes) || receipt.bytes < 500 || receipt.bytes > 10_000_000
+    || typeof receipt.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.sha256)
+    || typeof receipt.retrievedAt !== "string" || Number.isNaN(Date.parse(receipt.retrievedAt))) {
+    throw new Error(`${document.id}: 前回検証済み資料のreceiptまたは明細が資料定義と一致しません`);
+  }
+  if ((records.length === 0 && (!document.emptySentinel || receipt.emptySentinelFound !== true))
+    || (records.length > 0 && receipt.emptySentinelFound === true)) {
+    throw new Error(`${document.id}: 前回検証済み資料の0件表記receiptが明細数と一致しません`);
+  }
+  for (const record of records) {
+    if (record.datasetId !== document.id
+      || record.executorId !== document.executorId
+      || record.category !== document.category
+      || record.fiscalYear !== document.fiscalYear
+      || record.sourcePageUrl !== document.sourcePageUrl
+      || record.kind !== document.kind
+      || record.amountStage !== (document.amountStage ?? (document.category === "contract_result" ? "契約金額欄の掲載値" : "交付決定額欄の掲載値"))
+      || record.executorName !== document.executorName
+      || record.sourceDocumentUrl !== document.url) {
+      throw new Error(`${document.id}: 前回検証済み明細の識別項目が資料定義と一致しません`);
+    }
+  }
+  return {
+    document,
+    sha256: receipt.sha256,
+    bytes: receipt.bytes,
+    records: structuredClone(records),
+    carryForward: {
+      primaryFailureReasonCode: fetchFailureReasonCode(error),
+      lastSuccessfulRetrievedAt: receipt.retrievedAt,
+      emptySentinelFound: Boolean(receipt.emptySentinelFound),
+    },
+  };
+}
+
+async function fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl) {
+  try {
+    return await fetchDocument(document, fetchImpl);
+  } catch (primaryError) {
+    const fallback = document.verifiedFallback;
+    if (!fallback || !isFallbackEligibleFetchError(primaryError)) throw primaryError;
+    const baselineRecords = previousRecords.filter((record) => record.datasetId === document.id);
+    if (!baselineRecords.length) {
+      throw new Error(`${document.id}: 前回公開済み明細がないためWARP fallbackを使用できません`);
+    }
+    const fallbackDocument = { ...document, url: fallback.url, archiveProvider: "国立国会図書館インターネット資料収集保存事業（WARP）" };
+    delete fallbackDocument.verifiedFallback;
+    const source = await fetchDocument(fallbackDocument, fetchImpl);
+    assertPinnedReceipt(document.id, fallback, source, "WARP fallback");
+    return {
+      ...source,
+      fallback: {
+        primaryUrl: document.url,
+        primaryFailureReasonCode: fetchFailureReasonCode(primaryError),
+        url: fallback.url,
+        archiveProvider: fallbackDocument.archiveProvider,
+        archiveVerifiedAt: VERIFIED_LIVE_FALLBACK_METADATA.verifiedAt,
+        archiveVerification: VERIFIED_LIVE_FALLBACK_METADATA.verification,
+        expectedBytes: fallback.expectedBytes,
+        expectedSha256: fallback.expectedSha256,
+        expectedRecordCount: fallback.expectedRecordCount,
+      },
+    };
+  }
+}
+
+function assertFallbackRecordsMatchBaseline(document, fallback, records, previousRecords) {
+  if (records.length !== fallback.expectedRecordCount) {
+    throw new Error(`${document.id}: WARP fallback明細数が検証済み値と一致しません (${records.length}/${fallback.expectedRecordCount})`);
+  }
+  const baseline = previousRecords.filter((record) => record.datasetId === document.id);
+  const normalize = (record) => Object.fromEntries(Object.entries(record)
+    .filter(([field]) => field !== "sourceDocumentUrl")
+    .sort(([left], [right]) => left.localeCompare(right)));
+  const sort = (left, right) => left.sourceKey.localeCompare(right.sourceKey);
+  const expected = baseline.map(normalize).sort(sort);
+  const actual = records.map(normalize).sort(sort);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${document.id}: WARP fallback明細が前回公開済み明細と一致しません`);
+  }
+}
+
+function assertPinnedReceipt(id, expected, source, label) {
+  if (source.bytes !== expected.expectedBytes || source.sha256 !== expected.expectedSha256) {
+    throw new Error(`${id}: ${label}のバイト数またはSHA-256が検証済み値と一致しません`);
+  }
+}
+
+function isVerifiedArchiveDocument(document) {
+  if (!document.archiveProvider) return false;
+  if (!Number.isSafeInteger(document.archiveExpectedBytes)
+    || document.archiveExpectedBytes < 500
+    || document.archiveExpectedBytes > 10_000_000
+    || typeof document.archiveExpectedSha256 !== "string"
+    || !/^[0-9a-f]{64}$/.test(document.archiveExpectedSha256)
+    || !Number.isSafeInteger(document.archiveExpectedRecordCount)
+    || document.archiveExpectedRecordCount < 0) {
+    throw new Error(`${document.id}: WARP資料の検証済みreceipt定義がありません`);
+  }
+  return true;
+}
+
+function assertArchiveSourceReceipt(document, source) {
+  if (!isVerifiedArchiveDocument(document)) return;
+  if (source.bytes !== document.archiveExpectedBytes) {
+    throw new Error(`${document.id}: WARP応答のバイト数が検証済み値と一致しません (${source.bytes}/${document.archiveExpectedBytes})`);
+  }
+  if (source.sha256 !== document.archiveExpectedSha256) {
+    throw new Error(`${document.id}: WARP応答のSHA-256が検証済み値と一致しません`);
+  }
+}
+
+function assertArchiveRecordCount(document, records) {
+  if (!isVerifiedArchiveDocument(document)) return;
+  if (records.length !== document.archiveExpectedRecordCount) {
+    throw new Error(`${document.id}: WARP明細数が検証済み値と一致しません (${records.length}/${document.archiveExpectedRecordCount})`);
+  }
 }
 
 async function fetchDocument(document, fetchImpl) {
@@ -369,42 +548,142 @@ async function fetchDocument(document, fetchImpl) {
     const buffer = await readFile(new URL(`${document.id}.${document.format === "html" ? "html" : "xlsx"}`, directoryUrl));
     return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
   }
+  const attempts = isArchivedDocument(document) ? 1 : LIVE_FETCH_ATTEMPTS;
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetchDocumentOnce(document, fetchImpl);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableFetchError(error)) throw error;
+      if (attempt === attempts) throw markFallbackEligible(error);
+      await delay(LIVE_FETCH_BACKOFF_MS[attempt - 1]);
+    }
+  }
+  throw lastError;
+}
+
+async function fetchDocumentOnce(document, fetchImpl) {
   if (!fetchImpl) {
-    const { stdout } = await execFileAsync("curl", [
-      "--fail-with-body", "--silent", "--show-error", "--max-time", "30", "--proto", "=https",
-      "--user-agent", FETCH_HEADERS["user-agent"], "--referer", document.sourcePageUrl, document.url,
-    ], { encoding: "buffer", maxBuffer: 12_000_000 });
-    const buffer = Buffer.from(stdout);
-    if (buffer.length < 500 || buffer.length > 10_000_000) {
+    let stdout;
+    try {
+      ({ stdout } = await execFileAsync("curl", [
+        "--silent", "--show-error", "--max-time", "30", "--proto", "=https",
+        "--write-out", "\n%{http_code}",
+        "--user-agent", FETCH_HEADERS["user-agent"], "--referer", document.sourcePageUrl, document.url,
+      ], { encoding: "buffer", maxBuffer: 12_000_000 }));
+    } catch (error) {
+      if (isTransientCurlError(error)) throw markRetryable(error);
+      throw error;
+    }
+    const separator = stdout.lastIndexOf(0x0a);
+    const statusRaw = separator >= 0 ? stdout.subarray(separator + 1).toString("ascii") : "";
+    if (!/^\d{3}$/.test(statusRaw)) throw markRetryable(new Error(`${document.id}: HTTPステータスを取得できません`));
+    const status = Number(statusRaw);
+    const buffer = Buffer.from(stdout.subarray(0, separator));
+    if (status >= 300 && status < 400) {
+      throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${status}`);
+    }
+    if (status < 200 || status >= 300) {
+      const error = new Error(`${document.id}: HTTP ${status}`);
+      if (status === 408 || status === 429 || status >= 500) throw markRetryable(error);
+      throw error;
+    }
+    if (buffer.length < 500) {
+      throw markRetryable(new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`));
+    }
+    if (buffer.length > 10_000_000) {
       throw new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`);
     }
     return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
-  let response;
   try {
-    response = await fetchImpl(document.url, {
-      headers: { ...FETCH_HEADERS, referer: document.sourcePageUrl },
-      redirect: "manual",
-      signal: controller.signal,
-    });
+    let response;
+    try {
+      response = await fetchImpl(document.url, {
+        headers: { ...FETCH_HEADERS, referer: document.sourcePageUrl },
+        redirect: "manual",
+        signal: controller.signal,
+      });
+    } catch (error) {
+      throw markRetryable(error);
+    }
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${response.status}`);
+    }
+    if (!response.ok) {
+      const error = new Error(`${document.id}: HTTP ${response.status}`);
+      if (response.status === 408 || response.status === 429 || response.status >= 500) throw markRetryable(error);
+      throw error;
+    }
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > 10_000_000) {
+      throw new Error(`${document.id}: ファイルが上限を超えています`);
+    }
+    let buffer;
+    try {
+      buffer = Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      throw markRetryable(error);
+    }
+    if (buffer.length < 500) {
+      throw markRetryable(new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`));
+    }
+    if (buffer.length > 10_000_000) {
+      throw new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`);
+    }
+    return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
   } finally {
     clearTimeout(timeout);
   }
-  if (response.status >= 300 && response.status < 400) {
-    throw new Error(`${document.id}: 予期しないHTTPリダイレクト ${response.status}`);
+}
+
+function isTransientCurlError(error) {
+  const exitCode = Number(error?.code);
+  return new Set([5, 6, 7, 18, 28, 52, 55, 56, 92]).has(exitCode);
+}
+
+function isArchivedDocument(document) {
+  return Boolean(document.archiveProvider || document.url.startsWith("https://warp.ndl.go.jp/"));
+}
+
+function markRetryable(error) {
+  const candidate = error instanceof Error ? error : new Error("公式資料の取得に失敗しました");
+  if (!Object.hasOwn(candidate, "officialFetchRetryable")) {
+    Object.defineProperty(candidate, "officialFetchRetryable", { value: true });
   }
-  if (!response.ok) throw new Error(`${document.id}: HTTP ${response.status}`);
-  const contentLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > 10_000_000) {
-    throw new Error(`${document.id}: ファイルが上限を超えています`);
+  if (!Object.hasOwn(candidate, "officialFallbackEligible")) {
+    Object.defineProperty(candidate, "officialFallbackEligible", { value: true });
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length < 500 || buffer.length > 10_000_000) {
-    throw new Error(`${document.id}: ファイルサイズが不正です (${buffer.length})`);
+  return candidate;
+}
+
+function markFallbackEligible(error) {
+  const candidate = error instanceof Error ? error : new Error("公式資料の取得に失敗しました");
+  if (!Object.hasOwn(candidate, "officialFallbackEligible")) {
+    Object.defineProperty(candidate, "officialFallbackEligible", { value: true });
   }
-  return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
+  return candidate;
+}
+
+function isRetryableFetchError(error) {
+  return Boolean(error?.officialFetchRetryable);
+}
+
+function isFallbackEligibleFetchError(error) {
+  return Boolean(error?.officialFallbackEligible);
+}
+
+function fetchFailureReasonCode(error) {
+  if (/\(0\)$/.test(error?.message ?? "")) return "empty_response";
+  if (/HTTP (?:408|429|5\d\d)$/.test(error?.message ?? "")) return "transient_http";
+  return "fetch_failed";
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 const DEFAULT_HEADER_ALIASES = {
@@ -466,10 +745,17 @@ function parseGrantRows(worksheet, header, document) {
     const organization = valueAt(row, header.columns, "交付先名");
     if (normalizeHeader(program) === "事業名" && normalizeHeader(organization) === "交付先名") continue;
     if (document.emptySentinel && normalizeText(program) === document.emptySentinel) {
+      const sentinelValues = officialRowValues(row).map(normalizeText).filter(Boolean);
+      if (emptySentinelFound || !sentinelValues.length || sentinelValues.some((value) => value !== document.emptySentinel)) {
+        throw new Error(`${document.id}/${worksheet.name}/${rowNumber}行目: 0件表記の行に想定外の値があります`);
+      }
       emptySentinelFound = true;
       continue;
     }
-    if (!program || !organization) continue;
+    const rowValues = officialRowValues(row);
+    if (rowValues.every((value) => !normalizeText(value))) continue;
+    if (isKnownOfficialTableFootnote(rowValues, { program, organization, dateRaw: valueAt(row, header.columns, "交付決定日") })) continue;
+    assertRequiredOfficialRowValues({ document, worksheet, rowNumber, program, organization, dateRaw: valueAt(row, header.columns, "交付決定日") });
     records.push(makeRecord({
       document,
       worksheet,
@@ -482,6 +768,9 @@ function parseGrantRows(worksheet, header, document) {
       method: "補助金等の交付決定",
       notes: [valueAt(row, header.columns, "支出元会計区分"), valueAt(row, header.columns, "支出元目名称")].filter(Boolean).join("／"),
     }));
+  }
+  if (emptySentinelFound && records.length) {
+    throw new Error(`${document.id}/${worksheet.name}: 0件表記と交付決定明細が混在しています`);
   }
   return { records, emptySentinelFound };
 }
@@ -497,7 +786,10 @@ function parseContractRows(worksheet, header, document) {
       normalizeHeader(organization) === "契約の相手方の商号又は名称"
       && normalizeHeader(dateRaw) === "契約を締結した日"
     ) continue;
-    if (!program || !organization) continue;
+    const rowValues = officialRowValues(row);
+    if (rowValues.every((value) => !normalizeText(value))) continue;
+    if (isKnownOfficialTableFootnote(rowValues, { program, organization, dateRaw })) continue;
+    assertRequiredOfficialRowValues({ document, worksheet, rowNumber, program, organization, dateRaw });
     records.push(makeRecord({
       document,
       worksheet,
@@ -523,6 +815,10 @@ function makeRecord({ document, worksheet, rowNumber, program, organization, cor
   const corporateNumber = normalizeCorporateNumber(corporateNumberRaw);
   const amount = parseAmount(amountRaw);
   const date = parseDate(dateRaw);
+  if (!date) throw new Error(`${document.id}/${worksheet.name}/${rowNumber}行目: 日付を解釈できません: ${normalizeText(dateRaw) || "(空)"}`);
+  if (fiscalYearOfDate(date) !== document.fiscalYear) {
+    throw new Error(`${document.id}/${worksheet.name}/${rowNumber}行目: 日付が資料年度外です: ${normalizeText(dateRaw)}`);
+  }
   return {
     id: `official-${sha256(sourceKey).slice(0, 20)}`,
     sourceKey,
@@ -551,6 +847,27 @@ function makeRecord({ document, worksheet, rowNumber, program, organization, cor
     sourceSheet: worksheet.name,
     sourceRowNumber: rowNumber,
   };
+}
+
+function assertRequiredOfficialRowValues({ document, worksheet, rowNumber, program, organization, dateRaw }) {
+  for (const [field, value] of [["program", program], ["organization", organization], ["date", dateRaw]]) {
+    if (!normalizeText(value)) {
+      throw new Error(`${document.id}/${worksheet.name}/${rowNumber}行目: 必須値${field}が空です`);
+    }
+  }
+}
+
+function isKnownOfficialTableFootnote(rowValues, { program, organization, dateRaw }) {
+  if (normalizeText(organization) || normalizeText(dateRaw)) return false;
+  const nonempty = rowValues.map(normalizeText).filter(Boolean);
+  return nonempty.length === 1 && normalizeText(program) === nonempty[0]
+    && /^※公益法人の区分において、/.test(nonempty[0]);
+}
+
+function officialRowValues(row) {
+  const values = [];
+  row.eachCell((cell) => values.push(cellToString(cell.value)));
+  return values;
 }
 
 function normalizeSmeaRecord(record, document) {
@@ -657,6 +974,11 @@ function validDate(year, month, day) {
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function fiscalYearOfDate(date) {
+  const year = Number(date.slice(0, 4));
+  return Number(date.slice(5, 7)) >= 4 ? year : year - 1;
+}
+
 function formatDate(date) {
   return validDate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 }
@@ -741,18 +1063,45 @@ async function readJsonIfExists(url, fallback) {
 
 async function readPreviousOfficialState() {
   const manifest = await readJsonIfExists(new URL("manifest.json", DATA_DIRECTORY), null);
-  if (!manifest?.files || typeof manifest.files !== "object") return { records: [], sourceDocumentIds: [] };
-  const records = (await Promise.all(Object.values(manifest.files).map((filename) => {
-    if (!/^records-\d{4}\.json$/.test(filename)) {
+  if (!manifest?.files || typeof manifest.files !== "object") return { records: [], sourceDocumentIds: [], sourceDocuments: [] };
+  const publicFiles = manifest.publicFiles ?? {};
+  const yearEntries = Object.entries(manifest.files);
+  const yearRecords = await Promise.all(yearEntries.map(async ([year, filename]) => {
+    if (!/^\d{4}$/.test(year) || filename !== `records-${year}.json`) {
       throw new Error(`前回の公式資料manifestに許可されていないファイルがあります: ${filename}`);
     }
-    return readJsonIfExists(new URL(filename, DATA_DIRECTORY), []);
-  }))).flat();
-  const sourceDocumentIds = (manifest.sourceDocuments ?? []).map((source) => source?.id);
+    const descriptor = publicFiles[year];
+    if (!descriptor || descriptor.filename !== filename
+      || !Number.isSafeInteger(descriptor.bytes) || descriptor.bytes < 2
+      || !Number.isSafeInteger(descriptor.records) || descriptor.records < 0
+      || typeof descriptor.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(descriptor.sha256)) {
+      throw new Error(`前回の公式資料manifestの${year}年度ファイルreceiptが不正です`);
+    }
+    const text = await readFile(new URL(filename, DATA_DIRECTORY), "utf8");
+    if (Buffer.byteLength(text) !== descriptor.bytes || sha256(text) !== descriptor.sha256) {
+      throw new Error(`前回の公式資料${filename}のバイト数またはSHA-256がmanifestと一致しません`);
+    }
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed) || parsed.length !== descriptor.records) {
+      throw new Error(`前回の公式資料${filename}の明細数がmanifestと一致しません`);
+    }
+    if (parsed.some((record) => record.fiscalYear !== Number(year))) {
+      throw new Error(`前回の公式資料${filename}に年度外の明細があります`);
+    }
+    return parsed;
+  }));
+  const records = yearRecords.flat();
+  if (!Number.isSafeInteger(manifest.recordCount) || manifest.recordCount !== records.length
+    || Object.keys(publicFiles).length !== yearEntries.length
+    || Object.values(publicFiles).reduce((sum, item) => sum + item.records, 0) !== records.length) {
+    throw new Error("前回の公式資料manifestの総明細数またはファイル集合が一致しません");
+  }
+  const sourceDocuments = manifest.sourceDocuments ?? [];
+  const sourceDocumentIds = sourceDocuments.map((source) => source?.id);
   if (sourceDocumentIds.some((id) => typeof id !== "string" || !id) || new Set(sourceDocumentIds).size !== sourceDocumentIds.length) {
     throw new Error("前回の公式資料manifestに不正または重複した資料IDがあります");
   }
-  return { records, sourceDocumentIds };
+  return { records, sourceDocumentIds, sourceDocuments };
 }
 
 function coverageStatus(documents, category) {

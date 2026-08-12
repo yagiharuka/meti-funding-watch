@@ -22,27 +22,51 @@ type SourceFailure = {
   reasonCode: "empty_response" | "fetch_failed" | "parse_failed";
 };
 
+type FallbackFailureReason = SourceFailure["reasonCode"] | "transient_http";
+
+type SourceDocument = (typeof manifest.sourceDocuments)[number] & {
+  primaryUrl?: string;
+  transportUrl?: string;
+  fallbackUsed?: boolean;
+  carryForwardUsed?: boolean;
+  primaryFailureReasonCode?: FallbackFailureReason | null;
+  lastSuccessfulRetrievedAt?: string | null;
+  attemptedAt?: string | null;
+};
+
 export default function OfficialSourcesPage() {
   const coverage = manifest.coverage as typeof manifest.coverage & {
     fiscalYears?: number[];
     sourceDocumentCount?: number;
     attemptedSourceDocumentCount?: number;
     failedSourceDocumentCount?: number;
+    fallbackSourceDocumentCount?: number;
+    carryForwardSourceDocumentCount?: number;
   };
   const sourceFailures = ((manifest as typeof manifest & { sourceFailures?: SourceFailure[] }).sourceFailures ?? []);
+  const sourceDocuments = manifest.sourceDocuments as SourceDocument[];
+  const fallbackSources = sourceDocuments.filter((source) => source.fallbackUsed);
+  const carryForwardSources = sourceDocuments.filter((source) => source.carryForwardUsed);
   const smeaRecordCount = manifest.coverage.executors.smea.contractResults.records + manifest.coverage.executors.smea.grantDecisions.records;
   const jpoRecordCount = manifest.coverage.executors.jpo.contractResults.records + manifest.coverage.executors.jpo.grantDecisions.records;
   const years = coverage.fiscalYears ?? [...new Set(Object.values(manifest.coverage.executors).flatMap((item) => item.fiscalYears))].sort();
   const yearList = `${years.join("・")}年度`;
   const attemptedYears = [...new Set([
-    ...manifest.sourceDocuments.map((source) => source.fiscalYear),
+    ...sourceDocuments.map((source) => source.fiscalYear),
     ...sourceFailures.map((failure) => failure.fiscalYear),
   ])].sort();
   const missingYears = attemptedYears.filter((year) => !years.includes(year));
   const attemptedSourceCount = coverage.attemptedSourceDocumentCount
-    ?? (coverage.sourceDocumentCount ?? manifest.sourceDocuments.length) + sourceFailures.length;
-  const verifiedSourceCount = coverage.sourceDocumentCount ?? manifest.sourceDocuments.length;
+    ?? (coverage.sourceDocumentCount ?? sourceDocuments.length) + sourceFailures.length;
+  const verifiedSourceCount = coverage.sourceDocumentCount ?? sourceDocuments.length;
   const failedSourceCount = coverage.failedSourceDocumentCount ?? sourceFailures.length;
+  const fallbackSourceCount = coverage.fallbackSourceDocumentCount ?? fallbackSources.length;
+  const carryForwardSourceCount = coverage.carryForwardSourceDocumentCount ?? carryForwardSources.length;
+  if (fallbackSourceCount !== fallbackSources.length) throw new Error("公式資料manifestのWARP代替取得件数が一致しません");
+  if (carryForwardSourceCount !== carryForwardSources.length) throw new Error("公式資料manifestの前回明細継続件数が一致しません");
+  if (sourceDocuments.some((source) => source.fallbackUsed && source.carryForwardUsed)) throw new Error("公式資料manifestの代替取得状態が重複しています");
+  const currentVerifiedSourceCount = verifiedSourceCount - carryForwardSourceCount;
+  if (currentVerifiedSourceCount < 0) throw new Error("公式資料manifestの今回検証件数が不正です");
   return (
     <main>
       <header className="topbar">
@@ -68,9 +92,10 @@ export default function OfficialSourcesPage() {
       </section>
 
       <aside className="official-ingestion-summary" aria-labelledby="official-ingestion-title">
-        <strong id="official-ingestion-title">部分収録：候補URL {attemptedSourceCount}件のうち、資料を取得・検証できたもの {verifiedSourceCount}件</strong>
+        <strong id="official-ingestion-title">部分収録：候補URL {attemptedSourceCount}件のうち、検索に使用する資料 {verifiedSourceCount}件</strong>
         <span>
-          未取得候補 {failedSourceCount}件／全年度・全区分を完全照合済み {registry.collectionStatus.fullyReconciledCells}/{registry.collectionStatus.registeredEndpoints}系列。
+          今回取得・検証 {currentVerifiedSourceCount}件／前回検証済み明細を継続 {carryForwardSourceCount}件／未取得候補 {failedSourceCount}件／全年度・全区分を完全照合済み {registry.collectionStatus.fullyReconciledCells}/{registry.collectionStatus.registeredEndpoints}系列。
+          {fallbackSourceCount > 0 && ` ライブ取得に失敗し、前回公開明細との完全一致を検証したWARP保存資料を使用 ${fallbackSourceCount}件。`}
           {missingYears.length > 0 && `${missingYears.join("・")}年度の検索明細は現在ありません。`}
         </span>
         <small>日次更新は登録済みURLを再取得します。新年度・新URL・新機関は自動発見せず、確認・検証後に追加します。</small>
@@ -116,6 +141,34 @@ export default function OfficialSourcesPage() {
                   </li>
                 );
               })}
+            </ul>
+          </details>
+        )}
+        {fallbackSources.length > 0 && (
+          <details className="official-source-failures">
+            <summary>ライブ取得失敗後に検証済みWARP保存資料を使用：{fallbackSources.length}件</summary>
+            <p>ライブURLは日次更新で再試行します。WARP保存資料は、取得バイト・SHA-256・明細数と、前回公開した全明細の内容・識別子が一致した場合だけ使用します。</p>
+            <ul>
+              {fallbackSources.map((source) => (
+                <li key={source.id}>
+                  <a href={source.primaryUrl ?? source.originalUrl} target="_blank" rel="noreferrer">{source.executorId === "smea" ? "中小企業庁" : source.executorId}・{source.fiscalYear}年度・{source.kind}（ライブURL）↗</a>
+                  <span>{fallbackFailureLabel(source.primaryFailureReasonCode)}／WARP保存資料で明細を維持</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        {carryForwardSources.length > 0 && (
+          <details className="official-source-failures">
+            <summary>ライブ取得失敗後に前回検証済み明細を継続使用：{carryForwardSources.length}件</summary>
+            <p>今回のライブ取得は完了していません。前回公開manifestと明細ファイルのハッシュ・行数、資料ID・原本URL・資料別明細数を再検証し、前回の明細を変更せず掲載しています。新しい内容を取得済みとは扱いません。</p>
+            <ul>
+              {carryForwardSources.map((source) => (
+                <li key={source.id}>
+                  <a href={source.primaryUrl ?? source.originalUrl} target="_blank" rel="noreferrer">{source.executorId === "smea" ? "中小企業庁" : source.executorId}・{source.fiscalYear}年度・{source.kind}（ライブURL）↗</a>
+                  <span>{fallbackFailureLabel(source.primaryFailureReasonCode)}／最終正常取得 {formatJapaneseTimestamp(source.lastSuccessfulRetrievedAt)}／前回明細を継続</span>
+                </li>
+              ))}
             </ul>
           </details>
         )}
@@ -167,4 +220,22 @@ function sourceFailureLabel(reason: SourceFailure["reasonCode"]) {
   if (reason === "empty_response") return "0バイト応答のため未収録";
   if (reason === "parse_failed") return "形式を検証できないため未収録";
   return "取得できないため未収録";
+}
+
+function fallbackFailureLabel(reason: FallbackFailureReason | null | undefined) {
+  if (reason === "empty_response") return "ライブURLが0バイト応答";
+  if (reason === "transient_http") return "ライブURLが一時的なHTTPエラー";
+  return "ライブURLの取得に失敗";
+}
+
+function formatJapaneseTimestamp(value: string | null | undefined) {
+  if (!value || Number.isNaN(Date.parse(value))) return "日時不明";
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
