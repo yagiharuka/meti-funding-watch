@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "経産省関係の調達（委託を含む）・補助金情報",
-  description: "GビズINFOに掲載された経済産業省関係の調達（委託を含む）・補助金情報を検索する非公式サイトです。全支出・実支払を示すものではありません。",
+  description: "GビズINFO掲載行と、経済産業省本省・外局・地方経済産業局等13機関の公開済み契約結果・補助金等交付決定の一部を、系列を分けて検索する非公式サイトです。全年度・全公表区分・実支払を網羅しません。",
   other: {
     "codex-preview": "development",
   },

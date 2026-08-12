@@ -130,6 +130,11 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.match(publicIndex, /<title>経産省関係の調達（委託を含む）・補助金情報/);
   assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
   assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\/title>/);
+  assert.match(publicIndex, /GビズINFO掲載行と、経済産業省本省・外局・地方経済産業局等13機関/);
+  assert.match(publicIndex, /系列を分けて検索する非公式サイト/);
+  assert.match(officialIndex, /13機関の公開済み契約結果・補助金等交付決定の一部/);
+  assert.match(publicIndex, /全年度・全公表区分・実支払を網羅しません/);
+  assert.match(officialIndex, /全年度・全公表区分・実支払を網羅しません/);
   assert.notEqual(
     publicIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
     adoptionIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],

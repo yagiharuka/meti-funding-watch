@@ -7,6 +7,10 @@ const fundingWorkerSource = await readFile(new URL("../app/funding-search.worker
 const adoptionSource = await readFile(new URL("../app/adoptions/AdoptionSearch.tsx", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const pageHtml = await readFile(new URL("../pages-site/index.html", import.meta.url), "utf8");
+const officialPageHtml = await readFile(new URL("../pages-site/official/index.html", import.meta.url), "utf8");
+const layoutSource = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
+const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 
 test("resets hidden agency state whenever the fiscal year changes", () => {
   const changeYear = pageSource.match(/function changeYear\(nextYear: string\) \{([\s\S]*?)\n  \}/)?.[1] ?? "";
@@ -21,6 +25,22 @@ test("describes Gbiz results as published rows and uses the official category wo
   assert.match(pageSource, /調達（委託を含む）・補助金/);
   assert.doesNotMatch(pageSource, /<strong>\{searchTotal\.toLocaleString\("ja-JP"\)\}<\/strong>件/);
   assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報(?:（GビズINFO）)?<\/title>/);
+});
+
+test("describes the two search series separately without claiming complete coverage", () => {
+  for (const source of [layoutSource, pageHtml]) {
+    assert.match(source, /GビズINFO掲載行/);
+    assert.match(source, /13機関/);
+    assert.match(source, /系列を分けて検索/);
+    assert.match(source, /全年度・全公表区分・実支払を網羅しません/);
+  }
+  for (const source of [officialPageSource, officialPageHtml]) {
+    assert.match(source, /13機関の公開済み契約結果・補助金等交付決定の一部/);
+    assert.match(source, /全年度・全公表区分・実支払を網羅しません/);
+  }
+  assert.match(readme, /意味の異なる次の2系列を混ぜずに検索/);
+  assert.match(readme, /26の機関×系列のうち25系列/);
+  assert.match(readme, /契約額欄、交付決定額欄、GビズINFO掲載値は意味が異なる/);
 });
 
 test("uses non-authoritative freshness wording", () => {
