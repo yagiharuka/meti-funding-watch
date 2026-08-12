@@ -227,7 +227,7 @@ test("reuses only first-page headers when a pinned multipage schema explicitly r
   );
 });
 
-test("registers Tohoku and the eight official-index Kanto FY2025 grant PDFs without overstating coverage", () => {
+test("registers Tohoku and eight verified archived Kanto FY2025 grant PDFs without overstating coverage", () => {
   assert.equal(REGIONAL_PDF_DOCUMENTS.length, 10);
   const h1 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h1");
   const h2 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h2");
