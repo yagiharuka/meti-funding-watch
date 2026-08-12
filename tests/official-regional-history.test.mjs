@@ -23,10 +23,10 @@ test("registers only explicit official-index documents for the three structured 
   assert.equal(HOKKAIDO_DOCUMENTS.length, 21);
   assert.equal(SHIKOKU_DOCUMENTS.length, 84);
   assert.equal(REGIONAL_DOCUMENTS.length, 146);
-  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 18);
-  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 128);
-  assert.equal(REGIONAL_EVIDENCE_RECEIPTS.length, 18);
-  assert.equal(REGIONAL_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 388);
+  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 20);
+  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 126);
+  assert.equal(REGIONAL_EVIDENCE_RECEIPTS.length, 20);
+  assert.equal(REGIONAL_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 554);
   assert.equal(new Set(REGIONAL_DOCUMENTS.map((document) => document.id)).size, REGIONAL_DOCUMENTS.length);
   assert.deepEqual(
     [...REGIONAL_OFFICIAL_DOCUMENTS.map((document) => document.id)].sort(),
@@ -63,7 +63,7 @@ test("binds every production regional source to one complete evidence receipt", 
   }
 });
 
-test("replays all 18 exact evidence responses through their strict parser", {
+test("replays all 20 exact evidence responses through their strict parser", {
   skip: !process.env.REGIONAL_EVIDENCE_DIRECTORY,
 }, async () => {
   const receiptById = new Map(REGIONAL_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
@@ -85,9 +85,9 @@ test("replays all 18 exact evidence responses through their strict parser", {
     return new Response(buffer, { status: 200, headers: { "content-length": String(buffer.length) } });
   });
   assert.deepEqual(result.sourceFailures, []);
-  assert.equal(result.fetched.length, 18);
+  assert.equal(result.fetched.length, 20);
   const rows = result.fetched.flatMap((item) => item.records);
-  assert.equal(rows.length, 388);
+  assert.equal(rows.length, 554);
   assert.ok(rows.every((row) => row.sourceKey && row.id && row.sourcePageUrl && row.sourceDocumentUrl));
   assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
 });

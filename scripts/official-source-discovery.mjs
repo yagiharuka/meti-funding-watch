@@ -1,6 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import registry from "../data/official-source-registry.json" with { type: "json" };
+import { CHUBU_CONTRACT_DOCUMENTS, CHUBU_GRANT_DOCUMENTS } from "./official-chubu-sources.mjs";
+import {
+  KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
+  KANSAI_KYUSHU_GRANT_DOCUMENTS,
+} from "./official-kansai-kyushu-sources.mjs";
 import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
 import { METI_ANRE_CANDIDATE_DOCUMENTS } from "./official-meti-anre-history.mjs";
 import { REGIONAL_DOCUMENTS } from "./official-regional-history.mjs";
@@ -21,6 +26,10 @@ export function knownOfficialUrls() {
     ...METI_ANRE_CANDIDATE_DOCUMENTS,
     ...REGIONAL_DOCUMENTS,
     ...REGIONAL_PDF_DOCUMENTS,
+    ...CHUBU_GRANT_DOCUMENTS,
+    ...CHUBU_CONTRACT_DOCUMENTS,
+    ...KANSAI_KYUSHU_GRANT_DOCUMENTS,
+    ...KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
   ];
   for (const executor of registry.executors) {
     addUrl(values, executor.contracts);

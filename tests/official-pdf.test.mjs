@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { PDFDocument, StandardFonts } from "pdf-lib";
@@ -99,6 +100,89 @@ test("supports the same coordinate table for contracts without mixing amount sta
   assert.ok(records.every((record) => record.amountStage.includes("契約")));
   assert.ok(records.every((record) => !("gbiz" in record)));
   assert.ok(records.every((record) => record.method === "競争入札（委託費）"));
+});
+
+test("anchors unnumbered contract rows only to strict dates in the pinned date column", async () => {
+  const buffer = await makeFixturePdf();
+  const records = await parseOfficialPdf(buffer, fixtureDocument({
+    category: "contract_result",
+    kind: "競争入札（委託費）",
+    amountStage: "契約金額欄の掲載値",
+    pdfSchema: {
+      recordGranularity: "date_anchor_rows",
+      recordMapping: {
+        programColumn: "program",
+        organizationColumn: "organization",
+        corporateNumberColumn: "corporateNumber",
+        amountColumn: "amount",
+        dateColumn: "date",
+        notesColumns: ["account", "budgetItem"],
+      },
+    },
+  }));
+  assert.deepEqual(records.map((record) => record.sourceRowNumber), [1, 2]);
+  assert.deepEqual(records.map((record) => record.sourceKey), [
+    "regional-pdf-fixture:no-1",
+    "regional-pdf-fixture:no-2",
+  ]);
+  assert.deepEqual(records.map((record) => record.date), ["2025-10-03", "2026-01-20"]);
+});
+
+test("splits one printed ordinal into strictly aligned recipient amount records", async () => {
+  const buffer = await makeFixturePdf({ alignedAmounts: true });
+  const document = fixtureDocument({ pdfSchema: {
+    expectedRowsPerPage: [3],
+    expectedRecordCount: 3,
+    recordGranularity: "aligned_amount_rows",
+    expectedSplitOrdinalFragments: [],
+    expectedPartyCountsByOrdinal: { 1: 2 },
+    expectedMissingCorporateNumberCount: 1,
+    rowBoundaryOverrides: [],
+  } });
+  const records = await parseOfficialPdf(buffer, document);
+  assert.deepEqual(records.map((record) => record.sourceKey), [
+    "regional-pdf-fixture:no-1:recipient-1",
+    "regional-pdf-fixture:no-1:recipient-2",
+    "regional-pdf-fixture:no-2:recipient-1",
+  ]);
+  assert.deepEqual(records.map((record) => record.organization), ["Org Alpha", "Org Beta", "Municipality"]);
+  assert.deepEqual(records.map((record) => record.amount), [1_234_567, 2_345_678, 0]);
+  assert.deepEqual(records.map((record) => record.date), ["2025-10-03", "2025-10-04", "2026-01-20"]);
+  await assert.rejects(
+    parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: {
+      expectedRowsPerPage: [3],
+      expectedRecordCount: 3,
+      recordGranularity: "aligned_amount_rows",
+      expectedSplitOrdinalFragments: [],
+      expectedPartyCountsByOrdinal: { 1: 3 },
+      expectedMissingCorporateNumberCount: 1,
+      rowBoundaryOverrides: [],
+    } })),
+    /交付先別金額行数が検証済み値と一致しません/,
+  );
+});
+
+test("can anchor unnumbered contract rows by exact positioned dates and preserve the published method", async () => {
+  const buffer = await makeFixturePdf({ omitOrdinals: true });
+  const records = await parseOfficialPdf(buffer, fixtureDocument({
+    category: "contract_result",
+    kind: "競争入札（委託費）",
+    amountStage: "契約額欄の掲載値",
+    pdfSchema: {
+      rowAnchorMode: "date",
+      recordMapping: {
+        programColumn: "program",
+        organizationColumn: "organization",
+        corporateNumberColumn: "corporateNumber",
+        amountColumn: "amount",
+        dateColumn: "date",
+        methodColumn: "account",
+        notesColumns: ["budgetItem"],
+      },
+    },
+  }));
+  assert.deepEqual(records.map((record) => record.sourceRowNumber), [1, 2]);
+  assert.ok(records.every((record) => record.method === "General"));
 });
 
 test("splits a pinned amount/account text item only across the declared coordinate boundary", async () => {
@@ -227,8 +311,8 @@ test("reuses only first-page headers when a pinned multipage schema explicitly r
   );
 });
 
-test("registers Tohoku and eight verified archived Kanto FY2025 grant PDFs without overstating coverage", () => {
-  assert.equal(REGIONAL_PDF_DOCUMENTS.length, 10);
+test("registers Tohoku and verified archived Kanto FY2025 PDFs without overstating coverage", () => {
+  assert.equal(REGIONAL_PDF_DOCUMENTS.length, 15);
   const h1 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h1");
   const h2 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h2");
   assert.ok(h1);
@@ -251,13 +335,23 @@ test("registers Tohoku and eight verified archived Kanto FY2025 grant PDFs witho
   assert.deepEqual(h2.pdfSchema.expectedRowNumbers, { start: 1, end: 26 });
   assert.match(h2.coverageClaim, /26行/);
   const kanto = REGIONAL_PDF_DOCUMENTS.filter((source) => source.executorId === "kanto");
-  assert.equal(kanto.length, 8);
-  assert.equal(kanto.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 284);
-  assert.equal(kanto.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 21);
+  const kantoGrants = kanto.filter((source) => source.category === "grant_decision");
+  const kantoContracts = kanto.filter((source) => source.category === "contract_result");
+  assert.equal(kanto.length, 12);
+  assert.equal(kantoGrants.length, 8);
+  assert.equal(kantoGrants.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 284);
+  assert.equal(kantoGrants.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 21);
+  assert.equal(kantoContracts.length, 4);
+  assert.equal(kantoContracts.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 87);
+  assert.equal(kantoContracts.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 7);
   assert.ok(kanto.every((source) => source.url.startsWith("https://warp.ndl.go.jp/20260613/20260601093442/https://www.kanto.meti.go.jp/")));
-  assert.ok(kanto.every((source) => source.originalUrl.startsWith("https://www.kanto.meti.go.jp/johokokai/data/7fy_")));
-  assert.ok(kanto.every((source) => source.sourcePageUrl === "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html"));
-  assert.ok(kanto.every((source) => source.amountStage === "交付決定額欄の掲載値"));
+  assert.ok(kantoGrants.every((source) => source.originalUrl.startsWith("https://www.kanto.meti.go.jp/johokokai/data/7fy_")));
+  assert.ok(kantoGrants.every((source) => source.sourcePageUrl === "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html"));
+  assert.ok(kantoGrants.every((source) => source.amountStage === "交付決定額欄の掲載値"));
+  assert.ok(kantoContracts.every((source) => source.originalUrl.startsWith("https://www.kanto.meti.go.jp/chotatsu/chotatsu/data/7fy_")));
+  assert.ok(kantoContracts.every((source) => source.sourcePageUrl === "https://www.kanto.meti.go.jp/chotatsu/chotatsu/index_keiyaku.html"));
+  assert.ok(kantoContracts.every((source) => source.amountStage === "契約金額欄の掲載値"));
+  assert.ok(kantoContracts.every((source) => source.pdfSchema.recordGranularity === "date_anchor_rows"));
   assert.ok(kanto.every((source) => source.pdfSchema.normalizeCompatibilityText === true));
   assert.ok(kanto.every((source) => source.archiveExpectedBytes === source.pdfSchema.expectedBytes));
   assert.ok(kanto.every((source) => source.archiveExpectedSha256 === source.pdfSchema.expectedSha256));
@@ -265,9 +359,62 @@ test("registers Tohoku and eight verified archived Kanto FY2025 grant PDFs witho
   assert.ok(kanto.every((source) => source.discoveryStatus === "archived_official_file"));
   assert.ok(kanto.every((source) => source.discoveryReceipt === undefined));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.missing.includes("2024年度以前")));
-  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.category === "contract_result" && gap.status === "not_ingested"));
+  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.category === "contract_result" && gap.status === "partial_verified_official_file"));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "grant_decision" && gap.missing.includes("目次全件性")));
-  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "contract_result" && gap.status === "not_ingested"));
+  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "contract_result" && gap.status === "verified_archived_official_files" && gap.missing.includes("令和4～6年度")));
+});
+
+test("replays the exact FY2025 Tohoku contract PDF through the production parser", async () => {
+  const document = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-competitive-commission-1");
+  assert.ok(document);
+  const buffer = await readFile(new URL("../evidence/tohoku-contracts/kyoso_itaku_1.pdf", import.meta.url));
+  const records = await parseOfficialPdf(buffer, document);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].date, "2025-04-01");
+  assert.equal(records[0].organization, "公益財団法人原子力安全研究協会");
+  assert.equal(records[0].amount, 8_690_000);
+  assert.equal(records[0].sourceDocumentUrl, document.originalUrl);
+});
+
+test("replays the four exact FY2025 Kanto contract PDFs through the production parser", async () => {
+  const contracts = REGIONAL_PDF_DOCUMENTS.filter((source) => source.id.startsWith("kanto-2025-contracts-"));
+  const observed = [];
+  for (const document of contracts) {
+    const filename = new URL(document.originalUrl).pathname.split("/").at(-1);
+    const buffer = await readFile(new URL(`../evidence/kanto-2025-contracts/${filename}`, import.meta.url));
+    const records = await parseOfficialPdf(buffer, document);
+    observed.push({
+      id: document.id,
+      pages: document.pdfSchema.expectedPageCount,
+      items: document.pdfSchema.expectedPositionedTextItemCount,
+      rows: records.length,
+    });
+  }
+  assert.deepEqual(observed, [
+    { id: "kanto-2025-contracts-competitive-goods-services", pages: 1, items: 291, rows: 17 },
+    { id: "kanto-2025-contracts-competitive-commission", pages: 1, items: 221, rows: 11 },
+    { id: "kanto-2025-contracts-discretionary-goods-services", pages: 1, items: 118, rows: 4 },
+    { id: "kanto-2025-contracts-discretionary-commission", pages: 4, items: 1207, rows: 55 },
+  ]);
+});
+
+test("binds the saved Kanto contract index inventory and PDF bytes to one reproducible receipt", async () => {
+  const evidenceRoot = new URL("../evidence/kanto-2025-contracts/", import.meta.url);
+  const receipt = JSON.parse(await readFile(new URL("receipt.json", evidenceRoot), "utf8"));
+  const index = await readFile(new URL(receipt.index.file, evidenceRoot));
+  assert.equal(index.length, receipt.index.bytes);
+  assert.equal(createHash("sha256").update(index).digest("hex"), receipt.index.sha256);
+  assert.equal(receipt.index.fiscalYear2025Hrefs.length, 4);
+  assert.equal(new Set(receipt.index.fiscalYear2025Hrefs).size, 4);
+  for (const item of receipt.documents) {
+    const bytes = await readFile(new URL(item.file, evidenceRoot));
+    assert.equal(bytes.length, item.bytes, item.id);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), item.sha256, item.id);
+    assert.equal(item.rowsPerPage.reduce((sum, count) => sum + count, 0), item.rows, item.id);
+  }
+  assert.deepEqual(receipt.totals, {
+    documents: 4, bytes: 818327, pages: 7, rows: 87, positionedTextItems: 1837,
+  });
 });
 
 async function makeFixturePdf(options = {}) {
@@ -294,7 +441,7 @@ async function makeFixturePdf(options = {}) {
   if (options.zeroSentinel) {
     draw(options.zeroSentinel, 80, 530, 10);
   } else {
-    draw("1", 30, 535);
+    if (!options.omitOrdinals) draw("1", 30, 535);
     draw("Long Program", 80, 552);
     draw("Name", 80, 532);
     draw("Org Alpha", 270, 552);
@@ -302,18 +449,33 @@ async function makeFixturePdf(options = {}) {
     const corporateNumbers = options.firstCorporateNumbers ?? ["1234567890123", "9876543210987"];
     if (options.sameLineCorporateNumbers) draw(corporateNumbers.join(" "), 425, 535, 7);
     else corporateNumbers.forEach((number, index) => draw(number, 425, 552 - index * 35, 7));
-    if (options.combineAmountAccount) draw(`${options.firstAmount ?? "1,234,567"} General`, 625, 535, 8);
+    if (options.alignedAmounts) {
+      draw(options.firstAmount ?? "1,234,567", 555, 552, 8);
+      draw("2,345,678", 555, 517, 8);
+      draw("General", 670, 552, 8);
+      draw("General", 670, 517, 8);
+      draw("Grant item", 760, 552, 8);
+      draw("Grant item", 760, 517, 8);
+      draw(options.firstDate ?? "2025/10/3", 850, 552, 8);
+      draw("2025/10/4", 850, 517, 8);
+      draw("N/A", 920, 552, 7);
+      draw("N/A", 920, 517, 7);
+      draw("N/A", 965, 552, 7);
+      draw("N/A", 965, 517, 7);
+    } else if (options.combineAmountAccount) draw(`${options.firstAmount ?? "1,234,567"} General`, 625, 535, 8);
     else {
       draw(options.firstAmount ?? "1,234,567", 555, 535, 8);
       draw("General", 670, 535, 8);
     }
-    draw("Grant item", 760, 535, 8);
-    draw(options.firstDate ?? "2025/10/3", 850, 535, 8);
-    draw("N/A", 920, 535, 7);
-    draw("N/A", 965, 535, 7);
+    if (!options.alignedAmounts) {
+      draw("Grant item", 760, 535, 8);
+      draw(options.firstDate ?? "2025/10/3", 850, 535, 8);
+      draw("N/A", 920, 535, 7);
+      draw("N/A", 965, 535, 7);
+    }
 
     if (!options.omitSecondRow) {
-      draw("2", 30, 395);
+      if (!options.omitOrdinals) draw("2", 30, 395);
       draw("Second Program", 80, 395, 9);
       draw("Municipality", 270, 395, 9);
       draw("NO ID", 425, 395, 9);

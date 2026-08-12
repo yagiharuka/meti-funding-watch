@@ -4,6 +4,11 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 
+import { CHUBU_CONTRACT_DOCUMENTS, CHUBU_GRANT_DOCUMENTS } from "../scripts/official-chubu-sources.mjs";
+import {
+  KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
+  KANSAI_KYUSHU_GRANT_DOCUMENTS,
+} from "../scripts/official-kansai-kyushu-sources.mjs";
 import {
   METI_ANRE_ARCHIVE_RECEIPTS,
   METI_ANRE_OFFICIAL_DOCUMENTS,
@@ -24,13 +29,17 @@ const evidenceDocuments = [
   ...METI_ANRE_OFFICIAL_DOCUMENTS,
   ...REGIONAL_OFFICIAL_DOCUMENTS,
   ...REGIONAL_PDF_DOCUMENTS,
+  ...CHUBU_GRANT_DOCUMENTS,
+  ...CHUBU_CONTRACT_DOCUMENTS,
+  ...KANSAI_KYUSHU_GRANT_DOCUMENTS,
+  ...KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
   ...OKINAWA_GRANT_DOCUMENTS,
 ];
 
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
 test("binds every receipted production document to one complete evidence receipt", () => {
-  assert.equal(evidenceDocuments.length, 130);
+  assert.equal(evidenceDocuments.length, 157);
   assert.ok(evidenceDocuments.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   for (const document of evidenceDocuments) {
     assert.deepEqual(Object.keys(document.evidenceReceipt).sort(), [
@@ -48,6 +57,46 @@ test("keeps the deterministic evidence override limited to receipted documents",
   );
   assert.match(updaterSource, /evidenceDirectory && document\.evidenceReceipt/);
   assert.match(updaterSource, /OFFICIAL_EVIDENCE_DIRECTORY/);
+  assert.match(updaterSource, /allowBootstrapEvidence && bootstrapEvidenceDirectory && document\.evidenceReceipt/);
+  assert.match(updaterSource, /OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY/);
+  const workflowSource = await (await import("node:fs/promises")).readFile(
+    new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8",
+  );
+  assert.match(workflowSource, /OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence\/official-bootstrap/);
+});
+
+test("uses committed bootstrap evidence only before a source has been published", async () => {
+  const document = REGIONAL_OFFICIAL_DOCUMENTS.find((source) => source.id === "chugoku-2025-grant-decisions-part-2");
+  assert.ok(document);
+  const previous = process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY;
+  process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY = new URL("../evidence/official-bootstrap", import.meta.url).pathname;
+  let networkCalls = 0;
+  try {
+    const firstRun = await fetchOfficialDocuments([document], [], async () => {
+      networkCalls += 1;
+      return new Response("network must not be used", { status: 500 });
+    });
+    assert.equal(networkCalls, 0);
+    assert.equal(firstRun.sourceFailures.length, 0);
+    assert.equal(firstRun.fetched[0].records.length, 11);
+
+    await assert.rejects(
+      fetchOfficialDocuments(
+        [document],
+        [],
+        async () => {
+          networkCalls += 1;
+          return new Response("missing", { status: 404 });
+        },
+        [document.id],
+      ),
+      /検証済み公式資料を再検証できませんでした/,
+    );
+    assert.equal(networkCalls, 1);
+  } finally {
+    if (previous === undefined) delete process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY;
+    else process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY = previous;
+  }
 });
 
 test("replays all 86 new METI and ANRE archive receipts through the production strict parser", { timeout: 30_000 }, async (t) => {
@@ -174,7 +223,7 @@ test("carries forward a published evidence source after repeated HTTP 202", asyn
   assert.equal(result.fetched[0].records.length, records.length);
 });
 
-test("publishes all 130 receipted sources with their exact audit tuple", () => {
+test("publishes all receipted sources with their exact audit tuple", () => {
   assert.equal(publishedManifest.coverage.attemptedSourceDocumentCount, OFFICIAL_DOCUMENTS.length);
   assert.equal(publishedManifest.coverage.sourceDocumentCount, OFFICIAL_DOCUMENTS.length);
   assert.equal(publishedManifest.coverage.failedSourceDocumentCount, 0);

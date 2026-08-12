@@ -62,6 +62,8 @@ jobs:
         id: official_refresh
         continue-on-error: true
         timeout-minutes: 20
+        env:
+          OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
         run: npm run update:official
 
       - name: Preserve last verified official detail data after a source failure

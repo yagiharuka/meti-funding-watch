@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-08-12",
+  "archiveProvider": "国立国会図書館インターネット資料収集保存事業（WARP）",
+  "archiveCapture": "20260613/20260601093442",
+  "sourcePageUrl": "https://www.kanto.meti.go.jp/chotatsu/chotatsu/index_keiyaku.html",
+  "archiveSourcePageUrl": "https://warp.ndl.go.jp/20260613/20260601093442/https://www.kanto.meti.go.jp/chotatsu/chotatsu/index_keiyaku.html",
+  "index": {
+    "file": "index.html",
+    "bytes": 13257,
+    "sha256": "df20f1093577671eec6aed307e53464b36205a2569047c77652146e8aefd65ff",
+    "originalLastModified": "2026-03-06T06:00:04Z",
+    "fiscalYear2025Hrefs": [
+      "/20260613/20260601093442/https://www.kanto.meti.go.jp/chotatsu/chotatsu/data/7fy_keiyakuteiketsu_kyoso_bupin.pdf",
+      "/20260613/20260601093442/https://www.kanto.meti.go.jp/chotatsu/chotatsu/data/7fy_keiyakuteiketsu_kyoso_itaku.pdf",
+      "/20260613/20260601093442/https://www.kanto.meti.go.jp/chotatsu/chotatsu/data/7fy_keiyakuteiketsu_zuii_bupin.pdf",
+      "/20260613/20260601093442/https://www.kanto.meti.go.jp/chotatsu/chotatsu/data/7fy_keiyakuteiketsu_zuii_itaku.pdf"
+    ]
+  },
+  "documents": [
+    {
+      "id": "kanto-2025-contracts-competitive-goods-services",
+      "file": "7fy_keiyakuteiketsu_kyoso_bupin.pdf",
+      "bytes": 179337,
+      "sha256": "6f6c98a2dbd517c3635963c39ba2b97a6b7e5e0f8f27c62c9b6dc03eba6c375c",
+      "pages": 1,
+      "rowsPerPage": [17],
+      "rows": 17,
+      "positionedTextItems": 291
+    },
+    {
+      "id": "kanto-2025-contracts-competitive-commission",
+      "file": "7fy_keiyakuteiketsu_kyoso_itaku.pdf",
+      "bytes": 162182,
+      "sha256": "c2b7a8199cb0fa9a86501468f7f753cba49f69ebd743a7ba0427fb7d2e80f8c2",
+      "pages": 1,
+      "rowsPerPage": [11],
+      "rows": 11,
+      "positionedTextItems": 221
+    },
+    {
+      "id": "kanto-2025-contracts-discretionary-goods-services",
+      "file": "7fy_keiyakuteiketsu_zuii_bupin.pdf",
+      "bytes": 112702,
+      "sha256": "b85d15d5fab3fea5610e34171ed88500453620b014fe86eb1e90b52cda5d9542",
+      "pages": 1,
+      "rowsPerPage": [4],
+      "rows": 4,
+      "positionedTextItems": 118
+    },
+    {
+      "id": "kanto-2025-contracts-discretionary-commission",
+      "file": "7fy_keiyakuteiketsu_zuii_itaku.pdf",
+      "bytes": 364106,
+      "sha256": "309e57e00a12440bda00f38e0822ba1f8396a7b57d12d66b3ff609e96a925131",
+      "pages": 4,
+      "rowsPerPage": [15, 16, 16, 8],
+      "rows": 55,
+      "positionedTextItems": 1207
+    }
+  ],
+  "totals": {
+    "documents": 4,
+    "bytes": 818327,
+    "pages": 7,
+    "rows": 87,
+    "positionedTextItems": 1837
+  }
+}

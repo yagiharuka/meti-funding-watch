@@ -382,7 +382,7 @@ test("tolerates row insertion and reordering only when prior semantics remain in
   const moved = records.map((record, index) => ({
     ...record,
     id: `moved-${index}`,
-    sourceKey: `${record.datasetId}:${record.sourceSheet}:${record.sourceRowNumber + 10}`,
+    sourceKey: `${record.datasetId}:${record.sourceSheet}:${record.sourceRowNumber + 10}:moved-${index}`,
     sourceRowNumber: record.sourceRowNumber + 10,
   })).reverse();
   const result = assertOfficialContinuity(records, moved);

@@ -1,5 +1,8 @@
 const TOHOKU_GRANT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/koho/koshin/kobo/kofu_kettei.html";
+const TOHOKU_CONTRACT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/kaikei/keiyaku/keiyaku.html";
+const TOHOKU_WARP_PREFIX = "https://warp.ndl.go.jp/20260613/20260601111544/";
 const KANTO_GRANT_SOURCE_PAGE = "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html";
+const KANTO_CONTRACT_SOURCE_PAGE = "https://www.kanto.meti.go.jp/chotatsu/chotatsu/index_keiyaku.html";
 const KANTO_WARP_PREFIX = "https://warp.ndl.go.jp/20260613/20260601093442/";
 const WARP_PROVIDER = "国立国会図書館インターネット資料収集保存事業（WARP）";
 
@@ -211,13 +214,212 @@ const KANTO_2025_GRANT_DEFINITIONS = [
   }),
 ];
 
+const KANTO_CONTRACT_COLUMNS = Object.freeze([
+  ["program", ["名称及び数量"]],
+  ["contractOfficer", ["契約担当官等の"]],
+  ["date", ["した日"]],
+  ["organization", ["商号又は名称"]],
+  ["corporateNumber", ["法人番号"]],
+  ["address", ["住所"]],
+  ["procurementBasis", ["一般競争入札・", "随意契約によることとした"]],
+  ["plannedPrice", ["予定価格"]],
+  ["amount", ["契約金額"]],
+  ["postAmount", ["落札率"]],
+]);
+
+function makeKantoContractColumns(leftPoints) {
+  if (leftPoints.length !== KANTO_CONTRACT_COLUMNS.length) throw new Error("関東契約PDFの列境界数が不正です");
+  return KANTO_CONTRACT_COLUMNS.map(([key, headerAliases], index) => ({
+    key,
+    headerAliases,
+    leftRatio: leftPoints[index] / 841.68,
+  }));
+}
+
+function makeKantoContractDocument({
+  id, filename, kind, titleClass, expectedBytes, expectedSha256,
+  expectedPageCount, expectedRowsPerPage, expectedPositionedTextItemCount, leftPoints,
+}) {
+  const originalUrl = `https://www.kanto.meti.go.jp/chotatsu/chotatsu/data/${filename}`;
+  const expectedRecordCount = expectedRowsPerPage.reduce((sum, count) => sum + count, 0);
+  return {
+    id,
+    executorId: "kanto",
+    executorName: "関東経済産業局",
+    fiscalYear: 2025,
+    category: "contract_result",
+    kind,
+    amountStage: "契約金額欄の掲載値",
+    format: "pdf",
+    discoveryStatus: "archived_official_file",
+    verifiedAt: "2026-08-12",
+    sourcePageUrl: KANTO_CONTRACT_SOURCE_PAGE,
+    originalUrl,
+    url: `${KANTO_WARP_PREFIX}${originalUrl}`,
+    archiveProvider: WARP_PROVIDER,
+    archiveVerifiedAt: "2026-08-12",
+    archiveVerification: "WARP保存済み公式目次のhrefから公式PDF原本をFull GETし、PDF magic・byte数・SHA-256・ページ数・契約日行を照合",
+    archiveExpectedBytes: expectedBytes,
+    archiveExpectedSha256: expectedSha256,
+    archiveExpectedRecordCount: expectedRecordCount,
+    coverageClaim: `令和7年度${kind}の文字PDF全${expectedPageCount}ページに掲載された${expectedRecordCount}行`,
+    pdfSchema: {
+      schemaVersion: 1,
+      extractionMode: "positioned_text_only",
+      normalizeCompatibilityText: true,
+      expectedBytes,
+      expectedSha256,
+      expectedPageCount,
+      expectedPageSize: { width: 841.68, height: 595.2, tolerance: 0.2 },
+      expectedRowsPerPage,
+      expectedRecordCount,
+      expectedRowNumbers: { start: 1, end: expectedRecordCount },
+      headersOnFirstPageOnly: expectedPageCount > 1,
+      recordGranularity: "date_anchor_rows",
+      requiredPageText: [],
+      requiredFirstPageText: ["公共調達の適正化について", `${titleClass}に係る情報の公表`, kind.includes("物品") ? "庁費の類" : "委託費の類"],
+      columns: makeKantoContractColumns(leftPoints),
+      recordMapping: {
+        programColumn: "program",
+        organizationColumn: "organization",
+        corporateNumberColumn: "corporateNumber",
+        amountColumn: "amount",
+        dateColumn: "date",
+        notesColumns: ["procurementBasis"],
+      },
+      allowedDateFormats: ["western_ymd_ja"],
+      dateRange: { start: "2025-04-01", end: "2026-03-31" },
+      corporateNumberMissingSentinels: ["-", "－"],
+      minimumPositionedTextItems: expectedPositionedTextItemCount,
+      expectedPositionedTextItemCount,
+    },
+  };
+}
+
+const KANTO_2025_CONTRACT_DEFINITIONS = [
+  makeKantoContractDocument({
+    id: "kanto-2025-contracts-competitive-goods-services",
+    filename: "7fy_keiyakuteiketsu_kyoso_bupin.pdf",
+    kind: "競争入札（物品役務等）",
+    titleClass: "競争入札",
+    expectedBytes: 179337,
+    expectedSha256: "6f6c98a2dbd517c3635963c39ba2b97a6b7e5e0f8f27c62c9b6dc03eba6c375c",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [17],
+    expectedPositionedTextItemCount: 291,
+    leftPoints: [50, 112, 198, 234, 306, 340, 427, 486, 527, 566],
+  }),
+  makeKantoContractDocument({
+    id: "kanto-2025-contracts-competitive-commission",
+    filename: "7fy_keiyakuteiketsu_kyoso_itaku.pdf",
+    kind: "競争入札（委託契約）",
+    titleClass: "競争入札",
+    expectedBytes: 162182,
+    expectedSha256: "c2b7a8199cb0fa9a86501468f7f753cba49f69ebd743a7ba0427fb7d2e80f8c2",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [11],
+    expectedPositionedTextItemCount: 221,
+    leftPoints: [50, 112, 198, 234, 306, 341, 428, 487, 528, 567],
+  }),
+  makeKantoContractDocument({
+    id: "kanto-2025-contracts-discretionary-goods-services",
+    filename: "7fy_keiyakuteiketsu_zuii_bupin.pdf",
+    kind: "随意契約（物品役務等）",
+    titleClass: "随意契約",
+    expectedBytes: 112702,
+    expectedSha256: "b85d15d5fab3fea5610e34171ed88500453620b014fe86eb1e90b52cda5d9542",
+    expectedPageCount: 1,
+    expectedRowsPerPage: [4],
+    expectedPositionedTextItemCount: 118,
+    leftPoints: [50, 107, 185, 218, 284, 316, 395, 483, 525, 556],
+  }),
+  makeKantoContractDocument({
+    id: "kanto-2025-contracts-discretionary-commission",
+    filename: "7fy_keiyakuteiketsu_zuii_itaku.pdf",
+    kind: "随意契約（委託契約）",
+    titleClass: "随意契約",
+    expectedBytes: 364106,
+    expectedSha256: "309e57e00a12440bda00f38e0822ba1f8396a7b57d12d66b3ff609e96a925131",
+    expectedPageCount: 4,
+    expectedRowsPerPage: [15, 16, 16, 8],
+    expectedPositionedTextItemCount: 1207,
+    leftPoints: [50, 107, 185, 218, 284, 316, 395, 484, 526, 557],
+  }),
+];
+
 /**
  * Regional PDF sources are intentionally enumerated one document at a time.
- * A source is added only after its page count, printed row numbers and table
- * headers have been reviewed. Discovery of similarly named PDFs is not a
- * coverage claim.
+ * A source is added only after its page count, printed row numbers or strict
+ * positioned row anchors, and table headers have been reviewed. Discovery of
+ * similarly named PDFs is not a coverage claim.
  */
 const REGIONAL_PDF_DEFINITIONS = [
+  {
+    id: "tohoku-2025-competitive-commission-1",
+    executorId: "tohoku",
+    executorName: "東北経済産業局",
+    fiscalYear: 2025,
+    category: "contract_result",
+    kind: "競争入札（委託費）",
+    amountStage: "契約金額欄の掲載値",
+    format: "pdf",
+    discoveryStatus: "archived_official_file",
+    verifiedAt: "2026-08-12",
+    sourcePageUrl: TOHOKU_CONTRACT_SOURCE_PAGE,
+    originalUrl: "https://www.tohoku.meti.go.jp/kaikei/keiyaku/pdf/2025/kyoso_itaku_1.pdf",
+    url: `${TOHOKU_WARP_PREFIX}https://www.tohoku.meti.go.jp/kaikei/keiyaku/pdf/2025/kyoso_itaku_1.pdf`,
+    archiveProvider: WARP_PROVIDER,
+    archiveVerifiedAt: "2026-08-12",
+    archiveVerification: "WARP保存済み公式目次の実hrefから公式PDF原本をFull GETし、PDF magic・byte数・SHA-256・ページ数・掲載行を照合",
+    archiveExpectedBytes: 74427,
+    archiveExpectedSha256: "222880d4a5731e1b52cd8069dda97bc5463ce11e1a28faaf2780d01c99d1f46a",
+    archiveExpectedRecordCount: 1,
+    coverageClaim: "令和7年度の競争入札（委託費）第1掲載PDF全1ページの1行（同年度の他の月次PDFは未取込）",
+    pdfSchema: {
+      schemaVersion: 1,
+      extractionMode: "positioned_text_only",
+      normalizeCompatibilityText: true,
+      expectedBytes: 74427,
+      expectedSha256: "222880d4a5731e1b52cd8069dda97bc5463ce11e1a28faaf2780d01c99d1f46a",
+      expectedPageCount: 1,
+      expectedPageSize: { width: 1238.29, height: 875.29, tolerance: 0.2 },
+      expectedRowsPerPage: [1],
+      expectedRecordCount: 1,
+      expectedRowNumbers: { start: 1, end: 1 },
+      recordGranularity: "date_anchor_rows",
+      requiredPageText: ["競争入札に係る情報の公表（委託費の類）", "東北経済産業局"],
+      columns: [
+        { key: "program", leftRatio: 0.05, headerAliases: ["物品役務等の"] },
+        { key: "officer", leftRatio: 0.135, headerAliases: ["契約担当官等の"] },
+        { key: "date", leftRatio: 0.245, headerAliases: ["契約を締結"] },
+        { key: "organization", leftRatio: 0.285, headerAliases: ["商号又は名称"] },
+        { key: "corporateNumber", leftRatio: 0.395, headerAliases: ["法人番号"] },
+        { key: "address", leftRatio: 0.445, headerAliases: ["住所"] },
+        { key: "competitionMethod", leftRatio: 0.54, headerAliases: ["一般競争入札・"] },
+        { key: "plannedAmount", leftRatio: 0.62, headerAliases: ["予定価格"] },
+        { key: "amount", leftRatio: 0.66, headerAliases: ["契約金額"] },
+        { key: "bidRate", leftRatio: 0.70, headerAliases: ["落札率"] },
+        { key: "contractMethod", leftRatio: 0.73, headerAliases: ["契約方式"] },
+        { key: "notes", leftRatio: 0.76, headerAliases: ["備考"] },
+        { key: "publicInterestClass", leftRatio: 0.785, headerAliases: ["公益法人"] },
+        { key: "jurisdictionClass", leftRatio: 0.815, headerAliases: ["所管の区分"] },
+        { key: "applicantCount", leftRatio: 0.885, headerAliases: ["応札・"] },
+      ],
+      recordMapping: {
+        programColumn: "program",
+        organizationColumn: "organization",
+        corporateNumberColumn: "corporateNumber",
+        amountColumn: "amount",
+        dateColumn: "date",
+        notesColumns: ["competitionMethod", "contractMethod", "notes"],
+      },
+      allowedDateFormats: ["western_ymd_ja"],
+      dateRange: { start: "2025-04-01", end: "2026-03-31" },
+      corporateNumberMissingSentinels: ["法人番号なし"],
+      minimumPositionedTextItems: 53,
+      expectedPositionedTextItemCount: 53,
+    },
+  },
   {
     id: "tohoku-2025-grant-decisions-h1",
     executorId: "tohoku",
@@ -332,6 +534,7 @@ const REGIONAL_PDF_DEFINITIONS = [
     },
   },
   ...KANTO_2025_GRANT_DEFINITIONS,
+  ...KANTO_2025_CONTRACT_DEFINITIONS,
 ];
 
 export const REGIONAL_PDF_DOCUMENTS = Object.freeze(REGIONAL_PDF_DEFINITIONS.map((document) => Object.freeze({
@@ -357,9 +560,9 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
     executorId: "tohoku",
     fiscalYear: 2025,
     category: "contract_result",
-    status: "not_ingested",
-    included: "なし",
-    missing: "競争・随意、物品役務・委託・公共工事の月次PDF",
+    status: "partial_verified_official_file",
+    included: "競争入札（委託費）第1掲載PDF（1行）",
+    missing: "同年度の競争入札（委託費）第2～6掲載PDF、競争入札（物品役務等）第1～6掲載PDF、随意契約（委託費）第1～5掲載PDF、随意契約（物品役務等）第1掲載PDF、および他年度",
   },
   {
     executorId: "kanto",
@@ -373,8 +576,8 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
     executorId: "kanto",
     fiscalYear: 2025,
     category: "contract_result",
-    status: "not_ingested",
-    included: "なし",
-    missing: "公式目次で確認した令和4～7年度の競争・随意、物品役務・委託PDF（16資料）",
+    status: "verified_archived_official_files",
+    included: "WARP保存済みの令和7年度競争・随意、物品役務・委託4公式PDF（計87掲載行）",
+    missing: "公式目次で確認した令和4～6年度の競争・随意、物品役務・委託PDF（12資料）",
   },
 ];

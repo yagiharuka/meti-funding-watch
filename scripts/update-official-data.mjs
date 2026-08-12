@@ -5,6 +5,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import ExcelJS from "exceljs";
+import { CHUBU_CONTRACT_DOCUMENTS, CHUBU_GRANT_DOCUMENTS } from "./official-chubu-sources.mjs";
+import {
+  KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
+  KANSAI_KYUSHU_GRANT_DOCUMENTS,
+} from "./official-kansai-kyushu-sources.mjs";
 import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
 import { METI_ANRE_OFFICIAL_DOCUMENTS } from "./official-meti-anre-history.mjs";
 import { OKINAWA_GRANT_DOCUMENTS } from "./official-okinawa-sources.mjs";
@@ -25,7 +30,7 @@ const FETCH_HEADERS = {
 };
 const LIVE_FETCH_ATTEMPTS = 3;
 const LIVE_FETCH_BACKOFF_MS = [250, 500];
-export const OFFICIAL_PARSER_REVISION = "official-parser-2026-08-12-archive-carry-v1";
+export const OFFICIAL_PARSER_REVISION = "official-parser-2026-08-12-regional-pdf-v2";
 
 class OfficialArchiveUnavailableError extends Error {
   constructor(document, status) {
@@ -149,6 +154,10 @@ export const OFFICIAL_DOCUMENTS = applyVerifiedLiveFallbacks(applyVerifiedWarpCa
   ...SMEA_HISTORICAL_DOCUMENTS,
   ...REGIONAL_OFFICIAL_DOCUMENTS,
   ...REGIONAL_PDF_DOCUMENTS,
+  ...CHUBU_GRANT_DOCUMENTS,
+  ...CHUBU_CONTRACT_DOCUMENTS,
+  ...KANSAI_KYUSHU_GRANT_DOCUMENTS,
+  ...KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
   ...OKINAWA_GRANT_DOCUMENTS,
 ]));
 
@@ -404,7 +413,12 @@ export async function fetchOfficialDocuments(
     const verifiedArchive = isVerifiedArchiveDocument(document);
     let phase = "fetch";
     try {
-      const source = await fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl);
+      const source = await fetchDocumentWithVerifiedFallback(
+        document,
+        previousRecords,
+        fetchImpl,
+        !previousDatasetIds.has(document.id),
+      );
       phase = "archive_receipt";
       assertArchiveSourceReceipt(document, source);
       phase = "evidence";
@@ -534,9 +548,9 @@ function expectedRecordSourceDocumentUrl(document) {
   return document.format === "pdf" ? (document.originalUrl ?? document.url) : document.url;
 }
 
-async function fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl) {
+async function fetchDocumentWithVerifiedFallback(document, previousRecords, fetchImpl, allowBootstrapEvidence = false) {
   try {
-    return await fetchDocument(document, fetchImpl);
+    return await fetchDocument(document, fetchImpl, allowBootstrapEvidence);
   } catch (primaryError) {
     const fallback = document.verifiedFallback;
     if (!fallback || !isFallbackEligibleFetchError(primaryError)) throw primaryError;
@@ -676,7 +690,7 @@ function assertCarryForwardEvidenceReceipt(document, priorReceipt) {
   }
 }
 
-async function fetchDocument(document, fetchImpl) {
+async function fetchDocument(document, fetchImpl, allowBootstrapEvidence = false) {
   const localSourceDirectory = process.env.OFFICIAL_SOURCE_DIRECTORY?.trim();
   if (localSourceDirectory) {
     const directoryUrl = pathToFileURL(`${localSourceDirectory.replace(/\/$/, "")}/`);
@@ -686,6 +700,12 @@ async function fetchDocument(document, fetchImpl) {
   const evidenceDirectory = process.env.OFFICIAL_EVIDENCE_DIRECTORY?.trim();
   if (evidenceDirectory && document.evidenceReceipt) {
     const directoryUrl = pathToFileURL(`${evidenceDirectory.replace(/\/$/, "")}/`);
+    const buffer = await readFile(new URL(`${document.id}.${sourceFormat(document)}`, directoryUrl));
+    return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
+  }
+  const bootstrapEvidenceDirectory = process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY?.trim();
+  if (allowBootstrapEvidence && bootstrapEvidenceDirectory && document.evidenceReceipt) {
+    const directoryUrl = pathToFileURL(`${bootstrapEvidenceDirectory.replace(/\/$/, "")}/`);
     const buffer = await readFile(new URL(`${document.id}.${sourceFormat(document)}`, directoryUrl));
     return { buffer, bytes: buffer.length, sha256: sha256(buffer) };
   }

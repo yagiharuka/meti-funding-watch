@@ -49,6 +49,9 @@ export async function parseOfficialPdf(buffer, document) {
     let emptySentinelFound = false;
     let positionedTextItemCount = 0;
     let firstPageColumns = null;
+    const parsingState = schemaUsesAlignedAmountRows(schema)
+      ? { mode: "aligned_amount_rows", recipientCounts: new Map(), emptyFragments: [] }
+      : schemaUsesDateAnchorRows(schema) ? { mode: "date_anchor_rows", nextRowNumber: 0 } : null;
     const splitRuleCounts = new Map((schema.crossColumnSplitRules ?? []).map((rule) => [rule.id, 0]));
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
@@ -57,7 +60,7 @@ export async function parseOfficialPdf(buffer, document) {
       const textContent = await page.getTextContent({ disableNormalization: false, includeMarkedContent: false });
       const items = extractPositionedItems(textContent.items, viewport, document, pageNumber, splitRuleCounts);
       positionedTextItemCount += items.length;
-      const pageResult = parsePage(items, viewport, document, pageNumber, firstPageColumns);
+      const pageResult = parsePage(items, viewport, document, pageNumber, firstPageColumns, parsingState);
       if (pageNumber === 1 && schema.headersOnFirstPageOnly) firstPageColumns = pageResult.columns;
       if (pageResult.records.length !== schema.expectedRowsPerPage[pageNumber - 1]) {
         throw new Error(`${document.id}/p.${pageNumber}: ページ内掲載行数が検証済み値と一致しません (${pageResult.records.length}/${schema.expectedRowsPerPage[pageNumber - 1]})`);
@@ -84,7 +87,12 @@ export async function parseOfficialPdf(buffer, document) {
     if (!records.length && !emptySentinelFound) {
       throw new Error(`${document.id}: 0件を示す所定表記がありません`);
     }
-    if (records.length) assertExpectedRowNumbers(records, schema.expectedRowNumbers, document.id);
+    if (records.length) {
+      if (parsingState?.mode === "aligned_amount_rows") {
+        assertAlignedAmountRows(records, schema, parsingState, document.id);
+      }
+      else assertExpectedRowNumbers(records, schema.expectedRowNumbers, document.id);
+    }
     Object.defineProperty(records, "emptySentinelFound", { value: emptySentinelFound, enumerable: false });
     return records;
   } catch (error) {
@@ -128,6 +136,30 @@ function validateDocumentDefinition(document) {
           || new Set(rows).size !== rows.length)))
     || (schema.headersOnFirstPageOnly !== undefined && typeof schema.headersOnFirstPageOnly !== "boolean")
     || (schema.normalizeCompatibilityText !== undefined && typeof schema.normalizeCompatibilityText !== "boolean")
+    || (schema.recordGranularity !== undefined
+      && !["aligned_amount_rows", "date_anchor_rows"].includes(schema.recordGranularity))
+    || (schema.expectedSplitOrdinalFragments !== undefined
+      && (!Array.isArray(schema.expectedSplitOrdinalFragments)
+        || schema.expectedSplitOrdinalFragments.some((fragment) => !fragment
+          || !Number.isSafeInteger(fragment.page) || fragment.page < 1 || fragment.page > schema.expectedPageCount
+          || !Number.isSafeInteger(fragment.ordinal) || fragment.ordinal < 1)))
+    || (schema.expectedPartyCountsByOrdinal !== undefined
+      && (!schema.expectedPartyCountsByOrdinal || typeof schema.expectedPartyCountsByOrdinal !== "object"
+        || Array.isArray(schema.expectedPartyCountsByOrdinal)
+        || Object.entries(schema.expectedPartyCountsByOrdinal).some(([ordinal, count]) => !/^\d+$/.test(ordinal)
+          || !Number.isSafeInteger(count) || count < 1)))
+    || (schema.expectedMissingCorporateNumberCount !== undefined
+      && (!Number.isSafeInteger(schema.expectedMissingCorporateNumberCount)
+        || schema.expectedMissingCorporateNumberCount < 0))
+    || (schema.rowBoundaryOverrides !== undefined
+      && (!Array.isArray(schema.rowBoundaryOverrides)
+        || schema.rowBoundaryOverrides.some((override) => !override
+          || !Number.isSafeInteger(override.page) || override.page < 1 || override.page > schema.expectedPageCount
+          || !Number.isSafeInteger(override.upperOrdinal) || override.upperOrdinal < 1
+          || !Number.isSafeInteger(override.lowerOrdinal) || override.lowerOrdinal < 1
+          || override.upperOrdinal === override.lowerOrdinal
+          || !Number.isFinite(override.yRatio) || override.yRatio <= 0 || override.yRatio >= 1)))
+    || (schema.rowAnchorMode !== undefined && !["ordinal", "date"].includes(schema.rowAnchorMode))
     || !Array.isArray(schema.columns) || schema.columns.length < 6
     || new Set(schema.columns.map((column) => column.key)).size !== schema.columns.length
     || schema.columns.some((column) => !column.key || !Array.isArray(column.headerAliases) || !column.headerAliases.length
@@ -136,11 +168,18 @@ function validateDocumentDefinition(document) {
     || !Array.isArray(schema.allowedDateFormats) || !schema.allowedDateFormats.length
     || schema.allowedDateFormats.some((format) => !(format in DATE_FORMATS))
   ) throw new Error(`${document.id}: PDF表スキーマが不正です`);
+  if (schemaUsesAlignedAmountRows(schema)
+    && (!schema.expectedPartyCountsByOrdinal || !Array.isArray(schema.expectedSplitOrdinalFragments)
+      || !Number.isSafeInteger(schema.expectedMissingCorporateNumberCount)
+      || !Array.isArray(schema.rowBoundaryOverrides))) {
+    throw new Error(`${document.id}: 金額行単位PDFの検証receiptが不完全です`);
+  }
   if (schema.columns.some((column, index) => index > 0 && column.leftRatio <= schema.columns[index - 1].leftRatio)) {
     throw new Error(`${document.id}: PDF列境界が昇順ではありません`);
   }
   const keys = new Set(schema.columns.map((column) => column.key));
-  const requiredMapping = ["ordinalColumn", "programColumn", "organizationColumn", "amountColumn", "dateColumn"];
+  const requiredMapping = ["programColumn", "organizationColumn", "amountColumn", "dateColumn"];
+  if (!schemaUsesDateAnchorRows(schema)) requiredMapping.push("ordinalColumn");
   if (!schema.corporateNumberOmitted) requiredMapping.push("corporateNumberColumn");
   if (requiredMapping.some((field) => !keys.has(schema.recordMapping[field]))) {
     throw new Error(`${document.id}: PDF列対応が不正です`);
@@ -150,6 +189,9 @@ function validateDocumentDefinition(document) {
   }
   if ((schema.recordMapping.notesColumns ?? []).some((key) => !keys.has(key))) {
     throw new Error(`${document.id}: PDF備考列対応が不正です`);
+  }
+  if (schema.recordMapping.methodColumn !== undefined && !keys.has(schema.recordMapping.methodColumn)) {
+    throw new Error(`${document.id}: PDF契約方式列対応が不正です`);
   }
   const splitRuleIds = new Set();
   for (const rule of schema.crossColumnSplitRules ?? []) {
@@ -236,7 +278,7 @@ function assertPageSize(viewport, expected, documentId, pageNumber) {
   }
 }
 
-function parsePage(items, viewport, document, pageNumber, firstPageColumns = null) {
+function parsePage(items, viewport, document, pageNumber, firstPageColumns = null, parsingState = null) {
   const schema = document.pdfSchema;
   if (!items.length) throw new Error(`${document.id}/p.${pageNumber}: 文字要素がありません（OCRは実行しません）`);
   const normalizedPageText = normalizeMatchText(items.map((item) => item.text).join(""));
@@ -255,14 +297,9 @@ function parsePage(items, viewport, document, pageNumber, firstPageColumns = nul
   const columns = pageNumber > 1 && schema.headersOnFirstPageOnly
     ? reuseFirstPageColumns(firstPageColumns, viewport, document, pageNumber)
     : locateHeaders(items, viewport, schema, document, pageNumber);
-  const ordinalColumn = columns.find((column) => column.key === schema.recordMapping.ordinalColumn);
-  const rowAnchors = items
-    .filter((item) => item.centerY < columns.headerBottom - 0.5)
-    .filter((item) => item.centerX >= ordinalColumn.left && item.centerX < ordinalColumn.right)
-    .filter((item) => /^\d+$/.test(normalizeCellText(item.text)))
-    .map((item) => ({ ...item, ordinal: Number(normalizeCellText(item.text)) }))
-    .filter((item) => Number.isSafeInteger(item.ordinal) && item.ordinal > 0)
-    .sort((a, b) => b.centerY - a.centerY);
+  const rowAnchors = parsingState?.mode === "date_anchor_rows"
+    ? dateRowAnchors(items, columns, schema, parsingState)
+    : ordinalRowAnchors(items, columns, schema);
 
   if (!rowAnchors.length) {
     const sentinel = (schema.emptySentinels ?? []).find((value) => normalizedPageText.includes(normalizeMatchText(value)));
@@ -279,8 +316,12 @@ function parsePage(items, viewport, document, pageNumber, firstPageColumns = nul
   const observedBlankRows = new Set();
   for (let index = 0; index < rowAnchors.length; index += 1) {
     const anchor = rowAnchors[index];
-    const top = index === 0 ? columns.headerBottom : (rowAnchors[index - 1].centerY + anchor.centerY) / 2;
-    const bottom = index === rowAnchors.length - 1 ? 0 : (anchor.centerY + rowAnchors[index + 1].centerY) / 2;
+    const top = index === 0 ? columns.headerBottom : rowBoundary(
+      schema, pageNumber, rowAnchors[index - 1], anchor, viewport.height,
+    );
+    const bottom = index === rowAnchors.length - 1 ? 0 : rowBoundary(
+      schema, pageNumber, anchor, rowAnchors[index + 1], viewport.height,
+    );
     const bodyBottom = Math.max(bottom, (schema.bodyMinimumYRatio ?? 0) * viewport.height);
     const rowItems = items.filter((item) => item.centerY < top && item.centerY >= bodyBottom);
     const cells = Object.fromEntries(columns.map((column) => [
@@ -301,12 +342,50 @@ function parsePage(items, viewport, document, pageNumber, firstPageColumns = nul
       observedBlankRows.add(anchor.ordinal);
       continue;
     }
-    pageRows.push(makeRecord(document, schema, cells, anchor.ordinal, pageNumber, viewport.height));
+    if (parsingState?.mode === "aligned_amount_rows") {
+      pageRows.push(...makeAlignedAmountRecords(
+        document, schema, cells, anchor.ordinal, pageNumber, parsingState,
+      ));
+    } else {
+      pageRows.push(makeRecord(document, schema, cells, anchor.ordinal, pageNumber));
+    }
   }
   if (observedBlankRows.size !== expectedBlankRows.size) {
     throw new Error(`${document.id}/p.${pageNumber}: 検証済み空欄行が一致しません`);
   }
   return { records: pageRows, emptySentinelFound: false, columns };
+}
+
+function ordinalRowAnchors(items, columns, schema) {
+  const ordinalColumn = columns.find((column) => column.key === schema.recordMapping.ordinalColumn);
+  return items
+    .filter((item) => item.centerY < columns.headerBottom - 0.5)
+    .filter((item) => item.centerX >= ordinalColumn.left && item.centerX < ordinalColumn.right)
+    .filter((item) => /^\d+$/.test(normalizeCellText(item.text)))
+    .map((item) => ({ ...item, ordinal: Number(normalizeCellText(item.text)) }))
+    .filter((item) => Number.isSafeInteger(item.ordinal) && item.ordinal > 0)
+    .sort((a, b) => b.centerY - a.centerY);
+}
+
+function dateRowAnchors(items, columns, schema, state) {
+  const dateColumn = columns.find((column) => column.key === schema.recordMapping.dateColumn);
+  const anchors = items
+    .filter((item) => item.centerY < columns.headerBottom - 0.5)
+    .filter((item) => item.centerX >= dateColumn.left && item.centerX < dateColumn.right)
+    .filter((item) => matchesAllowedDate(compactCell(item.text), schema.allowedDateFormats))
+    .sort((a, b) => b.centerY - a.centerY);
+  return anchors.map((anchor) => ({ ...anchor, ordinal: ++state.nextRowNumber }));
+}
+
+function rowBoundary(schema, pageNumber, upperAnchor, lowerAnchor, pageHeight) {
+  const overrides = (schema.rowBoundaryOverrides ?? []).filter((override) =>
+    override.page === pageNumber
+    && override.upperOrdinal === upperAnchor.ordinal
+    && override.lowerOrdinal === lowerAnchor.ordinal);
+  if (overrides.length > 1) throw new Error("PDF行境界overrideが重複しています");
+  return overrides.length === 1
+    ? overrides[0].yRatio * pageHeight
+    : (upperAnchor.centerY + lowerAnchor.centerY) / 2;
 }
 
 function reuseFirstPageColumns(firstPageColumns, viewport, document, pageNumber) {
@@ -380,7 +459,54 @@ function joinLineItems(items) {
   return normalizeCellText(result);
 }
 
-function makeRecord(document, schema, cells, ordinal, pageNumber) {
+function makeAlignedAmountRecords(document, schema, cells, ordinal, pageNumber, state) {
+  const mapping = schema.recordMapping;
+  const amountLines = cells[mapping.amountColumn].lines;
+  if (!amountLines.length) {
+    if (!normalizeMultilineCell(cells[mapping.programColumn].text)) {
+      throw new Error(`${document.id}/p.${pageNumber}/no.${ordinal}: 分割掲載行の事業名が空です`);
+    }
+    state.emptyFragments.push({ page: pageNumber, ordinal });
+    return [];
+  }
+  for (const line of amountLines) {
+    if (!/^(?:0|[1-9]\d{0,2}(?:,\d{3})*)$/.test(compactCell(line.text))) {
+      throw new Error(`${document.id}/p.${pageNumber}/no.${ordinal}: 金額行を一意に分割できません`);
+    }
+  }
+  const anchors = amountLines.map((line) => line.y).sort((left, right) => right - left);
+  const records = [];
+  for (const anchorY of anchors) {
+    const partyCells = Object.fromEntries(Object.entries(cells).map(([key, cell]) => {
+      if (key === mapping.ordinalColumn || key === mapping.programColumn) return [key, cell];
+      return [key, sliceCellAtAnchor(cell, anchors, anchorY)];
+    }));
+    const recipientIndex = (state.recipientCounts.get(ordinal) ?? 0) + 1;
+    state.recipientCounts.set(ordinal, recipientIndex);
+    records.push(makeRecord(
+      document, schema, partyCells, ordinal, pageNumber, `:recipient-${recipientIndex}`,
+    ));
+  }
+  return records;
+}
+
+function sliceCellAtAnchor(cell, anchors, anchorY) {
+  const lines = cell.lines.filter((line) => {
+    let nearest = anchors[0];
+    let distance = Math.abs(line.y - nearest);
+    for (let index = 1; index < anchors.length; index += 1) {
+      const candidateDistance = Math.abs(line.y - anchors[index]);
+      if (candidateDistance < distance) {
+        nearest = anchors[index];
+        distance = candidateDistance;
+      }
+    }
+    return nearest === anchorY;
+  });
+  return { lines, text: lines.map((line) => line.text).filter(Boolean).join("\n") };
+}
+
+function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffix = "") {
   const mapping = schema.recordMapping;
   const program = normalizeMultilineCell(cells[mapping.programColumn].text);
   const organizationCell = cells[mapping.organizationColumn];
@@ -404,7 +530,11 @@ function makeRecord(document, schema, cells, ordinal, pageNumber) {
     .map((key) => normalizeMultilineCell(cells[key].text))
     .filter(Boolean)
     .join("／");
-  const sourceKey = `${document.id}:no-${ordinal}`;
+  const method = mapping.methodColumn
+    ? normalizeMultilineCell(cells[mapping.methodColumn].text)
+    : document.kind;
+  if (!method) throw new Error(`${document.id}/no.${ordinal}: 契約方式・随意契約理由が空です`);
+  const sourceKey = `${document.id}:no-${ordinal}${sourceKeySuffix}`;
   return {
     id: `official-${sha256(sourceKey).slice(0, 20)}`,
     sourceKey,
@@ -426,7 +556,7 @@ function makeRecord(document, schema, cells, ordinal, pageNumber) {
     program,
     amount,
     amountRaw,
-    method: document.kind,
+    method,
     notes,
     sourcePageUrl: document.sourcePageUrl,
     sourceDocumentUrl: document.originalUrl ?? document.url,
@@ -449,6 +579,10 @@ function parseStrictDate(raw, allowedFormats, documentId, ordinal) {
     return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
   throw new Error(`${documentId}/no.${ordinal}: 日付形式が不正です (${raw || "空"})`);
+}
+
+function matchesAllowedDate(raw, allowedFormats) {
+  return allowedFormats.some((format) => DATE_FORMATS[format].test(raw));
 }
 
 function parseStrictAmount(raw, documentId, ordinal) {
@@ -508,14 +642,52 @@ function partitionOrganizations(cell, corporateAnchors, corporateNumbers, docume
   return organizations;
 }
 
-function assertExpectedRowNumbers(records, expected, documentId) {
+function assertExpectedRowNumbers(records, expected, documentId, allowRepeats = false) {
   if (!expected || !Number.isSafeInteger(expected.start) || !Number.isSafeInteger(expected.end) || expected.end < expected.start) {
     throw new Error(`${documentId}: 期待掲載番号の定義が不正です`);
   }
-  const observed = records.map((record) => record.sourceRowNumber).sort((a, b) => a - b);
+  const observedValues = records.map((record) => record.sourceRowNumber);
+  const observed = (allowRepeats ? [...new Set(observedValues)] : observedValues).sort((a, b) => a - b);
   const wanted = Array.from({ length: expected.end - expected.start + 1 }, (_, index) => expected.start + index);
   if (observed.length !== wanted.length || observed.some((value, index) => value !== wanted[index])) {
     throw new Error(`${documentId}: 掲載番号が連続した検証済み範囲と一致しません`);
+  }
+}
+
+function schemaUsesAlignedAmountRows(schema) {
+  return schema.recordGranularity === "aligned_amount_rows";
+}
+
+function schemaUsesDateAnchorRows(schema) {
+  return schema.recordGranularity === "date_anchor_rows" || schema.rowAnchorMode === "date";
+}
+
+function assertAlignedAmountRows(records, schema, state, documentId) {
+  assertExpectedRowNumbers(records, schema.expectedRowNumbers, documentId, true);
+  const expectedFragments = schema.expectedSplitOrdinalFragments
+    .map(({ page, ordinal }) => `${page}:${ordinal}`).sort();
+  const observedFragments = state.emptyFragments
+    .map(({ page, ordinal }) => `${page}:${ordinal}`).sort();
+  if (observedFragments.length !== expectedFragments.length
+    || observedFragments.some((value, index) => value !== expectedFragments[index])) {
+    throw new Error(`${documentId}: 改ページ分割された掲載番号が検証済みreceiptと一致しません`);
+  }
+  const { start, end } = schema.expectedRowNumbers;
+  for (const ordinal of Object.keys(schema.expectedPartyCountsByOrdinal).map(Number)) {
+    if (ordinal < start || ordinal > end) {
+      throw new Error(`${documentId}: 複数交付先receiptの掲載番号が範囲外です`);
+    }
+  }
+  for (let ordinal = start; ordinal <= end; ordinal += 1) {
+    const expected = schema.expectedPartyCountsByOrdinal[String(ordinal)] ?? 1;
+    const observed = state.recipientCounts.get(ordinal) ?? 0;
+    if (observed !== expected) {
+      throw new Error(`${documentId}/no.${ordinal}: 交付先別金額行数が検証済み値と一致しません (${observed}/${expected})`);
+    }
+  }
+  const missingCorporateNumbers = records.filter((record) => record.corporateNumbers.length === 0).length;
+  if (missingCorporateNumbers !== schema.expectedMissingCorporateNumberCount) {
+    throw new Error(`${documentId}: 法人番号空欄行数が検証済み値と一致しません (${missingCorporateNumbers}/${schema.expectedMissingCorporateNumberCount})`);
   }
 }
 

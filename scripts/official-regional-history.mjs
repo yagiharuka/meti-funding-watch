@@ -310,7 +310,7 @@ function validateEvidenceMap(value, documents) {
   if (typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
     throw new Error("地域局evidence mapの検証方法が不正です");
   }
-  if (!Array.isArray(value.records) || value.records.length !== 18) throw new Error("地域局evidence receiptは18資料でなければなりません");
+  if (!Array.isArray(value.records) || value.records.length !== 20) throw new Error("地域局evidence receiptは20資料でなければなりません");
   const definitions = new Map(documents.map((document) => [document.id, document]));
   const ids = new Set();
   for (const receipt of value.records) {
