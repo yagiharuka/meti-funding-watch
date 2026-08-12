@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-12T07:21:26.632Z",
+  "generatedAt": "2026-08-12T07:57:09.963Z",
   "recordCount": 12442,
   "files": {
     "2020": "records-2020.json",
@@ -95,6 +95,20 @@
           "status": "2021・2022・2023・2024・2025年度／10公式XLSX資料を収録（全年度・全区分の完全収録ではありません）"
         }
       },
+      "kanto": {
+        "name": "関東経済産業局",
+        "fiscalYears": [
+          2025
+        ],
+        "contractResults": {
+          "records": 0,
+          "status": "明細未収録"
+        },
+        "grantDecisions": {
+          "records": 284,
+          "status": "2025年度／8公式PDF資料を収録（全年度・全区分の完全収録ではありません）"
+        }
+      },
       "meti": {
         "name": "経済産業省（本省）",
         "fiscalYears": [
@@ -111,6 +125,24 @@
         "grantDecisions": {
           "records": 815,
           "status": "2022・2023・2024・2025年度／7公式XLSX資料を収録（全年度・全区分の完全収録ではありません）"
+        }
+      },
+      "okinawa": {
+        "name": "沖縄総合事務局（経済産業部）",
+        "fiscalYears": [
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ],
+        "contractResults": {
+          "records": 0,
+          "status": "明細未収録"
+        },
+        "grantDecisions": {
+          "records": 194,
+          "status": "2020・2021・2022・2023・2024年度／10公式PDF資料を収録（全年度・全区分の完全収録ではありません）"
         }
       },
       "shikoku": {
@@ -161,38 +193,6 @@
           "records": 286,
           "status": "2025年度／2公式PDF資料を収録（全年度・全区分の完全収録ではありません）"
         }
-      },
-      "okinawa": {
-        "name": "沖縄総合事務局（経済産業部）",
-        "fiscalYears": [
-          2020,
-          2021,
-          2022,
-          2023,
-          2024
-        ],
-        "contractResults": {
-          "records": 0,
-          "status": "明細未収録"
-        },
-        "grantDecisions": {
-          "records": 194,
-          "status": "2020・2021・2022・2023・2024年度／10公式PDF資料を収録（全年度・全区分の完全収録ではありません）"
-        }
-      },
-      "kanto": {
-        "name": "関東経済産業局",
-        "fiscalYears": [
-          2025
-        ],
-        "contractResults": {
-          "records": 0,
-          "status": "明細未収録"
-        },
-        "grantDecisions": {
-          "records": 284,
-          "status": "2025年度／8公式PDF資料を収録（全年度・全区分の完全収録ではありません）"
-        }
       }
     },
     "note": "検索対象はmanifestに列挙した各執行機関の公式公表資料のうち、取得・形式・継続性を検証できた資料だけです。13執行機関・全年度・全公表区分の全資料ではなく、実支払・再委託・間接補助先も含みません。FY2026は年度途中です。"
@@ -202,8 +202,8 @@
     "grant_decision": 5701
   },
   "continuity": {
-    "retainedRecordCount": 4967,
-    "addedRecordCount": 7475,
+    "retainedRecordCount": 12442,
+    "addedRecordCount": 0,
     "changedRecordCount": 0,
     "changes": []
   },
@@ -244,7 +244,7 @@
       "bytes": 31863,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2025-competitive-goods",
@@ -282,7 +282,7 @@
       "bytes": 40902,
       "records": 11,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2025-competitive-commission",
@@ -320,7 +320,7 @@
       "bytes": 64380,
       "records": 49,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2025-discretionary-goods",
@@ -358,7 +358,7 @@
       "bytes": 27086,
       "records": 17,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2025-discretionary-commission",
@@ -396,7 +396,7 @@
       "bytes": 50337,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-competitive-goods",
@@ -434,7 +434,7 @@
       "bytes": 68091,
       "records": 155,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-discretionary-goods",
@@ -472,7 +472,7 @@
       "bytes": 50742,
       "records": 146,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-grant-decisions-h1",
@@ -510,7 +510,7 @@
       "bytes": 13638,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-grant-decisions-h2",
@@ -548,7 +548,7 @@
       "bytes": 22306,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-competitive-goods",
@@ -586,7 +586,7 @@
       "bytes": 83765,
       "records": 130,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-competitive-commission",
@@ -624,7 +624,7 @@
       "bytes": 102816,
       "records": 310,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-competitive-public-works",
@@ -662,7 +662,7 @@
       "bytes": 56675,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-grant-decisions-h2",
@@ -700,7 +700,7 @@
       "bytes": 28915,
       "records": 54,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-04",
@@ -738,7 +738,7 @@
       "bytes": 29315,
       "records": 56,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-grant-decisions-h2",
@@ -776,7 +776,7 @@
       "bytes": 174750,
       "records": 949,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2023-grant-decisions-h1",
@@ -814,7 +814,7 @@
       "bytes": 32095,
       "records": 230,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2023-grant-decisions-h2",
@@ -852,7 +852,7 @@
       "bytes": 76509,
       "records": 882,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-01",
@@ -890,7 +890,7 @@
       "bytes": 13134,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-02",
@@ -928,7 +928,7 @@
       "bytes": 14388,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-03",
@@ -966,7 +966,7 @@
       "bytes": 21635,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-04",
@@ -1004,7 +1004,7 @@
       "bytes": 24603,
       "records": 41,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-05",
@@ -1042,7 +1042,7 @@
       "bytes": 17109,
       "records": 14,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-06",
@@ -1080,7 +1080,7 @@
       "bytes": 17864,
       "records": 15,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-07",
@@ -1118,7 +1118,7 @@
       "bytes": 17079,
       "records": 12,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-08",
@@ -1156,7 +1156,7 @@
       "bytes": 16824,
       "records": 10,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-09",
@@ -1194,7 +1194,7 @@
       "bytes": 17654,
       "records": 15,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-10",
@@ -1232,7 +1232,7 @@
       "bytes": 18003,
       "records": 14,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-11",
@@ -1270,7 +1270,7 @@
       "bytes": 14574,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-commission-12",
@@ -1308,7 +1308,7 @@
       "bytes": 16053,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-goods-04",
@@ -1346,7 +1346,7 @@
       "bytes": 16657,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-goods-06",
@@ -1384,7 +1384,7 @@
       "bytes": 15586,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-competitive-goods-09",
@@ -1422,7 +1422,7 @@
       "bytes": 15394,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-03",
@@ -1460,7 +1460,7 @@
       "bytes": 20941,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-04",
@@ -1498,7 +1498,7 @@
       "bytes": 25042,
       "records": 39,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-05",
@@ -1536,7 +1536,7 @@
       "bytes": 14644,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-06",
@@ -1574,7 +1574,7 @@
       "bytes": 14348,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-07",
@@ -1612,7 +1612,7 @@
       "bytes": 15553,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-08",
@@ -1650,7 +1650,7 @@
       "bytes": 14932,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-09",
@@ -1688,7 +1688,7 @@
       "bytes": 12837,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-commission-12",
@@ -1726,7 +1726,7 @@
       "bytes": 13617,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-discretionary-goods-10",
@@ -1764,7 +1764,7 @@
       "bytes": 15759,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-grant-decisions-h1",
@@ -1802,7 +1802,7 @@
       "bytes": 37142,
       "records": 262,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2024-grant-decisions-h2",
@@ -1840,7 +1840,7 @@
       "bytes": 207152,
       "records": 915,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-01",
@@ -1878,7 +1878,7 @@
       "bytes": 12814,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-02",
@@ -1916,7 +1916,7 @@
       "bytes": 21048,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-05",
@@ -1954,7 +1954,7 @@
       "bytes": 21719,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-06",
@@ -1992,7 +1992,7 @@
       "bytes": 21515,
       "records": 12,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-07",
@@ -2030,7 +2030,7 @@
       "bytes": 21297,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-08",
@@ -2068,7 +2068,7 @@
       "bytes": 21230,
       "records": 8,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-09",
@@ -2106,7 +2106,7 @@
       "bytes": 21686,
       "records": 12,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-10",
@@ -2144,7 +2144,7 @@
       "bytes": 26041,
       "records": 16,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-11",
@@ -2182,7 +2182,7 @@
       "bytes": 23612,
       "records": 10,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-commission-12",
@@ -2220,7 +2220,7 @@
       "bytes": 20766,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-goods-04",
@@ -2258,7 +2258,7 @@
       "bytes": 20827,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-goods-06",
@@ -2296,7 +2296,7 @@
       "bytes": 22294,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-competitive-goods-11",
@@ -2334,7 +2334,7 @@
       "bytes": 21349,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-04",
@@ -2372,7 +2372,7 @@
       "bytes": 25987,
       "records": 28,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-05",
@@ -2410,7 +2410,7 @@
       "bytes": 22005,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-06",
@@ -2448,7 +2448,7 @@
       "bytes": 19986,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-07",
@@ -2486,7 +2486,7 @@
       "bytes": 22465,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-08",
@@ -2524,7 +2524,7 @@
       "bytes": 19982,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-10",
@@ -2562,7 +2562,7 @@
       "bytes": 22889,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-commission-11",
@@ -2600,7 +2600,7 @@
       "bytes": 20049,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-goods-01",
@@ -2638,7 +2638,7 @@
       "bytes": 21671,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-goods-02",
@@ -2676,7 +2676,7 @@
       "bytes": 21763,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-goods-03",
@@ -2714,7 +2714,7 @@
       "bytes": 21512,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-discretionary-goods-10",
@@ -2752,7 +2752,7 @@
       "bytes": 19697,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "anre-2025-grant-decisions-h1",
@@ -2790,7 +2790,7 @@
       "bytes": 51365,
       "records": 288,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2021-competitive-commission",
@@ -2828,7 +2828,7 @@
       "bytes": 104321,
       "records": 349,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2021-competitive-goods",
@@ -2866,7 +2866,7 @@
       "bytes": 62754,
       "records": 147,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2021-competitive-public-works",
@@ -2904,7 +2904,7 @@
       "bytes": 18005,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2021-discretionary-commission",
@@ -2942,7 +2942,7 @@
       "bytes": 84176,
       "records": 149,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2021-discretionary-goods",
@@ -2980,7 +2980,7 @@
       "bytes": 75945,
       "records": 144,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2021-discretionary-public-works",
@@ -3018,7 +3018,7 @@
       "bytes": 15498,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-competitive-commission",
@@ -3056,7 +3056,7 @@
       "bytes": 108633,
       "records": 340,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-competitive-goods",
@@ -3094,7 +3094,7 @@
       "bytes": 54807,
       "records": 104,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-competitive-public-works",
@@ -3132,7 +3132,7 @@
       "bytes": 11163,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-discretionary-commission",
@@ -3170,7 +3170,7 @@
       "bytes": 81710,
       "records": 158,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-discretionary-goods",
@@ -3208,7 +3208,7 @@
       "bytes": 74904,
       "records": 137,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-discretionary-public-works",
@@ -3246,7 +3246,7 @@
       "bytes": 11375,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-grant-decisions-h1",
@@ -3284,7 +3284,7 @@
       "bytes": 39727,
       "records": 186,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2022-grant-decisions-h2",
@@ -3322,7 +3322,7 @@
       "bytes": 23137,
       "records": 86,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-competitive-commission",
@@ -3360,7 +3360,7 @@
       "bytes": 109236,
       "records": 331,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-competitive-goods",
@@ -3398,7 +3398,7 @@
       "bytes": 61471,
       "records": 136,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-competitive-public-works",
@@ -3436,7 +3436,7 @@
       "bytes": 18891,
       "records": 6,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-discretionary-commission",
@@ -3474,7 +3474,7 @@
       "bytes": 83676,
       "records": 154,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-discretionary-goods",
@@ -3512,7 +3512,7 @@
       "bytes": 78101,
       "records": 140,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-discretionary-public-works",
@@ -3550,7 +3550,7 @@
       "bytes": 14064,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-grant-decisions-h1",
@@ -3588,7 +3588,7 @@
       "bytes": 29356,
       "records": 155,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2023-grant-decisions-h2",
@@ -3626,7 +3626,7 @@
       "bytes": 20364,
       "records": 71,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-competitive-commission",
@@ -3664,7 +3664,7 @@
       "bytes": 90653,
       "records": 309,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-competitive-goods",
@@ -3702,7 +3702,7 @@
       "bytes": 66180,
       "records": 150,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-competitive-public-works",
@@ -3740,7 +3740,7 @@
       "bytes": 18529,
       "records": 6,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-discretionary-commission",
@@ -3778,7 +3778,7 @@
       "bytes": 65576,
       "records": 127,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-discretionary-goods",
@@ -3816,7 +3816,7 @@
       "bytes": 62687,
       "records": 133,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-discretionary-public-works",
@@ -3854,7 +3854,7 @@
       "bytes": 16034,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-grant-decisions-h1",
@@ -3892,7 +3892,7 @@
       "bytes": 28894,
       "records": 159,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2024-grant-decisions-h2",
@@ -3930,7 +3930,7 @@
       "bytes": 21621,
       "records": 104,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-discretionary-commission",
@@ -3968,7 +3968,7 @@
       "bytes": 75116,
       "records": 116,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-discretionary-goods",
@@ -4006,7 +4006,7 @@
       "bytes": 88525,
       "records": 142,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "meti-2025-discretionary-public-works",
@@ -4044,7 +4044,7 @@
       "bytes": 60640,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:53:00.000Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2020-competitive-goods",
@@ -4082,7 +4082,7 @@
       "bytes": 76101,
       "records": 157,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2020-competitive-commission",
@@ -4120,7 +4120,7 @@
       "bytes": 68609,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2020-competitive-public-works",
@@ -4158,7 +4158,7 @@
       "bytes": 17509,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2020-discretionary-goods",
@@ -4196,7 +4196,7 @@
       "bytes": 64179,
       "records": 156,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2020-discretionary-commission",
@@ -4234,7 +4234,7 @@
       "bytes": 27099,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2020-discretionary-public-works",
@@ -4272,7 +4272,7 @@
       "bytes": 21361,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-competitive-goods",
@@ -4310,7 +4310,7 @@
       "bytes": 76668,
       "records": 159,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-competitive-commission",
@@ -4348,7 +4348,7 @@
       "bytes": 30930,
       "records": 15,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-competitive-public-works",
@@ -4386,7 +4386,7 @@
       "bytes": 18015,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-discretionary-goods",
@@ -4424,7 +4424,7 @@
       "bytes": 55954,
       "records": 144,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-discretionary-commission",
@@ -4462,7 +4462,7 @@
       "bytes": 15028,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-discretionary-public-works",
@@ -4500,7 +4500,7 @@
       "bytes": 21911,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-competitive-goods",
@@ -4538,7 +4538,7 @@
       "bytes": 73743,
       "records": 155,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-competitive-commission",
@@ -4576,7 +4576,7 @@
       "bytes": 32367,
       "records": 15,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-competitive-public-works",
@@ -4614,7 +4614,7 @@
       "bytes": 17223,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-discretionary-goods",
@@ -4652,7 +4652,7 @@
       "bytes": 47540,
       "records": 94,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-discretionary-commission",
@@ -4690,7 +4690,7 @@
       "bytes": 15636,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-discretionary-public-works",
@@ -4728,7 +4728,7 @@
       "bytes": 15984,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-competitive-goods",
@@ -4766,7 +4766,7 @@
       "bytes": 72985,
       "records": 165,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-competitive-commission",
@@ -4804,7 +4804,7 @@
       "bytes": 35266,
       "records": 17,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-competitive-public-works",
@@ -4842,7 +4842,7 @@
       "bytes": 14272,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-discretionary-goods",
@@ -4880,7 +4880,7 @@
       "bytes": 55405,
       "records": 100,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-discretionary-commission",
@@ -4918,7 +4918,7 @@
       "bytes": 15546,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-discretionary-public-works",
@@ -4956,7 +4956,7 @@
       "bytes": 16305,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-grant-decisions-h1",
@@ -4994,7 +4994,7 @@
       "bytes": 14084,
       "records": 8,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2021-grant-decisions-h2",
@@ -5032,7 +5032,7 @@
       "bytes": 12591,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-grant-decisions-h1",
@@ -5070,7 +5070,7 @@
       "bytes": 13896,
       "records": 8,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2022-grant-decisions-h2",
@@ -5108,7 +5108,7 @@
       "bytes": 12604,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-grant-decisions-h1",
@@ -5146,7 +5146,7 @@
       "bytes": 13881,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2023-grant-decisions-h2",
@@ -5184,7 +5184,7 @@
       "bytes": 12374,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-grant-decisions-h1",
@@ -5222,7 +5222,7 @@
       "bytes": 13488,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-grant-decisions-h2",
@@ -5260,7 +5260,7 @@
       "bytes": 21134,
       "records": 0,
       "emptySentinelFound": true,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-competitive-goods",
@@ -5298,7 +5298,7 @@
       "bytes": 249865,
       "records": 175,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-competitive-commission",
@@ -5336,7 +5336,7 @@
       "bytes": 29393,
       "records": 16,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-competitive-public-works",
@@ -5374,7 +5374,7 @@
       "bytes": 14114,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-discretionary-goods",
@@ -5412,7 +5412,7 @@
       "bytes": 45269,
       "records": 144,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2024-discretionary-commission",
@@ -5450,7 +5450,7 @@
       "bytes": 19044,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-competitive-commission",
@@ -5488,7 +5488,7 @@
       "bytes": 31421,
       "records": 22,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-competitive-public-works",
@@ -5526,7 +5526,7 @@
       "bytes": 25997,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "jpo-2025-discretionary-commission",
@@ -5534,10 +5534,10 @@
       "primaryUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/document/2025/2025_itaku.xlsx",
       "transportUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/document/2025/2025_itaku.xlsx",
       "fallbackUsed": false,
-      "carryForwardUsed": false,
-      "primaryFailureReasonCode": null,
-      "lastSuccessfulRetrievedAt": null,
-      "attemptedAt": null,
+      "carryForwardUsed": true,
+      "primaryFailureReasonCode": "transient_http",
+      "lastSuccessfulRetrievedAt": "2026-08-12T06:16:38.350Z",
+      "attemptedAt": "2026-08-12T07:57:09.963Z",
       "originalUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/document/2025/2025_itaku.xlsx",
       "sourcePageUrl": "https://www.jpo.go.jp/news/chotatsu/rakusatu/zuikeyaku/2025.html",
       "format": "xlsx",
@@ -5602,7 +5602,7 @@
       "bytes": 11596,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2020-competitive-commission",
@@ -5640,7 +5640,7 @@
       "bytes": 69647,
       "records": 61,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2020-discretionary-goods",
@@ -5651,7 +5651,7 @@
       "carryForwardUsed": true,
       "primaryFailureReasonCode": "transient_http",
       "lastSuccessfulRetrievedAt": "2026-08-12T02:02:37.744Z",
-      "attemptedAt": "2026-08-12T06:16:38.350Z",
+      "attemptedAt": "2026-08-12T07:57:09.963Z",
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_chouhi_2020.html",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "format": "html",
@@ -5716,7 +5716,7 @@
       "bytes": 46624,
       "records": 31,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2020-grant-decisions",
@@ -5754,7 +5754,7 @@
       "bytes": 59065,
       "records": 121,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2021-competitive-goods",
@@ -5792,7 +5792,7 @@
       "bytes": 9064,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2021-competitive-commission",
@@ -5830,7 +5830,7 @@
       "bytes": 74638,
       "records": 66,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2021-discretionary-goods",
@@ -5868,7 +5868,7 @@
       "bytes": 8885,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2021-discretionary-commission",
@@ -5906,7 +5906,7 @@
       "bytes": 36342,
       "records": 19,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2021-grant-decisions",
@@ -5944,7 +5944,7 @@
       "bytes": 27255,
       "records": 48,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2022-competitive-goods",
@@ -5982,7 +5982,7 @@
       "bytes": 13908,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2022-competitive-commission",
@@ -6020,7 +6020,7 @@
       "bytes": 60133,
       "records": 53,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2022-discretionary-goods",
@@ -6058,7 +6058,7 @@
       "bytes": 12017,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2022-discretionary-commission",
@@ -6096,7 +6096,7 @@
       "bytes": 32556,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2022-grant-decisions",
@@ -6134,7 +6134,7 @@
       "bytes": 33702,
       "records": 61,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2023-competitive-goods",
@@ -6172,7 +6172,7 @@
       "bytes": 11814,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2023-competitive-commission",
@@ -6210,7 +6210,7 @@
       "bytes": 54079,
       "records": 44,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2023-discretionary-goods",
@@ -6248,7 +6248,7 @@
       "bytes": 9548,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2023-discretionary-commission",
@@ -6286,7 +6286,7 @@
       "bytes": 41144,
       "records": 25,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2023-grant-decisions",
@@ -6324,7 +6324,7 @@
       "bytes": 26717,
       "records": 63,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2024-competitive-goods",
@@ -6362,7 +6362,7 @@
       "bytes": 16653,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2024-competitive-commission",
@@ -6400,7 +6400,7 @@
       "bytes": 46900,
       "records": 42,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2024-discretionary-goods",
@@ -6438,7 +6438,7 @@
       "bytes": 20107,
       "records": 9,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2024-discretionary-commission",
@@ -6476,7 +6476,7 @@
       "bytes": 28999,
       "records": 21,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "smea-2024-grant-decisions",
@@ -6514,7 +6514,7 @@
       "bytes": 14802,
       "records": 21,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "chugoku-2020-competitive-goods",
@@ -6552,7 +6552,7 @@
       "bytes": 31885,
       "records": 20,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "chugoku-2024-competitive-goods",
@@ -6590,7 +6590,7 @@
       "bytes": 34897,
       "records": 18,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2023-competitive-goods",
@@ -6628,7 +6628,7 @@
       "bytes": 26945,
       "records": 18,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2023-competitive-commission",
@@ -6666,7 +6666,7 @@
       "bytes": 26691,
       "records": 14,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2023-discretionary-goods",
@@ -6704,7 +6704,7 @@
       "bytes": 9894,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2023-discretionary-commission",
@@ -6742,7 +6742,7 @@
       "bytes": 25731,
       "records": 14,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2024-competitive-goods",
@@ -6780,7 +6780,7 @@
       "bytes": 26086,
       "records": 17,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2024-competitive-commission",
@@ -6818,7 +6818,7 @@
       "bytes": 27730,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2025-competitive-goods",
@@ -6856,7 +6856,7 @@
       "bytes": 28656,
       "records": 18,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "hokkaido-2025-grant-decisions",
@@ -6867,7 +6867,7 @@
       "carryForwardUsed": true,
       "primaryFailureReasonCode": "transient_http",
       "lastSuccessfulRetrievedAt": "2026-08-12T06:07:18.107Z",
-      "attemptedAt": "2026-08-12T06:16:38.350Z",
+      "attemptedAt": "2026-08-12T07:57:09.963Z",
       "originalUrl": "https://www.hkd.meti.go.jp/hoksa/koufu_ichiran/fy2025.htm",
       "sourcePageUrl": "https://www.hkd.meti.go.jp/information/koubo/hojokin/koufuichiran.htm",
       "format": "html",
@@ -6932,7 +6932,7 @@
       "bytes": 8930,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2025-competitive-goods-202504",
@@ -6970,7 +6970,7 @@
       "bytes": 8902,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2025-competitive-goods-202507",
@@ -7008,7 +7008,7 @@
       "bytes": 9966,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2025-competitive-goods-202510",
@@ -7046,7 +7046,7 @@
       "bytes": 8971,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2025-competitive-commission-202507",
@@ -7084,7 +7084,7 @@
       "bytes": 9966,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2024-discretionary-goods-202404",
@@ -7122,7 +7122,7 @@
       "bytes": 11021,
       "records": 3,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2025-discretionary-commission-202504",
@@ -7160,7 +7160,7 @@
       "bytes": 18874,
       "records": 12,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "shikoku-2025-grant-decisions-h1",
@@ -7168,10 +7168,10 @@
       "primaryUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202504_202509/202504_202509.html",
       "transportUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202504_202509/202504_202509.html",
       "fallbackUsed": false,
-      "carryForwardUsed": true,
-      "primaryFailureReasonCode": "transient_http",
-      "lastSuccessfulRetrievedAt": "2026-08-12T06:07:18.107Z",
-      "attemptedAt": "2026-08-12T06:16:38.350Z",
+      "carryForwardUsed": false,
+      "primaryFailureReasonCode": null,
+      "lastSuccessfulRetrievedAt": null,
+      "attemptedAt": null,
       "originalUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/04_kaikei/02_hojokin_202504_202509/202504_202509.html",
       "sourcePageUrl": "https://www.shikoku.meti.go.jp/02_soshikiinfos/hojokin_index.html",
       "format": "html",
@@ -7198,7 +7198,7 @@
       "bytes": 49584,
       "records": 113,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:07:18.107Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "tohoku-2025-grant-decisions-h1",
@@ -7236,7 +7236,7 @@
       "bytes": 157695,
       "records": 260,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "tohoku-2025-grant-decisions-h2",
@@ -7274,7 +7274,7 @@
       "bytes": 82911,
       "records": 26,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:16:38.350Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h1-energy-grant",
@@ -7312,7 +7312,7 @@
       "bytes": 243447,
       "records": 19,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h1-energy-subsidy",
@@ -7350,7 +7350,7 @@
       "bytes": 328524,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h1-general-subsidy",
@@ -7388,7 +7388,7 @@
       "bytes": 1254376,
       "records": 150,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h1-power-development-grant",
@@ -7426,7 +7426,7 @@
       "bytes": 634457,
       "records": 84,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h1-patent-subsidy",
@@ -7464,7 +7464,7 @@
       "bytes": 309920,
       "records": 13,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h2-energy-grant",
@@ -7502,7 +7502,7 @@
       "bytes": 126011,
       "records": 1,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h2-general-subsidy",
@@ -7540,7 +7540,7 @@
       "bytes": 151174,
       "records": 8,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "kanto-2025-grant-decisions-h2-power-development-grant",
@@ -7578,7 +7578,7 @@
       "bytes": 136087,
       "records": 2,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T07:02:02.886Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2020-grant-decisions-h1",
@@ -7616,7 +7616,7 @@
       "bytes": 108326,
       "records": 28,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2020-grant-decisions-h2",
@@ -7654,7 +7654,7 @@
       "bytes": 53923,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2021-grant-decisions-h1",
@@ -7692,7 +7692,7 @@
       "bytes": 110618,
       "records": 31,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2021-grant-decisions-h2",
@@ -7730,7 +7730,7 @@
       "bytes": 63004,
       "records": 6,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2022-grant-decisions-h1",
@@ -7768,7 +7768,7 @@
       "bytes": 104738,
       "records": 25,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2022-grant-decisions-h2",
@@ -7806,7 +7806,7 @@
       "bytes": 64538,
       "records": 7,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2023-grant-decisions-h1",
@@ -7844,7 +7844,7 @@
       "bytes": 117264,
       "records": 33,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2023-grant-decisions-h2",
@@ -7882,7 +7882,7 @@
       "bytes": 64242,
       "records": 4,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2024-grant-decisions-h1",
@@ -7920,7 +7920,7 @@
       "bytes": 123539,
       "records": 50,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     },
     {
       "id": "okinawa-2024-grant-decisions-h2",
@@ -7958,7 +7958,7 @@
       "bytes": 64198,
       "records": 5,
       "emptySentinelFound": false,
-      "retrievedAt": "2026-08-12T06:52:25.206Z"
+      "retrievedAt": "2026-08-12T07:57:09.963Z"
     }
   ],
   "sourceFailures": [],
