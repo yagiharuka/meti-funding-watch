@@ -7,7 +7,7 @@ import sourceRegistry from "@/data/official-source-registry.json";
 
 export const metadata: Metadata = {
   title: "公式契約結果・補助金交付決定",
-  description: "経済産業省関係機関の公式契約結果と補助金等の交付決定を、収録範囲を限定して明細検索できます。",
+  description: "経済産業省本省、外局、地方経済産業局等13機関の公開済み契約結果・補助金等交付決定の一部を横断検索できます。",
 };
 
 const registry = sourceRegistry;
