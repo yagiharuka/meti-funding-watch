@@ -26,12 +26,12 @@ test("registers only explicit official-index documents for the three structured 
   assert.equal(HOKKAIDO_DOCUMENTS.length, 21);
   assert.equal(SHIKOKU_DOCUMENTS.length, 84);
   assert.equal(REGIONAL_DOCUMENTS.length, 146);
-  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 128);
-  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 18);
+  assert.equal(REGIONAL_OFFICIAL_DOCUMENTS.length, 131);
+  assert.equal(REGIONAL_CANDIDATE_DOCUMENTS.length, 15);
   assert.equal(REGIONAL_EVIDENCE_RECEIPTS.length, 20);
   assert.equal(REGIONAL_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 554);
-  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.length, 108);
-  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 2_360);
+  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.length, 111);
+  assert.equal(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.reduce((sum, receipt) => sum + receipt.expectedRecordCount, 0), 2_363);
   assert.equal(new Set(REGIONAL_DOCUMENTS.map((document) => document.id)).size, REGIONAL_DOCUMENTS.length);
   assert.deepEqual(
     [...REGIONAL_OFFICIAL_DOCUMENTS.map((document) => document.id)].sort(),
@@ -108,7 +108,7 @@ test("replays all 20 exact evidence responses through their strict parser", {
   assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
 });
 
-test("replays all 108 committed WARP evidence responses through production ingestion", async () => {
+test("replays all 111 committed WARP evidence responses through production ingestion", async () => {
   const documents = REGIONAL_OFFICIAL_DOCUMENTS.filter((document) => document.archiveProvider);
   const receiptById = new Map(REGIONAL_ARCHIVE_EVIDENCE_RECEIPTS.map((receipt) => [receipt.id, receipt]));
   const responseByUrl = new Map();
@@ -125,9 +125,9 @@ test("replays all 108 committed WARP evidence responses through production inges
     return new Response(buffer, { status: 200, headers: { "content-length": String(buffer.length) } });
   });
   assert.deepEqual(result.sourceFailures, []);
-  assert.equal(result.fetched.length, 108);
+  assert.equal(result.fetched.length, 111);
   const rows = result.fetched.flatMap((item) => item.records);
-  assert.equal(rows.length, 2_360);
+  assert.equal(rows.length, 2_363);
   assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
   assert.ok(rows.every((row) => row.sourceKey && row.sourcePageUrl && row.sourceDocumentUrl));
 });
@@ -150,6 +150,35 @@ test("binds China grant table-boundary skips to exact workbook rows and values",
   await assert.rejects(
     parseOfficialWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()), document),
     /固定した非明細行と一致しません/,
+  );
+});
+
+test("binds China public-works spelling variants to the exact three documents", async () => {
+  const ids = [
+    "chugoku-2021-competitive-public-works",
+    "chugoku-2022-competitive-public-works",
+    "chugoku-2023-discretionary-public-works",
+  ];
+  const expectedMethods = ["一般競争（最低価格方式）", "一般競争（最低価格方式）", "少額随契"];
+  for (const [index, id] of ids.entries()) {
+    const document = REGIONAL_OFFICIAL_DOCUMENTS.find((candidate) => candidate.id === id);
+    assert.ok(document);
+    assert.deepEqual(document.headerAliases["契約の相手方の商号又は名称"], ["契約の相手方の商号または名称"]);
+    const buffer = await readFile(new URL(`../evidence/official-bootstrap/${id}.xlsx`, import.meta.url));
+    const rows = await parseOfficialWorkbook(buffer, document);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].method, expectedMethods[index]);
+    assert.equal(rows[0].amountStage, "契約金額欄の掲載値");
+  }
+
+  const document = REGIONAL_OFFICIAL_DOCUMENTS.find((candidate) => candidate.id === ids[0]);
+  const buffer = await readFile(new URL(`../evidence/official-bootstrap/${ids[0]}.xlsx`, import.meta.url));
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  workbook.getWorksheet("６月競争（工事）").getCell("D1").value = "契約の相手方の商号もしくは名称";
+  await assert.rejects(
+    parseOfficialWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()), document),
+    /必須見出しが見つかりません/,
   );
 });
 
@@ -176,7 +205,7 @@ test("keeps the exact linked-year gaps visible instead of inventing regional sou
 test("pins every remaining regional candidate and its fail-closed reason", () => {
   assert.equal(regionalGapInventory.schemaVersion, 1);
   assert.equal(regionalGapInventory.capture, "20260602/20260601000000");
-  assert.equal(regionalGapInventory.candidates.length, 18);
+  assert.equal(regionalGapInventory.candidates.length, 15);
   assert.deepEqual(
     regionalGapInventory.candidates.map((item) => item.id).sort(),
     REGIONAL_CANDIDATE_DOCUMENTS.map((document) => document.id).sort(),

@@ -5,39 +5,6 @@
   "scope": "公式目次で定義済みだが固定WARP原本のstrict parseまたは取得を通過していない地域局候補。FY2026は年度途中。",
   "candidates": [
     {
-      "id": "chugoku-2021-competitive-public-works",
-      "executorId": "chugoku",
-      "fiscalYear": 2021,
-      "category": "contract_result",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_10kouji.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_10kouji.xlsx",
-      "failure": "chugoku-2021-competitive-public-works/６月競争（工事）: 必須見出しが見つかりません"
-    },
-    {
-      "id": "chugoku-2022-competitive-public-works",
-      "executorId": "chugoku",
-      "fiscalYear": 2022,
-      "category": "contract_result",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503koukyou.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503koukyou.xlsx",
-      "failure": "chugoku-2022-competitive-public-works/公共調達の適正化(様式１): 必須見出しが見つかりません"
-    },
-    {
-      "id": "chugoku-2023-discretionary-public-works",
-      "executorId": "chugoku",
-      "fiscalYear": 2023,
-      "category": "contract_result",
-      "format": "xlsx",
-      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_r0602koukyoukouji.xlsx",
-      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
-      "transportUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_r0602koukyoukouji.xlsx",
-      "failure": "chugoku-2023-discretionary-public-works/公共調達の適正化(様式２): 必須見出しが見つかりません"
-    },
-    {
       "id": "chugoku-2025-competitive-commission",
       "executorId": "chugoku",
       "fiscalYear": 2025,

@@ -975,6 +975,33 @@
       "expectedBytes": 39813,
       "expectedSha256": "0ed4bec718bce4c00ba849ad03726c6bb1dab1ad013abdbee23961b609a122a6",
       "expectedRecordCount": 175
+    },
+    {
+      "id": "chugoku-2021-competitive-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_10kouji.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0304_10kouji.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 11458,
+      "expectedSha256": "e0cee1ed3a241a8396ba68efc5272f52775ac7562e772123708f30dcf24dd64f",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "chugoku-2022-competitive-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503koukyou.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/ippan_kyoso/r0404_r0503koukyou.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 12167,
+      "expectedSha256": "a9ee97810a578e309a5c89f67c48f1b31799065fb36e91f01615480e1e944c2f",
+      "expectedRecordCount": 1
+    },
+    {
+      "id": "chugoku-2023-discretionary-public-works",
+      "url": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_r0602koukyoukouji.xlsx",
+      "originalUrl": "https://www.chugoku.meti.go.jp/nyusatu/file/zuii/r0504_r0602koukyoukouji.xlsx",
+      "sourcePageUrl": "https://www.chugoku.meti.go.jp/nyusatu/koukyouchoutatu-tekisei.html",
+      "expectedBytes": 11554,
+      "expectedSha256": "72034a6ae80a8a964668cf595b3a51bab0ce5dc4eb63cff587f1817cbf32c8ea",
+      "expectedRecordCount": 1
     }
   ]
 }

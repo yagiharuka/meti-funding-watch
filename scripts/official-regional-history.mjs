@@ -122,6 +122,21 @@ const CHUGOKU_CONTRACT_PATHS = Object.freeze({
   },
 });
 
+const CHUGOKU_PUBLIC_WORKS_HEADER_ALIASES = Object.freeze({
+  "chugoku-2021-competitive-public-works": Object.freeze({
+    "契約の相手方の商号又は名称": Object.freeze(["契約の相手方の商号または名称"]),
+  }),
+  "chugoku-2022-competitive-public-works": Object.freeze({
+    "契約の相手方の商号又は名称": Object.freeze(["契約の相手方の商号または名称"]),
+  }),
+  "chugoku-2023-discretionary-public-works": Object.freeze({
+    "契約の相手方の商号又は名称": Object.freeze(["契約の相手方の商号または名称"]),
+    "一般競争入札指名競争入札の別総合評価の実施": Object.freeze([
+      "随意契約によることとした会計法令の根拠条文及び理由規格競争または公募",
+    ]),
+  }),
+});
+
 const CHUGOKU_GRANT_PATHS = Object.freeze({
   2025: ["r0704_r0709kofukettei.xlsx", "r0710_r0803kofukettei.xlsx"],
   2024: ["r0604_r0609kofukettei.xlsx", "r0610_r0703kofukettei.xlsx"],
@@ -178,9 +193,13 @@ const CHUGOKU_GRANT_NON_RECORD_ROWS = Object.freeze({
 });
 
 export const CHUGOKU_DOCUMENTS = Object.freeze([
-  ...Object.entries(CHUGOKU_CONTRACT_PATHS).flatMap(([year, paths]) => Object.entries(paths).map(([series, path]) =>
-    contract(CHUGOKU, Number(year), CONTRACT_SERIES[series], path),
-  )),
+  ...Object.entries(CHUGOKU_CONTRACT_PATHS).flatMap(([year, paths]) => Object.entries(paths).map(([series, path]) => {
+    const id = `chugoku-${year}-${CONTRACT_SERIES[series].id}`;
+    const headerAliases = CHUGOKU_PUBLIC_WORKS_HEADER_ALIASES[id];
+    return contract(CHUGOKU, Number(year), CONTRACT_SERIES[series], path, {
+      ...(headerAliases ? { document: { headerAliases } } : {}),
+    });
+  })),
   ...Object.entries(CHUGOKU_GRANT_PATHS).flatMap(([year, paths]) => paths.map((path, index) => {
     const suffix = paths.length > 1 ? `part-${index + 1}` : "";
     const id = `chugoku-${year}-grant-decisions${suffix ? `-${suffix}` : ""}`;
@@ -466,7 +485,7 @@ function validateArchiveEvidenceMap(value, documents, directReceipts) {
     || typeof value.verification !== "string" || !value.verification.includes("Full GET") || !value.verification.includes("strict parser")) {
     throw new Error("地域局archive evidence mapの検証メタデータが不正です");
   }
-  if (!Array.isArray(value.records) || value.records.length !== 108) throw new Error("地域局archive evidence receiptは108資料でなければなりません");
+  if (!Array.isArray(value.records) || value.records.length !== 111) throw new Error("地域局archive evidence receiptは111資料でなければなりません");
   const definitions = new Map(documents.map((document) => [document.id, document]));
   const directIds = new Set(directReceipts.map((receipt) => receipt.id));
   const ids = new Set();
@@ -488,7 +507,7 @@ function validateArchiveEvidenceMap(value, documents, directReceipts) {
     }
     recordCount += receipt.expectedRecordCount;
   }
-  if (recordCount !== 2_360) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
+  if (recordCount !== 2_363) throw new Error(`地域局archive evidence receiptの明細数が不正です: ${recordCount}`);
 }
 
 export function parseRegionalOfficialHtml(buffer, document) {
