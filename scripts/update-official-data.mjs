@@ -51,7 +51,9 @@ export const OFFICIAL_DOCUMENTS = [
     sourcePageUrl: SMEA_SOURCE_PAGE,
     url: "https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_nyuusatu_2025.xlsx",
   },
-  ...[2025, 2026].flatMap((fiscalYear) => [
+  // FY2026 links currently return empty response bodies. Do not turn a broken
+  // or not-yet-published workbook into a verified zero-record collection.
+  ...[2025].flatMap((fiscalYear) => [
     {
       id: `smea-${fiscalYear}-discretionary-goods`,
       executorId: "smea",
@@ -75,20 +77,6 @@ export const OFFICIAL_DOCUMENTS = [
       url: `https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/itaku_zuikei_${fiscalYear}.xlsx`,
     },
   ]),
-  ...[
-    ["competitive-goods", "競争入札（請負契約）", "chouhi_nyuusatu"],
-    ["competitive-commission", "競争入札（委託契約）", "itaku_nyuusatu"],
-  ].map(([suffix, kind, filename]) => ({
-    id: `smea-2026-${suffix}`,
-    executorId: "smea",
-    executorName: "中小企業庁",
-    fiscalYear: 2026,
-    category: "contract_result",
-    kind,
-    amountStage: "契約額",
-    sourcePageUrl: SMEA_SOURCE_PAGE,
-    url: `https://www.chusho.meti.go.jp/koukai/nyusatsu/choutatsu/${filename}_2026.xlsx`,
-  })),
   {
     id: "jpo-2025-competitive-goods",
     executorId: "jpo",
