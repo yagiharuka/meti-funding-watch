@@ -13,8 +13,18 @@ export const metadata: Metadata = {
 const registry = sourceRegistry;
 const manifest = officialManifest;
 
+type SourceFailure = {
+  id: string;
+  executorId: string;
+  fiscalYear: number;
+  kind: string;
+  sourcePageUrl: string;
+  reasonCode: "empty_response" | "fetch_failed" | "parse_failed";
+};
+
 export default function OfficialSourcesPage() {
   const coverage = manifest.coverage as typeof manifest.coverage & { fiscalYears?: number[]; sourceDocumentCount?: number };
+  const sourceFailures = ((manifest as typeof manifest & { sourceFailures?: SourceFailure[] }).sourceFailures ?? []);
   const smeaRecordCount = manifest.coverage.executors.smea.contractResults.records + manifest.coverage.executors.smea.grantDecisions.records;
   const jpoRecordCount = manifest.coverage.executors.jpo.contractResults.records + manifest.coverage.executors.jpo.grantDecisions.records;
   const years = coverage.fiscalYears ?? [...new Set(Object.values(manifest.coverage.executors).flatMap((item) => item.fiscalYears))].sort();
@@ -69,6 +79,23 @@ export default function OfficialSourcesPage() {
           検索可能な公式資料明細は {manifest.recordCount}掲載行です。
           検索収録は2機関・{yearRange}の{coverage.sourceDocumentCount ?? manifest.sourceDocuments.length}公式資料です。リンクだけの資料は収録済みと数えていません。
         </p>
+        {sourceFailures.length > 0 && (
+          <details className="official-source-failures">
+            <summary>取得・形式検証できず未収録の候補資料：{sourceFailures.length}件</summary>
+            <p>失敗した新規候補を0件資料とは扱わず、検索対象から外しています。前回公開済み資料の再検証に失敗した場合は、公式明細全体の更新を停止します。</p>
+            <ul>
+              {sourceFailures.map((failure) => {
+                const executorName = registry.executors.find((item) => item.id === failure.executorId)?.name ?? failure.executorId;
+                return (
+                  <li key={failure.id}>
+                    <a href={failure.sourcePageUrl} target="_blank" rel="noreferrer">{executorName}・{failure.fiscalYear}年度・{failure.kind} ↗</a>
+                    <span>{sourceFailureLabel(failure.reasonCode)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        )}
       </section>
 
       <section className="official-section official-catalog" aria-labelledby="catalog-title">
@@ -111,4 +138,10 @@ export default function OfficialSourcesPage() {
       </footer>
     </main>
   );
+}
+
+function sourceFailureLabel(reason: SourceFailure["reasonCode"]) {
+  if (reason === "empty_response") return "0バイト応答のため未収録";
+  if (reason === "parse_failed") return "形式を検証できないため未収録";
+  return "取得できないため未収録";
 }

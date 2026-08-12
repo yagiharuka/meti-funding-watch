@@ -7,6 +7,7 @@ import ExcelJS from "exceljs";
 import {
   OFFICIAL_DOCUMENTS,
   assertOfficialContinuity,
+  fetchOfficialDocuments,
   parseOfficialWorkbook,
 } from "../scripts/update-official-data.mjs";
 
@@ -49,6 +50,12 @@ test("binds every published source document to a SHA, row count, and registered 
   assert.equal(manifest.sourceDocuments.length, manifest.coverage.sourceDocumentCount ?? manifest.sourceDocuments.length);
   const definitions = new Map(OFFICIAL_DOCUMENTS.map((item) => [item.id, item]));
   const receipts = new Map(manifest.sourceDocuments.map((item) => [item.id, item]));
+  const sourceFailures = manifest.sourceFailures ?? [];
+  assert.equal(sourceFailures.length, manifest.coverage.failedSourceDocumentCount ?? 0);
+  assert.equal(
+    manifest.sourceDocuments.length + sourceFailures.length,
+    manifest.coverage.attemptedSourceDocumentCount ?? manifest.sourceDocuments.length,
+  );
   for (const receipt of manifest.sourceDocuments) {
     const document = definitions.get(receipt.id);
     assert.ok(document, receipt.id);
@@ -61,6 +68,26 @@ test("binds every published source document to a SHA, row count, and registered 
     assert.equal(receipts.get("jpo-2025-grant-decisions-h2").records, 0);
     assert.equal(receipts.get("jpo-2025-grant-decisions-h2").emptySentinelFound, true);
   }
+});
+
+test("publishes other new documents while never dropping a previously published source", async () => {
+  const unavailable = {
+    id: "new-unavailable-source", executorId: "jpo", executorName: "特許庁", fiscalYear: 2020,
+    category: "contract_result", kind: "競争入札", amountStage: "契約額", format: "xlsx",
+    sourcePageUrl: "https://example.test/index.html", url: "https://example.test/empty.xlsx",
+  };
+  const emptyResponse = async () => new Response(new Uint8Array(), { status: 200 });
+  const partial = await fetchOfficialDocuments([unavailable], [], emptyResponse);
+  assert.equal(partial.fetched.length, 0);
+  assert.equal(partial.sourceFailures.length, 1);
+  assert.equal(partial.sourceFailures[0].reasonCode, "empty_response");
+  assert.equal(partial.sourceFailures[0].id, unavailable.id);
+  assert.doesNotMatch(JSON.stringify(partial.sourceFailures[0]), /ファイルサイズ|Error:/);
+
+  await assert.rejects(
+    fetchOfficialDocuments([unavailable], [{ datasetId: unavailable.id }], emptyResponse),
+    /前回公開済み資料を再検証できませんでした/,
+  );
 });
 
 test("parses an official contract sheet and preserves null, zero, raw, and provenance", async () => {

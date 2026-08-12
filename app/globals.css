@@ -145,6 +145,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .coverage-badge.no { background: #eef1ee; color: #52645d; }
 .catalog-status { max-width: 1440px; margin: 16px auto 0; padding: 14px 16px; border: 1px solid #d8c794; border-radius: 12px; background: #fffaf0; color: #5e563f; font-size: 12px; line-height: 1.75; }
 .catalog-status strong { color: var(--ink); }
+.official-source-failures { max-width: 1440px; margin: 12px auto 0; padding: 13px 16px; border: 1px solid #d6b66d; border-radius: 12px; background: #fff9ec; color: #59451f; font-size: 11px; line-height: 1.7; }
+.official-source-failures summary { min-height: 28px; color: #47391c; font-size: 12px; font-weight: 800; cursor: pointer; }
+.official-source-failures p { margin: 8px 0; }
+.official-source-failures ul { display: grid; gap: 6px; margin: 10px 0 0; padding-left: 20px; }
+.official-source-failures li { padding-left: 3px; }
+.official-source-failures a { color: var(--green); font-weight: 700; }
+.official-source-failures li span { margin-left: 8px; color: #765b27; }
 .official-catalog { padding-top: 58px; background: #edf1eb; }
 .official-source-table table { min-width: 900px; }
 .official-source-table td small { margin-top: 7px; }

@@ -49,6 +49,9 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
   assert.match(registry.series.grantDecisions.notIncluded, /実支払/);
   assert.match(pageSource, /GビズINFOの掲載値とも合算しません/);
   assert.match(pageSource, /リンクだけの資料は収録済みと数えていません/);
+  assert.match(pageSource, /取得・形式検証できず未収録の候補資料/);
+  assert.match(pageSource, /失敗した新規候補を0件資料とは扱わず/);
+  assert.match(pageSource, /前回公開済み資料の再検証に失敗した場合は、公式明細全体の更新を停止/);
   assert.match(pageSource, /明細未収録/);
   assert.match(pageSource, /再委託先、間接補助先、基金・所管法人からの下流支出/);
   assert.doesNotMatch(pageSource, /実支払額です|最終受益者です|全件収録済み/);

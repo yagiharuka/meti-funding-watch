@@ -210,18 +210,15 @@ export function assertOfficialContinuity(previousRecords, candidateRecords) {
 }
 
 export async function updateOfficialData({ now = new Date(), fetchImpl = null } = {}) {
-  const fetched = [];
-  for (const document of OFFICIAL_DOCUMENTS) {
-    const source = await fetchDocument(document, fetchImpl);
-    const records = document.format === "html"
-      ? parseSmeaOfficialHtml(source.buffer, document).map((record) => normalizeSmeaRecord(record, document))
-      : await parseOfficialWorkbook(source.buffer, document);
-    fetched.push({ document, ...source, records });
-  }
-
-  const candidateRecords = fetched.flatMap((item) => item.records);
-  uniqueMap(candidateRecords, "今回");
   const previousRecords = await readPreviousOfficialRecords();
+  const { fetched, sourceFailures } = await fetchOfficialDocuments(
+    OFFICIAL_DOCUMENTS,
+    previousRecords,
+    fetchImpl,
+  );
+  const candidateRecords = fetched.flatMap((item) => item.records);
+  if (!candidateRecords.length) throw new Error("検証できた公式資料明細が0行です");
+  uniqueMap(candidateRecords, "今回");
   const continuity = assertOfficialContinuity(previousRecords, candidateRecords);
   const generatedAt = now.toISOString();
   const counts = countRecords(candidateRecords);
@@ -268,9 +265,11 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       status: "partial",
       executorCount: executorIds.length,
       fiscalYears,
-      sourceDocumentCount: OFFICIAL_DOCUMENTS.length,
+      sourceDocumentCount: fetched.length,
+      attemptedSourceDocumentCount: OFFICIAL_DOCUMENTS.length,
+      failedSourceDocumentCount: sourceFailures.length,
       executors: executorCoverage,
-      note: "検索対象はmanifestに列挙した中小企業庁・特許庁の公式公表資料だけです。13執行機関・全年度・全公表区分の全資料ではありません。",
+      note: "検索対象はmanifestに列挙した中小企業庁・特許庁の公式公表資料のうち、取得・形式・継続性を検証できた資料だけです。13執行機関・全年度・全公表区分の全資料ではありません。",
     },
     seriesCounts: counts,
     continuity: {
@@ -298,6 +297,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
       emptySentinelFound: Boolean(records.emptySentinelFound),
       retrievedAt: generatedAt,
     })),
+    sourceFailures: sourceFailures.map((failure) => ({ ...failure, attemptedAt: generatedAt })),
     publicFiles: Object.fromEntries(Object.entries(publicFiles).map(([year, item]) => [year, {
       filename: item.filename,
       sha256: item.sha256,
@@ -317,6 +317,33 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   }
   await atomicWrite(new URL("manifest.json", DATA_DIRECTORY), `${JSON.stringify(manifest, null, 2)}\n`);
   return { manifest, records: candidateRecords };
+}
+
+export async function fetchOfficialDocuments(documents, previousRecords, fetchImpl = null) {
+  if (!Array.isArray(documents) || !Array.isArray(previousRecords)) {
+    throw new Error("公式資料の取得対象と前回明細には配列が必要です");
+  }
+  const previousDatasetIds = new Set(previousRecords.map((record) => record.datasetId).filter(Boolean));
+  const fetched = [];
+  const sourceFailures = [];
+  for (const document of documents) {
+    let phase = "fetch";
+    try {
+      const source = await fetchDocument(document, fetchImpl);
+      phase = "parse";
+      const records = document.format === "html"
+        ? parseSmeaOfficialHtml(source.buffer, document).map((record) => normalizeSmeaRecord(record, document))
+        : await parseOfficialWorkbook(source.buffer, document);
+      fetched.push({ document, ...source, records });
+    } catch (error) {
+      if (previousDatasetIds.has(document.id)) {
+        const message = error instanceof Error ? error.message : "原因不明";
+        throw new Error(`${document.id}: 前回公開済み資料を再検証できませんでした (${message})`);
+      }
+      sourceFailures.push(makeSourceFailure(document, phase, error));
+    }
+  }
+  return { fetched, sourceFailures };
 }
 
 async function fetchDocument(document, fetchImpl) {
@@ -638,6 +665,27 @@ function extractCorporateNumbers(value) {
 
 function semanticHash(record) {
   return sha256(JSON.stringify(Object.fromEntries(semanticFields.map((field) => [field, record[field] ?? null]))));
+}
+
+function makeSourceFailure(document, phase, error) {
+  const message = error instanceof Error ? error.message : "";
+  const reasonCode = phase === "fetch"
+    ? (/ファイルサイズが不正です \(0\)/.test(message) ? "empty_response" : "fetch_failed")
+    : "parse_failed";
+  return {
+    id: document.id,
+    url: document.url,
+    originalUrl: document.originalUrl ?? document.url,
+    sourcePageUrl: document.sourcePageUrl,
+    format: document.format === "html" ? "html" : "xlsx",
+    discoveryStatus: document.discoveryStatus ?? "linked_from_official_index",
+    archiveProvider: document.archiveProvider ?? null,
+    executorId: document.executorId,
+    category: document.category,
+    kind: document.kind,
+    fiscalYear: document.fiscalYear,
+    reasonCode,
+  };
 }
 
 function uniqueMap(records, label) {
