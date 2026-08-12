@@ -210,16 +210,17 @@ export function assertOfficialContinuity(previousRecords, candidateRecords) {
 }
 
 export async function updateOfficialData({ now = new Date(), fetchImpl = null } = {}) {
-  const previousRecords = await readPreviousOfficialRecords();
+  const previous = await readPreviousOfficialState();
   const { fetched, sourceFailures } = await fetchOfficialDocuments(
     OFFICIAL_DOCUMENTS,
-    previousRecords,
+    previous.records,
     fetchImpl,
+    previous.sourceDocumentIds,
   );
   const candidateRecords = fetched.flatMap((item) => item.records);
   if (!candidateRecords.length) throw new Error("検証できた公式資料明細が0行です");
   uniqueMap(candidateRecords, "今回");
-  const continuity = assertOfficialContinuity(previousRecords, candidateRecords);
+  const continuity = assertOfficialContinuity(previous.records, candidateRecords);
   const generatedAt = now.toISOString();
   const counts = countRecords(candidateRecords);
   const recordsByYear = Map.groupBy(candidateRecords, (record) => record.fiscalYear);
@@ -242,7 +243,7 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   const executorIds = [...new Set(candidateRecords.map((record) => record.executorId))].sort();
   const executorCoverage = Object.fromEntries(executorIds.map((executorId) => {
     const executorRecords = candidateRecords.filter((record) => record.executorId === executorId);
-    const executorDocuments = OFFICIAL_DOCUMENTS.filter((document) => document.executorId === executorId);
+    const executorDocuments = fetched.map((item) => item.document).filter((document) => document.executorId === executorId);
     return [executorId, {
       name: executorRecords[0]?.executorName ?? executorDocuments[0]?.executorName ?? executorId,
       fiscalYears: [...new Set(executorRecords.map((record) => record.fiscalYear))].sort((a, b) => a - b),
@@ -319,11 +320,22 @@ export async function updateOfficialData({ now = new Date(), fetchImpl = null } 
   return { manifest, records: candidateRecords };
 }
 
-export async function fetchOfficialDocuments(documents, previousRecords, fetchImpl = null) {
-  if (!Array.isArray(documents) || !Array.isArray(previousRecords)) {
+export async function fetchOfficialDocuments(documents, previousRecords, fetchImpl = null, previousSourceDocumentIds = []) {
+  if (!Array.isArray(documents) || !Array.isArray(previousRecords) || !Array.isArray(previousSourceDocumentIds)) {
     throw new Error("公式資料の取得対象と前回明細には配列が必要です");
   }
-  const previousDatasetIds = new Set(previousRecords.map((record) => record.datasetId).filter(Boolean));
+  const definitions = new Map();
+  for (const document of documents) {
+    if (!document?.id || definitions.has(document.id)) throw new Error(`公式資料の定義IDが不正または重複しています: ${document?.id ?? "(なし)"}`);
+    definitions.set(document.id, document);
+  }
+  const previousDatasetIds = new Set([
+    ...previousRecords.map((record) => record.datasetId).filter(Boolean),
+    ...previousSourceDocumentIds,
+  ]);
+  for (const id of previousDatasetIds) {
+    if (!definitions.has(id)) throw new Error(`前回公開済み資料の定義がなくなりました: ${id}`);
+  }
   const fetched = [];
   const sourceFailures = [];
   for (const document of documents) {
@@ -721,15 +733,20 @@ async function readJsonIfExists(url, fallback) {
   }
 }
 
-async function readPreviousOfficialRecords() {
+async function readPreviousOfficialState() {
   const manifest = await readJsonIfExists(new URL("manifest.json", DATA_DIRECTORY), null);
-  if (!manifest?.files || typeof manifest.files !== "object") return [];
-  return (await Promise.all(Object.values(manifest.files).map((filename) => {
+  if (!manifest?.files || typeof manifest.files !== "object") return { records: [], sourceDocumentIds: [] };
+  const records = (await Promise.all(Object.values(manifest.files).map((filename) => {
     if (!/^records-\d{4}\.json$/.test(filename)) {
       throw new Error(`前回の公式資料manifestに許可されていないファイルがあります: ${filename}`);
     }
     return readJsonIfExists(new URL(filename, DATA_DIRECTORY), []);
   }))).flat();
+  const sourceDocumentIds = (manifest.sourceDocuments ?? []).map((source) => source?.id);
+  if (sourceDocumentIds.some((id) => typeof id !== "string" || !id) || new Set(sourceDocumentIds).size !== sourceDocumentIds.length) {
+    throw new Error("前回の公式資料manifestに不正または重複した資料IDがあります");
+  }
+  return { records, sourceDocumentIds };
 }
 
 function coverageStatus(documents, category) {

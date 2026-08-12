@@ -51,6 +51,9 @@ test("binds every published source document to a SHA, row count, and registered 
   const definitions = new Map(OFFICIAL_DOCUMENTS.map((item) => [item.id, item]));
   const receipts = new Map(manifest.sourceDocuments.map((item) => [item.id, item]));
   const sourceFailures = manifest.sourceFailures ?? [];
+  assert.equal(receipts.size, manifest.sourceDocuments.length);
+  assert.equal(new Set(sourceFailures.map((failure) => failure.id)).size, sourceFailures.length);
+  assert.ok(sourceFailures.every((failure) => !receipts.has(failure.id)));
   assert.equal(sourceFailures.length, manifest.coverage.failedSourceDocumentCount ?? 0);
   assert.equal(
     manifest.sourceDocuments.length + sourceFailures.length,
@@ -76,17 +79,31 @@ test("publishes other new documents while never dropping a previously published 
     category: "contract_result", kind: "競争入札", amountStage: "契約額", format: "xlsx",
     sourcePageUrl: "https://example.test/index.html", url: "https://example.test/empty.xlsx",
   };
-  const emptyResponse = async () => new Response(new Uint8Array(), { status: 200 });
-  const partial = await fetchOfficialDocuments([unavailable], [], emptyResponse);
-  assert.equal(partial.fetched.length, 0);
+  const valid = { ...unavailable, id: "new-valid-source", url: "https://example.test/valid.xlsx" };
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("fixture");
+  sheet.addRow(["事業名", "交付先名", "法人番号", "交付決定額", "交付決定日"]);
+  sheet.addRow(["補助事業", "法人A", "6010001030403", "1,000", "2025年4月1日"]);
+  const validBytes = Buffer.from(await workbook.xlsx.writeBuffer());
+  const mixedResponse = async (url) => new Response(url.endsWith("valid.xlsx") ? validBytes : new Uint8Array(), { status: 200 });
+  valid.category = "grant_decision";
+  valid.kind = "補助金等の交付決定";
+  valid.amountStage = "交付決定額";
+  const partial = await fetchOfficialDocuments([unavailable, valid], [], mixedResponse);
+  assert.equal(partial.fetched.length, 1);
+  assert.equal(partial.fetched[0].document.id, valid.id);
   assert.equal(partial.sourceFailures.length, 1);
   assert.equal(partial.sourceFailures[0].reasonCode, "empty_response");
   assert.equal(partial.sourceFailures[0].id, unavailable.id);
   assert.doesNotMatch(JSON.stringify(partial.sourceFailures[0]), /ファイルサイズ|Error:/);
 
   await assert.rejects(
-    fetchOfficialDocuments([unavailable], [{ datasetId: unavailable.id }], emptyResponse),
+    fetchOfficialDocuments([unavailable], [], mixedResponse, [unavailable.id]),
     /前回公開済み資料を再検証できませんでした/,
+  );
+  await assert.rejects(
+    fetchOfficialDocuments([], [], mixedResponse, ["previous-zero-row-source"]),
+    /前回公開済み資料の定義がなくなりました/,
   );
 });
 
