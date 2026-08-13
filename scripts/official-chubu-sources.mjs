@@ -277,6 +277,12 @@ function makeDiscretionaryContractDocument({
     sourcePageUrl: CHUBU_SOURCE_PAGE,
     url: `${CHUBU_WARP_PREFIX}${originalUrl}`,
     originalUrl,
+    archiveProvider: "国立国会図書館インターネット資料収集保存事業（WARP）",
+    archiveVerifiedAt: "2026-08-13",
+    archiveVerification: "公式目次の保存HTMLにある実hrefをFull GETし、原本のbytes・SHA-256・magic・全行parseを固定",
+    archiveExpectedBytes: expectedBytes,
+    archiveExpectedSha256: expectedSha256,
+    archiveExpectedRecordCount: expectedRecordCount,
     coverageClaim: `WARP保存時点の令和6年度・随意契約（${costClass}）公式文字PDF全1ページに掲載された${expectedRecordCount}行`,
     pdfSchema: Object.freeze({
       schemaVersion: 1,

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
@@ -10,6 +11,8 @@ import {
   KANSAI_KYUSHU_OFFICIAL_DOCUMENTS,
 } from "../scripts/official-kansai-kyushu-sources.mjs";
 import { parseOfficialPdf } from "../scripts/official-pdf.mjs";
+
+const kansaiDiscretionaryEvidenceDirectory = new URL("../evidence/kansai-2025-discretionary/", import.meta.url);
 
 test("pins four archived Kansai and Kyushu FY2025 grant-decision PDFs", () => {
   assert.equal(KANSAI_KYUSHU_GRANT_DOCUMENTS.length, 4);
@@ -46,14 +49,14 @@ test("pins four archived Kansai and Kyushu FY2025 grant-decision PDFs", () => {
   }
 });
 
-test("pins twelve archived Kansai and Kyushu FY2025 competitive-commission PDFs", () => {
-  assert.equal(KANSAI_KYUSHU_CONTRACT_DOCUMENTS.length, 12);
-  assert.equal(KANSAI_KYUSHU_OFFICIAL_DOCUMENTS.length, 16);
+test("pins eighteen archived Kansai and Kyushu FY2025 contract PDFs", () => {
+  assert.equal(KANSAI_KYUSHU_CONTRACT_DOCUMENTS.length, 18);
+  assert.equal(KANSAI_KYUSHU_OFFICIAL_DOCUMENTS.length, 22);
   assert.equal(
     KANSAI_KYUSHU_CONTRACT_DOCUMENTS.reduce(
       (sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0,
     ),
-    29,
+    69,
   );
   assert.deepEqual(
     Object.fromEntries(["kansai", "kyushu"].map((executorId) => [
@@ -62,18 +65,53 @@ test("pins twelve archived Kansai and Kyushu FY2025 competitive-commission PDFs"
         .filter((document) => document.executorId === executorId)
         .reduce((sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0),
     ])),
-    { kansai: 21, kyushu: 8 },
+    { kansai: 61, kyushu: 8 },
   );
   for (const document of KANSAI_KYUSHU_CONTRACT_DOCUMENTS) {
     assert.equal(document.category, "contract_result");
-    assert.equal(document.kind, "競争入札（委託費）");
+    assert.ok(["競争入札（委託費）", "随意契約（委託費）"].includes(document.kind));
     assert.equal(document.pdfSchema.recordGranularity, "date_anchor_rows");
-    assert.equal(document.pdfSchema.expectedPageCount, 1);
+    assert.ok(document.pdfSchema.expectedPageCount >= 1);
     assert.equal(document.archiveExpectedBytes, document.pdfSchema.expectedBytes);
     assert.equal(document.archiveExpectedSha256, document.pdfSchema.expectedSha256);
     assert.equal(document.archiveExpectedRecordCount, document.pdfSchema.expectedRecordCount);
     assert.ok(document.url.startsWith("https://warp.ndl.go.jp/20260613/20260601093442/https://www."));
-    assert.match(document.coverageClaim, /競争入札（委託費）.*掲載された\d+件/);
+    assert.match(document.coverageClaim, /(?:競争入札|随意契約)（委託費）.*掲載された\d+件/);
+  }
+});
+
+test("binds Kansai's FY2025 discretionary-contract index and six PDFs to exact receipts", async () => {
+  const receipt = JSON.parse(await readFile(new URL("receipt.json", kansaiDiscretionaryEvidenceDirectory), "utf8"));
+  const top = await readFile(new URL("top.html", kansaiDiscretionaryEvidenceDirectory));
+  const index = await readFile(new URL("index.html", kansaiDiscretionaryEvidenceDirectory));
+  assert.equal(top.length, receipt.topExpectedBytes);
+  assert.equal(createHash("sha256").update(top).digest("hex"), receipt.topExpectedSha256);
+  assert.equal(index.length, receipt.indexExpectedBytes);
+  assert.equal(createHash("sha256").update(index).digest("hex"), receipt.indexExpectedSha256);
+  assert.ok(top.toString("utf8").includes(receipt.sourcePageUrl));
+
+  const documents = KANSAI_KYUSHU_CONTRACT_DOCUMENTS.filter((document) =>
+    document.id.startsWith("kansai-2025-discretionary-commission-"));
+  assert.equal(receipt.documents.length, 6);
+  assert.equal(documents.length, 6);
+  for (const document of documents) {
+    const evidence = receipt.documents.find((item) => item.id === document.id);
+    assert.ok(evidence, document.id);
+    assert.ok(index.toString("utf8").includes(evidence.filename));
+    assert.equal(document.sourcePageUrl, receipt.sourcePageUrl);
+    assert.equal(document.originalUrl, evidence.originalUrl);
+    assert.equal(document.pdfSchema.expectedBytes, evidence.expectedBytes);
+    assert.equal(document.pdfSchema.expectedSha256, evidence.expectedSha256);
+    assert.equal(document.pdfSchema.expectedPageCount, evidence.expectedPageCount);
+    assert.deepEqual(document.pdfSchema.expectedRowsPerPage, evidence.expectedRowsPerPage);
+    assert.equal(document.pdfSchema.expectedRecordCount, evidence.expectedRecordCount);
+    assert.equal(document.pdfSchema.expectedPositionedTextItemCount, evidence.expectedPositionedTextItemCount);
+    const pdf = await readFile(new URL(evidence.filename, kansaiDiscretionaryEvidenceDirectory));
+    assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
+    assert.equal(pdf.length, evidence.expectedBytes);
+    assert.equal(createHash("sha256").update(pdf).digest("hex"), evidence.expectedSha256);
+    const records = await parseOfficialPdf(pdf, document);
+    assert.equal(records.length, evidence.expectedRecordCount);
   }
 });
 
@@ -108,9 +146,9 @@ test("keeps older years and unparsed contract series explicit as gaps", () => {
   }
 });
 
-test("replays all sixteen exact PDFs through the production positioned-text parser", { timeout: 30_000 }, async (t) => {
+test("replays all twenty-two exact PDFs through the production positioned-text parser", { timeout: 30_000 }, async (t) => {
   const fixtureDirectory = process.env.OFFICIAL_KANSAI_KYUSHU_EVIDENCE_DIRECTORY?.trim();
-  if (!fixtureDirectory) return t.skip("set OFFICIAL_KANSAI_KYUSHU_EVIDENCE_DIRECTORY to the sixteen exact PDF files");
+  if (!fixtureDirectory) return t.skip("set OFFICIAL_KANSAI_KYUSHU_EVIDENCE_DIRECTORY to the twenty-two exact PDF files");
   let recordCount = 0;
   for (const document of KANSAI_KYUSHU_OFFICIAL_DOCUMENTS) {
     const records = await parseOfficialPdf(
@@ -119,5 +157,5 @@ test("replays all sixteen exact PDFs through the production positioned-text pars
     assert.equal(records.length, document.evidenceReceipt.expectedRecordCount, document.id);
     recordCount += records.length;
   }
-  assert.equal(recordCount, 602);
+  assert.equal(recordCount, 642);
 });

@@ -36,6 +36,25 @@ export const OFFICIAL_PARSER_MIGRATION = Object.freeze({
   toRevision: OFFICIAL_PARSER_REVISION,
   previousManifestSha256: "14be720b3390b9e77d89ba4e2098aeb2d7fadd71d27ccf893f6276dd6412e0e1",
 });
+export const OFFICIAL_ARCHIVE_DEFINITION_MIGRATION = Object.freeze({
+  previousManifestSha256: "9a4658a589efb98d599d645491471349fd4c8eb9f564baeee9d6d14bc0806166",
+  documents: Object.freeze({
+    "chubu-2024-discretionary-commission": Object.freeze({
+      previousDefinitionSha256: "36292379810d4f64c0c2c86bbcb3e92b867fb1159404cf171c2f5361b2a5feba",
+      nextDefinitionSha256: "b96d3591ec6ae75c66193be7456f61736958423aa9b60d5ced1a9845d8e9ad98",
+      bytes: 174_706,
+      sha256: "f3a2d4014e8de2542bcd1e5bb20b621f82f4ae9c94ba8a838e6c91330b689323",
+      records: 28,
+    }),
+    "chubu-2024-discretionary-goods": Object.freeze({
+      previousDefinitionSha256: "112ee33014fcfbde9d961c969486de5871a63c345b1338fbe58a3ac4825f3ac6",
+      nextDefinitionSha256: "cbeeebd49e9d0835375641b9c844cb11350affdca3580a89d94a4614f61916d0",
+      bytes: 115_657,
+      sha256: "c929729f06b9e5ac61e2350ed82504f5741bc94caa9b1726487e0cf60bae135a",
+      records: 5,
+    }),
+  }),
+});
 
 class OfficialArchiveUnavailableError extends Error {
   constructor(document, status) {
@@ -502,6 +521,11 @@ function maybeCarryForwardDocument(
     receipt,
     previousManifestSha256,
   );
+  const approvedArchiveDefinitionMigration = isApprovedArchiveDefinitionMigration(
+    document,
+    receipt,
+    previousManifestSha256,
+  );
   if (receipt.id !== document.id
     || receipt.url !== document.url
     || (receipt.transportUrl ?? document.url) !== document.url
@@ -515,7 +539,7 @@ function maybeCarryForwardDocument(
     || receipt.format !== sourceFormat(document)
     || receipt.discoveryStatus !== (document.discoveryStatus ?? "linked_from_official_index")
     || receipt.coverageClaim !== (document.coverageClaim ?? "公式資料に掲載された行")
-    || (!parserDefinitionMatches && !approvedParserMigration)
+    || (!parserDefinitionMatches && !approvedParserMigration && !approvedArchiveDefinitionMigration)
     || receipt.records !== records.length
     || receipt.fallbackUsed
     || !Number.isSafeInteger(receipt.bytes) || receipt.bytes < 500 || receipt.bytes > 10_000_000
@@ -524,7 +548,7 @@ function maybeCarryForwardDocument(
     throw new Error(`${document.id}: 前回検証済み資料のreceiptまたは明細が資料定義と一致しません`);
   }
   if (archiveCarryForward) {
-    if (receipt.archiveProvider !== document.archiveProvider
+    if (!approvedArchiveDefinitionMigration && (receipt.archiveProvider !== document.archiveProvider
       || receipt.archiveVerifiedAt !== document.archiveVerifiedAt
       || receipt.archiveVerification !== document.archiveVerification
       || receipt.archiveExpectedBytes !== document.archiveExpectedBytes
@@ -532,7 +556,7 @@ function maybeCarryForwardDocument(
       || receipt.archiveExpectedRecordCount !== document.archiveExpectedRecordCount
       || receipt.bytes !== document.archiveExpectedBytes
       || receipt.sha256 !== document.archiveExpectedSha256
-      || receipt.records !== document.archiveExpectedRecordCount) {
+      || receipt.records !== document.archiveExpectedRecordCount)) {
       throw new Error(`${document.id}: 前回manifestのWARP receiptが現在の検証済み定義と一致しません`);
     }
   } else if (receipt.archiveProvider) {
@@ -1305,6 +1329,29 @@ export function isApprovedOfficialParserMigration(document, receipt, previousMan
       document,
       OFFICIAL_PARSER_MIGRATION.fromRevision,
     );
+}
+
+export function isApprovedArchiveDefinitionMigration(document, receipt, previousManifestSha256) {
+  const migration = OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.documents[document.id];
+  if (!migration) return false;
+  return previousManifestSha256 === OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.previousManifestSha256
+    && receipt.parserRevision === OFFICIAL_PARSER_REVISION
+    && receipt.definitionSha256 === migration.previousDefinitionSha256
+    && officialDocumentDefinitionSha256(document) === migration.nextDefinitionSha256
+    && receipt.archiveProvider == null
+    && receipt.archiveVerifiedAt == null
+    && receipt.archiveVerification == null
+    && receipt.archiveExpectedBytes == null
+    && receipt.archiveExpectedSha256 == null
+    && receipt.archiveExpectedRecordCount == null
+    && receipt.fallbackUsed === false
+    && receipt.carryForwardUsed === false
+    && receipt.bytes === migration.bytes
+    && receipt.sha256 === migration.sha256
+    && receipt.records === migration.records
+    && document.archiveExpectedBytes === migration.bytes
+    && document.archiveExpectedSha256 === migration.sha256
+    && document.archiveExpectedRecordCount === migration.records;
 }
 
 function canonicalJsonValue(value) {

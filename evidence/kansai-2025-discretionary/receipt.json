@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-13",
+  "officialTopUrl": "https://www.kansai.meti.go.jp/nyuusatu.html",
+  "topCaptureUrl": "https://warp.ndl.go.jp/20260613/20260601093442/https://www.kansai.meti.go.jp/nyuusatu.html",
+  "topExpectedBytes": 13823,
+  "topExpectedSha256": "7888e1a01f9f5dda8805011f4632d04a06845949626cf4728d8129578e6f58a7",
+  "sourcePageUrl": "https://www.kansai.meti.go.jp/8kaikei/zuikeiyaku_itaku.html",
+  "indexCaptureUrl": "https://warp.ndl.go.jp/20260613/20260601093442/https://www.kansai.meti.go.jp/8kaikei/zuikeiyaku_itaku.html",
+  "indexExpectedBytes": 12098,
+  "indexExpectedSha256": "a741f28478c30496eca34ed1c38755ee3e10b742abfcb956715ef6c89006ec1e",
+  "documents": [
+    {
+      "id": "kansai-2025-discretionary-commission-2504",
+      "filename": "2504_zuikei_itaku.pdf",
+      "originalUrl": "https://www.kansai.meti.go.jp/8kaikei/2504_zuikei_itaku.pdf",
+      "expectedBytes": 138007,
+      "expectedSha256": "7d3bc61c589920bd1c8524aa8734c1e8bac46a76bf842bc6cba4deaa71603c65",
+      "expectedPageCount": 2,
+      "expectedRowsPerPage": [11, 11],
+      "expectedRecordCount": 22,
+      "expectedPositionedTextItemCount": 558
+    },
+    {
+      "id": "kansai-2025-discretionary-commission-2505",
+      "filename": "2505_zuikei_itaku.pdf",
+      "originalUrl": "https://www.kansai.meti.go.jp/8kaikei/2505_zuikei_itaku.pdf",
+      "expectedBytes": 128613,
+      "expectedSha256": "0ea06013d99bca0839bab1970eefe086f17f637d393d363504e8dc8d55948fd8",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [3],
+      "expectedRecordCount": 3,
+      "expectedPositionedTextItemCount": 98
+    },
+    {
+      "id": "kansai-2025-discretionary-commission-2506",
+      "filename": "2506_zuikei_itaku.pdf",
+      "originalUrl": "https://www.kansai.meti.go.jp/8kaikei/2506_zuikei_itaku.pdf",
+      "expectedBytes": 138833,
+      "expectedSha256": "1d1499e499d5dcb902fe59c7536e2c9609519c61bc10aa83abfa916cc2d03540",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [6],
+      "expectedRecordCount": 6,
+      "expectedPositionedTextItemCount": 161
+    },
+    {
+      "id": "kansai-2025-discretionary-commission-2507",
+      "filename": "2507_zuikei_itaku.pdf",
+      "originalUrl": "https://www.kansai.meti.go.jp/8kaikei/2507_zuikei_itaku.pdf",
+      "expectedBytes": 121550,
+      "expectedSha256": "2f0da288c4b7554ef02b057aedd355618f4b94da9795d8f862b0bb5548cede3f",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [2],
+      "expectedRecordCount": 2,
+      "expectedPositionedTextItemCount": 77
+    },
+    {
+      "id": "kansai-2025-discretionary-commission-2508",
+      "filename": "2508_zuikei_itaku.pdf",
+      "originalUrl": "https://www.kansai.meti.go.jp/8kaikei/2508_zuikei_itaku.pdf",
+      "expectedBytes": 112172,
+      "expectedSha256": "fb385f0eb5bf5f86208f18734a1356c4fdc417e2d0f586ed5dd4b54ad1cfd2e6",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [5],
+      "expectedRecordCount": 5,
+      "expectedPositionedTextItemCount": 126
+    },
+    {
+      "id": "kansai-2025-discretionary-commission-2509",
+      "filename": "2509_zuikei_itaku.pdf",
+      "originalUrl": "https://www.kansai.meti.go.jp/8kaikei/2509_zuikei_itaku.pdf",
+      "expectedBytes": 106874,
+      "expectedSha256": "fc3d973fb603bf0ab8aab13fed7bd1b32f1d49d6ac7e2650a7510454921d0d8f",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [2],
+      "expectedRecordCount": 2,
+      "expectedPositionedTextItemCount": 72
+    }
+  ]
+}

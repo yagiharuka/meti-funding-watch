@@ -10,7 +10,12 @@ import {
   CHUBU_GRANT_DOCUMENTS,
 } from "../scripts/official-chubu-sources.mjs";
 import { parseOfficialPdf } from "../scripts/official-pdf.mjs";
-import { fetchOfficialDocuments, OFFICIAL_DOCUMENTS } from "../scripts/update-official-data.mjs";
+import {
+  fetchOfficialDocuments,
+  OFFICIAL_ARCHIVE_DEFINITION_MIGRATION,
+  OFFICIAL_DOCUMENTS,
+  officialDocumentDefinitionSha256,
+} from "../scripts/update-official-data.mjs";
 
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 const published2024Records = JSON.parse(await readFile(new URL("../data/official/records-2024.json", import.meta.url), "utf8"));
@@ -115,6 +120,10 @@ test("pins the official Chubu index hrefs and both discretionary PDF receipts", 
     assert.ok(indexHtml.includes(evidence.originalUrl));
     assert.equal(document.originalUrl, evidence.originalUrl);
     assert.equal(document.url, evidence.transportUrl);
+    assert.match(document.archiveProvider, /WARP/);
+    assert.equal(document.archiveExpectedBytes, evidence.expectedBytes);
+    assert.equal(document.archiveExpectedSha256, evidence.expectedSha256);
+    assert.equal(document.archiveExpectedRecordCount, evidence.expectedRecordCount);
     assert.equal(document.pdfSchema.expectedBytes, evidence.expectedBytes);
     assert.equal(document.pdfSchema.expectedSha256, evidence.expectedSha256);
     assert.equal(document.pdfSchema.expectedRecordCount, evidence.expectedRecordCount);
@@ -125,6 +134,78 @@ test("pins the official Chubu index hrefs and both discretionary PDF receipts", 
     assert.equal(createHash("sha256").update(pdf).digest("hex"), evidence.expectedSha256);
     const parsed = await parseOfficialPdf(pdf, document);
     assert.equal(parsed.length, evidence.expectedRecordCount);
+  }
+});
+
+test("carries both exact Chubu WARP PDFs forward only with their complete archive receipts", async () => {
+  const documents = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.id.includes("discretionary"));
+  for (const document of documents) {
+    const priorRecords = published2024Records.filter((record) => record.datasetId === document.id);
+    const publishedReceipt = publishedManifest.sourceDocuments.find((source) => source.id === document.id);
+    const migrationDefinition = OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.documents[document.id];
+    assert.equal(priorRecords.length, document.archiveExpectedRecordCount);
+    assert.ok(publishedReceipt);
+    assert.ok(migrationDefinition);
+    const oldReceipt = {
+      ...publishedReceipt,
+      carryForwardUsed: false,
+      primaryFailureReasonCode: null,
+      lastSuccessfulRetrievedAt: null,
+      attemptedAt: null,
+      archiveProvider: null,
+      archiveVerifiedAt: null,
+      archiveVerification: null,
+      archiveExpectedBytes: null,
+      archiveExpectedSha256: null,
+      archiveExpectedRecordCount: null,
+      definitionSha256: migrationDefinition.previousDefinitionSha256,
+    };
+    const migrationResult = await fetchOfficialDocuments(
+      [document],
+      priorRecords,
+      async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
+      [document.id],
+      [oldReceipt],
+      OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.previousManifestSha256,
+    );
+    assert.deepEqual(migrationResult.sourceFailures, []);
+    assert.equal(migrationResult.fetched[0].records.length, priorRecords.length);
+    assert.equal(migrationResult.fetched[0].carryForward.primaryFailureReasonCode, "archive_http_403");
+    await assert.rejects(
+      fetchOfficialDocuments(
+        [document],
+        priorRecords,
+        async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
+        [document.id],
+        [oldReceipt],
+        "0".repeat(64),
+      ),
+      /receiptまたは明細/,
+    );
+
+    const migratedReceipt = publishedReceipt;
+    assert.equal(migratedReceipt.definitionSha256, officialDocumentDefinitionSha256(document));
+    const result = await fetchOfficialDocuments(
+      [document],
+      priorRecords,
+      async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
+      [document.id],
+      [migratedReceipt],
+    );
+    assert.deepEqual(result.sourceFailures, []);
+    assert.equal(result.fetched[0].records.length, priorRecords.length);
+    assert.equal(result.fetched[0].carryForward.primaryFailureReasonCode, "archive_http_403");
+
+    await assert.rejects(
+      fetchOfficialDocuments(
+        [document],
+        priorRecords,
+        async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
+        [document.id],
+        [{ ...migratedReceipt, archiveExpectedSha256: "0".repeat(64) }],
+      ),
+      /WARP receipt|receiptまたは明細/,
+    );
   }
 });
 
