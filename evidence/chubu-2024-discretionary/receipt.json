@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-13",
+  "sourcePageUrl": "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html",
+  "indexCaptureUrl": "https://warp.ndl.go.jp/20260602/20260601000000/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html",
+  "indexExpectedBytes": 27086,
+  "indexExpectedSha256": "e1aa380fd0dc1277d6e559bafd3cde3871598d172d8c34f25e61be42456e621e",
+  "documents": [
+    {
+      "id": "chubu-2024-discretionary-commission",
+      "filename": "24-zuikei-itaku.pdf",
+      "originalUrl": "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/24-zuikei-itaku.pdf",
+      "transportUrl": "https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/24-zuikei-itaku.pdf",
+      "expectedBytes": 174706,
+      "expectedSha256": "f3a2d4014e8de2542bcd1e5bb20b621f82f4ae9c94ba8a838e6c91330b689323",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [28],
+      "expectedRecordCount": 28,
+      "expectedPositionedTextItemCount": 628
+    },
+    {
+      "id": "chubu-2024-discretionary-goods",
+      "filename": "24-zuikei-ukeoi.pdf",
+      "originalUrl": "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/24-zuikei-ukeoi.pdf",
+      "transportUrl": "https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/24-zuikei-ukeoi.pdf",
+      "expectedBytes": 115657,
+      "expectedSha256": "c929729f06b9e5ac61e2350ed82504f5741bc94caa9b1726487e0cf60bae135a",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [5],
+      "expectedRecordCount": 5,
+      "expectedPositionedTextItemCount": 141
+    }
+  ]
+}

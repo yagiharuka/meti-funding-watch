@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
@@ -13,6 +14,8 @@ import { fetchOfficialDocuments, OFFICIAL_DOCUMENTS } from "../scripts/update-of
 
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 const published2024Records = JSON.parse(await readFile(new URL("../data/official/records-2024.json", import.meta.url), "utf8"));
+
+const discretionaryEvidenceDirectory = new URL("../evidence/chubu-2024-discretionary/", import.meta.url);
 
 const expected = new Map([
   ["chubu-2024-grant-decisions-h1", {
@@ -63,37 +66,76 @@ test("registers two FY2024 Chubu grant PDFs with exact individual receipts", () 
   const contractGap = CHUBU_COVERAGE_GAPS.find((gap) =>
     gap.fiscalYear === 2024 && gap.category === "contract_result");
   assert.equal(grantGap?.status, "verified_official_period_pair");
-  assert.equal(contractGap?.status, "verified_official_files_partial_categories");
-  assert.match(contractGap?.included ?? "", /競争入札.*2資料.*42掲載行/);
-  assert.match(contractGap?.missing ?? "", /随意契約.*2資料/);
+  assert.equal(contractGap?.status, "verified_official_files_four_categories");
+  assert.match(contractGap?.included ?? "", /競争入札・随意契約.*4資料.*75掲載行/);
+  assert.match(contractGap?.missing ?? "", /完全性は主張しない/);
 });
 
-test("registers two byte-pinned FY2024 Chubu competitive-contract PDFs", () => {
-  assert.equal(CHUBU_CONTRACT_DOCUMENTS.length, 2);
+test("registers four byte-pinned FY2024 Chubu contract PDFs", () => {
+  assert.equal(CHUBU_CONTRACT_DOCUMENTS.length, 4);
   assert.deepEqual(
     CHUBU_CONTRACT_DOCUMENTS.map((document) => document.id),
-    ["chubu-2024-competitive-commission", "chubu-2024-competitive-goods"],
+    [
+      "chubu-2024-competitive-commission",
+      "chubu-2024-competitive-goods",
+      "chubu-2024-discretionary-commission",
+      "chubu-2024-discretionary-goods",
+    ],
   );
   assert.deepEqual(
     CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.expectedRecordCount),
-    [10, 32],
+    [10, 32, 28, 5],
   );
   assert.deepEqual(
     CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.expectedPositionedTextItemCount),
-    [199, 564],
+    [199, 564, 628, 141],
   );
   assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.rowAnchorMode === "date"));
   assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.expectedBytes > 100_000));
   assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => /^[0-9a-f]{64}$/.test(document.pdfSchema.expectedSha256)));
-  assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.recordMapping.methodColumn === "method"));
+  assert.deepEqual(
+    CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.recordMapping.methodColumn),
+    ["method", "method", "legalReason", "legalReason"],
+  );
 });
 
-test("strictly replays two individually receipted FY2024 Chubu competitive-contract PDFs", { timeout: 30_000 }, async (t) => {
+test("pins the official Chubu index hrefs and both discretionary PDF receipts", async () => {
+  const receipt = JSON.parse(await readFile(new URL("receipt.json", discretionaryEvidenceDirectory), "utf8"));
+  const indexBytes = await readFile(new URL("index.html", discretionaryEvidenceDirectory));
+  assert.equal(indexBytes.length, receipt.indexExpectedBytes);
+  assert.equal(createHash("sha256").update(indexBytes).digest("hex"), receipt.indexExpectedSha256);
+  const indexHtml = indexBytes.toString("utf8");
+  const documents = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.id.includes("discretionary"));
+  assert.equal(receipt.documents.length, 2);
+  assert.equal(documents.length, 2);
+
+  for (const document of documents) {
+    const evidence = receipt.documents.find((item) => item.id === document.id);
+    assert.ok(evidence, document.id);
+    assert.ok(indexHtml.includes(evidence.originalUrl));
+    assert.equal(document.originalUrl, evidence.originalUrl);
+    assert.equal(document.url, evidence.transportUrl);
+    assert.equal(document.pdfSchema.expectedBytes, evidence.expectedBytes);
+    assert.equal(document.pdfSchema.expectedSha256, evidence.expectedSha256);
+    assert.equal(document.pdfSchema.expectedRecordCount, evidence.expectedRecordCount);
+    assert.equal(document.pdfSchema.expectedPositionedTextItemCount, evidence.expectedPositionedTextItemCount);
+    const pdf = await readFile(new URL(evidence.filename, discretionaryEvidenceDirectory));
+    assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
+    assert.equal(pdf.length, evidence.expectedBytes);
+    assert.equal(createHash("sha256").update(pdf).digest("hex"), evidence.expectedSha256);
+    const parsed = await parseOfficialPdf(pdf, document);
+    assert.equal(parsed.length, evidence.expectedRecordCount);
+  }
+});
+
+test("strictly replays four individually receipted FY2024 Chubu contract PDFs", { timeout: 30_000 }, async (t) => {
   const fixtureDirectory = process.env.OFFICIAL_CHUBU_EVIDENCE_DIRECTORY?.trim();
   if (!fixtureDirectory) return t.skip("set OFFICIAL_CHUBU_EVIDENCE_DIRECTORY to the exact official PDFs");
   const expectedContracts = new Map([
     ["chubu-2024-competitive-commission", { filename: "nyusatsu_24-nyusatsu-itaku.pdf", rows: 10 }],
     ["chubu-2024-competitive-goods", { filename: "nyusatsu_24-nyusatsu-ukeoi.pdf", rows: 32 }],
+    ["chubu-2024-discretionary-commission", { filename: "24-zuikei-itaku.pdf", rows: 28 }],
+    ["chubu-2024-discretionary-goods", { filename: "24-zuikei-ukeoi.pdf", rows: 5 }],
   ]);
   const allRecords = [];
 
@@ -108,7 +150,7 @@ test("strictly replays two individually receipted FY2024 Chubu competitive-contr
     allRecords.push(...records);
   }
 
-  assert.equal(allRecords.length, 42);
+  assert.equal(allRecords.length, 75);
   assert.equal(new Set(allRecords.map((record) => record.id)).size, allRecords.length);
   assert.equal(new Set(allRecords.map((record) => record.sourceKey)).size, allRecords.length);
   assert.ok(allRecords.every((record) => record.category === "contract_result"));
@@ -116,7 +158,9 @@ test("strictly replays two individually receipted FY2024 Chubu competitive-contr
   assert.ok(allRecords.every((record) => record.fiscalYear === 2024));
   assert.ok(allRecords.every((record) => /^\d{13}$/.test(record.corporateNumber)));
   assert.ok(allRecords.every((record) => Number.isSafeInteger(record.amount) && record.amount > 0));
-  assert.ok(allRecords.every((record) => /一般競争/.test(record.method)));
+  assert.ok(allRecords.every((record) => record.method.length > 0));
+  assert.equal(allRecords.filter((record) => record.kind.startsWith("競争入札")).length, 42);
+  assert.equal(allRecords.filter((record) => record.kind.startsWith("随意契約")).length, 33);
 });
 
 test("replays both Chubu PDFs through the production positioned-text parser", { timeout: 30_000 }, async (t) => {
