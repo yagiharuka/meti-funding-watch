@@ -486,7 +486,7 @@ function maybeCarryForwardDocument(
 ) {
   const archiveCarryForward = phase === "fetch"
     && isVerifiedWarpArchiveUrl(document)
-    && error instanceof OfficialArchiveUnavailableError;
+    && (error instanceof OfficialArchiveUnavailableError || isFallbackEligibleFetchError(error));
   const liveCarryForward = !document.archiveProvider
     && !document.verifiedFallback
     && isFallbackEligibleFetchError(error);

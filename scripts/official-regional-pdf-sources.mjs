@@ -1,4 +1,5 @@
 import { TOHOKU_2025_ADDITIONAL_CONTRACT_DOCUMENTS } from "./official-tohoku-contract-sources.mjs";
+import { KANTO_2022_2024_CONTRACT_DOCUMENTS } from "./official-kanto-historical-contract-sources.mjs";
 
 const TOHOKU_GRANT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/koho/koshin/kobo/kofu_kettei.html";
 const TOHOKU_CONTRACT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/kaikei/keiyaku/keiyaku.html";
@@ -537,6 +538,7 @@ const REGIONAL_PDF_DEFINITIONS = [
     },
   },
   ...KANTO_2025_GRANT_DEFINITIONS,
+  ...KANTO_2022_2024_CONTRACT_DOCUMENTS,
   ...KANTO_2025_CONTRACT_DEFINITIONS,
 ];
 
@@ -577,10 +579,10 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
   },
   {
     executorId: "kanto",
-    fiscalYear: 2025,
+    fiscalYear: "2022-2025",
     category: "contract_result",
-    status: "verified_archived_official_files",
-    included: "WARP保存済みの令和7年度競争・随意、物品役務・委託4公式PDF（計87掲載行）",
-    missing: "公式目次で確認した令和4～6年度の競争・随意、物品役務・委託PDF（12資料）",
+    status: "verified_archived_official_snapshots",
+    included: "WARP保存済みの令和4～7年度、競争・随意×物品役務・委託16公式PDF（計306掲載行）。令和4～6年度は年度途中の保存スナップショット",
+    missing: "令和4～6年度は各保存時点より後の追加行、令和3年度以前、年度途中の令和8年度を未収録。年度別の完全収録とは扱わない",
   },
 ];

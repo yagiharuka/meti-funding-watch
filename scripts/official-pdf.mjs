@@ -200,8 +200,11 @@ function validateDocumentDefinition(document) {
   const splitRuleIds = new Set();
   for (const rule of schema.crossColumnSplitRules ?? []) {
     if (
-      !rule.id || splitRuleIds.has(rule.id) || !["amount_then_text", "date_then_text"].includes(rule.kind)
+      !rule.id || splitRuleIds.has(rule.id)
+      || !["amount_then_text", "date_then_text", "date_then_text_and_corporate_number"].includes(rule.kind)
       || !keys.has(rule.fromColumn) || !keys.has(rule.toColumn)
+      || (rule.kind === "date_then_text_and_corporate_number" && !keys.has(rule.thirdColumn))
+      || (rule.kind !== "date_then_text_and_corporate_number" && rule.thirdColumn !== undefined)
       || !Number.isSafeInteger(rule.expectedMatches) || rule.expectedMatches < 1
     ) throw new Error(`${document.id}: PDF列跨ぎ分割規則が不正です`);
     splitRuleIds.add(rule.id);
@@ -255,12 +258,18 @@ function splitCrossColumnItem(item, viewport, schema, splitRuleCounts) {
     const fromIndex = schema.columns.findIndex((column) => column.key === rule.fromColumn);
     const toIndex = schema.columns.findIndex((column) => column.key === rule.toColumn);
     if (toIndex !== fromIndex + 1) continue;
+    const thirdIndex = rule.thirdColumn === undefined
+      ? -1
+      : schema.columns.findIndex((column) => column.key === rule.thirdColumn);
+    if (rule.kind === "date_then_text_and_corporate_number" && thirdIndex !== toIndex + 1) continue;
     const fromLeft = schema.columns[fromIndex].leftRatio * viewport.width;
     const toLeft = schema.columns[toIndex].leftRatio * viewport.width;
     const toRight = (schema.columns[toIndex + 1]?.leftRatio ?? 1) * viewport.width;
     if (item.x < fromLeft || item.x >= toLeft || item.x + item.width <= toLeft) continue;
     const normalized = normalizeCellText(item.text);
-    const match = rule.kind === "date_then_text"
+    const match = rule.kind === "date_then_text_and_corporate_number"
+      ? normalized.match(/^((?:\d{4}年|令和[元\d]+年)\d{1,2}月\d{1,2}日)\s+(\S.*?)\s+(\d{13})$/u)
+      : rule.kind === "date_then_text"
       ? normalized.match(/^((?:\d{4}年|令和[元\d]+年)\d{1,2}月\d{1,2}日)\s*(\S.*)$/u)
       : normalized.match(/^(0|[1-9]\d{0,2}(?:,\d{3})*)\s+(\S.*)$/u);
     if (!match) continue;
@@ -268,6 +277,18 @@ function splitCrossColumnItem(item, viewport, schema, splitRuleCounts) {
     const firstWidth = Math.max(0.1, toLeft - item.x - 0.1);
     const secondX = toLeft + 0.1;
     const secondWidth = Math.max(0.1, Math.min(item.x + item.width, toRight) - secondX);
+    if (rule.kind === "date_then_text_and_corporate_number") {
+      const thirdLeft = schema.columns[thirdIndex].leftRatio * viewport.width;
+      const thirdRight = (schema.columns[thirdIndex + 1]?.leftRatio ?? 1) * viewport.width;
+      const organizationWidth = Math.max(0.1, thirdLeft - secondX - 0.1);
+      const corporateX = thirdLeft + 0.1;
+      const corporateWidth = Math.max(0.1, Math.min(item.x + item.width, thirdRight) - corporateX);
+      return [
+        { ...item, text: match[1], width: firstWidth, centerX: item.x + firstWidth / 2 },
+        { ...item, text: match[2], x: secondX, width: organizationWidth, centerX: secondX + organizationWidth / 2 },
+        { ...item, text: match[3], x: corporateX, width: corporateWidth, centerX: corporateX + corporateWidth / 2 },
+      ];
+    }
     return [
       { ...item, text: match[1], width: firstWidth, centerX: item.x + firstWidth / 2 },
       { ...item, text: match[2], x: secondX, width: secondWidth, centerX: secondX + secondWidth / 2 },

@@ -566,16 +566,16 @@
     },
     {
       "id": "smea-2023-discretionary-commission",
-      "capture": "20260602/20260601101846",
-      "url": "https://warp.ndl.go.jp/20260602/20260601101846/https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_itaku_2023.html",
+      "capture": "20241002/20241001012433",
+      "url": "https://warp.ndl.go.jp/20241002/20241001012433/https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_itaku_2023.html",
       "originalUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_itaku_2023.html",
       "sourcePageUrl": "https://www.chusho.meti.go.jp/koukai/nyusatsu/index.html",
       "executorId": "smea",
       "fiscalYear": 2023,
       "category": "contract_result",
       "format": "html",
-      "expectedBytes": 41144,
-      "expectedSha256": "0bd5ff13aec042bf83c641f8cb7958d281aab1f69ccca7c21e0358372dafd088",
+      "expectedBytes": 41532,
+      "expectedSha256": "db01822ac086ae4fc7783043bf45361c61ffc4cedb4a2bdbe53ee255b8922a09",
       "expectedRecordCount": 25
     },
     {

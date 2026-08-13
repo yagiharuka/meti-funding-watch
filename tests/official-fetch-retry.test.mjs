@@ -105,7 +105,7 @@ test("requires a committed verified WARP capture and enforces its byte, hash, an
   assert.equal(valid.sourceFailures.length, 0);
 });
 
-test("carries a pinned published WARP source only for an archive HTTP 403", async () => {
+test("carries a pinned published WARP source for HTTP 403 or a transient transport failure", async () => {
   const validBytes = await grantWorkbookBytes();
   const expectedSha256 = await sha256(validBytes);
   const originalUrl = "https://www.jpo.go.jp/example/archive.xlsx";
@@ -158,6 +158,12 @@ test("carries a pinned published WARP source only for an archive HTTP 403", asyn
   );
   assert.equal(repeated.fetched[0].carryForward.lastSuccessfulRetrievedAt, previousReceipt.retrievedAt);
 
+  const transient = await fetchOfficialDocuments(
+    [archived], baseline, async () => { throw new TypeError("network timeout"); },
+    [archived.id], [previousReceipt],
+  );
+  assert.equal(transient.fetched[0].carryForward.primaryFailureReasonCode, "fetch_failed");
+
   await assert.rejects(
     fetchOfficialDocuments([archived], [], async () => new Response("forbidden".padEnd(600), { status: 403 })),
     /検証済みWARP資料を再検証できません/,
@@ -165,7 +171,7 @@ test("carries a pinned published WARP source only for an archive HTTP 403", asyn
   );
 });
 
-test("never carries a WARP archive after non-403 fetch or post-fetch verification failures", async () => {
+test("never carries a WARP archive after permanent fetch or post-fetch verification failures", async () => {
   const validBytes = await grantWorkbookBytes();
   const expectedSha256 = await sha256(validBytes);
   const originalUrl = "https://www.jpo.go.jp/example/archive.xlsx";
