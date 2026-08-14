@@ -1,0 +1,115 @@
+name: Integrate Chubu FY2022 pinned legacy header
+
+on:
+  push:
+    paths:
+      - ".github/workflows/integrate-chubu-fy2022-v7.yml"
+permissions:
+  actions: read
+  contents: write
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: chubu-fy2022-audit-31822469715
+          path: .chubu-fy2022-audit
+          repository: yagiharuka/meti-funding-watch
+          run-id: 31822469715
+          github-token: ${{ github.token }}
+      - name: Install exact audited originals
+        shell: bash
+        run: |
+          set -euo pipefail
+          check(){ name="$1" bytes="$2" sha="$3" dest="$4"; src="$(find .chubu-fy2022-audit -name "$name" -print -quit)"; test -n "$src"; test "$(wc -c < "$src")" -eq "$bytes"; test "$(sha256sum "$src"|cut -d' ' -f1)" = "$sha"; cp "$src" "evidence/official-bootstrap/$dest"; }
+          check r4fy_4-9.pdf 393052 8eae0800f65273cc3543d61dcc5a45c677e490b6f0b394cc401ec7d642667670 chubu-2022-grant-decisions-h1.pdf
+          check r4fy_10-3.pdf 135918 a2710a4ca4ab2307576721342aaacff6d611a95905a7061902c2caee6738fba2 chubu-2022-grant-decisions-h2.pdf
+          check 22-nyusatsu-itaku.pdf 135508 84d958e5847a5e0864d6fcc6142745f7b2e444c3cacab72caf9853f0457816c1 chubu-2022-competitive-commission.pdf
+          check 22-ukeoi.pdf 183778 8fc64f358cfaa8509f927d5299cb6ae88944b4e7d9a0c19a1aa5265e30d7cd72 chubu-2022-competitive-goods.pdf
+          check 22-zuikei-itaku.pdf 222222 bc41295700790dd6b421ad08e77809dbd81a81f52d87b9c62f48cf3ba7ab2bdb chubu-2022-discretionary-commission.pdf
+          check 22-zuikei-ukeoi.pdf 90326 c33b9b5da9987937aa7909ef313441baca4aa38fc10d5f200645fc4efb727c45 chubu-2022-discretionary-goods.pdf
+      - name: Patch exact FY2022 receipts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/official-chubu-fy2022-sources.mjs'); s=p.read_text()
+          s=s.replace('expectedRowsPerPage: [16, 1],','expectedRowsPerPage: [18, 2],',1)
+          s=s.replace(': [15, 70, 140, 195, 245, 305, 370, 465, 520, 570, 610, 645, 680, 725, 780];',': [15, 70, 140, 195, 245, 305, 370, 465, 520, 590, 610, 645, 680, 725, 780];',1)
+          s=s.replace('["officer", ["契約担当官等の氏名"]],','["officer", ["契約担当官等の氏名並びにその"]],',1)
+          s=s.replace('["legalReason", ["随意契約によることとした"]],','["legalReason", ["随意契約によることとした会計法令の根拠条文及び理由"]],',1)
+          needle='expectedPageSize: { width: PAGE_WIDTH, height: pageHeight, tolerance: 0.2 },\n      expectedRowsPerPage,'
+          replacement='expectedPageSize: { width: PAGE_WIDTH, height: pageHeight, tolerance: 0.2 },\n      ...(oldGoodsLayout ? { headerMinimumYRatio: 0.78 } : {}),\n      expectedRowsPerPage,'
+          if needle not in s: raise SystemExit('header band insertion marker missing')
+          s=s.replace(needle,replacement,1)
+          p.write_text(s)
+          PY
+      - name: Replay six FY2022 PDFs
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { parseOfficialPdf } from './scripts/official-pdf.mjs';
+          import { CHUBU_FY2022_GRANT_DOCUMENTS, CHUBU_FY2022_CONTRACT_DOCUMENTS } from './scripts/official-chubu-fy2022-sources.mjs';
+          let total=0;
+          for (const document of [...CHUBU_FY2022_GRANT_DOCUMENTS,...CHUBU_FY2022_CONTRACT_DOCUMENTS]) {
+            const bytes=await readFile(`evidence/official-bootstrap/${document.id}.pdf`); const rows=await parseOfficialPdf(bytes,document); console.log(`${document.id} ${rows.length}`); total+=rows.length;
+          }
+          if(total!==268) throw Error(`FY2022 total ${total}`); console.log('FY2022 strict replay PASS 268');
+          NODE
+      - name: Register sources and tests
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/official-chubu-sources.mjs'); s=p.read_text()
+          imp='import { CHUBU_FY2022_CONTRACT_DOCUMENTS, CHUBU_FY2022_GRANT_DOCUMENTS } from "./official-chubu-fy2022-sources.mjs";\n'
+          if not s.startswith(imp): s=imp+s
+          s=s.replace('export const CHUBU_GRANT_DOCUMENTS = Object.freeze([\n  ...CHUBU_FY2023_GRANT_DOCUMENTS,','export const CHUBU_GRANT_DOCUMENTS = Object.freeze([\n  ...CHUBU_FY2022_GRANT_DOCUMENTS,\n  ...CHUBU_FY2023_GRANT_DOCUMENTS,',1)
+          s=s.replace('export const CHUBU_CONTRACT_DOCUMENTS = Object.freeze([\n  ...CHUBU_FY2023_CONTRACT_DOCUMENTS,','export const CHUBU_CONTRACT_DOCUMENTS = Object.freeze([\n  ...CHUBU_FY2022_CONTRACT_DOCUMENTS,\n  ...CHUBU_FY2023_CONTRACT_DOCUMENTS,',1)
+          marker='export const CHUBU_COVERAGE_GAPS = Object.freeze([\n'
+          add='  { executorId: "chubu", fiscalYear: 2022, category: "grant_decision", status: "verified_official_period_pair_archive", included: "WARP保存公式目次の実hrefから固定した4月～9月・10月～3月PDF（2資料・185掲載行）", missing: "保存公式目次時点の2資料を検証した範囲であり、年度母集団の完全性は主張しない" },\n  { executorId: "chubu", fiscalYear: 2022, category: "contract_result", status: "verified_official_files_four_categories_archive", included: "WARP保存公式目次の実hrefから固定した競争入札・随意契約の委託費・庁費PDF（4資料・83掲載行）", missing: "保存公式目次時点の4資料を検証した範囲であり、年度母集団の完全性は主張しない" },\n'
+          if 'fiscalYear: 2022, category: "grant_decision"' not in s: s=s.replace(marker,marker+add,1)
+          s=s.replace('included: "令和5・6年度の交付決定4資料と契約結果8資料",\n    missing: "令和2～4・7年度の交付決定・契約結果、および年度途中の令和8年度",','included: "令和4～6年度の交付決定6資料と契約結果12資料",\n    missing: "令和2・3・7年度の交付決定・契約結果、および年度途中の令和8年度",',1)
+          p.write_text(s)
+          p=Path('tests/official-chubu-sources.test.mjs'); s=p.read_text()
+          anchor='const grants2023 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);\nconst contracts2023 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);\n'
+          if 'const grants2022' not in s: s=s.replace(anchor,anchor+'const grants2022 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2022);\nconst contracts2022 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2022);\n',1)
+          marker='test("registers and strictly replays six FY2023 Chubu PDFs from exact committed originals"'
+          test='''test("registers and strictly replays six FY2022 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {\n  assert.equal(grants2022.length, 2); assert.equal(contracts2022.length, 4); const records=[];\n  for (const document of [...grants2022,...contracts2022]) { const bytes=await readFile(new URL(`../evidence/official-bootstrap/${document.id}.pdf`, import.meta.url)); const parsed=await parseOfficialPdf(bytes,document); assert.equal(parsed.length,document.evidenceReceipt.expectedRecordCount); records.push(...parsed); }\n  assert.equal(records.length,268);\n});\n\n'''
+          if 'strictly replays six FY2022' not in s: s=s.replace(marker,test+marker,1)
+          p.write_text(s)
+          p=Path('tests/official-evidence-receipts.test.mjs'); s=p.read_text()
+          if 'assert.equal(evidenceDocuments.length, 360);' in s: s=s.replace('assert.equal(evidenceDocuments.length, 360);','assert.equal(evidenceDocuments.length, 366);',1)
+          elif 'assert.equal(evidenceDocuments.length, 366);' not in s: raise SystemExit('evidence count marker missing')
+          p.write_text(s)
+          PY
+      - name: Verify exact legacy preservation and all tests
+        env:
+          OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/chubu-old && mkdir /tmp/chubu-old && cp data/official/records-*.json /tmp/chubu-old/
+          npm run update:official
+          node --input-type=module <<'NODE'
+          import {readFile,readdir} from 'node:fs/promises'; const load=async d=>{let o=[];for(const n of (await readdir(d)).filter(n=>/^records-.*\.json$/.test(n)))o.push(...JSON.parse(await readFile(`${d}/${n}`,'utf8')));return o}; const old=await load('/tmp/chubu-old'),fresh=await load('data/official'); if(old.length!==18205||fresh.length!==18473)throw Error(`counts ${old.length}/${fresh.length}`); const m=new Map(fresh.map(r=>[r.id,r])); let missing=0,changed=0; for(const r of old){const n=m.get(r.id);if(!n)missing++;else if(JSON.stringify(n)!==JSON.stringify(r))changed++;} if(missing||changed)throw Error(`prior changed ${missing}/${changed}`); const a=fresh.filter(r=>r.datasetId?.startsWith('chubu-2022-')); if(a.length!==268)throw Error(`added ${a.length}`); console.log('VERIFIED prior=18205 unchanged, added=268, total=18473');
+          NODE
+          npm run test:pages
+      - name: Commit verified integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- data/official
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/official-chubu-fy2022-sources.mjs scripts/official-chubu-sources.mjs tests/official-chubu-sources.test.mjs tests/official-evidence-receipts.test.mjs evidence/official-bootstrap/chubu-2022-*.pdf
+          git commit -m 'feat(official): add Chubu FY2022 verified records'
+          git push
