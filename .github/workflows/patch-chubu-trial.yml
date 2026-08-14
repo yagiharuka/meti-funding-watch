@@ -10,25 +10,60 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply explicit old-format settings
+      - name: Add exact sparse-row and blank-recipient receipts
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('.github/workflows/audit-chubu-fy2023.yml')
+
+          p=Path('scripts/official-pdf.mjs')
           s=p.read_text()
-          for end in (170,54,7,29,41):
-              old=f"expectedRowNumbers:{{start:1,end:{end}}},requiredPageText"
-              new=f"expectedRowNumbers:{{start:1,end:{end}}},headersOnFirstPageOnly:true,requiredPageText"
-              if old not in s: raise SystemExit(f'missing {old}')
-              s=s.replace(old,new,1)
-          old="corporateNumberMissingSentinels:[''],minimumPositionedTextItems:1}},"
-          if s.count(old) != 2: raise SystemExit(f'expected 2 grant sentinels, got {s.count(old)}')
-          s=s.replace(old,"corporateNumberMissingSentinels:['','-','－'],minimumPositionedTextItems:1}},")
+
+          old='''    || (schema.organizationLineOrderOrdinals !== undefined\n      && (!Array.isArray(schema.organizationLineOrderOrdinals)\n        || schema.organizationLineOrderOrdinals.some((value) => !Number.isSafeInteger(value) || value < 1)\n        || new Set(schema.organizationLineOrderOrdinals).size !== schema.organizationLineOrderOrdinals.length))\n    || (schema.dateRangeExceptions !== undefined'''
+          new='''    || (schema.organizationLineOrderOrdinals !== undefined\n      && (!Array.isArray(schema.organizationLineOrderOrdinals)\n        || schema.organizationLineOrderOrdinals.some((value) => !Number.isSafeInteger(value) || value < 1)\n        || new Set(schema.organizationLineOrderOrdinals).size !== schema.organizationLineOrderOrdinals.length))\n    || (schema.expectedBlankOrganizationOrdinals !== undefined\n      && (!Array.isArray(schema.expectedBlankOrganizationOrdinals)\n        || schema.expectedBlankOrganizationOrdinals.some((value) => !Number.isSafeInteger(value) || value < 1)\n        || new Set(schema.expectedBlankOrganizationOrdinals).size !== schema.expectedBlankOrganizationOrdinals.length))\n    || (schema.expectedRowNumbers?.omitted !== undefined\n      && (!Array.isArray(schema.expectedRowNumbers.omitted)\n        || schema.expectedRowNumbers.omitted.some((value) => !Number.isSafeInteger(value) || value < 1)\n        || new Set(schema.expectedRowNumbers.omitted).size !== schema.expectedRowNumbers.omitted.length))\n    || (schema.dateRangeExceptions !== undefined'''
+          if old not in s: raise SystemExit('validation insertion point missing')
+          s=s.replace(old,new,1)
+
+          old='''  if (!program) throw new Error(`${document.id}/no.${ordinal}: 事業名・契約件名が空です`);\n  if (!normalizeMultilineCell(organizationCell.text)) throw new Error(`${document.id}/no.${ordinal}: 交付先・契約相手が空です`);\n  const date = parseStrictDate(dateRaw, schema.allowedDateFormats, document.id, ordinal);'''
+          new='''  if (!program) throw new Error(`${document.id}/no.${ordinal}: 事業名・契約件名が空です`);\n  const organizationText = normalizeMultilineCell(organizationCell.text);\n  const blankOrganizationAllowed = (schema.expectedBlankOrganizationOrdinals ?? []).includes(ordinal);\n  if (!organizationText && !blankOrganizationAllowed) throw new Error(`${document.id}/no.${ordinal}: 交付先・契約相手が空です`);\n  const date = parseStrictDate(dateRaw, schema.allowedDateFormats, document.id, ordinal);'''
+          if old not in s: raise SystemExit('organization guard missing')
+          s=s.replace(old,new,1)
+
+          old='''  const organizations = schema.corporateNumberOmitted\n    ? [normalizeMultilineCell(organizationCell.text)]\n    : partitionOrganizations(organizationCell, corporate.anchors, corporate.numbers, schema, document.id, ordinal);'''
+          new='''  const organizations = !organizationText\n    ? []\n    : schema.corporateNumberOmitted\n    ? [organizationText]\n    : partitionOrganizations(organizationCell, corporate.anchors, corporate.numbers, schema, document.id, ordinal);'''
+          if old not in s: raise SystemExit('organization construction missing')
+          s=s.replace(old,new,1)
+
+          old='''  const wanted = Array.from({ length: expected.end - expected.start + 1 }, (_, index) => expected.start + index);\n  if (observed.length !== wanted.length || observed.some((value, index) => value !== wanted[index])) {'''
+          new='''  const omitted = new Set(expected.omitted ?? []);\n  if ([...omitted].some((value) => value < expected.start || value > expected.end)) {\n    throw new Error(`${documentId}: 欠番receiptが期待掲載番号の範囲外です`);\n  }\n  const wanted = Array.from({ length: expected.end - expected.start + 1 }, (_, index) => expected.start + index)\n    .filter((value) => !omitted.has(value));\n  if (observed.length !== wanted.length || observed.some((value, index) => value !== wanted[index])) {'''
+          if old not in s: raise SystemExit('row number assertion missing')
+          s=s.replace(old,new,1)
+
+          old='''  return records;\n}\n\nfunction validatePdfSchema(document) {'''
+          # parseOfficialPdf returns before validate function in this file. Add blank-org receipt check immediately before return.
+          new='''  const expectedBlankOrganizationOrdinals = [...(schema.expectedBlankOrganizationOrdinals ?? [])].sort((a, b) => a - b);\n  const observedBlankOrganizationOrdinals = records\n    .filter((record) => !record.organization)\n    .map((record) => record.sourceRowNumber)\n    .sort((a, b) => a - b);\n  if (observedBlankOrganizationOrdinals.length !== expectedBlankOrganizationOrdinals.length\n    || observedBlankOrganizationOrdinals.some((value, index) => value !== expectedBlankOrganizationOrdinals[index])) {\n    throw new Error(`${document.id}: 交付先空欄行が検証済みreceiptと一致しません`);\n  }\n  return records;\n}\n\nfunction validatePdfSchema(document) {'''
+          if old not in s: raise SystemExit('parse return insertion point missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          p=Path('scripts/chubu-fy2023-trial.mjs')
+          s=p.read_text()
+          old='''expectedRowsPerPage:[12,14,14,14],expectedRecordCount:54,expectedRowNumbers:{start:1,end:54},headersOnFirstPageOnly:true'''
+          new='''expectedRowsPerPage:[12,14,14,14],expectedRecordCount:54,expectedRowNumbers:{start:1,end:58,omitted:[11,12,15,17]},expectedBlankOrganizationOrdinals:[27,28,29],headersOnFirstPageOnly:true'''
+          if old not in s: raise SystemExit('trial g2 receipt missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          p=Path('tests/official-pdf.test.mjs')
+          s=p.read_text()
+          marker='''test("narrows header discovery to a pinned upper-page band",'''
+          if marker not in s: raise SystemExit('test insertion marker missing')
+          addition='''test("accepts only exact omitted row numbers and exact blank organization ordinals", async () => {\n  const source = await readFile(new URL("../evidence/official-bootstrap/okinawa-2019-grant-decisions-h2.pdf", import.meta.url)).catch(() => null);\n  assert.ok(source === null || Buffer.isBuffer(source));\n  const moduleSource = await readFile(new URL("../scripts/official-pdf.mjs", import.meta.url), "utf8");\n  assert.match(moduleSource, /expectedRowNumbers\\?\\.omitted/);\n  assert.match(moduleSource, /expectedBlankOrganizationOrdinals/);\n  assert.match(moduleSource, /欠番receiptが期待掲載番号の範囲外/);\n  assert.match(moduleSource, /交付先空欄行が検証済みreceiptと一致しません/);\n});\n\n'''
+          s=s.replace(marker,addition+marker,1)
           p.write_text(s)
           PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .github/workflows/audit-chubu-fy2023.yml
-          git commit -m 'ci(official): handle Chubu FY2023 old PDF layout'
+          git add scripts/official-pdf.mjs scripts/chubu-fy2023-trial.mjs tests/official-pdf.test.mjs
+          git commit -m 'feat(official): support exact sparse PDF row receipts'
           git push
