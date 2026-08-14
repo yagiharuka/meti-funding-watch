@@ -27,7 +27,16 @@ jobs:
           mkdir -p .audit-chubu-2022
           archive='https://warp.ndl.go.jp/20260613/20260601101404/'
           origin='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/'
-          curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "${archive}${origin}index.html" -o .audit-chubu-2022/index.html
+          retry_get() {
+            local url="$1" out="$2"
+            for attempt in 1 2 3 4 5; do
+              if curl --fail --location --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$url" -o "$out"; then return 0; fi
+              rm -f "$out"
+              sleep $((attempt * 4))
+            done
+            return 1
+          }
+          retry_get "${archive}${origin}index.html" .audit-chubu-2022/index.html
           python - <<'PY'
           from pathlib import Path
           import re
@@ -46,12 +55,21 @@ jobs:
           set -euo pipefail
           archive='https://warp.ndl.go.jp/20260613/20260601101404/'
           root='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data'
+          retry_get() {
+            local url="$1" out="$2"
+            for attempt in 1 2 3 4 5; do
+              if curl --fail --location --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$url" -o "$out"; then return 0; fi
+              rm -f "$out"
+              sleep $((attempt * 4))
+            done
+            return 1
+          }
           for rel in \
             hojyokin/r4fy_4-9.pdf hojyokin/r4fy_10-3.pdf \
             nyusatsu/22-nyusatsu-itaku.pdf nyusatsu/22-ukeoi.pdf \
             zuikei/22-zuikei-itaku.pdf zuikei/22-zuikei-ukeoi.pdf; do
             out=".audit-chubu-2022/${rel##*/}"
-            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "${archive}${root}/${rel}" -o "$out"
+            retry_get "${archive}${root}/${rel}" "$out"
             head -c 5 "$out" | grep -q '%PDF-' || { echo "not PDF: $rel"; exit 1; }
           done
       - name: Inspect exact PDF structure
@@ -64,4 +82,5 @@ jobs:
           path: |
             .audit-chubu-2022/*.pdf
             .audit-chubu-2022/index.html
+          include-hidden-files: true
           retention-days: 90
