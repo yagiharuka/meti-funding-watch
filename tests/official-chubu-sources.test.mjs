@@ -1,3 +1,4 @@
+// Release trigger after verified Chubu FY2023 integration.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
