@@ -9,6 +9,7 @@ on:
       - ".github/workflows/audit-okinawa-historical-grants.yml"
       - "scripts/official-okinawa-historical-audit.mjs"
       - "scripts/official-okinawa-fy2019-schema-audit.mjs"
+      - "scripts/official-okinawa-fy2019-parse-audit.mjs"
 
 permissions:
   contents: read
@@ -42,6 +43,10 @@ jobs:
       - name: Pin FY2019 schema evidence
         if: always()
         run: node scripts/official-okinawa-fy2019-schema-audit.mjs
+
+      - name: Verify FY2019 H2 with production parser
+        if: always()
+        run: node scripts/official-okinawa-fy2019-parse-audit.mjs
 
       - name: Preserve audit evidence
         if: always()
