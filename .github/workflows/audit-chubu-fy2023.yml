@@ -19,43 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-
-      - name: Fetch saved official index and print FY2023 hrefs
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from html.parser import HTMLParser
-          from urllib.parse import urljoin
-          from urllib.request import Request, urlopen
-          INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
-          req=Request(INDEX, headers={'User-Agent':'Mozilla/5.0'})
-          with urlopen(req, timeout=60) as r: raw=r.read()
-          text=raw.decode('utf-8', errors='strict')
-          class P(HTMLParser):
-              def __init__(self): super().__init__(); self.rows=[]; self.current=None; self.link=None
-              def handle_starttag(self, tag, attrs):
-                  if tag=='tr': self.current={'text':[],'links':[]}
-                  if self.current is not None and tag=='a': self.link=dict(attrs).get('href')
-              def handle_data(self, data):
-                  if self.current is not None: self.current['text'].append(data)
-              def handle_endtag(self, tag):
-                  if tag=='a' and self.current is not None and self.link:
-                      self.current['links'].append(self.link); self.link=None
-                  if tag=='tr' and self.current is not None:
-                      self.rows.append(self.current); self.current=None
-          p=P(); p.feed(text); found=0
-          for i,row in enumerate(p.rows):
-              label=' '.join(' '.join(row['text']).split())
-              if '令和5年度' in label or '令和５年度' in label:
-                  print(f'ROW {i}: {label}')
-                  for href in row['links']:
-                      print('SAVED_HREF', urljoin(INDEX, href)); found += 1
-          if found != 6: raise SystemExit(f'expected exactly 6 FY2023 links, got {found}')
-          print('FY2023_LINK_COUNT', found)
-          PY
-
-      - name: Download six exact FY2023 PDFs
+      - name: Download six exact saved official PDFs
         shell: bash
         run: |
           set -euo pipefail
@@ -65,47 +29,48 @@ jobs:
             hojyokin/r5fy_4-9.pdf hojyokin/r5fy_10-3.pdf \
             nyusatsu/23-nyusatsu-itaku.pdf nyusatsu/23-ukeoi.pdf \
             zuikei/23-zuikei-itaku.pdf zuikei/23-zuikei-ukeoi.pdf; do
-            file="audit/${rel##*/}"
-            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$prefix/$rel" -o "$file"
-            printf 'RECEIPT %s bytes=%s sha256=%s magic=%s\n' "${file##*/}" "$(wc -c < "$file")" "$(sha256sum "$file" | cut -d' ' -f1)" "$(head -c 5 "$file")"
+            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$prefix/$rel" -o "audit/${rel##*/}"
           done
-
-      - name: Audit positioned text and header geometry with production PDF engine
+      - name: Parse all six with production parser
         run: |
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
-          import { getDocument, Util } from 'pdfjs-dist/legacy/build/pdf.mjs';
-          const files = [
-            'r5fy_4-9.pdf','r5fy_10-3.pdf','23-nyusatsu-itaku.pdf','23-ukeoi.pdf','23-zuikei-itaku.pdf','23-zuikei-ukeoi.pdf'
-          ];
-          const needles = ['番号','事業名','交付先名','法人番号','交付決定額','支出元会計区分','支出元(目)名称','交付決定日','公益法人の区分','国所管、','物品役務等の','契約担当官等の','契約を締結','商号又は名称','住所','一般競争入札・','予定価格','契約金額','落札率','備考','応札・','随意契約によることとした','再就職'];
-          for (const name of files) {
-            const bytes = await readFile(`audit/${name}`);
-            const task = getDocument({data:new Uint8Array(bytes),disableFontFace:true,useSystemFonts:false,isEvalSupported:false});
-            const pdf = await task.promise;
-            let total=0; const counts=[];
-            console.log(`DOC ${name} pages=${pdf.numPages}`);
-            for(let pn=1;pn<=pdf.numPages;pn++){
-              const page=await pdf.getPage(pn); const viewport=page.getViewport({scale:1});
-              const tc=await page.getTextContent({disableNormalization:false,includeMarkedContent:false});
-              const items=[];
-              for(const raw of tc.items){
-                if(!raw || typeof raw.str!=='string' || !raw.str.trim()) continue;
-                const [, , , , x, topY]=Util.transform(viewport.transform, raw.transform??[]);
-                items.push({text:raw.str.normalize('NFC').replace(/\s+/gu,' ').trim(),x,y:viewport.height-topY});
-              }
-              total+=items.length; counts.push(items.length);
-              console.log(`PAGE ${pn} width=${viewport.width} height=${viewport.height} items=${items.length}`);
-              if(pn===1){
-                for(const it of items){ if(needles.some(n=>it.text.includes(n))) console.log(`HEADER x=${it.x.toFixed(3)} y=${it.y.toFixed(3)} text=${it.text}`); }
-              }
-              page.cleanup();
-            }
-            console.log(`POSITIONED ${name} total=${total} pages=${JSON.stringify(counts)}`);
-            await task.destroy();
-          }
-          NODE
+          import { parseOfficialPdf } from './scripts/official-pdf.mjs';
 
+          const grantColumns = (lefts) => [
+            ['ordinal',['番号']],['program',['事業名']],['organization',['交付先名']],['corporateNumber',['法人番号']],
+            ['amount',['交付決定額']],['account',['支出元会計区分']],['budgetItem',['支出元(目)名称']],['date',['交付決定日']],
+            ['publicInterestClass',['公益法人の区分']],['jurisdictionClass',['国所管、都道府']]
+          ].map(([key,headerAliases],i)=>({key,headerAliases,leftRatio:lefts[i]/841.68}));
+          const competitiveColumns = (lefts) => [
+            ['program',['物品役務等の']],['officer',['契約担当官等の']],['date',['契約を締結']],['organization',['商号又は名称']],
+            ['corporateNumber',['法人番号']],['address',['住所']],['method',['一般競争入札・']],['plannedAmount',['予定価格']],
+            ['amount',['契約金額']],['awardRate',['落札率']],['notes',['備考']],['publicInterestClass',['公益法人']],
+            ['jurisdictionClass',['国所管、']],['bidderCount',['応札・']]
+          ].map(([key,headerAliases],i)=>({key,headerAliases,leftRatio:lefts[i]/841.68}));
+          const discretionaryColumns = (lefts) => [
+            ['program',['物品役務等の']],['officer',['契約担当官等の']],['date',['契約を締結']],['organization',['方の商号']],
+            ['corporateNumber',['法人番号']],['address',['の住所']],['legalReason',['随意契約によること']],['plannedAmount',['予定価格']],
+            ['amount',['契約金額']],['awardRate',['落札率']],['reemployedOfficerCount',['再就職']],['notes',['備考']],
+            ['publicInterestClass',['公益法人']],['jurisdictionClass',['国所管、']],['bidderCount',['応札・']]
+          ].map(([key,headerAliases],i)=>({key,headerAliases,leftRatio:lefts[i]/841.68}));
+
+          const base = {executorId:'chubu',executorName:'中部経済産業局',fiscalYear:2023,format:'pdf',sourcePageUrl:'https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'};
+          const docs = [
+            {...base,id:'trial-g1',category:'grant_decision',kind:'補助金等の交付決定（4月～9月）',amountStage:'交付決定額欄の掲載値',file:'r5fy_4-9.pdf',pdfSchema:{schemaVersion:1,extractionMode:'positioned_text_only',normalizeCompatibilityText:true,expectedBytes:418926,expectedSha256:'9ff29945ebc29911b723f5ac557e67f94890b6d9282c6986fff3c891606cff74',expectedPageCount:15,expectedPageSize:{width:841.68,height:595.2,tolerance:0.2},expectedRowsPerPage:[10,12,12,12,12,12,12,12,12,12,12,12,12,12,4],expectedRecordCount:170,expectedRowNumbers:{start:1,end:170},requiredPageText:[],requiredFirstPageText:['令和05年度補助金等の情報','中部経済産業局'],columns:grantColumns([28,50,215,340,405,460,550,665,725,760]),recordMapping:{ordinalColumn:'ordinal',programColumn:'program',organizationColumn:'organization',corporateNumberColumn:'corporateNumber',amountColumn:'amount',dateColumn:'date',notesColumns:['account','budgetItem']},allowedDateFormats:['reiwa_ymd_ja'],dateRange:{start:'2023-04-01',end:'2023-09-30'},corporateNumberMissingSentinels:[''],minimumPositionedTextItems:1}},
+            {...base,id:'trial-g2',category:'grant_decision',kind:'補助金等の交付決定（10月～3月）',amountStage:'交付決定額欄の掲載値',file:'r5fy_10-3.pdf',pdfSchema:{schemaVersion:1,extractionMode:'positioned_text_only',normalizeCompatibilityText:true,expectedBytes:201458,expectedSha256:'d81b9409cf04fee5ce77245d179e66a34789df635e616575e6adff21580055a7',expectedPageCount:4,expectedPageSize:{width:841.68,height:595.2,tolerance:0.2},expectedRowsPerPage:[12,14,14,14],expectedRecordCount:54,expectedRowNumbers:{start:1,end:54},requiredPageText:[],requiredFirstPageText:['令和05年度補助金等の情報','中部経済産業局'],columns:grantColumns([28,50,200,320,385,445,545,665,725,760]),recordMapping:{ordinalColumn:'ordinal',programColumn:'program',organizationColumn:'organization',corporateNumberColumn:'corporateNumber',amountColumn:'amount',dateColumn:'date',notesColumns:['account','budgetItem']},allowedDateFormats:['reiwa_ymd_ja'],dateRange:{start:'2023-10-01',end:'2024-03-31'},corporateNumberMissingSentinels:[''],minimumPositionedTextItems:1}},
+            {...base,id:'trial-c1',category:'contract_result',kind:'競争入札（委託費の類）',amountStage:'契約金額欄の掲載値',file:'23-nyusatsu-itaku.pdf',pdfSchema:{schemaVersion:1,extractionMode:'positioned_text_only',normalizeCompatibilityText:true,rowAnchorMode:'date',expectedBytes:120104,expectedSha256:'666ab5fba88ef2b043b939a64bf7cf6de0bef50e548531cafcfd0239004739d9',expectedPageCount:2,expectedPageSize:{width:841.68,height:595.2,tolerance:0.2},expectedRowsPerPage:[5,2],expectedRecordCount:7,expectedRowNumbers:{start:1,end:7},requiredPageText:[],requiredFirstPageText:['公共調達の適正化について','競争入札に係る情報の公表'],columns:competitiveColumns([15,75,155,215,280,345,415,500,550,600,645,680,725,780]),recordMapping:{programColumn:'program',organizationColumn:'organization',corporateNumberColumn:'corporateNumber',amountColumn:'amount',dateColumn:'date',methodColumn:'method',notesColumns:['notes']},allowedDateFormats:['western_ymd_ja'],dateRange:{start:'2023-04-01',end:'2024-03-31'},corporateNumberMissingSentinels:['-','－','法人番号なし'],minimumPositionedTextItems:1}},
+            {...base,id:'trial-c2',category:'contract_result',kind:'競争入札（庁費の類）',amountStage:'契約金額欄の掲載値',file:'23-ukeoi.pdf',pdfSchema:{schemaVersion:1,extractionMode:'positioned_text_only',normalizeCompatibilityText:true,rowAnchorMode:'date',expectedBytes:171505,expectedSha256:'226da7ccb6ba81e52c33fb5c2ca52e2056466142730db5624452dd7157756987',expectedPageCount:5,expectedPageSize:{width:841.68,height:595.2,tolerance:0.2},expectedRowsPerPage:[6,7,6,8,2],expectedRecordCount:29,expectedRowNumbers:{start:1,end:29},requiredPageText:[],requiredFirstPageText:['公共調達の適正化について','競争入札に係る情報の公表'],columns:competitiveColumns([15,75,155,215,280,345,415,495,545,595,640,675,715,765]),recordMapping:{programColumn:'program',organizationColumn:'organization',corporateNumberColumn:'corporateNumber',amountColumn:'amount',dateColumn:'date',methodColumn:'method',notesColumns:['notes']},allowedDateFormats:['western_ymd_ja'],dateRange:{start:'2023-04-01',end:'2024-03-31'},corporateNumberMissingSentinels:['-','－','法人番号なし'],minimumPositionedTextItems:1}},
+            {...base,id:'trial-d1',category:'contract_result',kind:'随意契約（委託費の類）',amountStage:'契約金額欄の掲載値',file:'23-zuikei-itaku.pdf',pdfSchema:{schemaVersion:1,extractionMode:'positioned_text_only',normalizeCompatibilityText:true,rowAnchorMode:'date',expectedBytes:223892,expectedSha256:'68d9e5c9c2e60d3882bc9f362cffb387513348824c664ff1eb9fcb68305be6da',expectedPageCount:10,expectedPageSize:{width:841.68,height:595.2,tolerance:0.2},expectedRowsPerPage:[5,5,5,5,3,3,3,4,4,4],expectedRecordCount:41,expectedRowNumbers:{start:1,end:41},requiredPageText:[],requiredFirstPageText:['公共調達の適正化について','随意契約に係る情報の公表'],columns:discretionaryColumns([15,70,140,195,245,305,370,465,520,570,610,645,680,725,780]),recordMapping:{programColumn:'program',organizationColumn:'organization',corporateNumberColumn:'corporateNumber',amountColumn:'amount',dateColumn:'date',methodColumn:'legalReason',notesColumns:['notes']},allowedDateFormats:['western_ymd_ja'],dateRange:{start:'2023-04-01',end:'2024-03-31'},corporateNumberMissingSentinels:['-','－','法人番号なし'],minimumPositionedTextItems:1}},
+            {...base,id:'trial-d2',category:'contract_result',kind:'随意契約（庁費の類）',amountStage:'契約金額欄の掲載値',file:'23-zuikei-ukeoi.pdf',pdfSchema:{schemaVersion:1,extractionMode:'positioned_text_only',normalizeCompatibilityText:true,rowAnchorMode:'date',expectedBytes:115261,expectedSha256:'5471dad9fd1006fc0d252f85e64e56e98af32760f4b1fe84862c592c42f9ea6e',expectedPageCount:1,expectedPageSize:{width:841.68,height:595.2,tolerance:0.2},expectedRowsPerPage:[5],expectedRecordCount:5,expectedRowNumbers:{start:1,end:5},requiredPageText:[],requiredFirstPageText:['公共調達の適正化について','随意契約に係る情報の公表'],columns:discretionaryColumns([15,70,140,195,245,305,375,465,520,570,610,645,680,725,780]),recordMapping:{programColumn:'program',organizationColumn:'organization',corporateNumberColumn:'corporateNumber',amountColumn:'amount',dateColumn:'date',methodColumn:'legalReason',notesColumns:['notes']},allowedDateFormats:['western_ymd_ja'],dateRange:{start:'2023-04-01',end:'2024-03-31'},corporateNumberMissingSentinels:['-','－','法人番号なし'],minimumPositionedTextItems:1}},
+          ];
+          let failed=0;
+          for(const d of docs){
+            try{const rows=await parseOfficialPdf(await readFile(`audit/${d.file}`),d);console.log(`PASS ${d.id} rows=${rows.length}`)}
+            catch(e){failed++;console.error(`FAIL ${d.id}: ${e.message}`)}
+          }
+          if(failed) process.exit(1);
+          NODE
       - name: Preserve audited originals
         if: always()
         uses: actions/upload-artifact@v4
