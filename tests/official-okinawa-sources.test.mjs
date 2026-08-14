@@ -16,6 +16,7 @@ const registry = JSON.parse(await readFile(new URL("../data/official-source-regi
 const pageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
 
 const expectedGrantSources = [
+  ["https://www.ogb.go.jp/-/media/Files/OGB/Keisan/move/kobo/hojyokin/31fyhojoshimoki.pdf", 50170, "cc0dee7fffdc496913a88ef241f3b572f87560e7f98b32077cd3ac7f329621b3", 3],
   ["https://www.ogb.go.jp/-/media/Files/OGB/Keisan/move/kobo/hojyokin/R2FY_firsthojokin.pdf", 108326, "c182f5cf85254d2424747f91cd69d7a3c88a893373fb49e0537b2dc5a654cd5d", 28],
   ["https://www.ogb.go.jp/-/media/Files/OGB/Keisan/move/kobo/hojyokin/R2FY_secondhojokin.pdf", 53923, "dc24e2fff65eaded675c7aba2b7ffd578c44fc172f62003adadc66e633a5bb96", 5],
   ["https://www.ogb.go.jp/-/media/Files/OGB/Keisan/move/kobo/hojyokin/R3FY_firsthojokin.pdf", 110618, "74971b12885357a571388830d94db67468689ed1a17103d9d6ba28adaa9f4c4e", 31],
@@ -28,10 +29,10 @@ const expectedGrantSources = [
   ["https://www.ogb.go.jp/-/media/Files/OGB/Keisan/move/kobo/250514_01/R6FY_secondhojokin.pdf", 64198, "9b398d26392853946c6ffe00ecc9e8754a3f9a6e1ec0b9769575a3c27ce2b815", 5],
 ];
 
-test("registers only the ten indexed Economic Industry Department grant PDFs", () => {
-  assert.equal(OKINAWA_GRANT_DOCUMENTS.length, 10);
-  assert.deepEqual([...new Set(OKINAWA_GRANT_DOCUMENTS.map((document) => document.fiscalYear))], [2020, 2021, 2022, 2023, 2024]);
-  assert.equal(OKINAWA_GRANT_DOCUMENTS.reduce((sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0), 194);
+test("registers the eleven verified Economic Industry Department grant PDFs", () => {
+  assert.equal(OKINAWA_GRANT_DOCUMENTS.length, 11);
+  assert.deepEqual([...new Set(OKINAWA_GRANT_DOCUMENTS.map((document) => document.fiscalYear))], [2019, 2020, 2021, 2022, 2023, 2024]);
+  assert.equal(OKINAWA_GRANT_DOCUMENTS.reduce((sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0), 197);
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => document.executorId === "okinawa"));
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => document.executorName === "沖縄総合事務局（経済産業部）"));
@@ -40,7 +41,7 @@ test("registers only the ten indexed Economic Industry Department grant PDFs", (
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => document.pdfSchema.corporateNumberOmitted === true));
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => document.coverageClaim.includes("原資料に法人番号欄なし")));
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => document.sourcePageUrl === "https://www.ogb.go.jp/keisan/3842/saitaku/f_03/014671"));
-  assert.equal(new Set(OKINAWA_GRANT_DOCUMENTS.map((document) => document.id)).size, 10);
+  assert.equal(new Set(OKINAWA_GRANT_DOCUMENTS.map((document) => document.id)).size, 11);
   for (const [index, document] of OKINAWA_GRANT_DOCUMENTS.entries()) {
     const [expectedUrl, expectedBytes, expectedSha256, expectedRecords] = expectedGrantSources[index];
     assert.equal(document.url, expectedUrl, document.id);
@@ -55,10 +56,16 @@ test("registers only the ten indexed Economic Industry Department grant PDFs", (
     assert.equal(document.pdfSchema.expectedSha256, document.evidenceReceipt.expectedSha256);
     assert.equal(document.pdfSchema.expectedBytes, document.evidenceReceipt.expectedBytes);
     assert.equal(document.pdfSchema.expectedRecordCount, document.evidenceReceipt.expectedRecordCount);
-    assert.equal(document.pdfSchema.crossColumnSplitRules.length, 1, document.id);
-    assert.equal(document.pdfSchema.crossColumnSplitRules[0].kind, "date_then_text", document.id);
-    assert.equal(document.pdfSchema.crossColumnSplitRules[0].expectedMatches, expectedRecords, document.id);
-    assert.ok(document.pdfSchema.expectedPositionedTextItemCount > document.pdfSchema.minimumPositionedTextItems, document.id);
+    if (document.fiscalYear === 2019) {
+      assert.deepEqual(document.pdfSchema.crossColumnSplitRules ?? [], [], document.id);
+      assert.equal(document.pdfSchema.expectedPositionedTextItemCount, document.pdfSchema.minimumPositionedTextItems, document.id);
+      assert.equal(document.pdfSchema.columns.find((column) => column.key === "publicInterestClass").leftRatio, 0.822);
+    } else {
+      assert.equal(document.pdfSchema.crossColumnSplitRules.length, 1, document.id);
+      assert.equal(document.pdfSchema.crossColumnSplitRules[0].kind, "date_then_text", document.id);
+      assert.equal(document.pdfSchema.crossColumnSplitRules[0].expectedMatches, expectedRecords, document.id);
+      assert.ok(document.pdfSchema.expectedPositionedTextItemCount > document.pdfSchema.minimumPositionedTextItems, document.id);
+    }
   }
 });
 
@@ -81,7 +88,7 @@ test("keeps Okinawa contracts excluded because whole-bureau rows are not attribu
   assert.match(pageSource, /grantScopeNote/);
 });
 
-test("replays all ten exact grant PDFs with the strict positioned-text parser", {
+test("replays all eleven exact grant PDFs with the strict positioned-text parser", {
   skip: !process.env.OKINAWA_EVIDENCE_DIRECTORY,
 }, async () => {
   const allRows = [];
@@ -96,8 +103,8 @@ test("replays all ten exact grant PDFs with the strict positioned-text parser", 
     assert.ok(rows.every((row) => row.executorId === "okinawa" && row.category === "grant_decision"), document.id);
     allRows.push(...rows);
   }
-  assert.equal(allRows.length, 194);
-  assert.equal(new Set(allRows.map((row) => row.sourceKey)).size, 194);
+  assert.equal(allRows.length, 197);
+  assert.equal(new Set(allRows.map((row) => row.sourceKey)).size, 197);
 
   const document = OKINAWA_GRANT_DOCUMENTS[0];
   const tampered = Buffer.from(await readFile(`${process.env.OKINAWA_EVIDENCE_DIRECTORY}/${document.id}.pdf`));
@@ -127,11 +134,12 @@ test("contract exclusion audit fails closed on byte drift and unregistered defin
   await assert.rejects(auditOkinawaContractWorkbook(Buffer.from("PK\u0003\u0004".padEnd(600)), clone), /未登録または変更された/);
 });
 
-test("states the FY2025 and payment-stage gaps without inventing zero records", () => {
+test("states the remaining historical and FY2025 gaps without inventing zero records", () => {
   const grantGap = OKINAWA_COVERAGE_GAPS.find((item) => item.category === "grant_decision");
-  assert.match(grantGap.included, /194掲載行/);
+  assert.match(grantGap.included, /197掲載行/);
+  assert.match(grantGap.missing, /FY2019上期/);
+  assert.match(grantGap.missing, /FY2010～FY2018/);
   assert.match(grantGap.missing, /FY2025以降/);
-  assert.match(grantGap.missing, /公式索引にリンクなし/);
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => !document.coverageClaim.includes("実支払")));
   assert.ok(OKINAWA_GRANT_DOCUMENTS.every((document) => !document.coverageClaim.includes("全支出")));
 });
