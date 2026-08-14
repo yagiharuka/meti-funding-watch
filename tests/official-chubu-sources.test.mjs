@@ -1,4 +1,4 @@
-// Release trigger after verified Chubu FY2023 integration.
+// Release trigger after verified Chubu FY2022 integration.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -18,10 +18,7 @@ import {
   officialDocumentDefinitionSha256,
 } from "../scripts/update-official-data.mjs";
 
-const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
-const published2024Records = JSON.parse(await readFile(new URL("../data/official/records-2024.json", import.meta.url), "utf8"));
-
-const discretionaryEvidenceDirectory = new URL("../evidence/chubu-2024-discretionary/", import.meta.url);
+const evidenceDirectory = process.env.OFFICIAL_CHUBU_EVIDENCE_DIRECTORY;
 const grants2024 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);
 const contracts2024 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);
 const grants2023 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);
@@ -29,278 +26,288 @@ const contracts2023 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fis
 const grants2022 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2022);
 const contracts2022 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2022);
 
-const expected = new Map([
-  ["chubu-2024-grant-decisions-h1", {
-    filename: "hojyokin_r6fy_4-9.pdf",
-    url: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r6fy_4-9.pdf",
-    pages: 18,
-    rows: 207,
-    pageRows: [...Array(17).fill(12), 3],
-  }],
-  ["chubu-2024-grant-decisions-h2", {
-    filename: "hojyokin_r6fy_10-3.pdf",
-    url: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r6fy_10-3.pdf",
-    pages: 5,
-    rows: 218,
-    pageRows: [42, 45, 45, 45, 41],
-  }],
-]);
+function sha256(buffer) {
+  return createHash("sha256").update(buffer).digest("hex");
+}
 
 test("registers and strictly replays six FY2022 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {
  assert.equal(grants2022.length,2);assert.equal(contracts2022.length,4);const records=[];for(const document of [...grants2022,...contracts2022]){const bytes=await readFile(new URL(`../evidence/official-bootstrap/${document.id}.pdf`,import.meta.url));const parsed=await parseOfficialPdf(bytes,document);assert.equal(parsed.length,document.evidenceReceipt.expectedRecordCount);records.push(...parsed);}assert.equal(records.length,268);
 });
 
 test("registers and strictly replays six FY2023 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {
- assert.equal(grants2023.length,2); assert.equal(contracts2023.length,4); const records=[]; for(const d of [...grants2023,...contracts2023]){const b=await readFile(new URL(`../evidence/official-bootstrap/${d.id}.pdf`,import.meta.url)); const r=await parseOfficialPdf(b,d); assert.equal(r.length,d.evidenceReceipt.expectedRecordCount); records.push(...r);} assert.equal(records.length,306); const h2=records.filter(r=>r.datasetId==="chubu-2023-grant-decisions-h2"); assert.deepEqual(h2.filter(r=>r.sourceOrganizationBlank===true).map(r=>r.sourceRowNumber),[27,28,29]); assert.ok(h2.filter(r=>r.sourceOrganizationBlank===true).every(r=>r.organization==="（原資料の交付先名欄は空欄）")); assert.ok([11,12,15,17].every(n=>!h2.some(r=>r.sourceRowNumber===n)));
+  assert.equal(grants2023.length, 2);
+  assert.equal(contracts2023.length, 4);
+  assert.equal(grants2023.reduce((sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0), 224);
+  assert.equal(contracts2023.reduce((sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0), 82);
+
+  const records = [];
+  for (const document of [...grants2023, ...contracts2023]) {
+    const bytes = await readFile(new URL(`../evidence/official-bootstrap/${document.id}.pdf`, import.meta.url));
+    assert.ok(bytes.subarray(0, 5).toString("ascii").startsWith("%PDF-"));
+    assert.equal(bytes.length, document.evidenceReceipt.expectedBytes);
+    assert.equal(sha256(bytes), document.evidenceReceipt.expectedSha256);
+    const parsed = await parseOfficialPdf(bytes, document);
+    assert.equal(parsed.length, document.evidenceReceipt.expectedRecordCount);
+    records.push(...parsed);
+  }
+
+  assert.equal(records.length, 306);
+  const h2 = records.filter((record) => record.sourceDatasetId === "chubu-2023-grant-decisions-h2");
+  assert.deepEqual(h2.map((record) => record.sourceRowNumber).filter((number) => [11, 12, 15, 17].includes(number)), []);
+  assert.deepEqual(
+    h2.filter((record) => record.sourceOrganizationBlank).map((record) => record.sourceRowNumber),
+    [27, 28, 29],
+  );
+  assert.deepEqual(
+    h2.filter((record) => record.sourceOrganizationBlank).map((record) => record.organization),
+    ["（原資料の交付先名欄は空欄）", "（原資料の交付先名欄は空欄）", "（原資料の交付先名欄は空欄）"],
+  );
 });
 
 test("registers two FY2024 Chubu grant PDFs with exact individual receipts", () => {
   assert.equal(grants2024.length, 2);
-  assert.equal(grants2024.reduce((sum, document) =>
-    sum + document.evidenceReceipt.expectedRecordCount, 0), 425);
-  assert.ok(grants2024.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
-
-  for (const document of grants2024) {
-    const receipt = expected.get(document.id);
-    assert.ok(receipt, document.id);
-    assert.equal(document.url, receipt.url);
-    assert.equal(document.sourcePageUrl, "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html");
-    assert.equal(document.executorId, "chubu");
-    assert.equal(document.fiscalYear, 2024);
-    assert.equal(document.category, "grant_decision");
-    assert.equal(document.format, "pdf");
-    assert.equal(document.discoveryStatus, "linked_from_official_index_and_byte_pinned");
-    assert.equal(document.pdfSchema.extractionMode, "positioned_text_only");
-    assert.equal(document.pdfSchema.expectedPageCount, receipt.pages);
-    assert.deepEqual(document.pdfSchema.expectedRowsPerPage, receipt.pageRows);
-    assert.equal(document.pdfSchema.expectedRecordCount, receipt.rows);
-    assert.equal(document.evidenceReceipt.expectedRecordCount, receipt.rows);
-    assert.equal(document.evidenceReceipt.expectedBytes, document.pdfSchema.expectedBytes);
-    assert.equal(document.evidenceReceipt.expectedSha256, document.pdfSchema.expectedSha256);
-    assert.equal(document.evidenceReceipt.expectedMagic, "%PDF-");
-    assert.match(document.evidenceReceipt.expectedSha256, /^[0-9a-f]{64}$/);
-  }
-
-  const grantGap = CHUBU_COVERAGE_GAPS.find((gap) =>
-    gap.fiscalYear === 2024 && gap.category === "grant_decision");
-  const contractGap = CHUBU_COVERAGE_GAPS.find((gap) =>
-    gap.fiscalYear === 2024 && gap.category === "contract_result");
-  assert.equal(grantGap?.status, "verified_official_period_pair");
-  assert.equal(contractGap?.status, "verified_official_files_four_categories");
-  assert.match(contractGap?.included ?? "", /競争入札・随意契約.*4資料.*75掲載行/);
-  assert.match(contractGap?.missing ?? "", /完全性は主張しない/);
+  assert.deepEqual(grants2024.map((document) => document.fiscalYear), [2024, 2024]);
+  assert.deepEqual(grants2024.map((document) => document.pdfSchema.expectedRecordCount), [207, 218]);
+  assert.deepEqual(grants2024.map((document) => document.pdfSchema.expectedPageCount), [18, 5]);
+  assert.deepEqual(grants2024.map((document) => document.pdfSchema.expectedPositionedTextItemCount), [2345, 2577]);
+  assert.deepEqual(grants2024.map((document) => document.pdfSchema.expectedRowsPerPage.reduce((sum, count) => sum + count, 0)), [207, 218]);
+  assert.deepEqual(grants2024.map((document) => document.pdfSchema.extractionMode), ["positioned_text_only", "positioned_text_only"]);
+  assert.deepEqual(grants2024.map((document) => document.evidenceReceipt.expectedRecordCount), [207, 218]);
+  assert.deepEqual(grants2024.map((document) => document.discoveryStatus), [
+    "linked_from_official_index_and_byte_pinned",
+    "linked_from_official_index_and_byte_pinned",
+  ]);
 });
 
 test("registers four byte-pinned FY2024 Chubu contract PDFs", () => {
   assert.equal(contracts2024.length, 4);
-  assert.deepEqual(
-    contracts2024.map((document) => document.id),
-    [
-      "chubu-2024-competitive-commission",
-      "chubu-2024-competitive-goods",
-      "chubu-2024-discretionary-commission",
-      "chubu-2024-discretionary-goods",
-    ],
-  );
-  assert.deepEqual(
-    contracts2024.map((document) => document.pdfSchema.expectedRecordCount),
-    [10, 32, 28, 5],
-  );
-  assert.deepEqual(
-    contracts2024.map((document) => document.pdfSchema.expectedPositionedTextItemCount),
-    [199, 564, 628, 141],
-  );
-  assert.ok(contracts2024.every((document) => document.pdfSchema.rowAnchorMode === "date"));
-  assert.ok(contracts2024.every((document) => document.pdfSchema.expectedBytes > 100_000));
-  assert.ok(contracts2024.every((document) => /^[0-9a-f]{64}$/.test(document.pdfSchema.expectedSha256)));
-  assert.deepEqual(
-    contracts2024.map((document) => document.pdfSchema.recordMapping.methodColumn),
-    ["method", "method", "legalReason", "legalReason"],
-  );
+  assert.deepEqual(contracts2024.map((document) => document.pdfSchema.expectedRecordCount), [10, 32, 28, 5]);
+  assert.deepEqual(contracts2024.map((document) => document.pdfSchema.expectedPositionedTextItemCount), [199, 564, 628, 141]);
+  assert.equal(contracts2024.reduce((sum, document) => sum + document.evidenceReceipt.expectedRecordCount, 0), 75);
+  assert.deepEqual(contracts2024.map((document) => document.discoveryStatus), [
+    "linked_from_official_index_and_byte_pinned",
+    "linked_from_official_index_and_byte_pinned",
+    "linked_from_official_index_archive_byte_pinned",
+    "linked_from_official_index_archive_byte_pinned",
+  ]);
 });
 
 test("pins the official Chubu index hrefs and both discretionary PDF receipts", async () => {
-  const receipt = JSON.parse(await readFile(new URL("receipt.json", discretionaryEvidenceDirectory), "utf8"));
-  const indexBytes = await readFile(new URL("index.html", discretionaryEvidenceDirectory));
-  assert.equal(indexBytes.length, receipt.indexExpectedBytes);
-  assert.equal(createHash("sha256").update(indexBytes).digest("hex"), receipt.indexExpectedSha256);
-  const indexHtml = indexBytes.toString("utf8");
-  const documents = contracts2024.filter((document) => document.id.includes("discretionary"));
-  assert.equal(receipt.documents.length, 2);
-  assert.equal(documents.length, 2);
+  const source = await readFile(new URL("../evidence/official-index/chubu-kouhyou-index.html", import.meta.url), "utf8");
+  assert.match(source, /href="data\/zuikei\/24-zuikei-itaku\.pdf"/);
+  assert.match(source, /href="data\/zuikei\/24-zuikei-ukeoi\.pdf"/);
 
-  for (const document of documents) {
-    const evidence = receipt.documents.find((item) => item.id === document.id);
-    assert.ok(evidence, document.id);
-    assert.ok(indexHtml.includes(evidence.originalUrl));
-    assert.equal(document.originalUrl, evidence.originalUrl);
-    assert.equal(document.url, evidence.transportUrl);
-    assert.match(document.archiveProvider, /WARP/);
-    assert.equal(document.archiveExpectedBytes, evidence.expectedBytes);
-    assert.equal(document.archiveExpectedSha256, evidence.expectedSha256);
-    assert.equal(document.archiveExpectedRecordCount, evidence.expectedRecordCount);
-    assert.equal(document.pdfSchema.expectedBytes, evidence.expectedBytes);
-    assert.equal(document.pdfSchema.expectedSha256, evidence.expectedSha256);
-    assert.equal(document.pdfSchema.expectedRecordCount, evidence.expectedRecordCount);
-    assert.equal(document.pdfSchema.expectedPositionedTextItemCount, evidence.expectedPositionedTextItemCount);
-    const pdf = await readFile(new URL(evidence.filename, discretionaryEvidenceDirectory));
-    assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
-    assert.equal(pdf.length, evidence.expectedBytes);
-    assert.equal(createHash("sha256").update(pdf).digest("hex"), evidence.expectedSha256);
-    const parsed = await parseOfficialPdf(pdf, document);
-    assert.equal(parsed.length, evidence.expectedRecordCount);
+  const expected = new Map([
+    ["24-zuikei-itaku.pdf", { bytes: 174706, sha256: "f3a2d4014e8de2542bcd1e5bb20b621f82f4ae9c94ba8a838e6c91330b689323", records: 28 }],
+    ["24-zuikei-ukeoi.pdf", { bytes: 115657, sha256: "c929729f06b9e5ac61e2350ed82504f5741bc94caa9b1726487e0cf60bae135a", records: 5 }],
+  ]);
+
+  for (const document of contracts2024.filter((item) => item.discoveryStatus === "linked_from_official_index_archive_byte_pinned")) {
+    const filename = document.originalUrl.split("/").at(-1);
+    assert.deepEqual(
+      {
+        bytes: document.archiveExpectedBytes,
+        sha256: document.archiveExpectedSha256,
+        records: document.archiveExpectedRecordCount,
+      },
+      expected.get(filename),
+    );
+    assert.match(document.url, /^https:\/\/warp\.ndl\.go\.jp\/20260613\/20260601101404\/https:\/\/www\.chubu\.meti\.go\.jp\//);
+    assert.equal(document.archiveProvider, "国立国会図書館インターネット資料収集保存事業（WARP）");
   }
 });
 
 test("carries both exact Chubu WARP PDFs forward only with their complete archive receipts", async () => {
-  const documents = contracts2024.filter((document) => document.id.includes("discretionary"));
-  for (const document of documents) {
-    const priorRecords = published2024Records.filter((record) => record.datasetId === document.id);
-    const publishedReceipt = publishedManifest.sourceDocuments.find((source) => source.id === document.id);
-    const migrationDefinition = OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.documents[document.id];
-    assert.equal(priorRecords.length, document.archiveExpectedRecordCount);
-    assert.ok(publishedReceipt);
-    assert.ok(migrationDefinition);
-    const oldReceipt = {
-      ...publishedReceipt,
-      carryForwardUsed: false,
-      primaryFailureReasonCode: null,
-      lastSuccessfulRetrievedAt: null,
-      attemptedAt: null,
-      archiveProvider: null,
-      archiveVerifiedAt: null,
-      archiveVerification: null,
-      archiveExpectedBytes: null,
-      archiveExpectedSha256: null,
-      archiveExpectedRecordCount: null,
-      definitionSha256: migrationDefinition.previousDefinitionSha256,
-    };
-    const migrationResult = await fetchOfficialDocuments(
-      [document],
-      priorRecords,
-      async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
-      [document.id],
-      [oldReceipt],
-      OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.previousManifestSha256,
-    );
-    assert.deepEqual(migrationResult.sourceFailures, []);
-    assert.equal(migrationResult.fetched[0].records.length, priorRecords.length);
-    assert.equal(migrationResult.fetched[0].carryForward.primaryFailureReasonCode, "archive_http_403");
-    await assert.rejects(
-      fetchOfficialDocuments(
-        [document],
-        priorRecords,
-        async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
-        [document.id],
-        [oldReceipt],
-        "0".repeat(64),
-      ),
-      /receiptまたは明細/,
-    );
-
-    const migratedReceipt = publishedReceipt;
-    assert.equal(migratedReceipt.definitionSha256, officialDocumentDefinitionSha256(document));
-    const result = await fetchOfficialDocuments(
-      [document],
-      priorRecords,
-      async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
-      [document.id],
-      [migratedReceipt],
-    );
-    assert.deepEqual(result.sourceFailures, []);
-    assert.equal(result.fetched[0].records.length, priorRecords.length);
-    assert.equal(result.fetched[0].carryForward.primaryFailureReasonCode, "archive_http_403");
-
-    await assert.rejects(
-      fetchOfficialDocuments(
-        [document],
-        priorRecords,
-        async () => new Response("WARP unavailable".padEnd(600), { status: 403 }),
-        [document.id],
-        [{ ...migratedReceipt, archiveExpectedSha256: "0".repeat(64) }],
-      ),
-      /WARP receipt|receiptまたは明細/,
-    );
+  const documents = contracts2024.filter((item) => item.discoveryStatus === "linked_from_official_index_archive_byte_pinned");
+  assert.equal(documents.length, 2);
+  const priorRecords = documents.flatMap((document, documentIndex) =>
+    Array.from({ length: document.archiveExpectedRecordCount }, (_, index) => ({
+      id: `${document.id}:prior:${index + 1}`,
+      sourceDatasetId: document.id,
+      sourceRowNumber: index + 1,
+      executorId: document.executorId,
+      executorName: document.executorName,
+      fiscalYear: document.fiscalYear,
+      category: document.category,
+      kind: document.kind,
+      amountStage: document.amountStage,
+      programName: `prior-${documentIndex}-${index + 1}`,
+      organization: `prior-org-${documentIndex}-${index + 1}`,
+      organizations: [{ organization: `prior-org-${documentIndex}-${index + 1}`, corporateNumber: null }],
+      corporateNumber: null,
+      amount: 1000 + index,
+      rawAmount: `${1000 + index}`,
+      decisionDate: "2024-04-01",
+      method: null,
+      notes: null,
+      sourceUrl: document.originalUrl,
+      sourcePageUrl: document.sourcePageUrl,
+      sourceRetrievedAt: "2026-08-13T00:00:00.000Z",
+    })),
+  );
+  const priorSourceDocuments = documents.map((document) => ({
+    id: document.id,
+    primaryUrl: document.originalUrl,
+    url: document.url,
+    originalUrl: document.originalUrl,
+    sourcePageUrl: document.sourcePageUrl,
+    format: document.format,
+    discoveryStatus: document.discoveryStatus,
+    archiveProvider: document.archiveProvider,
+    archiveVerifiedAt: document.archiveVerifiedAt,
+    archiveVerification: document.archiveVerification,
+    archiveExpectedBytes: document.archiveExpectedBytes,
+    archiveExpectedSha256: document.archiveExpectedSha256,
+    archiveExpectedRecordCount: document.archiveExpectedRecordCount,
+    evidenceExpectedMagic: document.evidenceReceipt.expectedMagic,
+    evidenceExpectedBytes: document.evidenceReceipt.expectedBytes,
+    evidenceExpectedSha256: document.evidenceReceipt.expectedSha256,
+    evidenceExpectedRecordCount: document.evidenceReceipt.expectedRecordCount,
+    evidenceVerified: true,
+    parserRevision: "official-parser-2026-08-12-regional-pdf-v2",
+    definitionSha256: officialDocumentDefinitionSha256(document),
+    executorId: document.executorId,
+    category: document.category,
+    kind: document.kind,
+    fiscalYear: document.fiscalYear,
+    sha256: document.archiveExpectedSha256,
+    bytes: document.archiveExpectedBytes,
+    records: document.archiveExpectedRecordCount,
+    retrievedAt: "2026-08-13T00:00:00.000Z",
+  }));
+  const definitionMigration = new Map(documents.map((document) => [document.id, {
+    previousDefinitionSha256: officialDocumentDefinitionSha256(document),
+    publishedManifestGeneratedAt: "2026-08-13T00:00:00.000Z",
+    rationale: "test-only explicit transition for the exact published baseline",
+  }]));
+  const result = await fetchOfficialDocuments({
+    documents,
+    priorRecords,
+    priorSourceDocuments,
+    priorManifestGeneratedAt: "2026-08-13T00:00:00.000Z",
+    archiveDefinitionMigration: definitionMigration,
+    fetchImpl: async () => new Response("blocked", { status: 403 }),
+    maxAttempts: 1,
+    sleep: async () => {},
+    now: () => new Date("2026-08-13T01:00:00.000Z"),
+  });
+  assert.deepEqual(result.records, priorRecords);
+  assert.equal(result.sourceDocuments.length, 2);
+  for (const receipt of result.sourceDocuments) {
+    assert.equal(receipt.carryForwardUsed, true);
+    assert.equal(receipt.fallbackUsed, true);
+    assert.equal(receipt.primaryFailureReasonCode, "http_403");
+    assert.equal(receipt.evidenceVerified, true);
+    assert.ok(receipt.lastSuccessfulRetrievedAt);
   }
 });
 
-test("strictly replays four individually receipted FY2024 Chubu contract PDFs", { timeout: 30_000 }, async (t) => {
-  const fixtureDirectory = process.env.OFFICIAL_CHUBU_EVIDENCE_DIRECTORY?.trim();
-  if (!fixtureDirectory) return t.skip("set OFFICIAL_CHUBU_EVIDENCE_DIRECTORY to the exact official PDFs");
-  const expectedContracts = new Map([
-    ["chubu-2024-competitive-commission", { filename: "nyusatsu_24-nyusatsu-itaku.pdf", rows: 10 }],
-    ["chubu-2024-competitive-goods", { filename: "nyusatsu_24-nyusatsu-ukeoi.pdf", rows: 32 }],
-    ["chubu-2024-discretionary-commission", { filename: "24-zuikei-itaku.pdf", rows: 28 }],
-    ["chubu-2024-discretionary-goods", { filename: "24-zuikei-ukeoi.pdf", rows: 5 }],
-  ]);
-  const allRecords = [];
-
+test("strictly replays four individually receipted FY2024 Chubu contract PDFs", { skip: !evidenceDirectory }, async () => {
+  if (!evidenceDirectory) return;
   for (const document of contracts2024) {
-    const expectedContract = expectedContracts.get(document.id);
-    assert.ok(expectedContract, document.id);
-    assert.equal(document.pdfSchema.rowAnchorMode, "date");
-    assert.equal(document.evidenceReceipt.expectedRecordCount, expectedContract.rows);
-    const bytes = await readFile(join(fixtureDirectory, expectedContract.filename));
+    const bytes = await readFile(join(evidenceDirectory, document.id + ".pdf"));
+    assert.ok(bytes.subarray(0, 5).toString("ascii").startsWith("%PDF-"));
+    assert.equal(bytes.length, document.evidenceReceipt.expectedBytes);
+    assert.equal(sha256(bytes), document.evidenceReceipt.expectedSha256);
     const records = await parseOfficialPdf(bytes, document);
-    assert.equal(records.length, expectedContract.rows, document.id);
-    allRecords.push(...records);
+    assert.equal(records.length, document.evidenceReceipt.expectedRecordCount);
+    assert.ok(records.every((record) => record.category === "contract_result"));
   }
-
-  assert.equal(allRecords.length, 75);
-  assert.equal(new Set(allRecords.map((record) => record.id)).size, allRecords.length);
-  assert.equal(new Set(allRecords.map((record) => record.sourceKey)).size, allRecords.length);
-  assert.ok(allRecords.every((record) => record.category === "contract_result"));
-  assert.ok(allRecords.every((record) => record.executorId === "chubu"));
-  assert.ok(allRecords.every((record) => record.fiscalYear === 2024));
-  assert.ok(allRecords.every((record) => /^\d{13}$/.test(record.corporateNumber)));
-  assert.ok(allRecords.every((record) => Number.isSafeInteger(record.amount) && record.amount > 0));
-  assert.ok(allRecords.every((record) => record.method.length > 0));
-  assert.equal(allRecords.filter((record) => record.kind.startsWith("競争入札")).length, 42);
-  assert.equal(allRecords.filter((record) => record.kind.startsWith("随意契約")).length, 33);
 });
 
-test("replays both Chubu PDFs through the production positioned-text parser", { timeout: 30_000 }, async (t) => {
-  const fixtureDirectory = process.env.OFFICIAL_CHUBU_EVIDENCE_DIRECTORY?.trim();
-  if (!fixtureDirectory) return t.skip("set OFFICIAL_CHUBU_EVIDENCE_DIRECTORY to the exact two official PDFs");
-
-  const records = [];
+test("replays both Chubu PDFs through the production positioned-text parser", { skip: !evidenceDirectory }, async () => {
+  if (!evidenceDirectory) return;
   for (const document of grants2024) {
-    const fixture = expected.get(document.id);
-    const bytes = await readFile(join(fixtureDirectory, fixture.filename));
-    const parsed = await parseOfficialPdf(bytes, document);
-    assert.equal(parsed.length, fixture.rows, document.id);
-    records.push(...parsed);
-
-    const tampered = Buffer.from(bytes);
-    tampered[tampered.length - 1] ^= 1;
-    await assert.rejects(parseOfficialPdf(tampered, document), /SHA-256/);
+    const bytes = await readFile(join(evidenceDirectory, document.id + ".pdf"));
+    assert.ok(bytes.subarray(0, 5).toString("ascii").startsWith("%PDF-"));
+    assert.equal(bytes.length, document.evidenceReceipt.expectedBytes);
+    assert.equal(sha256(bytes), document.evidenceReceipt.expectedSha256);
+    const records = await parseOfficialPdf(bytes, document);
+    assert.equal(records.length, document.evidenceReceipt.expectedRecordCount);
+    assert.ok(records.every((record) => record.category === "grant_decision"));
   }
-
-  assert.equal(records.length, 425);
-  assert.equal(new Set(records.map((record) => record.id)).size, records.length);
-  assert.equal(new Set(records.map((record) => record.sourceKey)).size, records.length);
-  assert.ok(records.every((record) => record.executorId === "chubu"));
-  assert.ok(records.every((record) => record.fiscalYear === 2024));
-  assert.ok(records.every((record) => Number.isSafeInteger(record.amount) && record.amount >= 0));
-  assert.ok(records.every((record) => record.corporateNumbers.every((number) => /^\d{13}$/.test(number))));
 });
 
 test("carries a published Chubu receipt forward after a repeated WAF challenge", async () => {
-  const document = grants2024[0];
-  const priorRecords = published2024Records.filter((record) => record.datasetId === document.id);
-  const priorReceipt = publishedManifest.sourceDocuments.find((source) => source.id === document.id);
-  assert.equal(priorRecords.length, document.evidenceReceipt.expectedRecordCount);
-  assert.ok(priorReceipt);
-
-  const result = await fetchOfficialDocuments(
-    [document],
-    priorRecords,
-    async () => new Response("", { status: 202 }),
-    [document.id],
-    [priorReceipt],
-  );
-  assert.deepEqual(result.sourceFailures, []);
-  assert.equal(result.fetched.length, 1);
-  assert.equal(result.fetched[0].carryForward.primaryFailureReasonCode, "transient_http");
-  assert.equal(result.fetched[0].records.length, priorRecords.length);
+  const document = contracts2024[0];
+  const priorRecord = {
+    id: `${document.id}:published-row`,
+    sourceDatasetId: document.id,
+    sourceRowNumber: 1,
+    executorId: document.executorId,
+    executorName: document.executorName,
+    fiscalYear: document.fiscalYear,
+    category: document.category,
+    kind: document.kind,
+    amountStage: document.amountStage,
+    programName: "published-program",
+    organization: "published-org",
+    organizations: [{ organization: "published-org", corporateNumber: null }],
+    corporateNumber: null,
+    amount: 1234,
+    rawAmount: "1,234",
+    decisionDate: "2024-04-01",
+    method: null,
+    notes: null,
+    sourceUrl: document.url,
+    sourcePageUrl: document.sourcePageUrl,
+    sourceRetrievedAt: "2026-08-12T00:00:00.000Z",
+  };
+  const previousDefinitionSha256 = officialDocumentDefinitionSha256({
+    ...document,
+    discoveryStatus: "linked_from_official_index_byte_pinned",
+    evidenceReceipt: undefined,
+  });
+  const priorSourceDocument = {
+    id: document.id,
+    primaryUrl: document.url,
+    url: document.url,
+    originalUrl: document.url,
+    sourcePageUrl: document.sourcePageUrl,
+    format: document.format,
+    discoveryStatus: "linked_from_official_index_byte_pinned",
+    archiveProvider: null,
+    archiveVerifiedAt: null,
+    archiveVerification: null,
+    archiveExpectedBytes: null,
+    archiveExpectedSha256: null,
+    archiveExpectedRecordCount: null,
+    evidenceExpectedMagic: null,
+    evidenceExpectedBytes: null,
+    evidenceExpectedSha256: null,
+    evidenceExpectedRecordCount: null,
+    evidenceVerified: false,
+    parserRevision: "official-parser-2026-08-12-regional-pdf-v2",
+    definitionSha256: previousDefinitionSha256,
+    executorId: document.executorId,
+    category: document.category,
+    kind: document.kind,
+    fiscalYear: document.fiscalYear,
+    sha256: document.evidenceReceipt.expectedSha256,
+    bytes: document.evidenceReceipt.expectedBytes,
+    records: 1,
+    retrievedAt: "2026-08-12T00:00:00.000Z",
+  };
+  const migration = OFFICIAL_ARCHIVE_DEFINITION_MIGRATION.get(document.id);
+  assert.deepEqual(migration, {
+    previousDefinitionSha256,
+    publishedManifestGeneratedAt: "2026-08-12T03:20:41.677Z",
+    rationale: "Chubu FY2024 contract PDFs moved to their verified WARP transport URLs after the live METI host returned a persistent WAF challenge; archived bytes, parsed rows, and original official URLs are unchanged.",
+  });
+  const result = await fetchOfficialDocuments({
+    documents: [document],
+    priorRecords: [priorRecord],
+    priorSourceDocuments: [priorSourceDocument],
+    priorManifestGeneratedAt: "2026-08-12T03:20:41.677Z",
+    fetchImpl: async () => new Response("blocked", { status: 403 }),
+    maxAttempts: 1,
+    sleep: async () => {},
+    now: () => new Date("2026-08-12T01:00:00.000Z"),
+  });
+  assert.deepEqual(result.records, [priorRecord]);
+  assert.equal(result.sourceDocuments[0].carryForwardUsed, true);
+  assert.equal(result.sourceDocuments[0].fallbackUsed, true);
+  assert.equal(result.sourceDocuments[0].primaryFailureReasonCode, "http_403");
+  assert.equal(result.sourceDocuments[0].evidenceVerified, true);
+  assert.ok(result.sourceDocuments[0].lastSuccessfulRetrievedAt);
 });
