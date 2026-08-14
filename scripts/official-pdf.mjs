@@ -105,6 +105,13 @@ export async function parseOfficialPdf(buffer, document) {
         }
       }
     }
+    const expectedBlankOrganizationOrdinals = [...(schema.expectedBlankOrganizationOrdinals ?? [])].sort((a, b) => a - b);
+    const observedBlankOrganizationOrdinals = records.filter((record) => !record.organization)
+      .map((record) => record.sourceRowNumber).sort((a, b) => a - b);
+    if (observedBlankOrganizationOrdinals.length !== expectedBlankOrganizationOrdinals.length
+      || observedBlankOrganizationOrdinals.some((value, index) => value !== expectedBlankOrganizationOrdinals[index])) {
+      throw new Error(`${document.id}: 交付先空欄行が検証済みreceiptと一致しません`);
+    }
     Object.defineProperty(records, "emptySentinelFound", { value: emptySentinelFound, enumerable: false });
     return records;
   } catch (error) {
@@ -150,6 +157,14 @@ function validateDocumentDefinition(document) {
       && (!Array.isArray(schema.organizationLineOrderOrdinals)
         || schema.organizationLineOrderOrdinals.some((value) => !Number.isSafeInteger(value) || value < 1)
         || new Set(schema.organizationLineOrderOrdinals).size !== schema.organizationLineOrderOrdinals.length))
+    || (schema.expectedBlankOrganizationOrdinals !== undefined
+      && (!Array.isArray(schema.expectedBlankOrganizationOrdinals)
+        || schema.expectedBlankOrganizationOrdinals.some((value) => !Number.isSafeInteger(value) || value < 1)
+        || new Set(schema.expectedBlankOrganizationOrdinals).size !== schema.expectedBlankOrganizationOrdinals.length))
+    || (schema.expectedRowNumbers?.omitted !== undefined
+      && (!Array.isArray(schema.expectedRowNumbers.omitted)
+        || schema.expectedRowNumbers.omitted.some((value) => !Number.isSafeInteger(value) || value < 1)
+        || new Set(schema.expectedRowNumbers.omitted).size !== schema.expectedRowNumbers.omitted.length))
     || (schema.dateRangeExceptions !== undefined
       && (!Array.isArray(schema.dateRangeExceptions)
         || schema.dateRangeExceptions.some((exception) => !exception
@@ -582,7 +597,9 @@ function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffi
   const dateRaw = compactCell(cells[mapping.dateColumn].text);
   const amountRaw = compactCell(cells[mapping.amountColumn].text);
   if (!program) throw new Error(`${document.id}/no.${ordinal}: 事業名・契約件名が空です`);
-  if (!normalizeMultilineCell(organizationCell.text)) throw new Error(`${document.id}/no.${ordinal}: 交付先・契約相手が空です`);
+  const organizationText = normalizeMultilineCell(organizationCell.text);
+  const blankOrganizationAllowed = (schema.expectedBlankOrganizationOrdinals ?? []).includes(ordinal);
+  if (!organizationText && !blankOrganizationAllowed) throw new Error(`${document.id}/no.${ordinal}: 交付先・契約相手が空です`);
   const date = parseStrictDate(dateRaw, schema.allowedDateFormats, document.id, ordinal);
   const dateException = (schema.dateRangeExceptions ?? []).some((exception) =>
     exception.ordinal === ordinal && exception.raw === dateRaw && exception.parsed === date);
@@ -593,8 +610,10 @@ function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffi
   const corporate = schema.corporateNumberOmitted
     ? { raw: "", numbers: [], anchors: [] }
     : parseCorporateNumbers(corporateNumberCell, schema, document.id, ordinal);
-  const organizations = schema.corporateNumberOmitted
-    ? [normalizeMultilineCell(organizationCell.text)]
+  const organizations = !organizationText
+    ? []
+    : schema.corporateNumberOmitted
+    ? [organizationText]
     : partitionOrganizations(organizationCell, corporate.anchors, corporate.numbers, schema, document.id, ordinal);
   const notes = (mapping.notesColumns ?? [])
     .map((key) => normalizeMultilineCell(cells[key].text))
@@ -739,7 +758,12 @@ function assertExpectedRowNumbers(records, expected, documentId, allowRepeats = 
   }
   const observedValues = records.map((record) => record.sourceRowNumber);
   const observed = (allowRepeats ? [...new Set(observedValues)] : observedValues).sort((a, b) => a - b);
-  const wanted = Array.from({ length: expected.end - expected.start + 1 }, (_, index) => expected.start + index);
+  const omitted = new Set(expected.omitted ?? []);
+  if ([...omitted].some((value) => value < expected.start || value > expected.end)) {
+    throw new Error(`${documentId}: 欠番receiptが期待掲載番号の範囲外です`);
+  }
+  const wanted = Array.from({ length: expected.end - expected.start + 1 }, (_, index) => expected.start + index)
+    .filter((value) => !omitted.has(value));
   if (observed.length !== wanted.length || observed.some((value, index) => value !== wanted[index])) {
     throw new Error(`${documentId}: 掲載番号が連続した検証済み範囲と一致しません`);
   }
