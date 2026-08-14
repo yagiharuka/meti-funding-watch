@@ -1,3 +1,4 @@
+// Connector-triggered replay after exact sparse-row parser support.
 import { readFile } from "node:fs/promises";
 import { parseOfficialPdf } from "./official-pdf.mjs";
 
