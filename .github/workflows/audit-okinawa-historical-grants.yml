@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/audit-okinawa-historical-grants.yml"
       - "scripts/official-okinawa-historical-audit.mjs"
+      - "scripts/official-okinawa-fy2019-schema-audit.mjs"
 
 permissions:
   contents: read
@@ -37,6 +38,10 @@ jobs:
         id: audit
         continue-on-error: true
         run: node scripts/official-okinawa-historical-audit.mjs
+
+      - name: Pin FY2019 schema evidence
+        if: always()
+        run: node scripts/official-okinawa-fy2019-schema-audit.mjs
 
       - name: Preserve audit evidence
         if: always()
