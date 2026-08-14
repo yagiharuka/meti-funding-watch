@@ -13,6 +13,13 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
       - name: Fetch saved official index and print FY2023 hrefs
         shell: bash
         run: |
@@ -48,34 +55,56 @@ jobs:
           print('FY2023_LINK_COUNT', found)
           PY
 
-      - name: Install PDF inspection tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq poppler-utils
-
-      - name: Download and receipt six exact FY2023 PDFs
+      - name: Download six exact FY2023 PDFs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p audit
           prefix='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data'
-          urls=(
-            "$prefix/hojyokin/r5fy_4-9.pdf"
-            "$prefix/hojyokin/r5fy_10-3.pdf"
-            "$prefix/nyusatsu/23-nyusatsu-itaku.pdf"
-            "$prefix/nyusatsu/23-ukeoi.pdf"
-            "$prefix/zuikei/23-zuikei-itaku.pdf"
-            "$prefix/zuikei/23-zuikei-ukeoi.pdf"
-          )
-          for url in "${urls[@]}"; do
-            file="audit/${url##*/}"
-            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$url" -o "$file"
+          for rel in \
+            hojyokin/r5fy_4-9.pdf hojyokin/r5fy_10-3.pdf \
+            nyusatsu/23-nyusatsu-itaku.pdf nyusatsu/23-ukeoi.pdf \
+            zuikei/23-zuikei-itaku.pdf zuikei/23-zuikei-ukeoi.pdf; do
+            file="audit/${rel##*/}"
+            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$prefix/$rel" -o "$file"
             printf 'RECEIPT %s bytes=%s sha256=%s magic=%s\n' "${file##*/}" "$(wc -c < "$file")" "$(sha256sum "$file" | cut -d' ' -f1)" "$(head -c 5 "$file")"
-            pdfinfo "$file" | grep -E '^(Pages|Page size):'
-            pdftotext -layout "$file" "${file%.pdf}.txt"
-            printf '%s\n' "--- TEXT ${file##*/} ---"
-            sed -n '1,35p' "${file%.pdf}.txt"
           done
+
+      - name: Audit positioned text and header geometry with production PDF engine
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          import { getDocument, Util } from 'pdfjs-dist/legacy/build/pdf.mjs';
+          const files = [
+            'r5fy_4-9.pdf','r5fy_10-3.pdf','23-nyusatsu-itaku.pdf','23-ukeoi.pdf','23-zuikei-itaku.pdf','23-zuikei-ukeoi.pdf'
+          ];
+          const needles = ['番号','事業名','交付先名','法人番号','交付決定額','支出元会計区分','支出元(目)名称','交付決定日','公益法人の区分','国所管、','物品役務等の','契約担当官等の','契約を締結','商号又は名称','住所','一般競争入札・','予定価格','契約金額','落札率','備考','応札・','随意契約によることとした','再就職'];
+          for (const name of files) {
+            const bytes = await readFile(`audit/${name}`);
+            const task = getDocument({data:new Uint8Array(bytes),disableFontFace:true,useSystemFonts:false,isEvalSupported:false});
+            const pdf = await task.promise;
+            let total=0; const counts=[];
+            console.log(`DOC ${name} pages=${pdf.numPages}`);
+            for(let pn=1;pn<=pdf.numPages;pn++){
+              const page=await pdf.getPage(pn); const viewport=page.getViewport({scale:1});
+              const tc=await page.getTextContent({disableNormalization:false,includeMarkedContent:false});
+              const items=[];
+              for(const raw of tc.items){
+                if(!raw || typeof raw.str!=='string' || !raw.str.trim()) continue;
+                const [, , , , x, topY]=Util.transform(viewport.transform, raw.transform??[]);
+                items.push({text:raw.str.normalize('NFC').replace(/\s+/gu,' ').trim(),x,y:viewport.height-topY});
+              }
+              total+=items.length; counts.push(items.length);
+              console.log(`PAGE ${pn} width=${viewport.width} height=${viewport.height} items=${items.length}`);
+              if(pn===1){
+                for(const it of items){ if(needles.some(n=>it.text.includes(n))) console.log(`HEADER x=${it.x.toFixed(3)} y=${it.y.toFixed(3)} text=${it.text}`); }
+              }
+              page.cleanup();
+            }
+            console.log(`POSITIONED ${name} total=${total} pages=${JSON.stringify(counts)}`);
+            await task.destroy();
+          }
+          NODE
 
       - name: Preserve audited originals
         if: always()
