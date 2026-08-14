@@ -58,30 +58,26 @@ async function inspectPdf(bytes) {
   let totalNonWhitespaceChars = 0;
   let economicIndustryDepartmentMentions = 0;
   let grantDisclosureMentions = 0;
-  try {
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const strings = content.items.map((item) => typeof item.str === "string" ? item.str : "");
-      const text = strings.join(" ");
-      const nonWhitespaceChars = text.replace(/\s/g, "").length;
-      totalItems += content.items.length;
-      totalNonWhitespaceChars += nonWhitespaceChars;
-      if (text.includes("沖縄総合事務局") && text.includes("経済産業部")) economicIndustryDepartmentMentions += 1;
-      if (text.includes("補助金") && (text.includes("交付") || text.includes("情報"))) grantDisclosureMentions += 1;
-      const viewport = page.getViewport({ scale: 1 });
-      pages.push({
-        pageNumber,
-        width: viewport.width,
-        height: viewport.height,
-        textItems: content.items.length,
-        nonWhitespaceChars,
-        sample: text.replace(/\s+/g, " ").slice(0, 240),
-      });
-      page.cleanup();
-    }
-  } finally {
-    await document.destroy();
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const strings = content.items.map((item) => typeof item.str === "string" ? item.str : "");
+    const text = strings.join(" ");
+    const nonWhitespaceChars = text.replace(/\s/g, "").length;
+    totalItems += content.items.length;
+    totalNonWhitespaceChars += nonWhitespaceChars;
+    if (text.includes("沖縄総合事務局") && text.includes("経済産業部")) economicIndustryDepartmentMentions += 1;
+    if (text.includes("補助金") && (text.includes("交付") || text.includes("情報"))) grantDisclosureMentions += 1;
+    const viewport = page.getViewport({ scale: 1 });
+    pages.push({
+      pageNumber,
+      width: viewport.width,
+      height: viewport.height,
+      textItems: content.items.length,
+      nonWhitespaceChars,
+      sample: text.replace(/\s+/g, " ").slice(0, 240),
+    });
+    page.cleanup();
   }
   return {
     pageCount: pages.length,
@@ -101,50 +97,63 @@ for (const source of SOURCES) {
   try {
     const fetched = await fetchBuffer(source.url);
     const sha256 = createHash("sha256").update(fetched.bytes).digest("hex");
-    const inspection = await inspectPdf(fetched.bytes);
     const localName = `${source.fiscalYear}-${source.filename}`;
     await writeFile(path.join(OUTPUT, localName), fetched.bytes);
-    documents.push({
+    const baseObservation = {
       ...source,
       sourcePageUrl: INDEX,
-      status: "retrieved",
       startedAt,
       finalUrl: fetched.finalUrl,
       contentType: fetched.contentType,
       bytes: fetched.bytes.length,
       sha256,
-      ...inspection,
+      magicHex: fetched.bytes.subarray(0, 16).toString("hex"),
       localName,
-    });
-    console.log(`OK ${source.filename}: ${fetched.bytes.length} bytes, ${inspection.pageCount} pages, ${inspection.totalTextItems} text items`);
+    };
+    try {
+      const inspection = await inspectPdf(fetched.bytes);
+      documents.push({ ...baseObservation, status: "retrieved", ...inspection });
+      console.log(`OK ${source.filename}: ${fetched.bytes.length} bytes, ${inspection.pageCount} pages, ${inspection.totalTextItems} text items`);
+    } catch (error) {
+      documents.push({
+        ...baseObservation,
+        status: "retrieved_unparseable",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      console.error(`UNPARSEABLE ${source.filename}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   } catch (error) {
     documents.push({
       ...source,
       sourcePageUrl: INDEX,
-      status: "failed",
+      status: "fetch_failed",
       startedAt,
       error: error instanceof Error ? error.message : String(error),
     });
-    console.error(`FAIL ${source.filename}: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`FETCH FAIL ${source.filename}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-const retrieved = documents.filter((document) => document.status === "retrieved");
+const parsed = documents.filter((document) => document.status === "retrieved");
+const fetched = documents.filter((document) => document.status === "retrieved" || document.status === "retrieved_unparseable");
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   checkedAt: new Date().toISOString(),
   sourcePageUrl: INDEX,
   purpose: "Read-only audit of historical Okinawa Economic Industry Department grant-disclosure PDFs discovered as exact official-index hrefs. No production records are emitted.",
   sourceCount: SOURCES.length,
-  retrievedCount: retrieved.length,
-  failedCount: documents.length - retrieved.length,
-  textPdfCount: retrieved.filter((document) => document.textPdf).length,
-  totalBytes: retrieved.reduce((sum, document) => sum + document.bytes, 0),
-  totalPages: retrieved.reduce((sum, document) => sum + document.pageCount, 0),
-  totalTextItems: retrieved.reduce((sum, document) => sum + document.totalTextItems, 0),
+  fetchedCount: fetched.length,
+  parsedCount: parsed.length,
+  failedCount: documents.length - parsed.length,
+  fetchFailedCount: documents.filter((document) => document.status === "fetch_failed").length,
+  unparseableCount: documents.filter((document) => document.status === "retrieved_unparseable").length,
+  textPdfCount: parsed.filter((document) => document.textPdf).length,
+  totalFetchedBytes: fetched.reduce((sum, document) => sum + document.bytes, 0),
+  totalParsedPages: parsed.reduce((sum, document) => sum + document.pageCount, 0),
+  totalTextItems: parsed.reduce((sum, document) => sum + document.totalTextItems, 0),
   documents,
 };
 await writeFile(path.join(OUTPUT, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
-console.log(JSON.stringify({ sourceCount: report.sourceCount, retrievedCount: report.retrievedCount, failedCount: report.failedCount, textPdfCount: report.textPdfCount }));
+console.log(JSON.stringify({ sourceCount: report.sourceCount, fetchedCount: report.fetchedCount, parsedCount: report.parsedCount, fetchFailedCount: report.fetchFailedCount, unparseableCount: report.unparseableCount }));
 
 if (report.failedCount > 0) process.exitCode = 2;
