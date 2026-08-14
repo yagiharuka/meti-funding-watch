@@ -21,17 +21,13 @@ jobs:
           from html.parser import HTMLParser
           from urllib.parse import urljoin
           from urllib.request import Request, urlopen
-
           ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
           INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
           req=Request(INDEX, headers={'User-Agent':'Mozilla/5.0'})
-          with urlopen(req, timeout=60) as r:
-              raw=r.read()
+          with urlopen(req, timeout=60) as r: raw=r.read()
           text=raw.decode('utf-8', errors='strict')
-
           class P(HTMLParser):
-              def __init__(self):
-                  super().__init__(); self.rows=[]; self.current=None; self.link=None
+              def __init__(self): super().__init__(); self.rows=[]; self.current=None; self.link=None
               def handle_starttag(self, tag, attrs):
                   if tag=='tr': self.current={'text':[],'links':[]}
                   if self.current is not None and tag=='a': self.link=dict(attrs).get('href')
@@ -42,21 +38,44 @@ jobs:
                       self.current['links'].append(self.link); self.link=None
                   if tag=='tr' and self.current is not None:
                       self.rows.append(self.current); self.current=None
-          p=P(); p.feed(text)
-          found=0
+          p=P(); p.feed(text); found=0
           for i,row in enumerate(p.rows):
               label=' '.join(' '.join(row['text']).split())
               if '令和5年度' in label or '令和５年度' in label:
                   print(f'ROW {i}: {label}')
                   for href in row['links']:
-                      saved=urljoin(INDEX, href)
-                      print('SAVED_HREF', saved)
-                      if '/https://' in saved:
-                          print('ORIGINAL_HREF', saved.split('/https://',1)[1].join(['https://','']))
-                      else:
-                          print('RESOLVED_ORIGINAL', urljoin(ORIGINAL, href))
-                      found += 1
-          if found < 6:
-              raise SystemExit(f'expected at least 6 FY2023 links, got {found}')
+                      saved=urljoin(INDEX, href); print('SAVED_HREF', saved); found += 1
+          if found != 6: raise SystemExit(f'expected exactly 6 FY2023 links, got {found}')
           print('FY2023_LINK_COUNT', found)
           PY
+
+      - name: Download and receipt six exact FY2023 PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          prefix='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data'
+          urls=(
+            "$prefix/hojyokin/r5fy_4-9.pdf"
+            "$prefix/hojyokin/r5fy_10-3.pdf"
+            "$prefix/nyusatsu/23-nyusatsu-itaku.pdf"
+            "$prefix/nyusatsu/23-ukeoi.pdf"
+            "$prefix/zuikei/23-zuikei-itaku.pdf"
+            "$prefix/zuikei/23-zuikei-ukeoi.pdf"
+          )
+          for url in "${urls[@]}"; do
+            file="audit/${url##*/}"
+            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$url" -o "$file"
+            printf 'RECEIPT %s bytes=%s sha256=%s magic=%s\n' "${file##*/}" "$(wc -c < "$file")" "$(sha256sum "$file" | cut -d' ' -f1)" "$(head -c 5 "$file")"
+            pdfinfo "$file" | grep -E '^(Pages|Page size):' || true
+            pdftotext -layout "$file" "${file%.pdf}.txt"
+            printf '%s\n' "--- TEXT ${file##*/} ---"
+            sed -n '1,35p' "${file%.pdf}.txt"
+          done
+
+      - name: Preserve audited originals
+        uses: actions/upload-artifact@v4
+        with:
+          name: chubu-fy2023-audit-${{ github.run_id }}
+          path: audit/
+          retention-days: 90
