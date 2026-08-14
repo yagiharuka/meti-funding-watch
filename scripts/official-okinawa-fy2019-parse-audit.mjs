@@ -12,7 +12,7 @@ const TABLE_COLUMNS = Object.freeze([
   { key: "account", leftRatio: 0.448, headerAliases: ["支出元会計区分"] },
   { key: "budgetItem", leftRatio: 0.57, headerAliases: ["支出元（目）名称"] },
   { key: "date", leftRatio: 0.75, headerAliases: ["交付決定日"] },
-  { key: "publicInterestClass", leftRatio: 0.84, headerAliases: ["公益法人の区分", "公益法人の区"] },
+  { key: "publicInterestClass", leftRatio: 0.822, headerAliases: ["公益法人の区分", "公益法人の区"] },
   { key: "jurisdictionClass", leftRatio: 0.89, headerAliases: ["国所管、都道府", "国所管、都道"] },
 ]);
 
@@ -61,9 +61,10 @@ const document = Object.freeze({
 const bytes = await readFile(path.join(DIRECTORY, "2019-31fyhojoshimoki.pdf"));
 const records = await parseOfficialPdf(bytes, document);
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   checkedAt: new Date().toISOString(),
   documentId: document.id,
+  fixedPublicInterestBoundaryRatio: 0.822,
   recordCount: records.length,
   records,
 };
