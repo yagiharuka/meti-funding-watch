@@ -1,0 +1,57 @@
+name: Audit Chubu FY2023 index hrefs
+
+on:
+  push:
+    paths:
+      - ".github/workflows/audit-chubu-fy2023.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch official index and print FY2023 hrefs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin
+          from urllib.request import Request, urlopen
+
+          INDEX='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          req=Request(INDEX, headers={'User-Agent':'Mozilla/5.0'})
+          with urlopen(req, timeout=60) as r:
+              raw=r.read()
+          text=raw.decode('utf-8', errors='strict')
+
+          class P(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.stack=[]; self.rows=[]; self.current=None; self.link=None
+              def handle_starttag(self, tag, attrs):
+                  if tag=='tr': self.current={'text':[],'links':[]}
+                  if self.current is not None and tag=='a':
+                      href=dict(attrs).get('href'); self.link=href
+              def handle_data(self, data):
+                  if self.current is not None: self.current['text'].append(data)
+              def handle_endtag(self, tag):
+                  if tag=='a' and self.current is not None and self.link:
+                      self.current['links'].append(self.link); self.link=None
+                  if tag=='tr' and self.current is not None:
+                      self.rows.append(self.current); self.current=None
+          p=P(); p.feed(text)
+          found=0
+          for i,row in enumerate(p.rows):
+              label=' '.join(' '.join(row['text']).split())
+              if '令和5年度' in label or '令和５年度' in label:
+                  print(f'ROW {i}: {label}')
+                  for href in row['links']:
+                      print('HREF', urljoin(INDEX, href))
+                      found += 1
+          if found < 6:
+              raise SystemExit(f'expected at least 6 FY2023 links, got {found}')
+          print('FY2023_LINK_COUNT', found)
+          PY
