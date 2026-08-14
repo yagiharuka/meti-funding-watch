@@ -1,0 +1,54 @@
+name: Audit historical Okinawa grant sources
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/audit-okinawa-historical-grants.yml"
+      - "scripts/official-okinawa-historical-audit.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: official-okinawa-historical-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit historical Okinawa grant PDFs
+        id: audit
+        continue-on-error: true
+        run: node scripts/official-okinawa-historical-audit.mjs
+
+      - name: Preserve audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: official-okinawa-historical-audit-${{ github.run_id }}
+          path: .audit/okinawa-historical/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Fail after preserving partial evidence
+        if: steps.audit.outcome != 'success'
+        run: |
+          echo "::error::Historical Okinawa grant audit had one or more retrieval/parser failures. Production data was not changed."
+          exit 1
