@@ -1,0 +1,67 @@
+name: Audit Chubu FY2022 sources
+
+on:
+  push:
+    paths:
+      - ".github/workflows/audit-chubu-fy2022.yml"
+      - "scripts/audit-chubu-fy2022.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Resolve exact FY2022 links from saved official index
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .audit-chubu-2022
+          archive='https://warp.ndl.go.jp/20260613/20260601101404/'
+          origin='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/'
+          curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "${archive}${origin}index.html" -o .audit-chubu-2022/index.html
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('.audit-chubu-2022/index.html').read_text(errors='replace')
+          expected=['r4fy_4-9.pdf','r4fy_10-3.pdf','22-nyusatsu-itaku.pdf','22-ukeoi.pdf','22-zuikei-itaku.pdf','22-zuikei-ukeoi.pdf']
+          hrefs=re.findall(r'href=["\']([^"\']+)["\']', html, flags=re.I)
+          for name in expected:
+              matches=[h for h in hrefs if h.endswith('/'+name) or h.endswith(name)]
+              if len(matches)!=1:
+                  raise SystemExit(f'{name}: expected exactly one saved-index href, got {matches}')
+              print(f'INDEX_HREF {name} {matches[0]}')
+          PY
+      - name: Download six exact saved official PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive='https://warp.ndl.go.jp/20260613/20260601101404/'
+          root='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data'
+          for rel in \
+            hojyokin/r4fy_4-9.pdf hojyokin/r4fy_10-3.pdf \
+            nyusatsu/22-nyusatsu-itaku.pdf nyusatsu/22-ukeoi.pdf \
+            zuikei/22-zuikei-itaku.pdf zuikei/22-zuikei-ukeoi.pdf; do
+            out=".audit-chubu-2022/${rel##*/}"
+            curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "${archive}${root}/${rel}" -o "$out"
+            head -c 5 "$out" | grep -q '%PDF-' || { echo "not PDF: $rel"; exit 1; }
+          done
+      - name: Inspect exact PDF structure
+        run: node scripts/audit-chubu-fy2022.mjs .audit-chubu-2022
+      - name: Preserve audited originals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chubu-fy2022-audit-${{ github.run_id }}
+          path: |
+            .audit-chubu-2022/*.pdf
+            .audit-chubu-2022/index.html
+          retention-days: 90
