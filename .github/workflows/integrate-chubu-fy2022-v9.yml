@@ -76,7 +76,7 @@ jobs:
           node --input-type=module <<'NODE'
           import{readFile,readdir}from'node:fs/promises';const load=async d=>{let a=[];for(const n of(await readdir(d)).filter(n=>/^records-.*\.json$/.test(n)))a.push(...JSON.parse(await readFile(`${d}/${n}`,'utf8')));return a};const old=await load('/tmp/chubu-old'),fresh=await load('data/official');if(old.length!==18205||fresh.length!==18473)throw Error(`counts ${old.length}/${fresh.length}`);const m=new Map(fresh.map(r=>[r.id,r]));let missing=0,changed=0;for(const r of old){const n=m.get(r.id);if(!n)missing++;else if(JSON.stringify(n)!==JSON.stringify(r))changed++;}if(missing||changed)throw Error(`prior ${missing}/${changed}`);if(fresh.filter(r=>r.datasetId?.startsWith('chubu-2022-')).length!==268)throw Error('added mismatch');console.log('VERIFIED prior=18205 unchanged added=268 total=18473');
           NODE
-          npm run test:pages
+          env -u OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY npm run test:pages
       - name: Commit integration
         run: |
           git checkout -- data/official
