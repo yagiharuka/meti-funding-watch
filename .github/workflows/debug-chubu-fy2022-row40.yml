@@ -1,0 +1,27 @@
+name: Inspect Chubu FY2022 row 40
+on:
+  push:
+    paths:
+      - ".github/workflows/debug-chubu-fy2022-row40.yml"
+      - "scripts/debug-chubu-fy2022-row40.mjs"
+permissions:
+  actions: read
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: chubu-fy2022-audit-31822469715
+          path: .chubu-fy2022-audit
+          repository: yagiharuka/meti-funding-watch
+          run-id: 31822469715
+          github-token: ${{ github.token }}
+      - run: node scripts/debug-chubu-fy2022-row40.mjs .chubu-fy2022-audit
