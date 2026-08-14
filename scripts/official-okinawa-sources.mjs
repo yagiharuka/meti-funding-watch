@@ -18,6 +18,20 @@ const TABLE_COLUMNS = Object.freeze([
   { key: "jurisdictionClass", leftRatio: 0.89, headerAliases: ["国所管、都道府", "国所管、都道"] },
 ]);
 
+const FY2019_TABLE_COLUMNS = Object.freeze([
+  { key: "ordinal", leftRatio: 0.03, headerAliases: ["番号"] },
+  { key: "program", leftRatio: 0.055, headerAliases: ["事業名"] },
+  { key: "organization", leftRatio: 0.25, headerAliases: ["交付先"] },
+  { key: "amount", leftRatio: 0.38, headerAliases: ["交付決定額"] },
+  { key: "account", leftRatio: 0.448, headerAliases: ["支出元会計区分"] },
+  { key: "budgetItem", leftRatio: 0.57, headerAliases: ["支出元（目）名称"] },
+  { key: "date", leftRatio: 0.75, headerAliases: ["交付決定日"] },
+  // FY2019 uses separate text items whose verified gap is 0.820784..0.824204
+  // of page width. Fix the boundary inside that gap rather than merging by text.
+  { key: "publicInterestClass", leftRatio: 0.822, headerAliases: ["公益法人の区分", "公益法人の区"] },
+  { key: "jurisdictionClass", leftRatio: 0.89, headerAliases: ["国所管、都道府", "国所管、都道"] },
+]);
+
 const RECEIPTS = Object.freeze({
   "2020-first": { bytes: 108326, sha256: "c182f5cf85254d2424747f91cd69d7a3c88a893373fb49e0537b2dc5a654cd5d", pages: 2, rowsPerPage: [17, 11], items: 273 },
   "2020-second": { bytes: 53923, sha256: "dc24e2fff65eaded675c7aba2b7ffd578c44fc172f62003adadc66e633a5bb96", pages: 1, rowsPerPage: [5], items: 72 },
@@ -105,12 +119,66 @@ function grantDocument(fiscalYear, half) {
   });
 }
 
-export const OKINAWA_GRANT_DOCUMENTS = Object.freeze(
-  [2020, 2021, 2022, 2023, 2024].flatMap((fiscalYear) => [
+function fy2019SecondDocument() {
+  return Object.freeze({
+    id: "okinawa-2019-grant-decisions-h2",
+    executorId: "okinawa",
+    executorName: "沖縄総合事務局（経済産業部）",
+    fiscalYear: 2019,
+    category: "grant_decision",
+    kind: "補助金等の交付決定（10月～3月）",
+    amountStage: "交付決定額欄の掲載値",
+    format: "pdf",
+    discoveryStatus: "linked_from_official_economic_industry_index_and_byte_pinned",
+    verifiedAt: "2026-08-14",
+    sourcePageUrl: OKINAWA_GRANT_INDEX,
+    url: new URL("hojyokin/31fyhojoshimoki.pdf", OKINAWA_GRANT_BASE).href,
+    coverageClaim: "平成31年度下期の文字PDF全1ページに掲載された3行（原資料に法人番号欄なし）",
+    pdfSchema: Object.freeze({
+      schemaVersion: 1,
+      extractionMode: "positioned_text_only",
+      expectedBytes: 50170,
+      expectedSha256: "cc0dee7fffdc496913a88ef241f3b572f87560e7f98b32077cd3ac7f329621b3",
+      expectedPageCount: 1,
+      expectedPageSize: { width: 841.68, height: 595.2, tolerance: 0.2 },
+      expectedRowsPerPage: [3],
+      expectedRecordCount: 3,
+      expectedRowNumbers: { start: 1, end: 3 },
+      bodyMinimumYRatio: 0.04,
+      cellAssignmentCoordinate: "left",
+      requiredPageText: ["平成31年度補助金等の情報", "沖縄総合事務局経済産業部"],
+      requiredFirstPageText: [],
+      columns: FY2019_TABLE_COLUMNS,
+      recordMapping: {
+        ordinalColumn: "ordinal",
+        programColumn: "program",
+        organizationColumn: "organization",
+        amountColumn: "amount",
+        dateColumn: "date",
+        notesColumns: ["account", "budgetItem"],
+      },
+      corporateNumberOmitted: true,
+      allowedDateFormats: ["reiwa_ymd_ja"],
+      dateRange: { start: "2019-10-01", end: "2020-03-31" },
+      minimumPositionedTextItems: 51,
+      expectedPositionedTextItemCount: 51,
+    }),
+    evidenceReceipt: Object.freeze({
+      expectedMagic: "%PDF-",
+      expectedBytes: 50170,
+      expectedSha256: "cc0dee7fffdc496913a88ef241f3b572f87560e7f98b32077cd3ac7f329621b3",
+      expectedRecordCount: 3,
+    }),
+  });
+}
+
+export const OKINAWA_GRANT_DOCUMENTS = Object.freeze([
+  fy2019SecondDocument(),
+  ...[2020, 2021, 2022, 2023, 2024].flatMap((fiscalYear) => [
     grantDocument(fiscalYear, "first"),
     grantDocument(fiscalYear, "second"),
   ]),
-);
+]);
 
 // These are exact observations of the linked whole-bureau workbooks. They are
 // audit evidence, not production sources: their row-level contracting officer
@@ -163,9 +231,9 @@ export const OKINAWA_COVERAGE_GAPS = Object.freeze([
   Object.freeze({
     executorId: "okinawa",
     category: "grant_decision",
-    status: "official_index_through_fy2024",
-    included: "公式索引にリンクされたFY2020～FY2024の上期・下期PDF（計194掲載行）",
-    missing: "FY2025以降の統合交付決定資料（2026-08-12時点で公式索引にリンクなし）",
+    status: "partial_historical_and_official_index_through_fy2024",
+    included: "公式索引にリンクされたFY2019下期およびFY2020～FY2024のPDF（計197掲載行）",
+    missing: "FY2019上期、FY2010～FY2018の過年度資料、FY2025以降の未公表・未登録資料",
   }),
   Object.freeze({
     executorId: "okinawa",
