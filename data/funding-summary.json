@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T22:16:45.581Z",
+  "generatedAt": "2026-08-14T00:46:38.056Z",
   "sources": [
     {
       "id": "gbiz",
@@ -9,7 +9,7 @@
       "frequency": "日次確認",
       "lastChecked": "2026-08-14",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-13T22:16:20.529Z",
+      "dashboardCheckedAt": "2026-08-14T00:46:14.903Z",
       "dashboardRecordCount": 69522,
       "dashboardSubsidyCount": 51380,
       "dashboardProcurementCount": 18142,
@@ -26,30 +26,21 @@
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-13T22:16:32.962Z",
+      "csvRetrievedAt": "2026-08-14T00:46:25.444Z",
       "csvSubsidyFileBytes": 175574587,
       "csvProcurementFileBytes": 102373893,
       "csvSubsidySha256": "54d24115dd8d66e3821edb820adf314aac7c927472a05d7d8511a4c7cd39bd5b",
       "csvProcurementSha256": "57a4efb6e18e42f8b1565e65c337daed9c95ca7110535d6a9be8bfdbe7045b3d",
       "csvTotalSubsidyRows": 545877,
       "csvTotalProcurementRows": 308591,
-      "lastSuccessfulImportAt": "2026-08-13T22:16:45.581Z",
-      "continuityBaselineRecordCount": 69507,
-      "continuityRetainedRecordCount": 69507,
+      "lastSuccessfulImportAt": "2026-08-14T00:46:38.056Z",
+      "continuityBaselineRecordCount": 69508,
+      "continuityRetainedRecordCount": 69508,
       "continuityRemovedRecordCount": 0,
-      "continuityChangedRecordCount": 1,
+      "continuityChangedRecordCount": 0,
       "continuityChangedRecordLimit": 100,
-      "continuityChangedRecords": [
-        {
-          "key": "subsidy_published\u001f2026_04_27_20260629_00004101",
-          "oldHash": "d6b7f42f0dd5425d839627496e997690fe30531d423c4c999cc4eb8974a53a37",
-          "newHash": "0a732a40e912f82ad3da2c10eeae38158df3eddf4b16ae9f4f3414793083b2c5",
-          "changedFields": [
-            "organization"
-          ]
-        }
-      ],
-      "continuityAddedRecordCount": 1,
+      "continuityChangedRecords": [],
+      "continuityAddedRecordCount": 0,
       "csvSubsidySchemaSha256": "b3f021be2271d0b7404ced03d2fb3c32f4deb54bbc3d67df1ed9a5fd6f53fc49",
       "csvProcurementSchemaSha256": "1cab7eb602079eb5c23531450aea840378124f9c1977c5b750563d6887cc808b",
       "csvSubsidyPublisherCounts": {
