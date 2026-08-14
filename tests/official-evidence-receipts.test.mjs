@@ -41,7 +41,7 @@ const evidenceDocuments = [
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
 test("binds every receipted production document to one complete evidence receipt", () => {
-  assert.equal(evidenceDocuments.length, 354); // 320 prior receipts + 33 Kanto FY2021-FY2024 PDFs + 1 Okinawa FY2019 H2 PDF
+  assert.equal(evidenceDocuments.length, 360); // prior receipted sources + 6 Chubu FY2023 verified PDFs
   assert.ok(evidenceDocuments.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   for (const document of evidenceDocuments) {
     assert.deepEqual(Object.keys(document.evidenceReceipt).sort(), [

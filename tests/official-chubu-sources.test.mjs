@@ -21,6 +21,10 @@ const publishedManifest = JSON.parse(await readFile(new URL("../data/official/ma
 const published2024Records = JSON.parse(await readFile(new URL("../data/official/records-2024.json", import.meta.url), "utf8"));
 
 const discretionaryEvidenceDirectory = new URL("../evidence/chubu-2024-discretionary/", import.meta.url);
+const grants2024 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);
+const contracts2024 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);
+const grants2023 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);
+const contracts2023 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);
 
 const expected = new Map([
   ["chubu-2024-grant-decisions-h1", {
@@ -39,13 +43,17 @@ const expected = new Map([
   }],
 ]);
 
-test("registers two FY2024 Chubu grant PDFs with exact individual receipts", () => {
-  assert.equal(CHUBU_GRANT_DOCUMENTS.length, 2);
-  assert.equal(CHUBU_GRANT_DOCUMENTS.reduce((sum, document) =>
-    sum + document.evidenceReceipt.expectedRecordCount, 0), 425);
-  assert.ok(CHUBU_GRANT_DOCUMENTS.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
+test("registers and strictly replays six FY2023 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {
+ assert.equal(grants2023.length,2); assert.equal(contracts2023.length,4); const records=[]; for(const d of [...grants2023,...contracts2023]){const b=await readFile(new URL(`../evidence/official-bootstrap/${d.id}.pdf`,import.meta.url)); const r=await parseOfficialPdf(b,d); assert.equal(r.length,d.evidenceReceipt.expectedRecordCount); records.push(...r);} assert.equal(records.length,306); const h2=records.filter(r=>r.datasetId==="chubu-2023-grant-decisions-h2"); assert.deepEqual(h2.filter(r=>r.sourceOrganizationBlank===true).map(r=>r.sourceRowNumber),[27,28,29]); assert.ok(h2.filter(r=>r.sourceOrganizationBlank===true).every(r=>r.organization==="（原資料の交付先名欄は空欄）")); assert.ok([11,12,15,17].every(n=>!h2.some(r=>r.sourceRowNumber===n)));
+});
 
-  for (const document of CHUBU_GRANT_DOCUMENTS) {
+test("registers two FY2024 Chubu grant PDFs with exact individual receipts", () => {
+  assert.equal(grants2024.length, 2);
+  assert.equal(grants2024.reduce((sum, document) =>
+    sum + document.evidenceReceipt.expectedRecordCount, 0), 425);
+  assert.ok(grants2024.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
+
+  for (const document of grants2024) {
     const receipt = expected.get(document.id);
     assert.ok(receipt, document.id);
     assert.equal(document.url, receipt.url);
@@ -77,9 +85,9 @@ test("registers two FY2024 Chubu grant PDFs with exact individual receipts", () 
 });
 
 test("registers four byte-pinned FY2024 Chubu contract PDFs", () => {
-  assert.equal(CHUBU_CONTRACT_DOCUMENTS.length, 4);
+  assert.equal(contracts2024.length, 4);
   assert.deepEqual(
-    CHUBU_CONTRACT_DOCUMENTS.map((document) => document.id),
+    contracts2024.map((document) => document.id),
     [
       "chubu-2024-competitive-commission",
       "chubu-2024-competitive-goods",
@@ -88,18 +96,18 @@ test("registers four byte-pinned FY2024 Chubu contract PDFs", () => {
     ],
   );
   assert.deepEqual(
-    CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.expectedRecordCount),
+    contracts2024.map((document) => document.pdfSchema.expectedRecordCount),
     [10, 32, 28, 5],
   );
   assert.deepEqual(
-    CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.expectedPositionedTextItemCount),
+    contracts2024.map((document) => document.pdfSchema.expectedPositionedTextItemCount),
     [199, 564, 628, 141],
   );
-  assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.rowAnchorMode === "date"));
-  assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.expectedBytes > 100_000));
-  assert.ok(CHUBU_CONTRACT_DOCUMENTS.every((document) => /^[0-9a-f]{64}$/.test(document.pdfSchema.expectedSha256)));
+  assert.ok(contracts2024.every((document) => document.pdfSchema.rowAnchorMode === "date"));
+  assert.ok(contracts2024.every((document) => document.pdfSchema.expectedBytes > 100_000));
+  assert.ok(contracts2024.every((document) => /^[0-9a-f]{64}$/.test(document.pdfSchema.expectedSha256)));
   assert.deepEqual(
-    CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.recordMapping.methodColumn),
+    contracts2024.map((document) => document.pdfSchema.recordMapping.methodColumn),
     ["method", "method", "legalReason", "legalReason"],
   );
 });
@@ -110,7 +118,7 @@ test("pins the official Chubu index hrefs and both discretionary PDF receipts", 
   assert.equal(indexBytes.length, receipt.indexExpectedBytes);
   assert.equal(createHash("sha256").update(indexBytes).digest("hex"), receipt.indexExpectedSha256);
   const indexHtml = indexBytes.toString("utf8");
-  const documents = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.id.includes("discretionary"));
+  const documents = contracts2024.filter((document) => document.id.includes("discretionary"));
   assert.equal(receipt.documents.length, 2);
   assert.equal(documents.length, 2);
 
@@ -138,7 +146,7 @@ test("pins the official Chubu index hrefs and both discretionary PDF receipts", 
 });
 
 test("carries both exact Chubu WARP PDFs forward only with their complete archive receipts", async () => {
-  const documents = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.id.includes("discretionary"));
+  const documents = contracts2024.filter((document) => document.id.includes("discretionary"));
   for (const document of documents) {
     const priorRecords = published2024Records.filter((record) => record.datasetId === document.id);
     const publishedReceipt = publishedManifest.sourceDocuments.find((source) => source.id === document.id);
@@ -220,7 +228,7 @@ test("strictly replays four individually receipted FY2024 Chubu contract PDFs", 
   ]);
   const allRecords = [];
 
-  for (const document of CHUBU_CONTRACT_DOCUMENTS) {
+  for (const document of contracts2024) {
     const expectedContract = expectedContracts.get(document.id);
     assert.ok(expectedContract, document.id);
     assert.equal(document.pdfSchema.rowAnchorMode, "date");
@@ -249,7 +257,7 @@ test("replays both Chubu PDFs through the production positioned-text parser", { 
   if (!fixtureDirectory) return t.skip("set OFFICIAL_CHUBU_EVIDENCE_DIRECTORY to the exact two official PDFs");
 
   const records = [];
-  for (const document of CHUBU_GRANT_DOCUMENTS) {
+  for (const document of grants2024) {
     const fixture = expected.get(document.id);
     const bytes = await readFile(join(fixtureDirectory, fixture.filename));
     const parsed = await parseOfficialPdf(bytes, document);
@@ -271,7 +279,7 @@ test("replays both Chubu PDFs through the production positioned-text parser", { 
 });
 
 test("carries a published Chubu receipt forward after a repeated WAF challenge", async () => {
-  const document = CHUBU_GRANT_DOCUMENTS[0];
+  const document = grants2024[0];
   const priorRecords = published2024Records.filter((record) => record.datasetId === document.id);
   const priorReceipt = publishedManifest.sourceDocuments.find((source) => source.id === document.id);
   assert.equal(priorRecords.length, document.evidenceReceipt.expectedRecordCount);

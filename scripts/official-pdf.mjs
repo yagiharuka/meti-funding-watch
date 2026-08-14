@@ -106,7 +106,7 @@ export async function parseOfficialPdf(buffer, document) {
       }
     }
     const expectedBlankOrganizationOrdinals = [...(schema.expectedBlankOrganizationOrdinals ?? [])].sort((a, b) => a - b);
-    const observedBlankOrganizationOrdinals = records.filter((record) => !record.organization)
+    const observedBlankOrganizationOrdinals = records.filter((record) => record.sourceOrganizationBlank === true)
       .map((record) => record.sourceRowNumber).sort((a, b) => a - b);
     if (observedBlankOrganizationOrdinals.length !== expectedBlankOrganizationOrdinals.length
       || observedBlankOrganizationOrdinals.some((value, index) => value !== expectedBlankOrganizationOrdinals[index])) {
@@ -636,8 +636,9 @@ function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffi
     fiscalYear: document.fiscalYear,
     date,
     dateRaw,
-    organization: organizations.join("\n"),
+    organization: organizationText ? organizations.join("\n") : "（原資料の交付先名欄は空欄）",
     organizations,
+    ...(!organizationText ? { sourceOrganizationBlank: true } : {}),
     corporateNumber: corporate.numbers.length === 1 ? corporate.numbers[0] : null,
     corporateNumbers: corporate.numbers,
     corporateNumberRaw: corporate.raw,
