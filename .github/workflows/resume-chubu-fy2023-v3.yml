@@ -1,0 +1,75 @@
+name: Complete Chubu FY2023 integration
+on:
+  push:
+    paths:
+      - ".github/workflows/resume-chubu-fy2023-v3.yml"
+permissions:
+  actions: read
+  contents: write
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm}
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: chubu-fy2023-audit-31801741025
+          path: .chubu-evidence
+          repository: yagiharuka/meti-funding-watch
+          run-id: 31801741025
+          github-token: ${{ github.token }}
+      - name: Integrate exact audited sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          check(){ local src="$1" bytes="$2" sha="$3" dest="$4"; test "$(wc -c < "$src")" -eq "$bytes"; test "$(sha256sum "$src"|cut -d' ' -f1)" = "$sha"; cp "$src" "evidence/official-bootstrap/$dest"; }
+          check "$(find .chubu-evidence -name 'r5fy_4-9.pdf' -print -quit)" 418926 9ff29945ebc29911b723f5ac557e67f94890b6d9282c6986fff3c891606cff74 chubu-2023-grant-decisions-h1.pdf
+          check "$(find .chubu-evidence -name 'r5fy_10-3.pdf' -print -quit)" 201458 d81b9409cf04fee5ce77245d179e66a34789df635e616575e6adff21580055a7 chubu-2023-grant-decisions-h2.pdf
+          check "$(find .chubu-evidence -name '23-nyusatsu-itaku.pdf' -print -quit)" 120104 666ab5fba88ef2b043b939a64bf7cf6de0bef50e548531cafcfd0239004739d9 chubu-2023-competitive-commission.pdf
+          check "$(find .chubu-evidence -name '23-ukeoi.pdf' -print -quit)" 171505 226da7ccb6ba81e52c33fb5c2ca52e2056466142730db5624452dd7157756987 chubu-2023-competitive-goods.pdf
+          check "$(find .chubu-evidence -name '23-zuikei-itaku.pdf' -print -quit)" 223892 68d9e5c9c2e60d3882bc9f362cffb387513348824c664ff1eb9fcb68305be6da chubu-2023-discretionary-commission.pdf
+          check "$(find .chubu-evidence -name '23-zuikei-ukeoi.pdf' -print -quit)" 115261 5471dad9fd1006fc0d252f85e64e56e98af32760f4b1fe84862c592c42f9ea6e chubu-2023-discretionary-goods.pdf
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/official-pdf.mjs'); s=p.read_text()
+          s=s.replace('const observedBlankOrganizationOrdinals = records.filter((record) => !record.organization)', 'const observedBlankOrganizationOrdinals = records.filter((record) => record.sourceOrganizationBlank === true)')
+          old='''    organization: organizations.join("\\n"),\n    organizations,'''; new='''    organization: organizationText ? organizations.join("\\n") : "（原資料の交付先名欄は空欄）",\n    organizations,\n    ...(!organizationText ? { sourceOrganizationBlank: true } : {}),'''
+          if old not in s: raise SystemExit('parser marker missing')
+          p.write_text(s.replace(old,new,1))
+          p=Path('scripts/official-chubu-sources.mjs'); s=p.read_text(); imp='import { CHUBU_FY2023_CONTRACT_DOCUMENTS, CHUBU_FY2023_GRANT_DOCUMENTS } from "./official-chubu-fy2023-sources.mjs";\n\n'
+          if not s.startswith(imp): s=imp+s
+          s=s.replace('export const CHUBU_GRANT_DOCUMENTS = Object.freeze([\n  makeGrantDocument({','export const CHUBU_GRANT_DOCUMENTS = Object.freeze([\n  ...CHUBU_FY2023_GRANT_DOCUMENTS,\n  makeGrantDocument({',1).replace('export const CHUBU_CONTRACT_DOCUMENTS = Object.freeze([\n  makeCompetitiveContractDocument({','export const CHUBU_CONTRACT_DOCUMENTS = Object.freeze([\n  ...CHUBU_FY2023_CONTRACT_DOCUMENTS,\n  makeCompetitiveContractDocument({',1)
+          marker='export const CHUBU_COVERAGE_GAPS = Object.freeze([\n'
+          if 'fiscalYear: 2023, category: "grant_decision"' not in s: s=s.replace(marker,marker+'  { executorId: "chubu", fiscalYear: 2023, category: "grant_decision", status: "verified_official_period_pair_archive", included: "WARP保存公式目次の実hrefから固定した4月～9月・10月～3月PDF（2資料・224掲載行）", missing: "保存公式目次時点の2資料を検証した範囲であり、年度母集団の完全性は主張しない" },\n  { executorId: "chubu", fiscalYear: 2023, category: "contract_result", status: "verified_official_files_four_categories_archive", included: "WARP保存公式目次の実hrefから固定した競争入札・随意契約の委託費・庁費PDF（4資料・82掲載行）", missing: "保存公式目次時点の4資料を検証した範囲であり、年度母集団の完全性は主張しない" },\n',1)
+          s=s.replace('included: "令和6年度の交付決定2資料と契約結果4資料",\n    missing: "令和2～5・7年度の交付決定・契約結果、および年度途中の令和8年度",','included: "令和5・6年度の交付決定4資料と契約結果8資料",\n    missing: "令和2～4・7年度の交付決定・契約結果、および年度途中の令和8年度",',1); p.write_text(s)
+          p=Path('tests/official-chubu-sources.test.mjs'); s=p.read_text(); anchor='const discretionaryEvidenceDirectory = new URL("../evidence/chubu-2024-discretionary/", import.meta.url);\n'
+          if 'const grants2024' not in s: s=s.replace(anchor,anchor+'const grants2024 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);\nconst contracts2024 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);\nconst grants2023 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);\nconst contracts2023 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);\n',1)
+          for a,b in {'assert.equal(CHUBU_GRANT_DOCUMENTS.length, 2);':'assert.equal(grants2024.length, 2);','CHUBU_GRANT_DOCUMENTS.reduce((sum, document) =>':'grants2024.reduce((sum, document) =>','CHUBU_GRANT_DOCUMENTS.every((document) => OFFICIAL_DOCUMENTS.includes(document))':'grants2024.every((document) => OFFICIAL_DOCUMENTS.includes(document))','for (const document of CHUBU_GRANT_DOCUMENTS) {':'for (const document of grants2024) {','assert.equal(CHUBU_CONTRACT_DOCUMENTS.length, 4);':'assert.equal(contracts2024.length, 4);','CHUBU_CONTRACT_DOCUMENTS.map((document) => document.id)':'contracts2024.map((document) => document.id)','CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.expectedRecordCount)':'contracts2024.map((document) => document.pdfSchema.expectedRecordCount)','CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.expectedPositionedTextItemCount)':'contracts2024.map((document) => document.pdfSchema.expectedPositionedTextItemCount)','CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.rowAnchorMode === "date")':'contracts2024.every((document) => document.pdfSchema.rowAnchorMode === "date")','CHUBU_CONTRACT_DOCUMENTS.every((document) => document.pdfSchema.expectedBytes > 100_000)':'contracts2024.every((document) => document.pdfSchema.expectedBytes > 100_000)','CHUBU_CONTRACT_DOCUMENTS.every((document) => /^[0-9a-f]{64}$/.test(document.pdfSchema.expectedSha256))':'contracts2024.every((document) => /^[0-9a-f]{64}$/.test(document.pdfSchema.expectedSha256))','CHUBU_CONTRACT_DOCUMENTS.map((document) => document.pdfSchema.recordMapping.methodColumn)':'contracts2024.map((document) => document.pdfSchema.recordMapping.methodColumn)','CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.id.includes("discretionary"))':'contracts2024.filter((document) => document.id.includes("discretionary"))','for (const document of CHUBU_CONTRACT_DOCUMENTS) {':'for (const document of contracts2024) {','const document = CHUBU_GRANT_DOCUMENTS[0];':'const document = grants2024[0];'}.items(): s=s.replace(a,b)
+          marker='test("registers two FY2024 Chubu grant PDFs with exact individual receipts", () => {'
+          if 'registers and strictly replays six FY2023' not in s: s=s.replace(marker,'test("registers and strictly replays six FY2023 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {\n assert.equal(grants2023.length,2); assert.equal(contracts2023.length,4); const records=[]; for(const d of [...grants2023,...contracts2023]){const b=await readFile(new URL(`../evidence/official-bootstrap/${d.id}.pdf`,import.meta.url)); const r=await parseOfficialPdf(b,d); assert.equal(r.length,d.evidenceReceipt.expectedRecordCount); records.push(...r);} assert.equal(records.length,306); const h2=records.filter(r=>r.datasetId==="chubu-2023-grant-decisions-h2"); assert.deepEqual(h2.filter(r=>r.sourceOrganizationBlank===true).map(r=>r.sourceRowNumber),[27,28,29]); assert.ok(h2.filter(r=>r.sourceOrganizationBlank===true).every(r=>r.organization==="（原資料の交付先名欄は空欄）")); assert.ok([11,12,15,17].every(n=>!h2.some(r=>r.sourceRowNumber===n)));\n});\n\n'+marker,1); p.write_text(s)
+          p=Path('tests/official-evidence-receipts.test.mjs'); p.write_text(p.read_text().replace('assert.equal(evidenceDocuments.length, 354); // 320 prior receipts + 33 Kanto FY2021-FY2024 PDFs + 1 Okinawa FY2019 H2 PDF','assert.equal(evidenceDocuments.length, 360); // prior receipted sources + 6 Chubu FY2023 verified PDFs',1))
+          Path('scripts/chubu-fy2023-trial.mjs').unlink(missing_ok=True)
+          PY
+      - name: Verify data, tests and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/chubu-old && mkdir /tmp/chubu-old && cp data/official/records-*.json /tmp/chubu-old/
+          OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY=evidence/official-bootstrap npm run update:official
+          node --input-type=module <<'NODE'
+          import{readFile,readdir}from'node:fs/promises';const load=async d=>{let o=[];for(const n of(await readdir(d)).filter(n=>/^records-.*\.json$/.test(n)))o.push(...JSON.parse(await readFile(`${d}/${n}`,'utf8')));return o};const old=await load('/tmp/chubu-old'),fresh=await load('data/official');if(old.length!==17899||fresh.length!==18205)throw Error('count mismatch');const m=new Map(fresh.map(r=>[r.id,r]));let mi=0,ch=0;for(const r of old){const n=m.get(r.id);if(!n)mi++;else if(JSON.stringify(n)!==JSON.stringify(r))ch++;}if(mi||ch)throw Error(`prior changed ${mi}/${ch}`);const a=fresh.filter(r=>r.datasetId?.startsWith('chubu-2023-'));if(a.length!==306||a.filter(r=>r.sourceOrganizationBlank===true).length!==3)throw Error('new mismatch');console.log('VERIFIED prior=17899 unchanged, added=306, total=18205');
+          NODE
+          npm run test:pages
+          npm run build:pages
+      - name: Commit integration
+        run: |
+          git checkout -- data/official
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/official-pdf.mjs scripts/official-chubu-sources.mjs tests/official-chubu-sources.test.mjs tests/official-evidence-receipts.test.mjs evidence/official-bootstrap/chubu-2023-*.pdf
+          git add -u scripts/chubu-fy2023-trial.mjs
+          git commit -m 'feat(official): add Chubu FY2023 verified records'
+          git push
