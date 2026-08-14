@@ -242,6 +242,34 @@ test("rejects invalid dates, out-of-period dates, and malformed amount text", as
   );
 });
 
+test("allows only an exact pinned out-of-period date exception", async () => {
+  const buffer = await makeFixturePdf({ firstDate: "2025/9/30" });
+  await assert.doesNotReject(parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: {
+    dateRangeExceptions: [{ ordinal: 1, raw: "2025/9/30", parsed: "2025-09-30" }],
+  } })));
+  await assert.rejects(
+    parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: {
+      dateRangeExceptions: [{ ordinal: 1, raw: "2025/9/29", parsed: "2025-09-29" }],
+    } })),
+    /対象期間外|日付範囲例外が検証済み行と一致しません/,
+  );
+});
+
+test("narrows header discovery to a pinned upper-page band", async () => {
+  const buffer = await makeFixturePdf();
+  await assert.doesNotReject(parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: {
+    headerMinimumYRatio: 0.85,
+  } })));
+  await assert.rejects(
+    parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: { headerMinimumYRatio: 0.95 } })),
+    /見出しを一意に特定できません/,
+  );
+  await assert.rejects(
+    parseOfficialPdf(buffer, fixtureDocument({ pdfSchema: { headerMinimumYRatio: 0.49 } })),
+    /PDF表スキーマが不正です/,
+  );
+});
+
 test("rejects malformed corporate numbers and ambiguous multi-party coordinates", async () => {
   await assert.rejects(
     parseOfficialPdf(await makeFixturePdf({ firstCorporateNumbers: ["12345"] }), fixtureDocument()),
@@ -321,7 +349,7 @@ test("reuses only first-page headers when a pinned multipage schema explicitly r
 });
 
 test("registers Tohoku and verified archived Kanto PDFs without overstating snapshot coverage", () => {
-  assert.equal(REGIONAL_PDF_DOCUMENTS.length, 44);
+  assert.equal(REGIONAL_PDF_DOCUMENTS.length, 77);
   const h1 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h1");
   const h2 = REGIONAL_PDF_DOCUMENTS.find((source) => source.id === "tohoku-2025-grant-decisions-h2");
   assert.ok(h1);
@@ -355,15 +383,15 @@ test("registers Tohoku and verified archived Kanto PDFs without overstating snap
   const kanto = REGIONAL_PDF_DOCUMENTS.filter((source) => source.executorId === "kanto");
   const kantoGrants = kanto.filter((source) => source.category === "grant_decision");
   const kantoContracts = kanto.filter((source) => source.category === "contract_result");
-  assert.equal(kanto.length, 24);
-  assert.equal(kantoGrants.length, 8);
-  assert.equal(kantoGrants.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 284);
-  assert.equal(kantoGrants.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 21);
+  assert.equal(kanto.length, 57);
+  assert.equal(kantoGrants.length, 41);
+  assert.equal(kantoGrants.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 1_486);
+  assert.equal(kantoGrants.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 82);
   assert.equal(kantoContracts.length, 16);
   assert.equal(kantoContracts.reduce((sum, source) => sum + source.pdfSchema.expectedRecordCount, 0), 306);
   assert.equal(kantoContracts.reduce((sum, source) => sum + source.pdfSchema.expectedRowsPerPage.length, 0), 35);
   assert.ok(kanto.every((source) => source.url.startsWith("https://warp.ndl.go.jp/")));
-  assert.ok(kantoGrants.every((source) => source.originalUrl.startsWith("https://www.kanto.meti.go.jp/johokokai/data/7fy_")));
+  assert.ok(kantoGrants.every((source) => /^https:\/\/www\.kanto\.meti\.go\.jp\/johokokai\/data\/[34567]fy_/.test(source.originalUrl)));
   assert.ok(kantoGrants.every((source) => source.sourcePageUrl === "https://www.kanto.meti.go.jp/johokokai/kofu_kettei_jyokyo.html"));
   assert.ok(kantoGrants.every((source) => source.amountStage === "交付決定額欄の掲載値"));
   assert.ok(kantoContracts.every((source) => /^https:\/\/www\.kanto\.meti\.go\.jp\/chotatsu\/chotatsu\/data\/[4567]fy_/.test(source.originalUrl)));
@@ -378,7 +406,7 @@ test("registers Tohoku and verified archived Kanto PDFs without overstating snap
   assert.ok(kanto.every((source) => source.discoveryReceipt === undefined));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.missing.includes("2024年度以前")));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "tohoku" && gap.category === "contract_result" && gap.status === "pilot_fiscal_year_complete" && gap.included.includes("18 PDF（59掲載行）")));
-  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "grant_decision" && gap.missing.includes("目次全件性")));
+  assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "grant_decision" && gap.missing.includes("完全収録とは扱わない")));
   assert.ok(REGIONAL_PDF_COVERAGE_GAPS.some((gap) => gap.executorId === "kanto" && gap.category === "contract_result" && gap.status === "verified_archived_official_snapshots" && gap.missing.includes("保存時点より後")));
 });
 
@@ -469,6 +497,65 @@ test("binds the saved Kanto contract index inventory and PDF bytes to one reprod
   assert.deepEqual(receipt.totals, {
     documents: 4, bytes: 818327, pages: 7, rows: 87, positionedTextItems: 1837,
   });
+});
+
+test("replays all 33 exact FY2021-FY2024 Kanto grant PDFs through the production parser", async () => {
+  const grants = REGIONAL_PDF_DOCUMENTS.filter((source) => /^kanto-202[1-4]-grant-decisions-/.test(source.id));
+  const observed = [];
+  const records = [];
+  for (const document of grants) {
+    const filename = new URL(document.originalUrl).pathname.split("/").at(-1);
+    const buffer = await readFile(new URL(`../evidence/kanto-2021-2024-grants/${filename}`, import.meta.url));
+    const parsed = await parseOfficialPdf(buffer, document);
+    records.push(...parsed);
+    observed.push({ fiscalYear: document.fiscalYear, pages: document.pdfSchema.expectedPageCount, rows: parsed.length });
+  }
+  assert.equal(observed.length, 33);
+  assert.equal(observed.reduce((sum, item) => sum + item.pages, 0), 61);
+  assert.equal(observed.reduce((sum, item) => sum + item.rows, 0), 1_202);
+  assert.deepEqual(Object.fromEntries([2021, 2022, 2023, 2024].map((year) => [year,
+    observed.filter((item) => item.fiscalYear === year).reduce((sum, item) => sum + item.rows, 0)])),
+  { 2021: 334, 2022: 305, 2023: 271, 2024: 292 });
+  const dateAnomaly = records.find((record) =>
+    record.sourceKey === "kanto-2021-grant-decisions-h2-general-subsidy:no-34");
+  assert.ok(dateAnomaly);
+  assert.equal(dateAnomaly.dateRaw, "令和4年11月12日");
+  assert.equal(dateAnomaly.date, "2022-11-12");
+  const multiParty = records.find((record) =>
+    record.sourceKey === "kanto-2024-grant-decisions-h1-general-subsidy:no-98");
+  assert.deepEqual(multiParty.organizations, ["三勝株式会社", "関東注染工業協同組合"]);
+  assert.deepEqual(multiParty.corporateNumbers, ["1010001044192", "2011805001584"]);
+  assert.equal(multiParty.amount, 5_600_000);
+  assert.equal(records.filter((record) => !record.corporateNumbers.length).length, 7);
+});
+
+test("binds the Kanto FY2021-FY2024 grant index, 33 PDF bytes, and parser receipts", async () => {
+  const root = new URL("../evidence/kanto-2021-2024-grants/", import.meta.url);
+  const receipt = JSON.parse(await readFile(new URL("receipt.json", root), "utf8"));
+  const index = await readFile(new URL(receipt.index.file, root));
+  assert.equal(index.length, receipt.index.bytes);
+  assert.equal(createHash("sha256").update(index).digest("hex"), receipt.index.sha256);
+  assert.equal(receipt.index.fiscalYear2021To2024Hrefs.length, 33);
+  assert.equal(new Set(receipt.index.fiscalYear2021To2024Hrefs).size, 33);
+  assert.equal(receipt.documents.length, 33);
+  for (const item of receipt.documents) {
+    assert.ok(receipt.index.fiscalYear2021To2024Hrefs.includes(
+      `/20260613/20260601093442/https://www.kanto.meti.go.jp/johokokai/data/${item.file}`), item.id);
+    const bytes = await readFile(new URL(item.file, root));
+    assert.equal(bytes.length, item.bytes, item.id);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), item.sha256, item.id);
+    assert.equal(item.rowsPerPage.reduce((sum, count) => sum + count, 0), item.rows, item.id);
+  }
+  assert.deepEqual(receipt.totals, {
+    documents: 33,
+    bytes: 14_262_886,
+    pages: 61,
+    rows: 1_202,
+    rawPositionedTextItems: 16_812,
+    parsedPositionedTextItems: 16_828,
+  });
+  assert.match(receipt.dateAnomaly, /推測修正せず/);
+  assert.match(receipt.coverageLimitation, /完全収録を意味しない/);
 });
 
 test("replays all 12 exact FY2022-FY2024 Kanto contract snapshots", async () => {

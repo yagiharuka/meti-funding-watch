@@ -1,5 +1,6 @@
 import { TOHOKU_2025_ADDITIONAL_CONTRACT_DOCUMENTS } from "./official-tohoku-contract-sources.mjs";
 import { KANTO_2022_2024_CONTRACT_DOCUMENTS } from "./official-kanto-historical-contract-sources.mjs";
+import { KANTO_2021_2024_GRANT_DOCUMENTS } from "./official-kanto-historical-grant-sources.mjs";
 
 const TOHOKU_GRANT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/koho/koshin/kobo/kofu_kettei.html";
 const TOHOKU_CONTRACT_SOURCE_PAGE = "https://www.tohoku.meti.go.jp/kaikei/keiyaku/keiyaku.html";
@@ -537,6 +538,7 @@ const REGIONAL_PDF_DEFINITIONS = [
       expectedPositionedTextItemCount: 278,
     },
   },
+  ...KANTO_2021_2024_GRANT_DOCUMENTS,
   ...KANTO_2025_GRANT_DEFINITIONS,
   ...KANTO_2022_2024_CONTRACT_DOCUMENTS,
   ...KANTO_2025_CONTRACT_DEFINITIONS,
@@ -571,11 +573,11 @@ export const REGIONAL_PDF_COVERAGE_GAPS = [
   },
   {
     executorId: "kanto",
-    fiscalYear: 2025,
+    fiscalYear: "2021-2025",
     category: "grant_decision",
     status: "verified_archived_official_files",
-    included: "WARP保存済みの令和7年度上期5・下期3公式PDF（計284掲載行）",
-    missing: "その他の年度・資料は未取込（目次全件性は公開ゲートの保証対象外）",
+    included: "WARP保存済み公式索引が列挙する令和3～6年度33 PDF（計1,202掲載行）と令和7年度上期5・下期3 PDF（計284掲載行）",
+    missing: "保存索引に掲載されない年度・区分、各保存時点より後の更新、年度途中の令和8年度は未収録。全年度・全区分の完全収録とは扱わない",
   },
   {
     executorId: "kanto",

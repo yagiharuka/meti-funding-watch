@@ -84,6 +84,12 @@ export async function parseOfficialPdf(buffer, document) {
     if (records.length !== schema.expectedRecordCount) {
       throw new Error(`${document.id}: PDF掲載行数が検証済み値と一致しません (${records.length}/${schema.expectedRecordCount})`);
     }
+    for (const exception of schema.dateRangeExceptions ?? []) {
+      if (!records.some((record) => record.sourceRowNumber === exception.ordinal
+        && record.dateRaw === exception.raw && record.date === exception.parsed)) {
+        throw new Error(`${document.id}: 日付範囲例外が検証済み行と一致しません (${exception.ordinal})`);
+      }
+    }
     if (!records.length && !emptySentinelFound) {
       throw new Error(`${document.id}: 0件を示す所定表記がありません`);
     }
@@ -92,6 +98,12 @@ export async function parseOfficialPdf(buffer, document) {
         assertAlignedAmountRows(records, schema, parsingState, document.id);
       }
       else assertExpectedRowNumbers(records, schema.expectedRowNumbers, document.id);
+      if (schema.corporateNumberBlankAllowed && parsingState?.mode !== "aligned_amount_rows") {
+        const observedMissing = records.filter((record) => record.corporateNumbers.length === 0).length;
+        if (observedMissing !== schema.expectedMissingCorporateNumberCount) {
+          throw new Error(`${document.id}: 法人番号空欄行数が検証済み値と一致しません (${observedMissing}/${schema.expectedMissingCorporateNumberCount})`);
+        }
+      }
     }
     Object.defineProperty(records, "emptySentinelFound", { value: emptySentinelFound, enumerable: false });
     return records;
@@ -126,7 +138,26 @@ function validateDocumentDefinition(document) {
       && (!Number.isSafeInteger(schema.expectedPositionedTextItemCount) || schema.expectedPositionedTextItemCount < schema.minimumPositionedTextItems))
     || (schema.bodyMinimumYRatio !== undefined
       && (!Number.isFinite(schema.bodyMinimumYRatio) || schema.bodyMinimumYRatio < 0 || schema.bodyMinimumYRatio >= 0.5))
+    || (schema.headerMinimumYRatio !== undefined
+      && (!Number.isFinite(schema.headerMinimumYRatio) || schema.headerMinimumYRatio < 0.5 || schema.headerMinimumYRatio >= 1))
     || (schema.corporateNumberOmitted !== undefined && typeof schema.corporateNumberOmitted !== "boolean")
+    || (schema.corporateNumberBlankAllowed !== undefined && typeof schema.corporateNumberBlankAllowed !== "boolean")
+    || (schema.corporateNumberBlankAllowed === true
+      && !Number.isSafeInteger(schema.expectedMissingCorporateNumberCount))
+    || (schema.corporateNumberRowLabel !== undefined
+      && (typeof schema.corporateNumberRowLabel !== "string" || !schema.corporateNumberRowLabel.trim()))
+    || (schema.organizationLineOrderOrdinals !== undefined
+      && (!Array.isArray(schema.organizationLineOrderOrdinals)
+        || schema.organizationLineOrderOrdinals.some((value) => !Number.isSafeInteger(value) || value < 1)
+        || new Set(schema.organizationLineOrderOrdinals).size !== schema.organizationLineOrderOrdinals.length))
+    || (schema.dateRangeExceptions !== undefined
+      && (!Array.isArray(schema.dateRangeExceptions)
+        || schema.dateRangeExceptions.some((exception) => !exception
+          || !Number.isSafeInteger(exception.ordinal) || exception.ordinal < 1
+          || typeof exception.raw !== "string" || !exception.raw.trim()
+          || typeof exception.parsed !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(exception.parsed))
+        || new Set(schema.dateRangeExceptions.map((exception) => exception.ordinal)).size
+          !== schema.dateRangeExceptions.length))
     || (schema.amountMissingSentinels !== undefined
       && (!Array.isArray(schema.amountMissingSentinels)
         || schema.amountMissingSentinels.some((value) => typeof value !== "string" || !value.trim())))
@@ -201,7 +232,7 @@ function validateDocumentDefinition(document) {
   for (const rule of schema.crossColumnSplitRules ?? []) {
     if (
       !rule.id || splitRuleIds.has(rule.id)
-      || !["amount_then_text", "date_then_text", "date_then_text_and_corporate_number"].includes(rule.kind)
+      || !["amount_then_text", "date_then_text", "date_then_text_and_corporate_number", "ordinal_then_text"].includes(rule.kind)
       || !keys.has(rule.fromColumn) || !keys.has(rule.toColumn)
       || (rule.kind === "date_then_text_and_corporate_number" && !keys.has(rule.thirdColumn))
       || (rule.kind !== "date_then_text_and_corporate_number" && rule.thirdColumn !== undefined)
@@ -271,6 +302,8 @@ function splitCrossColumnItem(item, viewport, schema, splitRuleCounts) {
       ? normalized.match(/^((?:\d{4}年|令和[元\d]+年)\d{1,2}月\d{1,2}日)\s+(\S.*?)\s+(\d{13})$/u)
       : rule.kind === "date_then_text"
       ? normalized.match(/^((?:\d{4}年|令和[元\d]+年)\d{1,2}月\d{1,2}日)\s*(\S.*)$/u)
+      : rule.kind === "ordinal_then_text"
+      ? normalized.match(/^(\d{1,4})\s+(\S.*)$/u)
       : normalized.match(/^(0|[1-9]\d{0,2}(?:,\d{3})*)\s+(\S.*)$/u);
     if (!match) continue;
     splitRuleCounts.set(rule.id, (splitRuleCounts.get(rule.id) ?? 0) + 1);
@@ -433,7 +466,7 @@ function reuseFirstPageColumns(firstPageColumns, viewport, document, pageNumber)
 }
 
 function locateHeaders(items, viewport, schema, document, pageNumber) {
-  const headerBand = items.filter((item) => item.centerY >= viewport.height * 0.5);
+  const headerBand = items.filter((item) => item.centerY >= viewport.height * (schema.headerMinimumYRatio ?? 0.5));
   const located = schema.columns.map((column) => {
     const candidates = headerBand.filter((item) => column.headerAliases.some((alias) =>
       normalizeMatchText(item.text) === normalizeMatchText(alias)));
@@ -551,7 +584,9 @@ function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffi
   if (!program) throw new Error(`${document.id}/no.${ordinal}: 事業名・契約件名が空です`);
   if (!normalizeMultilineCell(organizationCell.text)) throw new Error(`${document.id}/no.${ordinal}: 交付先・契約相手が空です`);
   const date = parseStrictDate(dateRaw, schema.allowedDateFormats, document.id, ordinal);
-  if (date < schema.dateRange.start || date > schema.dateRange.end) {
+  const dateException = (schema.dateRangeExceptions ?? []).some((exception) =>
+    exception.ordinal === ordinal && exception.raw === dateRaw && exception.parsed === date);
+  if ((date < schema.dateRange.start || date > schema.dateRange.end) && !dateException) {
     throw new Error(`${document.id}/no.${ordinal}: 日付が資料の対象期間外です (${dateRaw})`);
   }
   const amount = parseStrictAmount(amountRaw, schema.amountMissingSentinels, document.id, ordinal);
@@ -560,7 +595,7 @@ function makeRecord(document, schema, cells, ordinal, pageNumber, sourceKeySuffi
     : parseCorporateNumbers(corporateNumberCell, schema, document.id, ordinal);
   const organizations = schema.corporateNumberOmitted
     ? [normalizeMultilineCell(organizationCell.text)]
-    : partitionOrganizations(organizationCell, corporate.anchors, corporate.numbers, document.id, ordinal);
+    : partitionOrganizations(organizationCell, corporate.anchors, corporate.numbers, schema, document.id, ordinal);
   const notes = (mapping.notesColumns ?? [])
     .map((key) => normalizeMultilineCell(cells[key].text))
     .filter(Boolean)
@@ -633,8 +668,21 @@ function parseStrictAmount(raw, missingSentinels = [], documentId, ordinal) {
 }
 
 function parseCorporateNumbers(cell, schema, documentId, ordinal) {
-  const raw = normalizeMultilineCell(cell.text);
+  const rowLabel = schema.corporateNumberRowLabel;
+  const labelLines = rowLabel
+    ? cell.lines.filter((line) => normalizeMatchText(line.text) === normalizeMatchText(rowLabel))
+    : [];
+  if (rowLabel && labelLines.length > 1) {
+    throw new Error(`${documentId}/no.${ordinal}: 法人番号欄の固定ラベルが一致しません (${labelLines.length})`);
+  }
+  const valueLines = rowLabel
+    ? cell.lines.filter((line) => normalizeMatchText(line.text) !== normalizeMatchText(rowLabel))
+    : cell.lines;
+  const raw = normalizeMultilineCell(valueLines.map((line) => line.text).join("\n"));
   const compact = compactCell(raw);
+  if (!compact && schema.corporateNumberBlankAllowed) {
+    return { raw, numbers: [], anchors: [] };
+  }
   if ((schema.corporateNumberMissingSentinels ?? []).map(compactCell).includes(compact)) {
     return { raw, numbers: [], anchors: [] };
   }
@@ -643,7 +691,7 @@ function parseCorporateNumbers(cell, schema, documentId, ordinal) {
     throw new Error(`${documentId}/no.${ordinal}: 法人番号欄が不正です (${raw || "空"})`);
   }
   const anchors = [];
-  for (const line of cell.lines) {
+  for (const line of valueLines) {
     const lineNumbers = compactCell(line.text).match(/\d{13}/g) ?? [];
     if (lineNumbers.length > 1) {
       throw new Error(`${documentId}/no.${ordinal}: 複数法人番号の行対応を座標から判定できません`);
@@ -656,8 +704,15 @@ function parseCorporateNumbers(cell, schema, documentId, ordinal) {
   return { raw, numbers, anchors };
 }
 
-function partitionOrganizations(cell, corporateAnchors, corporateNumbers, documentId, ordinal) {
+function partitionOrganizations(cell, corporateAnchors, corporateNumbers, schema, documentId, ordinal) {
   if (corporateNumbers.length <= 1) return [normalizeMultilineCell(cell.text)];
+  if ((schema.organizationLineOrderOrdinals ?? []).includes(ordinal)) {
+    const lines = [...cell.lines].sort((a, b) => b.y - a.y);
+    if (lines.length !== corporateNumbers.length) {
+      throw new Error(`${documentId}/no.${ordinal}: 行順指定された複数当事者数が一致しません`);
+    }
+    return lines.map((line) => normalizeMultilineCell(line.text));
+  }
   const anchors = [...corporateAnchors].sort((a, b) => b.y - a.y);
   const groups = anchors.map(() => []);
   for (const line of cell.lines) {
