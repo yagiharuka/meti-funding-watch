@@ -40,6 +40,17 @@ function dateThenTextSplit(item, viewport) {
   return /^(?:(?:平成|令和)[元\d]+年)\d{1,2}月\d{1,2}日\s*(\S.*)$/u.test(item.text);
 }
 
+function geometrySummary(item, viewport) {
+  return {
+    text: item.text,
+    x: item.x,
+    width: item.width,
+    xRatio: item.x / viewport.width,
+    rightRatio: (item.x + item.width) / viewport.width,
+    centerRatio: item.centerX / viewport.width,
+  };
+}
+
 const documents = [];
 for (const source of SOURCES) {
   const bytes = await readFile(path.join(DIRECTORY, source.filename));
@@ -70,14 +81,10 @@ for (const source of SOURCES) {
         .sort((a, b) => a - b);
       const dateLikeItems = positioned
         .filter((item) => /^(?:平成|令和)[元\d]+年\d{1,2}月\d{1,2}日/u.test(item.text))
-        .map((item) => ({
-          text: item.text,
-          x: item.x,
-          width: item.width,
-          xRatio: item.x / viewport.width,
-          rightRatio: (item.x + item.width) / viewport.width,
-          centerRatio: item.centerX / viewport.width,
-        }));
+        .map((item) => geometrySummary(item, viewport));
+      const adjacentClassItems = positioned
+        .filter((item) => /^(?:非該当|該当|国所管|都道府県所管|都道府県)$/u.test(item.text))
+        .map((item) => geometrySummary(item, viewport));
       pages.push({
         pageNumber,
         width: viewport.width,
@@ -86,6 +93,7 @@ for (const source of SOURCES) {
         nonEmptyPositionedTextItems: positioned.length,
         ordinalCandidates,
         dateLikeItems,
+        adjacentClassItems,
       });
       page.cleanup();
     }
@@ -102,6 +110,6 @@ for (const source of SOURCES) {
   }
 }
 
-const report = { schemaVersion: 2, checkedAt: new Date().toISOString(), documents };
+const report = { schemaVersion: 3, checkedAt: new Date().toISOString(), documents };
 await writeFile(path.join(DIRECTORY, "fy2019-schema.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify(report));
