@@ -1,0 +1,29 @@
+name: Recover Okinawa FY2019 evidence via API
+
+on:
+  push:
+    paths:
+      - ".github/workflows/bootstrap-okinawa-fy2019-api.yml"
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recover and commit exact audited source through Contents API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/okinawa-audit
+          gh api repos/${{ github.repository }}/actions/artifacts/9212326868/zip > /tmp/okinawa-audit.zip
+          unzip -q /tmp/okinawa-audit.zip -d /tmp/okinawa-audit
+          src=/tmp/okinawa-audit/2019-31fyhojoshimoki.pdf
+          test "$(stat -c %s "$src")" = "50170"
+          echo "cc0dee7fffdc496913a88ef241f3b572f87560e7f98b32077cd3ac7f329621b3  $src" | sha256sum -c -
+          encoded="$(base64 -w0 "$src")"
+          jq -n --arg message "data(official): pin Okinawa FY2019 H2 bootstrap evidence" --arg content "$encoded" --arg branch "main" '{message:$message,content:$content,branch:$branch}' \
+            | gh api --method PUT repos/${{ github.repository }}/contents/evidence/official-bootstrap/okinawa-2019-grant-decisions-h2.pdf --input -
