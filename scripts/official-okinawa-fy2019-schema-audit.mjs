@@ -68,6 +68,16 @@ for (const source of SOURCES) {
         .filter((item) => item.centerX >= ordinalLeft && item.centerX < programLeft && /^\d{1,3}$/u.test(item.text))
         .map((item) => Number(item.text))
         .sort((a, b) => a - b);
+      const dateLikeItems = positioned
+        .filter((item) => /^(?:平成|令和)[元\d]+年\d{1,2}月\d{1,2}日/u.test(item.text))
+        .map((item) => ({
+          text: item.text,
+          x: item.x,
+          width: item.width,
+          xRatio: item.x / viewport.width,
+          rightRatio: (item.x + item.width) / viewport.width,
+          centerRatio: item.centerX / viewport.width,
+        }));
       pages.push({
         pageNumber,
         width: viewport.width,
@@ -75,6 +85,7 @@ for (const source of SOURCES) {
         rawTextContentItems: content.items.length,
         nonEmptyPositionedTextItems: positioned.length,
         ordinalCandidates,
+        dateLikeItems,
       });
       page.cleanup();
     }
@@ -91,6 +102,6 @@ for (const source of SOURCES) {
   }
 }
 
-const report = { schemaVersion: 1, checkedAt: new Date().toISOString(), documents };
+const report = { schemaVersion: 2, checkedAt: new Date().toISOString(), documents };
 await writeFile(path.join(DIRECTORY, "fy2019-schema.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify(report));
