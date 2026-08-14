@@ -1,3 +1,4 @@
+import { CHUBU_FY2022_CONTRACT_DOCUMENTS, CHUBU_FY2022_GRANT_DOCUMENTS } from "./official-chubu-fy2022-sources.mjs";
 import { CHUBU_FY2023_CONTRACT_DOCUMENTS, CHUBU_FY2023_GRANT_DOCUMENTS } from "./official-chubu-fy2023-sources.mjs";
 
 const CHUBU_SOURCE_PAGE = "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html";
@@ -102,6 +103,7 @@ function makeGrantDocument({
 }
 
 export const CHUBU_GRANT_DOCUMENTS = Object.freeze([
+  ...CHUBU_FY2022_GRANT_DOCUMENTS,
   ...CHUBU_FY2023_GRANT_DOCUMENTS,
   makeGrantDocument({
     id: "chubu-2024-grant-decisions-h1",
@@ -327,6 +329,7 @@ function makeDiscretionaryContractDocument({
 }
 
 export const CHUBU_CONTRACT_DOCUMENTS = Object.freeze([
+  ...CHUBU_FY2022_CONTRACT_DOCUMENTS,
   ...CHUBU_FY2023_CONTRACT_DOCUMENTS,
   makeCompetitiveContractDocument({
     id: "chubu-2024-competitive-commission",
@@ -371,6 +374,8 @@ export const CHUBU_CONTRACT_DOCUMENTS = Object.freeze([
 ]);
 
 export const CHUBU_COVERAGE_GAPS = Object.freeze([
+  { executorId: "chubu", fiscalYear: 2022, category: "grant_decision", status: "verified_official_period_pair_archive", included: "WARP保存公式目次の実hrefから固定した4月～9月・10月～3月PDF（2資料・185掲載行）", missing: "保存公式目次時点の2資料を検証した範囲であり、年度母集団の完全性は主張しない" },
+  { executorId: "chubu", fiscalYear: 2022, category: "contract_result", status: "verified_official_files_four_categories_archive", included: "WARP保存公式目次の実hrefから固定した競争入札・随意契約の委託費・庁費PDF（4資料・83掲載行）", missing: "保存公式目次時点の4資料を検証した範囲であり、年度母集団の完全性は主張しない" },
   { executorId: "chubu", fiscalYear: 2023, category: "grant_decision", status: "verified_official_period_pair_archive", included: "WARP保存公式目次の実hrefから固定した4月～9月・10月～3月PDF（2資料・224掲載行）", missing: "保存公式目次時点の2資料を検証した範囲であり、年度母集団の完全性は主張しない" },
   { executorId: "chubu", fiscalYear: 2023, category: "contract_result", status: "verified_official_files_four_categories_archive", included: "WARP保存公式目次の実hrefから固定した競争入札・随意契約の委託費・庁費PDF（4資料・82掲載行）", missing: "保存公式目次時点の4資料を検証した範囲であり、年度母集団の完全性は主張しない" },
   {
@@ -394,7 +399,7 @@ export const CHUBU_COVERAGE_GAPS = Object.freeze([
     fiscalYear: null,
     category: "all",
     status: "not_ingested",
-    included: "令和5・6年度の交付決定4資料と契約結果8資料",
-    missing: "令和2～4・7年度の交付決定・契約結果、および年度途中の令和8年度",
+    included: "令和4～6年度の交付決定6資料と契約結果12資料",
+    missing: "令和2・3・7年度の交付決定・契約結果、および年度途中の令和8年度",
   },
 ]);

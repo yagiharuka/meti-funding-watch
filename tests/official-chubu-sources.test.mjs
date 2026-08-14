@@ -26,6 +26,8 @@ const grants2024 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYea
 const contracts2024 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2024);
 const grants2023 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);
 const contracts2023 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2023);
+const grants2022 = CHUBU_GRANT_DOCUMENTS.filter((document) => document.fiscalYear === 2022);
+const contracts2022 = CHUBU_CONTRACT_DOCUMENTS.filter((document) => document.fiscalYear === 2022);
 
 const expected = new Map([
   ["chubu-2024-grant-decisions-h1", {
@@ -43,6 +45,10 @@ const expected = new Map([
     pageRows: [42, 45, 45, 45, 41],
   }],
 ]);
+
+test("registers and strictly replays six FY2022 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {
+ assert.equal(grants2022.length,2);assert.equal(contracts2022.length,4);const records=[];for(const document of [...grants2022,...contracts2022]){const bytes=await readFile(new URL(`../evidence/official-bootstrap/${document.id}.pdf`,import.meta.url));const parsed=await parseOfficialPdf(bytes,document);assert.equal(parsed.length,document.evidenceReceipt.expectedRecordCount);records.push(...parsed);}assert.equal(records.length,268);
+});
 
 test("registers and strictly replays six FY2023 Chubu PDFs from exact committed originals", { timeout: 30000 }, async () => {
  assert.equal(grants2023.length,2); assert.equal(contracts2023.length,4); const records=[]; for(const d of [...grants2023,...contracts2023]){const b=await readFile(new URL(`../evidence/official-bootstrap/${d.id}.pdf`,import.meta.url)); const r=await parseOfficialPdf(b,d); assert.equal(r.length,d.evidenceReceipt.expectedRecordCount); records.push(...r);} assert.equal(records.length,306); const h2=records.filter(r=>r.datasetId==="chubu-2023-grant-decisions-h2"); assert.deepEqual(h2.filter(r=>r.sourceOrganizationBlank===true).map(r=>r.sourceRowNumber),[27,28,29]); assert.ok(h2.filter(r=>r.sourceOrganizationBlank===true).every(r=>r.organization==="（原資料の交付先名欄は空欄）")); assert.ok([11,12,15,17].every(n=>!h2.some(r=>r.sourceRowNumber===n)));

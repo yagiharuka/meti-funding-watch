@@ -83,12 +83,12 @@ const DISCRETIONARY_COLUMNS = Object.freeze([
 // before the corporate number and the notes column at the far right.
 const DISCRETIONARY_GOODS_COLUMNS = Object.freeze([
   ["program", ["物品役務等の名称"]],
-  ["officer", ["契約担当官等の氏名"]],
+  ["officer", ["契約担当官等の氏名並びにその"]],
   ["date", ["契約を締結した日"]],
   ["organization", ["契約の相手方の商号"]],
   ["address", ["契約の相手方の住所"]],
   ["corporateNumber", ["契約の相手方の法人番号"]],
-  ["legalReason", ["随意契約によることとした"]],
+  ["legalReason", ["随意契約によることとした会計法令の根拠条文及び理由"]],
   ["plannedAmount", ["予定価格"]],
   ["amount", ["契約金額"]],
   ["awardRate", ["落札率"]],
@@ -159,8 +159,8 @@ function contractDocument({ id, filename, type, costClass, expectedBytes, expect
   const leftPoints = competitive
     ? [15, 75, 155, 215, 280, 345, 415, 495, 545, 595, 640, 675, 715, 765]
     : oldGoodsLayout
-      ? [5, 53, 136, 182, 234, 287, 351, 497, 545, 583, 606, 642, 681, 720, 770]
-      : [15, 70, 140, 195, 245, 305, 370, 465, 520, 570, 610, 645, 680, 725, 780];
+      ? [5, 53, 136, 182, 234, 287, 351, 497, 545, 583, 606.5, 642, 681, 720, 770]
+      : [15, 70, 140, 195, 245, 305, 370, 465, 520, 590, 610, 645, 680, 725, 780];
   return Object.freeze({
     id,
     executorId: "chubu",
@@ -181,6 +181,7 @@ function contractDocument({ id, filename, type, costClass, expectedBytes, expect
       expectedSha256,
       expectedPageCount: expectedRowsPerPage.length,
       expectedPageSize: { width: PAGE_WIDTH, height: pageHeight, tolerance: 0.2 },
+      ...(oldGoodsLayout ? { headerMinimumYRatio: 0.78, cellAssignmentCoordinate: "left" } : {}),
       expectedRowsPerPage,
       expectedRecordCount,
       expectedRowNumbers: { start: 1, end: expectedRecordCount },
@@ -223,7 +224,7 @@ export const CHUBU_FY2022_GRANT_DOCUMENTS = Object.freeze([
     period: "10月～3月",
     expectedBytes: 135_918,
     expectedSha256: "a2710a4ca4ab2307576721342aaacff6d611a95905a7061902c2caee6738fba2",
-    expectedRowsPerPage: [16, 1],
+    expectedRowsPerPage: [18, 2],
     expectedPositionedTextItemCount: 264,
   }),
 ]);
