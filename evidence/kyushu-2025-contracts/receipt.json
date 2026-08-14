@@ -1,0 +1,152 @@
+{
+  "verifiedAt": "2026-08-14",
+  "sourcePageUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_nyusatsu_kekka.html",
+  "transportPageUrl": "https://warp.ndl.go.jp/20260613/20260601093442/https://www.kyushu.meti.go.jp/under/chotatu/2025fy_nyusatsu_kekka.html",
+  "indexExpectedBytes": 12598,
+  "indexExpectedSha256": "3abfa1b80ff04535929fcc27700ffe9a29f9ca1436d1812cb295b188a648a946",
+  "documents": [
+    {
+      "id": "kyushu-2025-competitive-goods-2504",
+      "filename": "2504chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2504chohi_nyusatu.pdf",
+      "expectedBytes": 61683,
+      "expectedSha256": "6580b88cb1e1c5a709063686b191b7aa3415921941857e3c3de45f41fc8e61e6",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [5],
+      "expectedRecordCount": 5,
+      "expectedPositionedTextItemCount": 126
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2505",
+      "filename": "2505chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2505chohi_nyusatu.pdf",
+      "expectedBytes": 53276,
+      "expectedSha256": "c959024053198490d4b3a021dc87bdda11c4ab568bafd37175ec0ce3cfe82e86",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 50
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2506",
+      "filename": "2506chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2506chohi_nyusatu.pdf",
+      "expectedBytes": 53126,
+      "expectedSha256": "c943557428b063b4c3552f9818416a68bb66e3189fe05556238d8f7912b434eb",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 51
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2507",
+      "filename": "2507chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2507chohi_nyusatu.pdf",
+      "expectedBytes": 54732,
+      "expectedSha256": "e258f20f2d677c03014625aebd1e41ff1074935f575c5f5627457de4c8ff2979",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [2],
+      "expectedRecordCount": 2,
+      "expectedPositionedTextItemCount": 68
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2508",
+      "filename": "2508chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2508chohi_nyusatu.pdf",
+      "expectedBytes": 58188,
+      "expectedSha256": "9385e14b52bb4cd94397ab9fecf4c214cf89db9fea65aeccbf032ada39db84c6",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [2],
+      "expectedRecordCount": 2,
+      "expectedPositionedTextItemCount": 69
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2509",
+      "filename": "2509chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2509chohi_nyusatu.pdf",
+      "expectedBytes": 67004,
+      "expectedSha256": "83efde25de1676d1480f915a0a6a737bc77a1a07b5da338593b02b0d1a500643",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [4],
+      "expectedRecordCount": 4,
+      "expectedPositionedTextItemCount": 105
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2512",
+      "filename": "2512chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2512chohi_nyusatu.pdf",
+      "expectedBytes": 53238,
+      "expectedSha256": "0bcd3e6345055a70a884544d1b4f7d1b850e56f07ced28fdb7bbb019792aff93",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 50
+    },
+    {
+      "id": "kyushu-2025-competitive-goods-2601",
+      "filename": "2601chohi_nyusatu.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2601chohi_nyusatu.pdf",
+      "expectedBytes": 53638,
+      "expectedSha256": "f7eabeb954aeb45a415702f7ca18c3f711be95c9c76873846a361a541be3225f",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 49
+    },
+    {
+      "id": "kyushu-2025-discretionary-commission-2504",
+      "filename": "2504itaku_zuikei.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2504itaku_zuikei.pdf",
+      "expectedBytes": 94530,
+      "expectedSha256": "8f1c4e436c1a7d049dfb1de1e3c08b16cce7c6f0ec8e84d9b64ad591f514135d",
+      "expectedPageCount": 2,
+      "expectedRowsPerPage": [24, 5],
+      "expectedRecordCount": 29,
+      "expectedPositionedTextItemCount": 643
+    },
+    {
+      "id": "kyushu-2025-discretionary-commission-2505",
+      "filename": "2505itaku_zuikei.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2505itaku_zuikei.pdf",
+      "expectedBytes": 59770,
+      "expectedSha256": "4cac2044f9924472bb2bccc6e8d12b7ce8f12975e590af63323240acd5b325e4",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 60
+    },
+    {
+      "id": "kyushu-2025-discretionary-commission-2506",
+      "filename": "2506itaku_zuikei.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2506itaku_zuikei.pdf",
+      "expectedBytes": 59905,
+      "expectedSha256": "b9173974a68d2b7201c8e3c538be01e40fb404cdeff2114cae0b9f3338031543",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 59
+    },
+    {
+      "id": "kyushu-2025-discretionary-commission-2507",
+      "filename": "2507itaku_zuikei.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2507itaku_zuikei.pdf",
+      "expectedBytes": 60243,
+      "expectedSha256": "491738e1aecdd1a1e65daacbe7abf62daf84f6d762c830e8de702aa0fa22e9a0",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 59
+    },
+    {
+      "id": "kyushu-2025-discretionary-commission-2508",
+      "filename": "2508itaku_zuikei.pdf",
+      "originalUrl": "https://www.kyushu.meti.go.jp/under/chotatu/2025fy_kouhyou/2508itaku_zuikei.pdf",
+      "expectedBytes": 61874,
+      "expectedSha256": "887a0e134448e8d586822aff99d7b874457a92f7cbecbec77adbeb171086b257",
+      "expectedPageCount": 1,
+      "expectedRowsPerPage": [1],
+      "expectedRecordCount": 1,
+      "expectedPositionedTextItemCount": 61
+    }
+  ]
+}
