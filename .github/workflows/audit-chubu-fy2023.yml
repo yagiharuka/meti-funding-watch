@@ -21,7 +21,6 @@ jobs:
           from html.parser import HTMLParser
           from urllib.parse import urljoin
           from urllib.request import Request, urlopen
-          ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
           INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
           req=Request(INDEX, headers={'User-Agent':'Mozilla/5.0'})
           with urlopen(req, timeout=60) as r: raw=r.read()
@@ -44,10 +43,15 @@ jobs:
               if '令和5年度' in label or '令和５年度' in label:
                   print(f'ROW {i}: {label}')
                   for href in row['links']:
-                      saved=urljoin(INDEX, href); print('SAVED_HREF', saved); found += 1
+                      print('SAVED_HREF', urljoin(INDEX, href)); found += 1
           if found != 6: raise SystemExit(f'expected exactly 6 FY2023 links, got {found}')
           print('FY2023_LINK_COUNT', found)
           PY
+
+      - name: Install PDF inspection tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
 
       - name: Download and receipt six exact FY2023 PDFs
         shell: bash
@@ -67,13 +71,14 @@ jobs:
             file="audit/${url##*/}"
             curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 -A 'Mozilla/5.0' "$url" -o "$file"
             printf 'RECEIPT %s bytes=%s sha256=%s magic=%s\n' "${file##*/}" "$(wc -c < "$file")" "$(sha256sum "$file" | cut -d' ' -f1)" "$(head -c 5 "$file")"
-            pdfinfo "$file" | grep -E '^(Pages|Page size):' || true
+            pdfinfo "$file" | grep -E '^(Pages|Page size):'
             pdftotext -layout "$file" "${file%.pdf}.txt"
             printf '%s\n' "--- TEXT ${file##*/} ---"
             sed -n '1,35p' "${file%.pdf}.txt"
           done
 
       - name: Preserve audited originals
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: chubu-fy2023-audit-${{ github.run_id }}
