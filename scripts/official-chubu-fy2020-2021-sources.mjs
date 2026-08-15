@@ -59,6 +59,41 @@ const COMPETITIVE_COLUMNS = Object.freeze([
   ["bidderCount", ["応札・"]],
 ]);
 
+const COMPETITIVE_GOODS_COLUMNS = Object.freeze([
+  ["program", ["物品役務等の"]],
+  ["officer", ["契約担当官等の"]],
+  ["date", ["契約を締結"]],
+  ["organization", ["商号又は名称", "契約の相手方の商"]],
+  ["address", ["住所"]],
+  ["corporateNumber", ["法人番号"]],
+  ["method", ["一般競争入札・", "指名競争入札の別"]],
+  ["plannedAmount", ["予定価格"]],
+  ["amount", ["契約金額"]],
+  ["awardRate", ["落札率"]],
+  ["publicInterestClass", ["公益法人"]],
+  ["jurisdictionClass", ["国所管、", "都道府県"]],
+  ["bidderCount", ["応札・"]],
+  ["notes", ["備考"]],
+]);
+
+const DISCRETIONARY_GOODS_COLUMNS = Object.freeze([
+  ["program", ["物品役務等の"]],
+  ["officer", ["契約担当官等の"]],
+  ["date", ["契約を締結"]],
+  ["organization", ["方の商号", "契約の相手方の商号"]],
+  ["address", ["の住所", "契約の相手方の住所"]],
+  ["corporateNumber", ["法人番号"]],
+  ["legalReason", ["随意契約によること", "とした会計法令の"]],
+  ["plannedAmount", ["予定価格"]],
+  ["amount", ["契約金額"]],
+  ["awardRate", ["落札率"]],
+  ["reemployedOfficerCount", ["再就職", "再就職の役員"]],
+  ["publicInterestClass", ["公益法人"]],
+  ["jurisdictionClass", ["国所管、", "都道府県"]],
+  ["bidderCount", ["応札・"]],
+  ["notes", ["備考"]],
+]);
+
 const DISCRETIONARY_COLUMNS = Object.freeze([
   ["program", ["物品役務等の"]],
   ["officer", ["契約担当官等の"]],
@@ -127,10 +162,12 @@ function grantDocument({ id, fiscalYear, period, rawUrl, originalUrl, expectedBy
   });
 }
 
-function contractDocument({ id, fiscalYear, type, costClass, rawUrl, originalUrl, expectedBytes, expectedSha256, expectedRowsPerPage, leftPoints, cellAssignmentCoordinate }) {
+function contractDocument({ id, fiscalYear, type, costClass, rawUrl, originalUrl, expectedBytes, expectedSha256, expectedRowsPerPage, leftPoints, cellAssignmentCoordinate, goodsLayout = false }) {
   const competitive = type === "competitive";
   const expectedRecordCount = expectedRowsPerPage.reduce((a, b) => a + b, 0);
-  const definitions = competitive ? COMPETITIVE_COLUMNS : DISCRETIONARY_COLUMNS;
+  const definitions = goodsLayout
+    ? (competitive ? COMPETITIVE_GOODS_COLUMNS : DISCRETIONARY_GOODS_COLUMNS)
+    : (competitive ? COMPETITIVE_COLUMNS : DISCRETIONARY_COLUMNS);
   return Object.freeze({
     id,
     executorId: "chubu",
@@ -225,7 +262,7 @@ export const CHUBU_FY2021_CONTRACT_DOCUMENTS = Object.freeze([
     rawUrl: "https://warp.ndl.go.jp/20210712/20210701132403/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/nyusatsu/21-ukeoi.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/nyusatsu/21-ukeoi.pdf",
     expectedBytes: 158_781, expectedSha256: "511407e802d17c1c97a3f329a35044c32702cc431d4fa059ad1f9b7fbb90b676", expectedRowsPerPage: [7, 7, 3],
-    leftPoints: [15, 85, 170, 230, 355, 440, 495, 535, 580, 620, 650, 670, 720, 775] }),
+    leftPoints: [15, 85, 170, 230, 300, 355, 440, 495, 535, 580, 620, 650, 720, 775], goodsLayout: true }),
   contractDocument({ id: "chubu-2021-discretionary-commission", fiscalYear: 2021, type: "discretionary", costClass: "委託費の類",
     rawUrl: "https://warp.ndl.go.jp/20210814/20210803100756/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/21-zuikei-itaku.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/21-zuikei-itaku.pdf",
@@ -235,7 +272,7 @@ export const CHUBU_FY2021_CONTRACT_DOCUMENTS = Object.freeze([
     rawUrl: "https://warp.ndl.go.jp/20210712/20210701132425/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/21-zuikei-ukeoi.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/21-zuikei-ukeoi.pdf",
     expectedBytes: 89_496, expectedSha256: "5d7ea669676854b03d64a7997165d6a09f733d7cb442ef7774310be5279a4320", expectedRowsPerPage: [6],
-    leftPoints: [15, 65, 145, 195, 305, 250, 365, 510, 555, 600, 625, 660, 700, 740, 785], cellAssignmentCoordinate: "left" }),
+    leftPoints: [15, 65, 145, 195, 250, 305, 365, 510, 555, 600, 625, 660, 700, 740, 785], cellAssignmentCoordinate: "left", goodsLayout: true }),
 ]);
 
 export const CHUBU_FY2020_CONTRACT_DOCUMENTS = Object.freeze([
@@ -248,7 +285,7 @@ export const CHUBU_FY2020_CONTRACT_DOCUMENTS = Object.freeze([
     rawUrl: "https://warp.ndl.go.jp/20200712/20200701044708/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/nyusatsu/20-ukeoi.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/nyusatsu/20-ukeoi.pdf",
     expectedBytes: 109_410, expectedSha256: "4dd9ca42b2679a300a434652c47fe1dc32ca035ede88866da35f1fb7e9b0b7a8", expectedRowsPerPage: [7, 7, 2],
-    leftPoints: [45, 105, 190, 245, 360, 295, 430, 485, 530, 575, 605, 645, 690, 745], cellAssignmentCoordinate: "left" }),
+    leftPoints: [45, 105, 190, 245, 295, 360, 430, 485, 530, 575, 605, 645, 690, 745], cellAssignmentCoordinate: "left", goodsLayout: true }),
   contractDocument({ id: "chubu-2020-discretionary-commission", fiscalYear: 2020, type: "discretionary", costClass: "委託費の類",
     rawUrl: "https://warp.ndl.go.jp/20200712/20200701044749/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/20-zuikei-itaku.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/20-zuikei-itaku.pdf",
@@ -258,5 +295,5 @@ export const CHUBU_FY2020_CONTRACT_DOCUMENTS = Object.freeze([
     rawUrl: "https://warp.ndl.go.jp/20200712/20200701044753/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/20-zuikei-ukeoi.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/zuikei/20-zuikei-ukeoi.pdf",
     expectedBytes: 82_535, expectedSha256: "4f806028946552c3ff08a7ab0252f22fc6630f2cd481cacd000f86508361271b", expectedRowsPerPage: [5],
-    leftPoints: [45, 95, 170, 215, 310, 260, 365, 500, 545, 580, 610, 640, 680, 715, 755], cellAssignmentCoordinate: "left" }),
+    leftPoints: [45, 95, 170, 215, 260, 310, 365, 500, 545, 580, 610, 640, 680, 715, 755], cellAssignmentCoordinate: "left", goodsLayout: true }),
 ]);
