@@ -1,0 +1,20 @@
+name: Export current main artifact
+on:
+  push:
+    paths: [".github/workflows/export-main-artifact.yml"]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove transient files
+        run: |
+          rm -rf node_modules .git .sites-runtime
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meti-funding-watch-main-${{ github.run_id }}
+          path: .
+          include-hidden-files: true
+          retention-days: 3
