@@ -24,7 +24,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
-          from urllib.parse import urljoin, urlparse
+          from urllib.parse import urljoin
           class P(HTMLParser):
               def __init__(self): super().__init__(); self.a=[]
               def handle_starttag(self, tag, attrs):
@@ -34,11 +34,13 @@ jobs:
           s=Path('.audit-chubu-hist/index.html').read_text(errors='replace')
           p=P(); p.feed(s)
           base='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
-          keys=('r3fy','r2fy','r1fy','21-','20-','19-','2019','2020','2021')
+          keys=('r3fy','r2fy','21-','20-')
           hits=[]
           for h in p.a:
               low=h.lower().split('?')[0]
-              if any(k in low for k in keys) and low.endswith(('.pdf','.xlsx','.xls')):
+              historical_pdf=any(k in low for k in keys) and low.endswith('.pdf')
+              legacy_excel='/a41kaikei/kouhyou/data/' in low and low.endswith(('.xlsx','.xls'))
+              if historical_pdf or legacy_excel:
                   hits.append(urljoin(base,h))
           hits=list(dict.fromkeys(hits))
           print('COUNT',len(hits))
