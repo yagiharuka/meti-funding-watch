@@ -220,7 +220,7 @@ export const CHUBU_FY2021_GRANT_DOCUMENTS = Object.freeze([
     rawUrl: "https://warp.ndl.go.jp/20211212/20211201021011/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf",
     expectedBytes: 314_303, expectedSha256: "8f74515a314f397c77242ea2501c618ea5a8de9c4fac7c69470d3c3c2ba382d2",
-    expectedRowsPerPage: [29, 26, 31, 32, 26, 26, 27, 23],
+    expectedRowsPerPage: [26, 26, 27, 36, 26, 26, 26, 27],
     leftPoints: [70, 90, 250, 340, 405, 465, 535, 670, 725, 765],
   }),
   grantDocument({
@@ -239,7 +239,7 @@ export const CHUBU_FY2020_GRANT_DOCUMENTS = Object.freeze([
     rawUrl: "https://warp.ndl.go.jp/20201212/20201201053139/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r2fy-4-9hojyokin.pdf",
     originalUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r2fy-4-9hojyokin.pdf",
     expectedBytes: 325_292, expectedSha256: "6f4c4392da6313066d70bb0ed1b86eab483f8a052759ca40444aca48017cdefb",
-    expectedRowsPerPage: [...Array(16).fill(14), 2],
+    expectedRowsPerPage: [12, ...Array(15).fill(14), 4],
     leftPoints: [85, 105, 245, 375, 435, 480, 555, 665, 725, 765],
   }),
   grantDocument({
