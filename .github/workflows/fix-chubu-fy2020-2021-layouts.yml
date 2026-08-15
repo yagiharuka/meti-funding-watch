@@ -9,25 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply source-derived page row receipts
+      - name: Apply source-derived FY2021 H2 header receipt
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('scripts/official-chubu-fy2020-2021-sources.mjs')
-          s=p.read_text()
-          replacements={
-            'expectedRowsPerPage: [29, 26, 31, 32, 26, 26, 27, 23]': 'expectedRowsPerPage: [26, 26, 27, 36, 26, 26, 26, 27]',
-            'expectedRowsPerPage: [...Array(16).fill(14), 2]': 'expectedRowsPerPage: [12, ...Array(15).fill(14), 4]',
-          }
-          for a,b in replacements.items():
-              assert a in s, a
-              s=s.replace(a,b,1)
-          p.write_text(s)
+          p=Path('scripts/official-chubu-fy2020-2021-sources.mjs'); s=p.read_text()
+          a='["jurisdictionClass", ["国所管、都道府県", "国所管、"]],'
+          b='["jurisdictionClass", ["国所管、都道府県", "国所管、", "県所管の区分"]],'
+          assert a in s
+          p.write_text(s.replace(a,b,1))
           PY
           node --check scripts/official-chubu-fy2020-2021-sources.mjs
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add scripts/official-chubu-fy2020-2021-sources.mjs
-          git commit -m 'fix(official): pin historical Chubu page row counts'
+          git commit -m 'fix(official): pin FY2021 H2 jurisdiction header'
           git push
