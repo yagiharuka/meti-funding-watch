@@ -66,6 +66,19 @@ if (officialIds.length !== officialManifest.recordCount || new Set(officialIds).
   throw new Error("公開releaseの公式資料行数またはID一意性が不正です");
 }
 
+const reviewDirectory = new URL("review/", dataDirectory);
+const reviewManifestText = await readFile(new URL("manifest.json", reviewDirectory), "utf8");
+const reviewManifest = JSON.parse(reviewManifestText);
+if (reviewManifest.schemaVersion !== 3 || !Number.isSafeInteger(reviewManifest.programCount) || !Number.isSafeInteger(reviewManifest.paymentCount)) {
+  throw new Error("公開releaseの行政事業レビューmanifestが不正です");
+}
+const reviewFiles = {};
+for (const filename of [reviewManifest.programsFile, ...reviewManifest.paymentFiles]) {
+  const fileUrl = new URL(filename, reviewDirectory); const text = await readFile(fileUrl, "utf8"); const rows = JSON.parse(text);
+  if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
+  reviewFiles[filename] = { sha256: sha256(text), bytes: (await stat(fileUrl)).size, rows: rows.length };
+}
+
 const appShell = {};
 const outputDirectory = new URL("../dist-pages/", import.meta.url);
 for (const relativePath of await listFiles(outputDirectory)) {
@@ -111,6 +124,14 @@ const release = {
     },
   },
   files,
+  review: {
+    generatedAt: reviewManifest.generatedAt,
+    reviewSheetYears: reviewManifest.reviewSheetYears,
+    programCount: reviewManifest.programCount,
+    paymentCount: reviewManifest.paymentCount,
+    manifestSha256: sha256(reviewManifestText),
+    files: reviewFiles,
+  },
   official: {
     generatedAt: officialManifest.generatedAt,
     recordCount: officialIds.length,

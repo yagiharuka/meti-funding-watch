@@ -317,3 +317,29 @@ footer a { color: var(--green); font-weight: 700; }
 }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+
+/* Coverage and Administrative Business Review */
+.coverage-matrix-section { background: #f7f4ec; }
+.coverage-year-matrix { max-width: 1440px; margin: 0 auto; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.coverage-year-matrix table { width: 100%; min-width: 1120px; border-collapse: collapse; }
+.coverage-year-matrix th, .coverage-year-matrix td { padding: 10px 9px; border-right: 1px solid #edf0ed; border-bottom: 1px solid #edf0ed; vertical-align: top; }
+.coverage-year-matrix thead th { position: sticky; top: 0; background: #f3f5f2; color: #52645d; font-size: 10px; text-align: center; }
+.coverage-year-matrix tbody th { min-width: 170px; color: var(--ink); font-size: 11px; text-align: left; }
+.matrix-state { display: block; margin: 2px 0; padding: 4px 6px; border-radius: 7px; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.matrix-state.ready { background: #e2f5ec; color: #075c47; }
+.matrix-state.zero { background: #e8f1f5; color: #27566a; }
+.matrix-state.watch { background: #fff2d9; color: #805000; }
+.matrix-state.no { background: #f0f2f0; color: #75827d; }
+.coverage-matrix-legend { max-width: 1440px; margin: 12px auto 0; color: #5a6b64; font-size: 10px; line-height: 1.7; }
+.zero-result-warning { max-width: 900px; margin: 0 auto; padding: 28px; text-align: center; }
+.zero-result-warning span { max-width: 760px; line-height: 1.8; }
+.review-mode-tabs { display: flex; gap: 8px; max-width: 1440px; margin: 0 auto 16px; }
+.review-mode-tabs button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #52645d; font-weight: 800; cursor: pointer; }
+.review-mode-tabs button.active { border-color: var(--green); background: #e2f5ec; color: var(--green); }
+.review-limitations { background: #edf1eb; }
+@media (max-width: 720px) {
+  .view-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .coverage-year-matrix { border-radius: 12px; }
+  .review-mode-tabs { overflow-x: auto; }
+}

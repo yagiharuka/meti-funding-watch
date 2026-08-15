@@ -176,6 +176,7 @@ export default defineConfig({
           }),
         ]);
         await copyOfficialData(dataDirectory);
+        await copyReviewData(dataDirectory);
       },
     },
   ],
@@ -192,6 +193,7 @@ export default defineConfig({
         main: fileURLToPath(new URL("./pages-site/index.html", import.meta.url)),
         adoptions: fileURLToPath(new URL("./pages-site/adoptions/index.html", import.meta.url)),
         official: fileURLToPath(new URL("./pages-site/official/index.html", import.meta.url)),
+        review: fileURLToPath(new URL("./pages-site/review/index.html", import.meta.url)),
       },
     },
   },
@@ -252,5 +254,37 @@ async function copyOfficialData(dataDirectory: string) {
   if (recordCount !== manifest.recordCount) {
     throw new Error(`公式資料manifestと明細行数が一致しません: ${manifest.recordCount}/${recordCount}`);
   }
+  await writeFile(new URL("manifest.json", outputDirectory), manifestText);
+}
+
+
+type ReviewManifest = {
+  schemaVersion: number; generatedAt: string; refreshStatus?: string; sourceUrl: string; reviewSheetYears: number[];
+  programsFile: string; paymentFiles: string[]; programCount: number; paymentCount: number; sourceReceipts: unknown[];
+};
+
+async function copyReviewData(dataDirectory: string) {
+  const sourceDirectory = new URL("./data/review-cache/", import.meta.url);
+  const outputDirectory = new URL("./review/", new URL(`file://${dataDirectory.replace(/\/$/, "")}/`));
+  await mkdir(outputDirectory, { recursive: true });
+  const manifestText = await readFile(new URL("manifest.json", sourceDirectory), "utf8");
+  const manifest = JSON.parse(manifestText) as ReviewManifest;
+  const receiptStateOk = Array.isArray(manifest.sourceReceipts) && (manifest.sourceReceipts.length >= 4 || manifest.refreshStatus === "cached-official-source-route-changed");
+  if (manifest.schemaVersion !== 3 || typeof manifest.generatedAt !== "string" || !manifest.sourceUrl?.startsWith("https://")
+    || !Array.isArray(manifest.reviewSheetYears) || !manifest.reviewSheetYears.length
+    || manifest.programsFile !== "programs.json" || !Array.isArray(manifest.paymentFiles) || !manifest.paymentFiles.length
+    || !Number.isSafeInteger(manifest.programCount) || !Number.isSafeInteger(manifest.paymentCount) || !receiptStateOk) throw new Error("行政事業レビューmanifestが不正です");
+  const files = [manifest.programsFile, ...manifest.paymentFiles];
+  let programs = 0; let payments = 0; const ids = new Set<string>();
+  for (const filename of files) {
+    if (filename !== "programs.json" && !/^payments-[0-9a-f]\.json$/.test(filename)) throw new Error(`行政事業レビュー公開ファイル名が不正です: ${filename}`);
+    const text = await readFile(new URL(filename, sourceDirectory), "utf8");
+    const rows = JSON.parse(text) as Array<Record<string, unknown>>;
+    if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
+    for (const row of rows) { if (typeof row.id !== "string" || !row.id || ids.has(row.id)) throw new Error(`行政事業レビューIDが不正または重複: ${filename}`); ids.add(row.id); }
+    if (filename === "programs.json") programs += rows.length; else payments += rows.length;
+    await writeFile(new URL(filename, outputDirectory), text);
+  }
+  if (programs !== manifest.programCount || payments !== manifest.paymentCount) throw new Error("行政事業レビューmanifestと公開行数が一致しません");
   await writeFile(new URL("manifest.json", outputDirectory), manifestText);
 }

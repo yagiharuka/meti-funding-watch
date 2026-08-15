@@ -238,7 +238,7 @@ function validateRelease(value: unknown): asserts value is DataRelease {
   if (!("index.html" in release.appShell)) throw new Error("公開releaseの画面情報が不正です");
   for (const [filename, metadata] of Object.entries(release.appShell)) {
     if (
-      !/^(?:index\.html|adoptions\/index\.html|official\/index\.html|assets\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\.svg)$/.test(filename)
+      !/^(?:index\.html|adoptions\/index\.html|official\/index\.html|review\/index\.html|assets\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\.svg)$/.test(filename)
       || !metadata || typeof metadata !== "object"
       || !isSha256(metadata.sha256)
       || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0
@@ -775,8 +775,8 @@ export default function Home() {
           </table>
           {!filteredCommitments.length && (
             <div className="empty-state">
-              <strong>{searchError ? "検索条件を処理できませんでした" : detailLoading ? "明細データを読み込んでいます" : dataMode === "unavailable" ? "明細データを取得できません" : "該当するレコードがありません"}</strong>
-              <span>{searchError ?? (detailLoading ? "少しお待ちください。" : dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "検索語や条件を変えてください。")}</span>
+              <strong>{searchError ? "検索条件を処理できませんでした" : detailLoading ? "明細データを読み込んでいます" : dataMode === "unavailable" ? "明細データを取得できません" : "収録済みのGビズINFO掲載行では確認できませんでした"}</strong>
+              <span>{searchError ?? (detailLoading ? "少しお待ちください。" : dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "これは経産省関係の資金を受けていないという意味ではありません。GビズINFOに法人番号付きで掲載された収録行の範囲で確認できなかった結果です。")}</span>
             </div>
           )}
         </div>

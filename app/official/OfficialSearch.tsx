@@ -213,7 +213,7 @@ export default function OfficialSearch() {
               </tr>
             ))}</tbody>
           </table>
-          {!loading && !visible.length && <div className="empty-state"><strong>該当する掲載行がありません</strong><span>検索語や条件を変えてください。</span></div>}
+          {!loading && !visible.length && <div className="empty-state zero-result-warning"><strong>収録済みの公式資料では確認できませんでした</strong><span>これは「契約・交付決定がない」という意味ではありません。未収録の機関・年度・公表区分、制度上の非公表、法人番号のない相手方があり得ます。下のカバレッジ表で検索対象範囲を確認してください。</span></div>}
           {loading && <div className="empty-state"><strong>公式資料明細を検証しています</strong><span>ハッシュと行数が一致したデータだけを表示します。</span></div>}
         </div>
       )}

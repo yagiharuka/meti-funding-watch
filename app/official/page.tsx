@@ -74,6 +74,19 @@ export default function OfficialSourcesPage() {
   if (sourceDocuments.some((source) => source.fallbackUsed && source.carryForwardUsed)) throw new Error("公式資料manifestの代替取得状態が重複しています");
   const currentVerifiedSourceCount = verifiedSourceCount - carryForwardSourceCount;
   if (currentVerifiedSourceCount < 0) throw new Error("公式資料manifestの今回検証件数が不正です");
+  const matrixYears = [...new Set([...years, ...attemptedYears])].sort((a, b) => a - b);
+  const coverageCell = (executorId: string, fiscalYear: number, category: "contract_result" | "grant_decision") => {
+    const docs = sourceDocuments.filter((source) => source.executorId === executorId && source.fiscalYear === fiscalYear && source.category === category);
+    const failures = sourceFailures.filter((source) => source.executorId === executorId && source.fiscalYear === fiscalYear
+      && (category === "contract_result" ? /契約|入札|随意/.test(source.kind) : /補助|交付/.test(source.kind)));
+    const records = docs.reduce((sum, source) => sum + source.records, 0);
+    const carried = docs.some((source) => source.carryForwardUsed);
+    if (carried) return { label: `継続 ${records.toLocaleString("ja-JP")}行`, className: "watch" };
+    if (records > 0) return { label: `${records.toLocaleString("ja-JP")}行`, className: "ready" };
+    if (docs.length > 0) return { label: "0件確認", className: "zero" };
+    if (failures.length > 0) return { label: "要確認", className: "watch" };
+    return { label: "未収録", className: "no" };
+  };
   return (
     <main>
       <header className="topbar">
@@ -113,7 +126,7 @@ export default function OfficialSourcesPage() {
 
       <section className="official-section" aria-labelledby="meaning-title">
         <div className="section-heading compact">
-          <div><p className="eyebrow">WHAT EACH SOURCE SHOWS</p><h2 id="meaning-title">3系列の違い</h2></div>
+          <div><p className="eyebrow">WHAT EACH SOURCE SHOWS</p><h2 id="meaning-title">4系列の違い</h2></div>
           <p>同じ法人名や事業名があっても、自動で同一案件にまとめません。</p>
         </div>
         <div className="population-matrix" role="region" aria-label="データ系列ごとの収録範囲">
@@ -124,6 +137,7 @@ export default function OfficialSourcesPage() {
               <tr><th scope="row">GビズINFO</th><td><span className="coverage-badge ready">○ 明細を検索可</span></td><td>GビズINFO掲載値</td><td><span className="coverage-badge no">× 判定不可</span></td></tr>
               <tr><th scope="row">公式契約結果</th><td><span className="coverage-badge partial">△ {manifest.seriesCounts.contract_result}掲載行を検索可</span></td><td>契約額欄の掲載値</td><td><span className="coverage-badge no">× 実支払・再委託なし</span></td></tr>
               <tr><th scope="row">補助金等の交付決定</th><td><span className="coverage-badge partial">△ {manifest.seriesCounts.grant_decision}掲載行を検索可</span></td><td>交付決定額欄の掲載値</td><td><span className="coverage-badge no">× 確定・支払・間接補助なし</span></td></tr>
+              <tr><th scope="row">行政事業レビュー</th><td><a className="source-link" href="../review/">別タブで検索 ↗</a></td><td>レビューシート掲載の予算・執行・支出先額</td><td><span className="coverage-badge partial">△ 公開経路の参考情報</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -180,6 +194,29 @@ export default function OfficialSourcesPage() {
             </ul>
           </details>
         )}
+      </section>
+
+      <section className="official-section coverage-matrix-section" aria-labelledby="coverage-matrix-title">
+        <div className="section-heading compact">
+          <div><p className="eyebrow">SEARCH COVERAGE</p><h2 id="coverage-matrix-title">機関×年度×系列の検索収録</h2></div>
+          <p>「未収録」は0件という意味ではありません。公式資料を検索DBへ取り込めていない状態です。</p>
+        </div>
+        <div className="coverage-year-matrix" role="region" aria-label="機関と年度ごとの契約結果・交付決定の検索収録状況" tabIndex={0}>
+          <table>
+            <thead><tr><th scope="col">執行機関</th>{matrixYears.map((y) => <th scope="col" key={y}>{y}</th>)}</tr></thead>
+            <tbody>{registry.executors.map((executor) => (
+              <tr key={executor.id}>
+                <th scope="row">{executor.name}</th>
+                {matrixYears.map((y) => {
+                  const contract = coverageCell(executor.id, y, "contract_result");
+                  const grant = coverageCell(executor.id, y, "grant_decision");
+                  return <td key={y} data-label={`${y}年度`}><span className={`matrix-state ${contract.className}`}>契 {contract.label}</span><span className={`matrix-state ${grant.className}`}>補 {grant.label}</span></td>;
+                })}
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+        <p className="coverage-matrix-legend"><strong>契</strong>＝契約結果、<strong>補</strong>＝補助金等交付決定。0件確認は登録資料を解析して掲載行0を確認した状態です。収録ありでも、その年度の全公表区分を完全照合したことを意味しません。</p>
       </section>
 
       <section className="official-section official-catalog" aria-labelledby="catalog-title">
