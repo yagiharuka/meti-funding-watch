@@ -1,0 +1,96 @@
+name: Apply coverage and review UI
+on:
+  push:
+    paths: [".github/workflows/apply-review-ui.yml"]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Apply reviewed UI changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p=Path(path); s=p.read_text();
+              if old not in s: raise SystemExit(f'marker missing: {path}: {old[:120]!r}')
+              p.write_text(s.replace(old,new,count))
+
+          # Zero-hit semantics: official series.
+          replace('app/official/OfficialSearch.tsx',
+            '<div className="empty-state"><strong>該当する掲載行がありません</strong><span>検索語や条件を変えてください。</span></div>',
+            '<div className="empty-state zero-result-warning"><strong>収録済みの公式資料では確認できませんでした</strong><span>これは「契約・交付決定がない」という意味ではありません。未収録の機関・年度・公表区分、制度上の非公表、法人番号のない相手方があり得ます。下のカバレッジ表で検索対象範囲を確認してください。</span></div>')
+
+          # Zero-hit semantics and release shell allowlist: Gbiz series.
+          replace('app/page.tsx',
+            '!/^(?:index\\.html|adoptions\\/index\\.html|official\\/index\\.html|assets\\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\\.svg)$/.test(filename)',
+            '!/^(?:index\\.html|adoptions\\/index\\.html|official\\/index\\.html|review\\/index\\.html|assets\\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\\.svg)$/.test(filename)')
+          replace('app/page.tsx',
+            'dataMode === "unavailable" ? "明細データを取得できません" : "該当するレコードがありません"',
+            'dataMode === "unavailable" ? "明細データを取得できません" : "収録済みのGビズINFO掲載行では確認できませんでした"')
+          replace('app/page.tsx',
+            'dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "検索語や条件を変えてください。"',
+            'dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "これは経産省関係の資金を受けていないという意味ではありません。GビズINFOに法人番号付きで掲載された収録行の範囲で確認できなかった結果です。"')
+
+          # Official coverage matrix and fourth reference series.
+          page=Path('app/official/page.tsx'); s=page.read_text()
+          marker='''  const currentVerifiedSourceCount = verifiedSourceCount - carryForwardSourceCount;\n  if (currentVerifiedSourceCount < 0) throw new Error("公式資料manifestの今回検証件数が不正です");'''
+          insert=marker+'''\n  const matrixYears = [...new Set([...years, ...attemptedYears])].sort((a, b) => a - b);\n  const coverageCell = (executorId: string, fiscalYear: number, category: "contract_result" | "grant_decision") => {\n    const docs = sourceDocuments.filter((source) => source.executorId === executorId && source.fiscalYear === fiscalYear && source.category === category);\n    const failures = sourceFailures.filter((source) => source.executorId === executorId && source.fiscalYear === fiscalYear\n      && (category === "contract_result" ? /契約|入札|随意/.test(source.kind) : /補助|交付/.test(source.kind)));\n    const records = docs.reduce((sum, source) => sum + source.records, 0);\n    const carried = docs.some((source) => source.carryForwardUsed);\n    if (carried) return { label: `継続 ${records.toLocaleString("ja-JP")}行`, className: "watch" };\n    if (records > 0) return { label: `${records.toLocaleString("ja-JP")}行`, className: "ready" };\n    if (docs.length > 0) return { label: "0件確認", className: "zero" };\n    if (failures.length > 0) return { label: "要確認", className: "watch" };\n    return { label: "未収録", className: "no" };\n  };'''
+          if marker not in s: raise SystemExit('official coverage insertion marker missing')
+          s=s.replace(marker,insert,1)
+          s=s.replace('<h2 id="meaning-title">3系列の違い</h2>','<h2 id="meaning-title">4系列の違い</h2>',1)
+          row='''              <tr><th scope="row">補助金等の交付決定</th><td><span className="coverage-badge partial">△ {manifest.seriesCounts.grant_decision}掲載行を検索可</span></td><td>交付決定額欄の掲載値</td><td><span className="coverage-badge no">× 確定・支払・間接補助なし</span></td></tr>'''
+          if row not in s: raise SystemExit('official review row marker missing')
+          s=s.replace(row,row+'''\n              <tr><th scope="row">行政事業レビュー</th><td><a className="source-link" href="../review/">別タブで検索 ↗</a></td><td>レビューシート掲載の予算・執行・支出先額</td><td><span className="coverage-badge partial">△ 公開経路の参考情報</span></td></tr>''',1)
+          catalog='''      <section className="official-section official-catalog" aria-labelledby="catalog-title">'''
+          matrix='''      <section className="official-section coverage-matrix-section" aria-labelledby="coverage-matrix-title">\n        <div className="section-heading compact">\n          <div><p className="eyebrow">SEARCH COVERAGE</p><h2 id="coverage-matrix-title">機関×年度×系列の検索収録</h2></div>\n          <p>「未収録」は0件という意味ではありません。公式資料を検索DBへ取り込めていない状態です。</p>\n        </div>\n        <div className="coverage-year-matrix" role="region" aria-label="機関と年度ごとの契約結果・交付決定の検索収録状況" tabIndex={0}>\n          <table>\n            <thead><tr><th scope="col">執行機関</th>{matrixYears.map((y) => <th scope="col" key={y}>{y}</th>)}</tr></thead>\n            <tbody>{registry.executors.map((executor) => (\n              <tr key={executor.id}>\n                <th scope="row">{executor.name}</th>\n                {matrixYears.map((y) => {\n                  const contract = coverageCell(executor.id, y, "contract_result");\n                  const grant = coverageCell(executor.id, y, "grant_decision");\n                  return <td key={y} data-label={`${y}年度`}><span className={`matrix-state ${contract.className}`}>契 {contract.label}</span><span className={`matrix-state ${grant.className}`}>補 {grant.label}</span></td>;\n                })}\n              </tr>\n            ))}</tbody>\n          </table>\n        </div>\n        <p className="coverage-matrix-legend"><strong>契</strong>＝契約結果、<strong>補</strong>＝補助金等交付決定。0件確認は登録資料を解析して掲載行0を確認した状態です。収録ありでも、その年度の全公表区分を完全照合したことを意味しません。</p>\n      </section>\n\n'''+catalog
+          if catalog not in s: raise SystemExit('catalog marker missing')
+          s=s.replace(catalog,matrix,1); page.write_text(s)
+
+          # Styles.
+          css=Path('app/globals.css'); c=css.read_text(); marker='/* Coverage and Administrative Business Review */'
+          if marker not in c:
+            c += '''\n\n/* Coverage and Administrative Business Review */\n.coverage-matrix-section { background: #f7f4ec; }\n.coverage-year-matrix { max-width: 1440px; margin: 0 auto; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: #fff; }\n.coverage-year-matrix table { width: 100%; min-width: 1120px; border-collapse: collapse; }\n.coverage-year-matrix th, .coverage-year-matrix td { padding: 10px 9px; border-right: 1px solid #edf0ed; border-bottom: 1px solid #edf0ed; vertical-align: top; }\n.coverage-year-matrix thead th { position: sticky; top: 0; background: #f3f5f2; color: #52645d; font-size: 10px; text-align: center; }\n.coverage-year-matrix tbody th { min-width: 170px; color: var(--ink); font-size: 11px; text-align: left; }\n.matrix-state { display: block; margin: 2px 0; padding: 4px 6px; border-radius: 7px; font-size: 9px; font-weight: 800; white-space: nowrap; }\n.matrix-state.ready { background: #e2f5ec; color: #075c47; }\n.matrix-state.zero { background: #e8f1f5; color: #27566a; }\n.matrix-state.watch { background: #fff2d9; color: #805000; }\n.matrix-state.no { background: #f0f2f0; color: #75827d; }\n.coverage-matrix-legend { max-width: 1440px; margin: 12px auto 0; color: #5a6b64; font-size: 10px; line-height: 1.7; }\n.zero-result-warning { max-width: 900px; margin: 0 auto; padding: 28px; text-align: center; }\n.zero-result-warning span { max-width: 760px; line-height: 1.8; }\n.review-mode-tabs { display: flex; gap: 8px; max-width: 1440px; margin: 0 auto 16px; }\n.review-mode-tabs button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #52645d; font-weight: 800; cursor: pointer; }\n.review-mode-tabs button.active { border-color: var(--green); background: #e2f5ec; color: var(--green); }\n.review-limitations { background: #edf1eb; }\n@media (max-width: 720px) {\n  .view-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }\n  .coverage-year-matrix { border-radius: 12px; }\n  .review-mode-tabs { overflow-x: auto; }\n}\n'''
+          css.write_text(c)
+
+          # Pages build: review entry + isolated data copy.
+          vite=Path('vite.pages.config.ts'); v=vite.read_text()
+          v=v.replace('        await copyOfficialData(dataDirectory);','        await copyOfficialData(dataDirectory);\n        await copyReviewData(dataDirectory);',1)
+          v=v.replace('        official: fileURLToPath(new URL("./pages-site/official/index.html", import.meta.url)),','        official: fileURLToPath(new URL("./pages-site/official/index.html", import.meta.url)),\n        review: fileURLToPath(new URL("./pages-site/review/index.html", import.meta.url)),',1)
+          if 'async function copyReviewData' not in v:
+            v += '''\n\ntype ReviewManifest = {\n  schemaVersion: number; generatedAt: string; refreshStatus?: string; sourceUrl: string; reviewSheetYears: number[];\n  programsFile: string; paymentFiles: string[]; programCount: number; paymentCount: number; sourceReceipts: unknown[];\n};\n\nasync function copyReviewData(dataDirectory: string) {\n  const sourceDirectory = new URL("./data/review-cache/", import.meta.url);\n  const outputDirectory = new URL("./review/", new URL(`file://${dataDirectory.replace(/\\/$/, "")}/`));\n  await mkdir(outputDirectory, { recursive: true });\n  const manifestText = await readFile(new URL("manifest.json", sourceDirectory), "utf8");\n  const manifest = JSON.parse(manifestText) as ReviewManifest;\n  const receiptStateOk = Array.isArray(manifest.sourceReceipts) && (manifest.sourceReceipts.length >= 4 || manifest.refreshStatus === "cached-official-source-route-changed");\n  if (manifest.schemaVersion !== 3 || typeof manifest.generatedAt !== "string" || !manifest.sourceUrl?.startsWith("https://")\n    || !Array.isArray(manifest.reviewSheetYears) || !manifest.reviewSheetYears.length\n    || manifest.programsFile !== "programs.json" || !Array.isArray(manifest.paymentFiles) || !manifest.paymentFiles.length\n    || !Number.isSafeInteger(manifest.programCount) || !Number.isSafeInteger(manifest.paymentCount) || !receiptStateOk) throw new Error("行政事業レビューmanifestが不正です");\n  const files = [manifest.programsFile, ...manifest.paymentFiles];\n  let programs = 0; let payments = 0; const ids = new Set<string>();\n  for (const filename of files) {\n    if (filename !== "programs.json" && !/^payments-[0-9a-f]\\.json$/.test(filename)) throw new Error(`行政事業レビュー公開ファイル名が不正です: ${filename}`);\n    const text = await readFile(new URL(filename, sourceDirectory), "utf8");\n    const rows = JSON.parse(text) as Array<Record<string, unknown>>;\n    if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);\n    for (const row of rows) { if (typeof row.id !== "string" || !row.id || ids.has(row.id)) throw new Error(`行政事業レビューIDが不正または重複: ${filename}`); ids.add(row.id); }\n    if (filename === "programs.json") programs += rows.length; else payments += rows.length;\n    await writeFile(new URL(filename, outputDirectory), text);\n  }\n  if (programs !== manifest.programCount || payments !== manifest.paymentCount) throw new Error("行政事業レビューmanifestと公開行数が一致しません");\n  await writeFile(new URL("manifest.json", outputDirectory), manifestText);\n}\n'''
+          vite.write_text(v)
+
+          # Release receipt includes review data, kept separate from Gbiz and official.
+          rel=Path('scripts/write-pages-release.mjs'); r=rel.read_text()
+          if 'const reviewDirectory = new URL("review/", dataDirectory);' not in r:
+            marker='''if (officialIds.length !== officialManifest.recordCount || new Set(officialIds).size !== officialIds.length) {\n  throw new Error("公開releaseの公式資料行数またはID一意性が不正です");\n}\n'''
+            block=marker+'''\nconst reviewDirectory = new URL("review/", dataDirectory);\nconst reviewManifestText = await readFile(new URL("manifest.json", reviewDirectory), "utf8");\nconst reviewManifest = JSON.parse(reviewManifestText);\nif (reviewManifest.schemaVersion !== 3 || !Number.isSafeInteger(reviewManifest.programCount) || !Number.isSafeInteger(reviewManifest.paymentCount)) {\n  throw new Error("公開releaseの行政事業レビューmanifestが不正です");\n}\nconst reviewFiles = {};\nfor (const filename of [reviewManifest.programsFile, ...reviewManifest.paymentFiles]) {\n  const fileUrl = new URL(filename, reviewDirectory); const text = await readFile(fileUrl, "utf8"); const rows = JSON.parse(text);\n  if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);\n  reviewFiles[filename] = { sha256: sha256(text), bytes: (await stat(fileUrl)).size, rows: rows.length };\n}\n'''
+            if marker not in r: raise SystemExit('release review marker missing')
+            r=r.replace(marker,block,1)
+            r=r.replace('''  files,\n  official: {''','''  files,\n  review: {\n    generatedAt: reviewManifest.generatedAt,\n    reviewSheetYears: reviewManifest.reviewSheetYears,\n    programCount: reviewManifest.programCount,\n    paymentCount: reviewManifest.paymentCount,\n    manifestSha256: sha256(reviewManifestText),\n    files: reviewFiles,\n  },\n  official: {''',1)
+          rel.write_text(r)
+
+          # README: 3 independent series and review limitations.
+          readme=Path('README.md'); m=readme.read_text()
+          m=m.replace('意味の異なる次の2系列を混ぜずに検索する非公式サイトです。','意味の異なる次の3系列を混ぜずに検索する非公式サイトです。',1)
+          bullet='- 経済産業省本省、外局、地方経済産業局等13機関の公開済み契約結果・補助金等交付決定の一部'
+          if '- 行政事業レビュー公式CSV' not in m:
+            m=m.replace(bullet,bullet+'\n- 行政事業レビュー公式CSVの事業・予算執行・支出先・公開支出経路（別系列）',1)
+            marker='## 表示値の意味'
+            section='''## 行政事業レビュー（別系列）\n\n`/review/` では、行政事業レビューの公式CSVから取得済みの経済産業省の事業・予算執行・支出先・公開支出経路を検索します。契約結果・交付決定・GビズINFOとは意味が異なるため、別データ・別画面・別更新workflowとして管理し、相互に合算しません。\n\n- 支出先の金額は公式CSVの「支出先の合計支出額」掲載値です。契約額・交付決定額・実支払額と同一視しません。\n- 上流・中間・終端の支出先が同じ資金経路に現れる場合があるため、レビュー内でも階層を跨いで足し上げません。\n- 未収録年度、移行年度の詳細欠落、レビューシート自体の非掲載があるため、検索0件を「資金を受けていない」と解釈しません。\n- 2026-08-15時点ではRSシステムの直接CSV配布経路変更を検知しているため、2026-08-06に公式CSVから取得できていた2024・2025年度の最終検証済みキャッシュを保持しています。新しい値を推測補完していません。\n- `.github/workflows/update-review-data.yml` はGビズINFO・公式契約/交付決定とは独立して更新を試行し、取得に成功した場合のみreview dataを置き換えます。\n\n'''+marker
+            m=m.replace(marker,section,1)
+          m=m.replace('公開用データは年度別の `commitments-*.json` とmanifestだけです。行政事業レビュー由来のデータは現行サイトの取込・表示・公開対象に含めません。','公開用GビズINFOデータは年度別の `commitments-*.json` とmanifestです。公式資料は `data/official/`、行政事業レビューは独立した `data/review-cache/` から、それぞれ検証済みファイルだけを公開します。3系列は相互に合算しません。',1)
+          m=m.replace('npm run update:official\nnpm run update:data','npm run update:official\nnpm run update:review\nnpm run update:data',1)
+          readme.write_text(m)
+          PY
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/official/OfficialSearch.tsx app/official/page.tsx app/page.tsx app/globals.css vite.pages.config.ts scripts/write-pages-release.mjs README.md
+          git commit -m "feat(ui): expose coverage gaps and restore review series"
+          git push
