@@ -1,0 +1,42 @@
+name: Replay Chubu FY2020-FY2021
+on:
+  push:
+    paths: [".github/workflows/replay-chubu-fy2020-2021.yml"]
+permissions:
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Strict replay 12 verified PDFs
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { parseOfficialPdf } from './scripts/official-pdf.mjs';
+          import {
+            CHUBU_FY2020_GRANT_DOCUMENTS,
+            CHUBU_FY2020_CONTRACT_DOCUMENTS,
+            CHUBU_FY2021_GRANT_DOCUMENTS,
+            CHUBU_FY2021_CONTRACT_DOCUMENTS,
+          } from './scripts/official-chubu-fy2020-2021-sources.mjs';
+          const docs=[...CHUBU_FY2021_GRANT_DOCUMENTS,...CHUBU_FY2021_CONTRACT_DOCUMENTS,...CHUBU_FY2020_GRANT_DOCUMENTS,...CHUBU_FY2020_CONTRACT_DOCUMENTS];
+          let total=0;
+          for(const doc of docs){
+            console.log(`START ${doc.id} ${doc.url}`);
+            const r=await fetch(doc.url,{headers:{'user-agent':'Mozilla/5.0','accept':'application/pdf,*/*;q=0.8'}});
+            if(!r.ok) throw new Error(`${doc.id}: HTTP ${r.status}`);
+            const b=Buffer.from(await r.arrayBuffer());
+            console.log(`FETCH ${doc.id} bytes=${b.length}`);
+            const records=await parseOfficialPdf(b,doc);
+            total+=records.length;
+            console.log(`PASS ${doc.id} rows=${records.length}`);
+          }
+          if(total!==561) throw new Error(`historical Chubu strict total mismatch ${total}/561`);
+          console.log(`STRICT PASS total=${total} documents=${docs.length}`);
+          NODE
