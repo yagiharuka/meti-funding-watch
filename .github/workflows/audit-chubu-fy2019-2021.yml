@@ -9,34 +9,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect WARP frontend scripts for PDF download endpoint
+      - name: Inspect all WARP frontend JS assets
         shell: bash
         run: |
           set -euo pipefail
           curl -sS -f -A 'Mozilla/5.0' 'https://warp.ndl.go.jp/' -o /tmp/home.html
           echo HOME_SIZE=$(wc -c < /tmp/home.html)
+          echo '=== JS REFERENCES ==='
+          grep -Eo '(/[^"'"' <>]+\.js[^"'"' <>]*)' /tmp/home.html | sort -u | tee /tmp/jsrefs.txt || true
+          echo '=== ASTRO/MODULE REFERENCES ==='
+          grep -Ein 'astro|modulepreload|client:|component-url|renderer-url|\.js' /tmp/home.html | head -300 || true
           python - <<'PY'
-          from html.parser import HTMLParser
+          import re
           from urllib.parse import urljoin
-          class P(HTMLParser):
-              def __init__(self): super().__init__(); self.s=[]
-              def handle_starttag(self,t,a):
-                  if t=='script':
-                      u=dict(a).get('src')
-                      if u: self.s.append(urljoin('https://warp.ndl.go.jp/',u))
-          p=P(); p.feed(open('/tmp/home.html',errors='replace').read())
-          p.s=list(dict.fromkeys(p.s))
-          print('SCRIPTS',len(p.s))
-          for u in p.s: print(u)
-          open('/tmp/scripts.txt','w').write('\n'.join(p.s)+'\n')
+          h=open('/tmp/home.html',errors='replace').read()
+          refs=re.findall(r'(?:src|href|component-url|renderer-url)=["\']([^"\']+\.js[^"\']*)',h,re.I)
+          refs += re.findall(r'["\'](/assets/[^"\']+\.js[^"\']*)["\']',h)
+          refs=list(dict.fromkeys(urljoin('https://warp.ndl.go.jp/',x.replace('&amp;','&')) for x in refs))
+          print('ASSETS',len(refs))
+          for u in refs: print(u)
+          open('/tmp/assets.txt','w').write('\n'.join(refs)+'\n')
           PY
           i=0
           while IFS= read -r u; do
             [ -n "$u" ] || continue
             i=$((i+1))
-            curl -sS -f --connect-timeout 10 --max-time 30 -A 'Mozilla/5.0' "$u" -o "/tmp/s$i.js" || continue
-            echo "=== SCRIPT $i $u size=$(wc -c < /tmp/s$i.js) ==="
-            grep -Eio '.{0,180}(pdf.{0,80}download|download.{0,80}pdf|downloadPdf|pdfDownload|contentDownload|downloadUrl|download_url|rawUrl|originalUrl|memento|timemap|/api/|fetch\().{0,220}' "/tmp/s$i.js" | head -300 || true
-          done < /tmp/scripts.txt
-          echo '=== ALL ENDPOINT-LIKE STRINGS ==='
-          cat /tmp/s*.js 2>/dev/null | strings | grep -Eio '[/][A-Za-z0-9_?=&.%:-]{1,120}(download|content|resource|memento|archive|file|pdf)[A-Za-z0-9_/?=&.%:-]{0,160}' | sort -u | head -500 || true
+            curl -sS -f --connect-timeout 10 --max-time 30 -A 'Mozilla/5.0' "$u" -o "/tmp/a$i.js" || continue
+            echo "=== ASSET $i $u size=$(wc -c < /tmp/a$i.js) ==="
+            grep -Eio '.{0,180}(PDFをダウンロード|pdf.{0,120}download|download.{0,120}pdf|downloadPdf|pdfDownload|downloadUrl|download_url|rawUrl|originalUrl|memento|timemap|/api/|fetch\(|axios|blob\().{0,260}' "/tmp/a$i.js" | head -300 || true
+          done < /tmp/assets.txt
+          echo '=== UNIQUE URL/ROUTE STRINGS ==='
+          cat /tmp/a*.js 2>/dev/null | grep -Eo 'https?://[^"'"'` ]+|/[A-Za-z0-9_.?=&%:@+-]{2,180}' | grep -Ei 'download|pdf|content|resource|archive|memento|api|raw|file' | sort -u | head -500 || true
