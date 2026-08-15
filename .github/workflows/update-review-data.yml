@@ -1,0 +1,47 @@
+name: Update administrative review data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45 20 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/update-review-data.yml"
+      - "scripts/update-review-data.mjs"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: administrative-review-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Refresh administrative review official CSVs
+        run: npm run update:review
+      - name: Verify review data
+        run: node --test tests/review-data.test.mjs
+      - name: Commit refreshed review data
+        run: |
+          if git diff --quiet -- data/review-cache; then
+            echo "Administrative review data unchanged."
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/review-cache
+          git commit -m "chore(data): refresh administrative review data"
+          git push
