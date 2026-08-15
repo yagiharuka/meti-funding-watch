@@ -14,6 +14,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Replay after source-derived page-row receipt correction.
       - name: Strict replay 12 verified PDFs
         shell: bash
         run: |
