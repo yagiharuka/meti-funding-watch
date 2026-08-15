@@ -4,6 +4,7 @@ on:
     paths: [".github/workflows/replay-chubu-fy2020-2021.yml"]
 permissions:
   contents: read
+  actions: read
 jobs:
   replay:
     runs-on: ubuntu-latest
@@ -14,11 +15,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Replay after source-derived page-row receipt correction.
+      - name: Download pinned historical source artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 31861177297 -n chubu-fy2019-2021-audit-31861177297 -D .audit-chubu-hist
       - name: Strict replay 12 verified PDFs
         shell: bash
         run: |
           node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
           import { parseOfficialPdf } from './scripts/official-pdf.mjs';
           import {
             CHUBU_FY2020_GRANT_DOCUMENTS,
@@ -27,13 +33,15 @@ jobs:
             CHUBU_FY2021_CONTRACT_DOCUMENTS,
           } from './scripts/official-chubu-fy2020-2021-sources.mjs';
           const docs=[...CHUBU_FY2021_GRANT_DOCUMENTS,...CHUBU_FY2021_CONTRACT_DOCUMENTS,...CHUBU_FY2020_GRANT_DOCUMENTS,...CHUBU_FY2020_CONTRACT_DOCUMENTS];
+          const dir='.audit-chubu-hist/files';
+          const names=fs.readdirSync(dir);
           let total=0;
           for(const doc of docs){
-            console.log(`START ${doc.id} ${doc.url}`);
-            const r=await fetch(doc.url,{headers:{'user-agent':'Mozilla/5.0','accept':'application/pdf,*/*;q=0.8'}});
-            if(!r.ok) throw new Error(`${doc.id}: HTTP ${r.status}`);
-            const b=Buffer.from(await r.arrayBuffer());
-            console.log(`FETCH ${doc.id} bytes=${b.length}`);
+            const basename=new URL(doc.originalUrl).pathname.split('/').pop();
+            const name=names.find(n=>n.endsWith(`__${basename}`));
+            if(!name) throw new Error(`${doc.id}: pinned source not found ${basename}`);
+            const b=fs.readFileSync(path.join(dir,name));
+            console.log(`SOURCE ${doc.id} ${name} bytes=${b.length}`);
             const records=await parseOfficialPdf(b,doc);
             total+=records.length;
             console.log(`PASS ${doc.id} rows=${records.length}`);
