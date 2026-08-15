@@ -1,0 +1,59 @@
+name: Refresh Gbiz funding data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 21 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/refresh-gbiz-data.yml"
+      - "scripts/update-data.mjs"
+      - "scripts/gbiz-*.mjs"
+      - "scripts/gbiz-values.mjs"
+      - "data/source-registry.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gbiz-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Refresh only Gbiz series
+        run: npm run update:data
+      - name: Preserve source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gbiz-source-evidence-${{ github.run_id }}
+          path: .audit/gbiz
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Validate Gbiz snapshot before commit
+        run: node --test tests/funding-data.test.mjs tests/gbiz-refresh.test.mjs
+      - name: Commit only Gbiz data
+        run: |
+          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages; then
+            echo "Gbiz data unchanged."
+            exit 0
+          fi
+          test -z "$(git status --porcelain -- data/official data/review-cache)"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/funding-data.json data/funding-summary.json data/pages
+          git commit -m "chore(data): refresh Gbiz funding data"
+          git push
