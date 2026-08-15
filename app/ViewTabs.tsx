@@ -1,30 +1,25 @@
 type ViewTabsProps = {
-  active: "gbiz" | "adoptions" | "official";
+  active: "gbiz" | "adoptions" | "official" | "review";
 };
 
 export default function ViewTabs({ active }: ViewTabsProps) {
-  const gbizHref = active === "gbiz" ? "#top" : "../";
-  const officialHref = active === "official"
-    ? "#top"
-    : active === "gbiz" ? "official/" : "../official/";
+  const href = (target: "gbiz" | "official" | "review") => {
+    if (active === target) return "#top";
+    if (target === "gbiz") return active === "gbiz" ? "#top" : "../";
+    if (target === "official") return active === "gbiz" ? "official/" : "../official/";
+    return active === "gbiz" ? "review/" : "../review/";
+  };
 
   return (
     <nav className="view-tabs" aria-label="表示する情報">
-      <a
-        className={active === "gbiz" ? "active" : undefined}
-        href={gbizHref}
-        aria-current={active === "gbiz" ? "page" : undefined}
-      >
-        <strong>調達（委託を含む）・補助金</strong>
-        <span>GビズINFO</span>
+      <a className={active === "gbiz" ? "active" : undefined} href={href("gbiz")} aria-current={active === "gbiz" ? "page" : undefined}>
+        <strong>調達（委託を含む）・補助金</strong><span>GビズINFO</span>
       </a>
-      <a
-        className={active === "official" ? "active" : undefined}
-        href={officialHref}
-        aria-current={active === "official" ? "page" : undefined}
-      >
-        <strong>契約結果・交付決定</strong>
-        <span>経産省・各機関の公式資料</span>
+      <a className={active === "official" ? "active" : undefined} href={href("official")} aria-current={active === "official" ? "page" : undefined}>
+        <strong>契約結果・交付決定</strong><span>経産省・各機関の公式資料</span>
+      </a>
+      <a className={active === "review" ? "active" : undefined} href={href("review")} aria-current={active === "review" ? "page" : undefined}>
+        <strong>行政事業レビュー</strong><span>事業・執行・支出先（別系列）</span>
       </a>
     </nav>
   );
