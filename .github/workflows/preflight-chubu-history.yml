@@ -1,0 +1,184 @@
+name: Preflight Chubu FY2019-FY2021 integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/preflight-chubu-history.yml"
+      - ".openai/chubu-history-changes.b64"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Restore the reviewed candidate bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .openai/chubu-history-changes.b64 > /tmp/chubu-history-changes.tgz
+          echo "2c1228d01bdd6a31d139e2ba2b5e76a4f677478a76dd2e409af8b7e026082b16  /tmp/chubu-history-changes.tgz" | sha256sum --check --strict
+          python - <<'PY'
+          from pathlib import Path
+          import tarfile
+
+          expected = [
+              "scripts/official-pdf.mjs",
+              "scripts/official-chubu-fy2020-2021-sources.mjs",
+              "scripts/update-official-data.mjs",
+              "scripts/read-legacy-xls.py",
+              "scripts/official-chubu-fy2019-sources.mjs",
+              "scripts/official-chubu-sources.mjs",
+              "tests/official-chubu-history.test.mjs",
+              "package.json",
+          ]
+          with tarfile.open("/tmp/chubu-history-changes.tgz", "r:gz") as archive:
+              members = archive.getmembers()
+              names = [member.name for member in members]
+              if names != expected:
+                  raise SystemExit(f"candidate member list mismatch: {names!r}")
+              for member in members:
+                  if not member.isfile() or member.name.startswith("/") or ".." in Path(member.name).parts:
+                      raise SystemExit(f"unsafe candidate member: {member.name}")
+                  source = archive.extractfile(member)
+                  if source is None:
+                      raise SystemExit(f"candidate member unreadable: {member.name}")
+                  target = Path(member.name)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(source.read())
+          PY
+          node --check scripts/official-pdf.mjs
+          node --check scripts/official-chubu-fy2020-2021-sources.mjs
+          node --check scripts/official-chubu-fy2019-sources.mjs
+          node --check scripts/official-chubu-sources.mjs
+          node --check scripts/update-official-data.mjs
+          node --check tests/official-chubu-history.test.mjs
+          python -m py_compile scripts/read-legacy-xls.py
+
+      - name: Vendor the pinned legacy XLS reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf scripts/vendor/python
+          mkdir -p scripts/vendor/python
+          python -m pip install --disable-pip-version-check --no-cache-dir --target scripts/vendor/python xlrd==2.0.1
+          find scripts/vendor/python -type d -name __pycache__ -prune -exec rm -rf {} +
+          test -f scripts/vendor/python/xlrd/__init__.py
+          test -f scripts/vendor/python/xlrd-2.0.1.dist-info/LICENSE
+
+      - name: Download the byte-pinned historical source artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/chubu-history
+          gh run download 31861177297 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name chubu-fy2019-2021-audit-31861177297 \
+            --dir /tmp/chubu-history
+          test "$(find /tmp/chubu-history/files -maxdepth 1 -type f | wc -l)" -eq 18
+
+      - name: Install the 18 verified originals as bootstrap evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/official-bootstrap
+          while IFS='|' read -r source target; do
+            install -m 0644 "/tmp/chubu-history/files/$source" "evidence/official-bootstrap/$target"
+          done <<'EOF'
+          01__r3fy-4-9-hojyokin.pdf|chubu-2021-grant-decisions-h1.pdf
+          02__r3fy-10-3hojyokin.pdf|chubu-2021-grant-decisions-h2.pdf
+          03__r2fy-4-9hojyokin.pdf|chubu-2020-grant-decisions-h1.pdf
+          04__r2fy-10-3-hojyokin.pdf|chubu-2020-grant-decisions-h2.pdf
+          05__r1fy-4-9hojyokin.xlsx|chubu-2019-grant-decisions-h1.xlsx
+          06__r1fy-10-3hojyokin.xlsx|chubu-2019-grant-decisions-h2.xlsx
+          07__21-nyusatsu-itaku.pdf|chubu-2021-competitive-commission.pdf
+          08__21-ukeoi.pdf|chubu-2021-competitive-goods.pdf
+          09__20-nyusatsu-itaku.pdf|chubu-2020-competitive-commission.pdf
+          10__20-ukeoi.pdf|chubu-2020-competitive-goods.pdf
+          11__19_nyusatsu_itaku.xlsx|chubu-2019-competitive-commission.xlsx
+          12__19-ukeoi.xlsx|chubu-2019-competitive-goods.xlsx
+          13__21-zuikei-itaku.pdf|chubu-2021-discretionary-commission.pdf
+          14__21-zuikei-ukeoi.pdf|chubu-2021-discretionary-goods.pdf
+          15__20-zuikei-itaku.pdf|chubu-2020-discretionary-commission.pdf
+          16__20-zuikei-ukeoi.pdf|chubu-2020-discretionary-goods.pdf
+          17__19-zuikei-itaku.xls|chubu-2019-discretionary-commission.xls
+          18__19-zuikei-ukeoi.xls|chubu-2019-discretionary-goods.xls
+          EOF
+          test "$(find evidence/official-bootstrap -maxdepth 1 -type f -name 'chubu-20*' | wc -l)" -ge 18
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Strictly replay the affected parsers and receipts
+        run: >-
+          node --test
+          tests/official-chubu-history.test.mjs
+          tests/official-chubu-sources.test.mjs
+          tests/official-pdf.test.mjs
+          tests/official-data.test.mjs
+          tests/official-evidence-receipts.test.mjs
+
+      - name: Build the candidate official dataset
+        env:
+          OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
+        run: npm run update:official
+
+      - name: Verify the exact candidate continuity and coverage
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFile } from "node:fs/promises";
+
+          const manifest = JSON.parse(await readFile("data/official/manifest.json", "utf8"));
+          assert.equal(manifest.recordCount, 19_350);
+          assert.equal(manifest.coverage.sourceDocumentCount, 458);
+          assert.equal(manifest.coverage.failedSourceDocumentCount, 0);
+          assert.equal(manifest.sourceFailures.length, 0);
+          assert.deepEqual(manifest.seriesCounts, {
+            contract_result: 8_191,
+            grant_decision: 11_159,
+          });
+          assert.equal(manifest.continuity.retainedRecordCount, 18_473);
+          assert.equal(manifest.continuity.addedRecordCount, 877);
+          assert.equal(manifest.continuity.changedRecordCount, 0);
+          assert.deepEqual(manifest.continuity.changes, []);
+
+          const chubu = manifest.coverage.executors.chubu;
+          assert.deepEqual(chubu.fiscalYears, [2019, 2020, 2021, 2022, 2023, 2024]);
+          assert.equal(chubu.grantDecisions.records, 1_555);
+          assert.equal(chubu.contractResults.records, 396);
+
+          const historical = manifest.sourceDocuments.filter((document) =>
+            document.executorId === "chubu" && [2019, 2020, 2021].includes(document.fiscalYear));
+          assert.equal(historical.length, 18);
+          assert.equal(historical.reduce((sum, document) => sum + document.records, 0), 877);
+          assert.ok(historical.every((document) => document.evidenceVerified === true));
+          assert.ok(historical.every((document) =>
+            document.parserRevision === "official-parser-2026-08-15-chubu-history-v1"));
+          assert.ok(historical.every((document) =>
+            document.evidenceExpectedSha256 === document.sha256));
+          console.log("PRE-FLIGHT MANIFEST PASS", {
+            records: manifest.recordCount,
+            sources: manifest.coverage.sourceDocumentCount,
+            chubu: chubu.grantDecisions.records + chubu.contractResults.records,
+          });
+          NODE
+
+      - name: Run the complete Pages regression suite
+        run: npm run test:pages
