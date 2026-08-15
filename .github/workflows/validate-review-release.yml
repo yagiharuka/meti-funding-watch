@@ -17,3 +17,4 @@ jobs:
       - run: npm ci
       - name: Full Pages regression gate
         run: npm run test:pages
+      # This workflow is intentionally self-triggered for release preflight reruns.
