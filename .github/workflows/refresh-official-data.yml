@@ -1,0 +1,59 @@
+name: Refresh official funding data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 20 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/refresh-official-data.yml"
+      - "scripts/update-official-data.mjs"
+      - "scripts/official-*.mjs"
+      - "data/official-source-registry.json"
+      - "evidence/official-bootstrap/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: official-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Refresh only official contract and grant series
+        run: npm run update:official
+      - name: Preserve official source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: official-source-evidence-${{ github.run_id }}
+          path: .audit/official
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Validate official snapshot before commit
+        run: node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs
+      - name: Commit only official data
+        run: |
+          if git diff --quiet -- data/official; then
+            echo "Official data unchanged."
+            exit 0
+          fi
+          test -z "$(git status --porcelain -- data/funding-data.json data/funding-summary.json data/pages data/review-cache)"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/official
+          git commit -m "chore(data): refresh official funding data"
+          git push
