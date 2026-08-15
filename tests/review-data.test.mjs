@@ -9,7 +9,15 @@ test("publishes administrative review as an isolated verified series", async () 
   assert.equal(manifest.schemaVersion, 3);
   assert.match(manifest.sourceUrl, /^https:\/\//);
   assert.ok(Array.isArray(manifest.reviewSheetYears) && manifest.reviewSheetYears.length > 0);
-  assert.ok(Array.isArray(manifest.sourceReceipts) && manifest.sourceReceipts.length >= manifest.reviewSheetYears.length * 4);
+  assert.ok(Array.isArray(manifest.sourceReceipts));
+  if (manifest.refreshStatus === "cached-official-source-route-changed") {
+    assert.equal(manifest.sourceReceipts.length, 0);
+    assert.match(manifest.bootstrapProvenance?.commit ?? "", /^[0-9a-f]{40}$/);
+    assert.match(manifest.bootstrapProvenance?.description ?? "", /公式CSV/);
+    assert.match(manifest.lastSuccessfulSourceRefresh ?? "", /^\d{4}-\d{2}-\d{2}$/);
+  } else {
+    assert.ok(manifest.sourceReceipts.length >= manifest.reviewSheetYears.length * 4);
+  }
   assert.equal(manifest.programsFile, "programs.json");
   assert.ok(manifest.paymentFiles.every((name) => /^payments-[0-9a-f]\.json$/.test(name)));
   const programs = JSON.parse(await readFile(new URL(manifest.programsFile, root), "utf8"));
