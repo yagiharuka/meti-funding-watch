@@ -1,0 +1,94 @@
+name: Audit Chubu FY2019-FY2021 sources
+on:
+  push:
+    paths: [".github/workflows/audit-chubu-fy2019-2021.yml"]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fetch index and historical sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .audit-chubu-hist/files
+          INDEX='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' "$INDEX" -o .audit-chubu-hist/index.html
+          python - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin
+          class P(HTMLParser):
+              def __init__(self): super().__init__(); self.a=[]
+              def handle_starttag(self, tag, attrs):
+                  if tag=='a':
+                      d=dict(attrs); h=d.get('href')
+                      if h: self.a.append(h)
+          s=Path('.audit-chubu-hist/index.html').read_text(errors='replace')
+          p=P(); p.feed(s)
+          base='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          keys=('r3fy','r2fy','r1fy','21-','20-','19-','2019','2020','2021')
+          hits=[]
+          for h in p.a:
+              low=h.lower()
+              if any(k in low for k in keys) and (low.endswith('.pdf') or low.endswith('.xlsx') or low.endswith('.xls')):
+                  hits.append(urljoin(base,h))
+          for u in dict.fromkeys(hits): print(u)
+          Path('.audit-chubu-hist/urls.txt').write_text('\n'.join(dict.fromkeys(hits))+'\n')
+          PY
+          echo '=== HISTORICAL URLS ==='
+          cat .audit-chubu-hist/urls.txt
+          i=0
+          while IFS= read -r u; do
+            [ -n "$u" ] || continue
+            i=$((i+1))
+            fn=$(basename "${u%%\?*}")
+            out=".audit-chubu-hist/files/${i}__${fn}"
+            curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -e "$INDEX" "$u" -o "$out"
+            printf '%02d\t%s\t%s\t%s\n' "$i" "$(wc -c < "$out")" "$(sha256sum "$out" | cut -d' ' -f1)" "$u"
+          done < .audit-chubu-hist/urls.txt | tee .audit-chubu-hist/receipts.tsv
+      - name: Inspect file structures
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+          import XLSX from 'xlsx';
+          const dir='.audit-chubu-hist/files';
+          for (const name of fs.readdirSync(dir).sort()) {
+            const p=path.join(dir,name); const b=fs.readFileSync(p);
+            console.log(`\n=== ${name} bytes=${b.length} sha=${(await import('node:crypto')).createHash('sha256').update(b).digest('hex')} ===`);
+            if (b.subarray(0,5).toString('ascii') === '%PDF-') {
+              const pdf=await pdfjsLib.getDocument({data:new Uint8Array(b)}).promise;
+              console.log('PDF pages',pdf.numPages);
+              for(let n=1;n<=pdf.numPages;n++){
+                const page=await pdf.getPage(n); const vp=page.getViewport({scale:1}); const tc=await page.getTextContent();
+                const items=tc.items.filter(x=>x.str?.trim());
+                const dates=items.filter(x=>/^(?:令和\s*[23]年|20(?:19|20|21)年|20(?:19|20|21)\/)/.test(x.str.trim()));
+                console.log(`p${n} size=${vp.width}x${vp.height} items=${items.length} dateLike=${dates.length}`);
+                if(n===1) console.log('HEAD',items.slice(0,80).map(x=>`${Math.round(x.transform[4])},${Math.round(x.transform[5])}:${x.str}`).join(' | '));
+              }
+            } else {
+              try {
+                const wb=XLSX.read(b,{type:'buffer',cellDates:false,raw:true});
+                console.log('XLSX sheets',wb.SheetNames);
+                for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); console.log('SHEET',sn,'ref',ws['!ref'],'rows',rows.length); console.log('HEADROWS',JSON.stringify(rows.slice(0,8))); }
+              } catch(e) { console.log('NONPDF parse error',e.message); }
+            }
+          }
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chubu-fy2019-2021-audit-${{ github.run_id }}
+          path: .audit-chubu-hist
+          include-hidden-files: true
+          retention-days: 90
