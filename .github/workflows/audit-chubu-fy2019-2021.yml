@@ -9,109 +9,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Resolve exact historical hrefs from saved official index
+      - name: Fetch one source with WARP index session
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .audit-chubu-hist/files .audit-chubu-hist/headers
           INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
-          curl -fL --retry 3 --retry-all-errors -A 'Mozilla/5.0' "$INDEX" -o .audit-chubu-hist/index.html
-          python - <<'PY'
-          from pathlib import Path
-          from html.parser import HTMLParser
-          from urllib.parse import urljoin
-          class P(HTMLParser):
-              def __init__(self): super().__init__(); self.a=[]
-              def handle_starttag(self, tag, attrs):
-                  if tag=='a':
-                      h=dict(attrs).get('href')
-                      if h: self.a.append(h)
-          s=Path('.audit-chubu-hist/index.html').read_text(errors='replace')
-          p=P(); p.feed(s)
-          base='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
-          keys=('r3fy','r2fy','21-','20-')
-          originals=[]
-          for h in p.a:
-              low=h.lower().split('?')[0]
-              historical_pdf=any(k in low for k in keys) and low.endswith('.pdf')
-              legacy_excel='/a41kaikei/kouhyou/data/' in low and low.endswith(('.xlsx','.xls'))
-              if historical_pdf or legacy_excel:
-                  old=urljoin(base,h)
-                  original='https://'+old.split('/https://',1)[1]
-                  originals.append(original)
-          originals=list(dict.fromkeys(originals))
-          assert len(originals)==18, len(originals)
-          Path('.audit-chubu-hist/original-urls.txt').write_text('\n'.join(originals)+'\n')
-          for u in originals: print(u)
-          PY
-      - name: Fetch all 18 via WARP Memento TimeGate
-        shell: bash
-        run: |
-          set -euo pipefail
-          i=0
-          : > .audit-chubu-hist/receipts.tsv
-          : > .audit-chubu-hist/resolved-urls.tsv
-          while IFS= read -r original; do
-            [ -n "$original" ] || continue
-            i=$((i+1))
-            fn=$(basename "${original%%\?*}")
-            hdr=".audit-chubu-hist/headers/${i}.txt"
-            tg="https://warp.ndl.go.jp/collections/$original"
-            curl -sS -D "$hdr" -o /dev/null \
-              -H 'Accept-Datetime: Mon, 01 Jun 2026 01:14:04 GMT' \
-              -A 'Mozilla/5.0' "$tg"
-            loc=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); print substr($0,11)}' "$hdr" | tail -1)
-            test -n "$loc"
-            case "$loc" in
-              http*) resolved="$loc" ;;
-              /*) resolved="https://warp.ndl.go.jp$loc" ;;
-              *) echo "bad Location: $loc" >&2; exit 1 ;;
-            esac
-            out=".audit-chubu-hist/files/${i}__${fn}"
-            curl -sS -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' "$resolved" -o "$out"
-            bytes=$(wc -c < "$out")
-            sha=$(sha256sum "$out" | cut -d' ' -f1)
-            magic=$(xxd -p -l 8 "$out")
-            printf '%02d\t%s\t%s\t%s\t%s\n' "$i" "$bytes" "$sha" "$magic" "$original" | tee -a .audit-chubu-hist/receipts.tsv
-            printf '%02d\t%s\n' "$i" "$resolved" >> .audit-chubu-hist/resolved-urls.tsv
-          done < .audit-chubu-hist/original-urls.txt
-          test "$i" -eq 18
-      - name: Inspect structures and row candidates
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto';
-          import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'; import XLSX from 'xlsx';
-          const dir='.audit-chubu-hist/files';
-          for (const name of fs.readdirSync(dir).sort((a,b)=>Number(a.split('__')[0])-Number(b.split('__')[0]))) {
-            const p=path.join(dir,name), b=fs.readFileSync(p);
-            console.log(`\n=== ${name} bytes=${b.length} sha=${crypto.createHash('sha256').update(b).digest('hex')} ===`);
-            if (b.subarray(0,5).toString('ascii')==='%PDF-') {
-              const pdf=await pdfjsLib.getDocument({data:new Uint8Array(b)}).promise; let total=0;
-              console.log('PDF pages',pdf.numPages);
-              for(let n=1;n<=pdf.numPages;n++){
-                const page=await pdf.getPage(n), vp=page.getViewport({scale:1}), tc=await page.getTextContent();
-                const items=tc.items.filter(x=>x.str?.trim()); total+=items.length;
-                const dateLike=items.filter(x=>/^(?:20(?:19|20|21|22)[/.年]|令和\s*[1234]年)/.test(x.str.trim()));
-                console.log(`p${n} size=${vp.width}x${vp.height} items=${items.length} dateLike=${dateLike.length}`);
-                if(n===1) console.log('HEAD',items.slice(0,120).map(x=>`${Math.round(x.transform[4])},${Math.round(x.transform[5])}:${x.str}`).join(' | '));
-              }
-              console.log('TOTAL_ITEMS',total);
-            } else {
-              const wb=XLSX.read(b,{type:'buffer',cellDates:false,raw:true}); console.log('WORKBOOK sheets',wb.SheetNames);
-              for(const sn of wb.SheetNames){const ws=wb.Sheets[sn]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); console.log('SHEET',sn,'ref',ws['!ref'],'rows',rows.length); console.log('HEADROWS',JSON.stringify(rows.slice(0,12)));}
-            }
-          }
-          NODE
-      - uses: actions/upload-artifact@v4
-        with:
-          name: chubu-fy2019-2021-audit-${{ github.run_id }}
-          path: .audit-chubu-hist
-          include-hidden-files: true
-          retention-days: 90
+          ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
+          curl -sS -fL -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36' -c /tmp/cookies "$INDEX" -o /tmp/index.html
+          TG="https://warp.ndl.go.jp/collections/$ORIGINAL"
+          curl -sS -D /tmp/tg.headers -o /dev/null -b /tmp/cookies -c /tmp/cookies \
+            -H 'Accept-Datetime: Mon, 01 Jun 2026 01:14:04 GMT' \
+            -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+            -H 'Sec-Fetch-Site: same-origin' -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Dest: document' \
+            -e "$INDEX" -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36' "$TG"
+          cat /tmp/tg.headers
+          loc=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); print substr($0,11)}' /tmp/tg.headers | tail -1)
+          resolved="https://warp.ndl.go.jp$loc"
+          echo "$resolved"
+          curl -sS -D /tmp/get.headers -o /tmp/source.bin -b /tmp/cookies -c /tmp/cookies \
+            -H 'Accept: application/pdf,application/octet-stream;q=0.9,*/*;q=0.8' \
+            -H 'Sec-Fetch-Site: same-origin' -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Dest: document' \
+            -e "$INDEX" -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36' "$resolved" || true
+          cat /tmp/get.headers
+          wc -c /tmp/source.bin
+          xxd -l 32 /tmp/source.bin
+          head -c 500 /tmp/source.bin | strings | head || true
+          grep -q '^HTTP/.* 200' /tmp/get.headers
+          test "$(head -c 5 /tmp/source.bin)" = '%PDF-'
