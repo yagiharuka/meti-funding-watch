@@ -8,33 +8,31 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe official review endpoints
+      - name: Inspect current RS frontend assets
         shell: bash
         run: |
           python - <<'PY'
-          import urllib.request, urllib.error
-          from urllib.parse import quote
-          urls=[
-            'https://rssystem.go.jp/api/projects/fiscal-years/',
-            'https://rssystem.go.jp/download-csv',
-          ]
-          for year in (2024,2025,2026):
-            for fn in (
-              f'1-1_RS_{year}_基本情報_組織情報.zip',
-              f'2-1_RS_{year}_予算・執行_サマリ.zip',
-              f'5-1_RS_{year}_支出先_支出情報.zip',
-              f'5-2_RS_{year}_支出先_支出ブロックのつながり.zip',
-            ):
-              urls.append('https://rssystem.go.jp/files/'+str(year)+'/rs/'+quote(fn))
-          for u in urls:
+          import re, urllib.request
+          from urllib.parse import urljoin
+          headers={'User-Agent':'Mozilla/5.0','Accept':'text/html,*/*'}
+          root='https://rssystem.go.jp/download-csv'
+          html=urllib.request.urlopen(urllib.request.Request(root,headers=headers),timeout=30).read().decode('utf-8','replace')
+          print('HTML',repr(html))
+          assets=[]
+          for src in re.findall(r'(?:src|href)=["\']([^"\']+\.(?:js|mjs|css)[^"\']*)',html):
+            u=urljoin(root,src)
+            if u not in assets: assets.append(u)
+          print('ASSETS',assets)
+          for u in assets:
             try:
-              req=urllib.request.Request(u,headers={'User-Agent':'meti-funding-watch/0.1 (+public-data-research)','Accept':'*/*'})
-              with urllib.request.urlopen(req,timeout=30) as r:
-                data=r.read(100)
-                print('OK',r.status,r.headers.get('content-type'),r.headers.get('content-length'),r.geturl(),data[:20].hex())
-            except urllib.error.HTTPError as e:
-              body=e.read(200)
-              print('HTTP',e.code,e.headers.get('content-type'),u,body[:80])
+              body=urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read()
             except Exception as e:
-              print('ERR',u,repr(e))
+              print('ASSET_ERR',u,repr(e)); continue
+            text=body.decode('utf-8','replace')
+            print('ASSET',u,'bytes',len(body))
+            terms=['download-csv','fiscal-years','files/','支出先_支出情報','基本情報_組織情報','.zip','/api/','csv']
+            for term in terms:
+              positions=[m.start() for m in re.finditer(re.escape(term),text,re.I)]
+              for pos in positions[:12]:
+                print('HIT',term,repr(text[max(0,pos-300):pos+500]))
           PY
