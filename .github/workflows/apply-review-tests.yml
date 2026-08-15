@@ -1,0 +1,54 @@
+name: Apply review UI regression tests
+on:
+  push:
+    paths: [".github/workflows/apply-review-tests.yml"]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Update tests for coverage and review semantics
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          def rep(path, old, new, n=1):
+            p=Path(path); s=p.read_text()
+            if old not in s: raise SystemExit(f'marker missing {path}: {old[:100]!r}')
+            p.write_text(s.replace(old,new,n))
+
+          p='tests/funding-data.test.mjs'
+          rep(p, '該当するレコードがありません', '収録済みのGビズINFO掲載行では確認できませんでした')
+
+          p='tests/ui-accuracy.test.mjs'; s=Path(p).read_text()
+          if 'reviewPageSource' not in s:
+            anchor='''const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");'''
+            insert=anchor+'''\nconst reviewPageSource = await readFile(new URL("../app/review/page.tsx", import.meta.url), "utf8");\nconst reviewSearchSource = await readFile(new URL("../app/review/ReviewSearch.tsx", import.meta.url), "utf8");\nconst reviewHtmlSource = await readFile(new URL("../pages-site/review/index.html", import.meta.url), "utf8");'''
+            if anchor not in s: raise SystemExit('ui anchor missing')
+            s=s.replace(anchor,insert,1)
+          s=s.replace('意味の異なる次の2系列', '意味の異なる次の3系列')
+          add='''\n\ntest("exposes review as a separate series and makes zero-hit semantics explicit", () => {\n  assert.match(reviewPageSource, /行政事業レビュー/);\n  assert.match(reviewPageSource, /別の参考系列/);\n  assert.match(reviewSearchSource, /0件でも「資金を受けていない」とは判断できません/);\n  assert.match(reviewSearchSource, /他系列と合算不可/);\n  assert.match(reviewSearchSource, /鮮度要確認/);\n  assert.match(reviewHtmlSource, /行政事業レビュー/);\n  assert.match(officialPageSource, /機関×年度×系列の検索収録/);\n  assert.match(officialSearchSource, /収録済みの公式資料では確認できませんでした/);\n  assert.match(pageSource, /収録済みのGビズINFO掲載行では確認できませんでした/);\n});\n'''
+          if 'exposes review as a separate series and makes zero-hit semantics explicit' not in s: s += add
+          Path(p).write_text(s)
+
+          p='tests/rendered-html.test.mjs'; s=Path(p).read_text()
+          if 'reviewHtml' not in s:
+            anchor='''const officialHtml = await readFile(new URL("../dist-pages/official/index.html", import.meta.url), "utf8");'''
+            if anchor in s: s=s.replace(anchor,anchor+'\nconst reviewHtml = await readFile(new URL("../dist-pages/review/index.html", import.meta.url), "utf8");',1)
+            else:
+              # tolerate alternate variable naming; append a direct declaration after imports.
+              import_anchor='''import test from "node:test";'''
+              if import_anchor not in s: raise SystemExit('rendered imports marker missing')
+              s=s.replace(import_anchor,import_anchor+'\n\nconst reviewHtml = await readFile(new URL("../dist-pages/review/index.html", import.meta.url), "utf8");',1)
+          add='''\n\ntest("renders coverage and administrative review entrypoints", () => {\n  assert.match(reviewHtml, /行政事業レビュー/);\n  const publicUi = [html, officialHtml, reviewHtml].join("\\n");\n  assert.match(publicUi, /行政事業レビュー/);\n  assert.match(publicUi, /機関×年度×系列の検索収録/);\n  assert.match(publicUi, /収録済みの公式資料では確認できませんでした/);\n});\n'''
+          if 'renders coverage and administrative review entrypoints' not in s: s += add
+          Path(p).write_text(s)
+          PY
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/funding-data.test.mjs tests/ui-accuracy.test.mjs tests/rendered-html.test.mjs
+          git commit -m "test(ui): cover review series and negative-search warnings"
+          git push
