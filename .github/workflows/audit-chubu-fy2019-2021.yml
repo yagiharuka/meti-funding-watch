@@ -9,42 +9,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve raw legacy WARP URL from TimeMap
+      - name: Inspect WARP PDF viewer with browser JavaScript
         shell: bash
         run: |
           set -euo pipefail
-          ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
-          TM="https://warp.ndl.go.jp/collections/timemap/$ORIGINAL"
-          curl -sS -f -A 'Mozilla/5.0' "$TM" -o /tmp/timemap.txt
+          U='https://warp.ndl.go.jp/web/20220104015622/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
+          BROWSER=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)
+          echo "BROWSER=$BROWSER"
+          test -n "$BROWSER"
+          "$BROWSER" --version
+          sleep 20
+          "$BROWSER" --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu \
+            --virtual-time-budget=15000 --dump-dom "$U" > /tmp/dom.html 2>/tmp/chrome.err || true
+          echo '=== CHROME ERR ==='
+          tail -100 /tmp/chrome.err || true
+          echo DOM_SIZE=$(wc -c < /tmp/dom.html)
+          echo '=== RELEVANT DOM ==='
+          grep -Ein 'download|PDF|iframe|embed|object|content|resource|raw|original|blob|file|web/' /tmp/dom.html | head -300 || true
+          echo '=== LINKS ==='
           python - <<'PY'
-          import re
-          s=open('/tmp/timemap.txt').read()
-          stamps=re.findall(r'https://warp\.ndl\.go\.jp/web/(\d{14})/https://www\.chubu\.meti\.go\.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin\.pdf',s)
-          stamps=list(dict.fromkeys(stamps))
-          open('/tmp/stamps.txt','w').write('\n'.join(stamps)+'\n')
-          print('STAMPS',len(stamps),stamps[:10])
+          from html.parser import HTMLParser
+          class P(HTMLParser):
+              def __init__(self): super().__init__(); self.items=[]
+              def handle_starttag(self,t,a):
+                  d=dict(a)
+                  if t in ('a','iframe','embed','object','button'):
+                      self.items.append((t,d))
+          h=open('/tmp/dom.html',errors='replace').read(); p=P(); p.feed(h)
+          for t,d in p.items:
+              s=' '.join(f'{k}={v}' for k,v in d.items())
+              if any(x in s.lower() for x in ('pdf','download','content','resource','raw','original','web/')):
+                  print(t,s)
           PY
-          n=0
-          while IFS= read -r stamp; do
-            [ -n "$stamp" ] || continue
-            n=$((n+1))
-            day=${stamp:0:8}
-            for tilde in '' '~'; do
-              if [ -n "$tilde" ]; then
-                u="https://warp.ndl.go.jp/$day/$stamp/~$ORIGINAL"
-              else
-                u="https://warp.ndl.go.jp/$day/$stamp/$ORIGINAL"
-              fi
-              code=$(curl -sS --connect-timeout 10 --max-time 30 -o /tmp/raw.bin -w '%{http_code}' -A 'Mozilla/5.0' "$u" || true)
-              bytes=$(wc -c < /tmp/raw.bin)
-              magic=$(xxd -p -l 8 /tmp/raw.bin)
-              echo "$n stamp=$stamp tilde=${tilde:-no} code=$code bytes=$bytes magic=$magic $u"
-              if [ "$code" = 200 ] && [ "$(head -c 5 /tmp/raw.bin)" = '%PDF-' ]; then
-                echo "RAW_SUCCESS=$u"
-                sha256sum /tmp/raw.bin
-                exit 0
-              fi
-            done
-            [ "$n" -ge 12 ] && break
-          done < /tmp/stamps.txt
-          exit 1
+          test -s /tmp/dom.html
