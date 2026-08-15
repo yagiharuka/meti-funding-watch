@@ -9,38 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect all WARP mementos for one historical PDF
+      - name: Inspect WARP viewer HTML for raw download target
         shell: bash
         run: |
           set -euo pipefail
-          ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
-          TM="https://warp.ndl.go.jp/collections/timemap/$ORIGINAL"
-          curl -sS -f -A 'Mozilla/5.0' "$TM" -o /tmp/timemap.txt
-          cat /tmp/timemap.txt
-          python - <<'PY'
-          import re
-          s=open('/tmp/timemap.txt').read()
-          urls=[]
-          for m in re.finditer(r'<([^>]+)>;\s*rel="memento"',s):
-              u=m.group(1)
-              if u.startswith('/'): u='https://warp.ndl.go.jp'+u
-              urls.append(u)
-          print('MEMENTOS',len(urls))
-          open('/tmp/mementos.txt','w').write('\n'.join(urls)+'\n')
-          for u in urls: print(u)
-          PY
-          n=0
-          while IFS= read -r u; do
-            [ -n "$u" ] || continue
-            n=$((n+1))
-            code=$(curl -sS -o "/tmp/m$n.bin" -w '%{http_code}' -A 'Mozilla/5.0' "$u" || true)
-            bytes=$(wc -c < "/tmp/m$n.bin")
-            magic=$(xxd -p -l 5 "/tmp/m$n.bin")
-            echo "$n code=$code bytes=$bytes magic=$magic $u"
-            if [ "$code" = 200 ] && [ "$(head -c 5 "/tmp/m$n.bin")" = '%PDF-' ]; then
-              echo SUCCESS="$u"
-              sha256sum "/tmp/m$n.bin"
-              exit 0
-            fi
-          done < /tmp/mementos.txt
-          exit 1
+          U='https://warp.ndl.go.jp/web/20220104015622/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
+          curl -sS -f -A 'Mozilla/5.0' "$U" -o /tmp/viewer.html
+          echo SIZE=$(wc -c < /tmp/viewer.html)
+          sed -n '1,260p' /tmp/viewer.html
+          echo '=== URL-LIKE ==='
+          grep -Eoi 'https?://[^"<> ]+|/[^"<> ]*(download|pdf|content|resource|raw|file)[^"<> ]*' /tmp/viewer.html | head -200 || true
+          echo '=== KEYWORDS ==='
+          grep -Ein 'download|pdf|iframe|embed|object|content|resource|raw|original|fetch|api' /tmp/viewer.html | head -200 || true
