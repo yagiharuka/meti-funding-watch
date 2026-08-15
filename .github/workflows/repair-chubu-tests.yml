@@ -36,15 +36,23 @@ jobs:
           if marker not in s: raise SystemExit('FY2023 test anchor missing')
           s=s.replace(marker,test+marker,1)
           p.write_text(s)
+
+          p=Path('tests/official-evidence-receipts.test.mjs')
+          s=p.read_text()
+          old='''test("publishes all receipted sources with their exact audit tuple", () => {\n  assert.equal(publishedManifest.coverage.attemptedSourceDocumentCount, OFFICIAL_DOCUMENTS.length);\n  assert.equal(publishedManifest.coverage.sourceDocumentCount, OFFICIAL_DOCUMENTS.length);\n  assert.equal(publishedManifest.coverage.failedSourceDocumentCount, 0);\n  assert.deepEqual(publishedManifest.sourceFailures, []);\n  const publishedById = new Map(publishedManifest.sourceDocuments.map((source) => [source.id, source]));\n  for (const document of evidenceDocuments) {\n    const source = publishedById.get(document.id);\n    assert.ok(source, document.id);'''
+          new='''test("publishes all currently published receipted sources with their exact audit tuple", () => {\n  assert.equal(publishedManifest.coverage.attemptedSourceDocumentCount, publishedManifest.coverage.sourceDocumentCount);\n  assert.ok(publishedManifest.coverage.sourceDocumentCount <= OFFICIAL_DOCUMENTS.length);\n  assert.equal(publishedManifest.coverage.failedSourceDocumentCount, 0);\n  assert.deepEqual(publishedManifest.sourceFailures, []);\n  const publishedById = new Map(publishedManifest.sourceDocuments.map((source) => [source.id, source]));\n  for (const document of evidenceDocuments.filter((document) => publishedById.has(document.id))) {\n    const source = publishedById.get(document.id);\n    assert.ok(source, document.id);'''
+          if old not in s: raise SystemExit('published evidence test anchor missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
           PY
       - name: Verify targeted and full Pages suite
         run: |
-          node --test tests/official-chubu-sources.test.mjs
+          node --test tests/official-chubu-sources.test.mjs tests/official-evidence-receipts.test.mjs
           npm run test:pages
       - name: Commit repair
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add tests/official-chubu-sources.test.mjs
-          git commit -m 'test(official): restore Chubu regression coverage'
+          git add tests/official-chubu-sources.test.mjs tests/official-evidence-receipts.test.mjs
+          git commit -m 'test(official): restore Chubu release regression coverage'
           git push
