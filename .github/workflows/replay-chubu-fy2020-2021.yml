@@ -19,6 +19,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh run download 31861177297 -n chubu-fy2019-2021-audit-31861177297 -D .audit-chubu-hist
+      # Replay after FY2021 H2 source-header alias fix.
       - name: Strict replay 12 verified PDFs
         shell: bash
         run: |
@@ -33,9 +34,7 @@ jobs:
             CHUBU_FY2021_CONTRACT_DOCUMENTS,
           } from './scripts/official-chubu-fy2020-2021-sources.mjs';
           const docs=[...CHUBU_FY2021_GRANT_DOCUMENTS,...CHUBU_FY2021_CONTRACT_DOCUMENTS,...CHUBU_FY2020_GRANT_DOCUMENTS,...CHUBU_FY2020_CONTRACT_DOCUMENTS];
-          const dir='.audit-chubu-hist/files';
-          const names=fs.readdirSync(dir);
-          let total=0;
+          const dir='.audit-chubu-hist/files'; const names=fs.readdirSync(dir); let total=0;
           for(const doc of docs){
             const basename=new URL(doc.originalUrl).pathname.split('/').pop();
             const name=names.find(n=>n.endsWith(`__${basename}`));
@@ -43,8 +42,7 @@ jobs:
             const b=fs.readFileSync(path.join(dir,name));
             console.log(`SOURCE ${doc.id} ${name} bytes=${b.length}`);
             const records=await parseOfficialPdf(b,doc);
-            total+=records.length;
-            console.log(`PASS ${doc.id} rows=${records.length}`);
+            total+=records.length; console.log(`PASS ${doc.id} rows=${records.length}`);
           }
           if(total!==561) throw new Error(`historical Chubu strict total mismatch ${total}/561`);
           console.log(`STRICT PASS total=${total} documents=${docs.length}`);
