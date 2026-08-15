@@ -27,7 +27,7 @@ test("describes Gbiz results as published rows and uses the official category wo
   assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報(?:（GビズINFO）)?<\/title>/);
 });
 
-test("describes the two search series separately without claiming complete coverage", () => {
+test("describes the three search series separately without claiming complete coverage", () => {
   for (const source of [layoutSource, pageHtml]) {
     assert.match(source, /GビズINFO掲載行/);
     assert.match(source, /13機関/);
@@ -38,7 +38,7 @@ test("describes the two search series separately without claiming complete cover
     assert.match(source, /13機関の公開済み契約結果・補助金等交付決定の一部/);
     assert.match(source, /全年度・全公表区分・実支払を網羅しません/);
   }
-  assert.match(readme, /意味の異なる次の2系列を混ぜずに検索/);
+  assert.match(readme, /意味の異なる次の3系列を混ぜずに検索/);
   assert.match(readme, /26の機関×系列のうち25系列/);
   assert.match(readme, /契約額欄、交付決定額欄、GビズINFO掲載値は意味が異なる/);
 });

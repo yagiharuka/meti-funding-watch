@@ -8,7 +8,7 @@ const sourceData = JSON.parse(
   await readFile(new URL("../data/funding-data.json", import.meta.url), "utf8"),
 );
 
-test("builds a Gbiz-only GitHub Pages artifact", async () => {
+test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async () => {
   const dataDirectory = new URL("../dist-pages/data/", import.meta.url);
   const publicManifest = JSON.parse(
     await readFile(new URL("manifest.json", dataDirectory), "utf8"),
@@ -19,9 +19,10 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   const publicDataFiles = (await readdir(dataDirectory)).sort();
   assert.ok(publicDataFiles.includes("manifest.json"));
   assert.ok(publicDataFiles.includes("official"));
+  assert.ok(publicDataFiles.includes("review"));
   assert.ok(publicDataFiles.some((filename) => filename.startsWith("commitments-")));
   assert.ok(publicDataFiles.every((filename) =>
-    filename === "manifest.json" || filename === "official" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)));
+    filename === "manifest.json" || filename === "official" || filename === "review" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(filename)));
   assert.ok(!publicDataFiles.some((filename) => /^(?:payments|programs)-/.test(filename)));
   const publicIds = [];
   const allowedFields = new Set([
@@ -120,16 +121,18 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   const publicIndex = await readFile(new URL("../dist-pages/index.html", import.meta.url), "utf8");
   const adoptionIndex = await readFile(new URL("../dist-pages/adoptions/index.html", import.meta.url), "utf8");
   const officialIndex = await readFile(new URL("../dist-pages/official/index.html", import.meta.url), "utf8");
+  const reviewIndex = await readFile(new URL("../dist-pages/review/index.html", import.meta.url), "utf8");
   const assetDirectory = new URL("../dist-pages/assets/", import.meta.url);
   const javascriptAssets = (await readdir(assetDirectory))
     .filter((filename) => filename.endsWith(".js"));
   const javascript = (await Promise.all(javascriptAssets.map((filename) =>
     readFile(new URL(filename, assetDirectory), "utf8")))).join("\n");
-  const publicUi = `${publicIndex}\n${adoptionIndex}\n${officialIndex}\n${javascript}`;
+  const publicUi = `${publicIndex}\n${adoptionIndex}\n${officialIndex}\n${reviewIndex}\n${javascript}`;
 
   assert.match(publicIndex, /<title>経産省関係の調達（委託を含む）・補助金情報/);
   assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
   assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\/title>/);
+  assert.match(reviewIndex, /<title>行政事業レビュー/);
   assert.match(publicIndex, /GビズINFO掲載行と、経済産業省本省・外局・地方経済産業局等13機関/);
   assert.match(publicIndex, /系列を分けて検索する非公式サイト/);
   assert.match(officialIndex, /13機関の公開済み契約結果・補助金等交付決定の一部/);
@@ -157,7 +160,8 @@ test("builds a Gbiz-only GitHub Pages artifact", async () => {
   assert.match(publicUi, /採択は補助金交付の候補者として選定された段階/);
   assert.doesNotMatch(publicUi, /補助金採択者検索を開く/);
   assert.doesNotMatch(publicUi, /_next\/data/);
-  assert.doesNotMatch(publicUi, /行政事業レビュー|レビューシート/);
+  assert.match(publicUi, /行政事業レビュー/);
+  assert.match(publicUi, /0件でも「資金を受けていない」とは判断できません/);
   assert.doesNotMatch(publicUi, /合計|交付金額|期間指定API/);
 });
 
