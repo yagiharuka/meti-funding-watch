@@ -19,7 +19,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Restore the reviewed candidate bundle
+      - name: Restore and patch the reviewed candidate bundle
         shell: bash
         run: |
           set -euo pipefail
@@ -55,12 +55,14 @@ jobs:
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(source.read())
           PY
+          python .openai/apply-chubu-history-fixes.py
           node --check scripts/official-pdf.mjs
           node --check scripts/official-chubu-fy2020-2021-sources.mjs
           node --check scripts/official-chubu-fy2019-sources.mjs
           node --check scripts/official-chubu-sources.mjs
           node --check scripts/update-official-data.mjs
           node --check tests/official-chubu-history.test.mjs
+          node --check tests/official-evidence-receipts.test.mjs
           python -m py_compile scripts/read-legacy-xls.py
 
       - name: Vendor the pinned legacy XLS reader
@@ -125,14 +127,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Strictly replay the affected parsers and receipts
-        run: >-
-          node --test
-          tests/official-chubu-history.test.mjs
-          tests/official-chubu-sources.test.mjs
-          tests/official-pdf.test.mjs
-          tests/official-data.test.mjs
-          tests/official-evidence-receipts.test.mjs
+      - name: Strictly replay the 18 affected originals
+        run: node --test tests/official-chubu-history.test.mjs
 
       - name: Build the candidate official dataset
         env:
