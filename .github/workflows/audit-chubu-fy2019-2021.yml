@@ -9,30 +9,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch one source with WARP index session
+      - name: Inspect all WARP mementos for one historical PDF
         shell: bash
         run: |
           set -euo pipefail
-          INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
           ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
-          curl -sS -fL -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36' -c /tmp/cookies "$INDEX" -o /tmp/index.html
-          TG="https://warp.ndl.go.jp/collections/$ORIGINAL"
-          curl -sS -D /tmp/tg.headers -o /dev/null -b /tmp/cookies -c /tmp/cookies \
-            -H 'Accept-Datetime: Mon, 01 Jun 2026 01:14:04 GMT' \
-            -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
-            -H 'Sec-Fetch-Site: same-origin' -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Dest: document' \
-            -e "$INDEX" -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36' "$TG"
-          cat /tmp/tg.headers
-          loc=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); print substr($0,11)}' /tmp/tg.headers | tail -1)
-          resolved="https://warp.ndl.go.jp$loc"
-          echo "$resolved"
-          curl -sS -D /tmp/get.headers -o /tmp/source.bin -b /tmp/cookies -c /tmp/cookies \
-            -H 'Accept: application/pdf,application/octet-stream;q=0.9,*/*;q=0.8' \
-            -H 'Sec-Fetch-Site: same-origin' -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Dest: document' \
-            -e "$INDEX" -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36' "$resolved" || true
-          cat /tmp/get.headers
-          wc -c /tmp/source.bin
-          xxd -l 32 /tmp/source.bin
-          head -c 500 /tmp/source.bin | strings | head || true
-          grep -q '^HTTP/.* 200' /tmp/get.headers
-          test "$(head -c 5 /tmp/source.bin)" = '%PDF-'
+          TM="https://warp.ndl.go.jp/collections/timemap/$ORIGINAL"
+          curl -sS -f -A 'Mozilla/5.0' "$TM" -o /tmp/timemap.txt
+          cat /tmp/timemap.txt
+          python - <<'PY'
+          import re
+          s=open('/tmp/timemap.txt').read()
+          urls=[]
+          for m in re.finditer(r'<([^>]+)>;\s*rel="memento"',s):
+              u=m.group(1)
+              if u.startswith('/'): u='https://warp.ndl.go.jp'+u
+              urls.append(u)
+          print('MEMENTOS',len(urls))
+          open('/tmp/mementos.txt','w').write('\n'.join(urls)+'\n')
+          for u in urls: print(u)
+          PY
+          n=0
+          while IFS= read -r u; do
+            [ -n "$u" ] || continue
+            n=$((n+1))
+            code=$(curl -sS -o "/tmp/m$n.bin" -w '%{http_code}' -A 'Mozilla/5.0' "$u" || true)
+            bytes=$(wc -c < "/tmp/m$n.bin")
+            magic=$(xxd -p -l 5 "/tmp/m$n.bin")
+            echo "$n code=$code bytes=$bytes magic=$magic $u"
+            if [ "$code" = 200 ] && [ "$(head -c 5 "/tmp/m$n.bin")" = '%PDF-' ]; then
+              echo SUCCESS="$u"
+              sha256sum "/tmp/m$n.bin"
+              exit 0
+            fi
+          done < /tmp/mementos.txt
+          exit 1
