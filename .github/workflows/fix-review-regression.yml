@@ -1,0 +1,77 @@
+name: Fix review regression expectations
+on:
+  push:
+    paths: [".github/workflows/fix-review-regression.yml"]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Update only legacy expectations
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"missing marker: {path}: {old!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          replace(
+              "tests/ui-accuracy.test.mjs",
+              'test("describes the two search series separately without claiming complete coverage", () => {',
+              'test("describes the three search series separately without claiming complete coverage", () => {',
+          )
+          replace(
+              "tests/ui-accuracy.test.mjs",
+              'assert.match(readme, /意味の異なる次の2系列を混ぜずに検索/);',
+              'assert.match(readme, /意味の異なる次の3系列を混ぜずに検索/);',
+          )
+
+          replace(
+              "tests/rendered-html.test.mjs",
+              'test("builds a Gbiz-only GitHub Pages artifact", async () => {',
+              'test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async () => {',
+          )
+          replace(
+              "tests/rendered-html.test.mjs",
+              'assert.ok(publicDataFiles.includes("official"));',
+              'assert.ok(publicDataFiles.includes("official"));\n  assert.ok(publicDataFiles.includes("review"));',
+          )
+          replace(
+              "tests/rendered-html.test.mjs",
+              'filename === "manifest.json" || filename === "official" || /^commitments-(?:\\d{4}|unclassified)\\.json$/.test(filename)));',
+              'filename === "manifest.json" || filename === "official" || filename === "review" || /^commitments-(?:\\d{4}|unclassified)\\.json$/.test(filename)));',
+          )
+          replace(
+              "tests/rendered-html.test.mjs",
+              'const officialIndex = await readFile(new URL("../dist-pages/official/index.html", import.meta.url), "utf8");',
+              'const officialIndex = await readFile(new URL("../dist-pages/official/index.html", import.meta.url), "utf8");\n  const reviewIndex = await readFile(new URL("../dist-pages/review/index.html", import.meta.url), "utf8");',
+          )
+          replace(
+              "tests/rendered-html.test.mjs",
+              'const publicUi = `${publicIndex}\\n${adoptionIndex}\\n${officialIndex}\\n${javascript}`;',
+              'const publicUi = `${publicIndex}\\n${adoptionIndex}\\n${officialIndex}\\n${reviewIndex}\\n${javascript}`;',
+          )
+          replace(
+              "tests/rendered-html.test.mjs",
+              'assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\\/title>/);',
+              'assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\\/title>/);\n  assert.match(reviewIndex, /<title>行政事業レビュー/);',
+          )
+          replace(
+              "tests/rendered-html.test.mjs",
+              'assert.doesNotMatch(publicUi, /行政事業レビュー|レビューシート/);',
+              'assert.match(publicUi, /行政事業レビュー/);\n  assert.match(publicUi, /0件でも「資金を受けていない」とは判断できません/);',
+          )
+          PY
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/ui-accuracy.test.mjs tests/rendered-html.test.mjs
+          git commit -m "test: align legacy expectations with review series"
+          git push
