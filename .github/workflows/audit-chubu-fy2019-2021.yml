@@ -9,15 +9,68 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect WARP viewer HTML for raw download target
+      - name: Find accessible WARP viewer and inspect raw-file references
         shell: bash
         run: |
           set -euo pipefail
-          U='https://warp.ndl.go.jp/web/20220104015622/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
-          curl -sS -f -A 'Mozilla/5.0' "$U" -o /tmp/viewer.html
-          echo SIZE=$(wc -c < /tmp/viewer.html)
-          sed -n '1,260p' /tmp/viewer.html
-          echo '=== URL-LIKE ==='
-          grep -Eoi 'https?://[^"<> ]+|/[^"<> ]*(download|pdf|content|resource|raw|file)[^"<> ]*' /tmp/viewer.html | head -200 || true
+          ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
+          TM="https://warp.ndl.go.jp/collections/timemap/$ORIGINAL"
+          curl -sS -f -A 'Mozilla/5.0' "$TM" -o /tmp/timemap.txt
+          python - <<'PY'
+          import re
+          s=open('/tmp/timemap.txt').read()
+          urls=[]
+          for line in s.splitlines():
+              m=re.search(r'<(https://warp\.ndl\.go\.jp/web/[^>]+)>;\s*rel="[^"]*memento[^"]*"',line)
+              if m: urls.append(m.group(1))
+          urls=list(dict.fromkeys(urls))
+          print('MEMENTOS',len(urls))
+          open('/tmp/mementos.txt','w').write('\n'.join(urls)+'\n')
+          PY
+          found=''
+          n=0
+          while IFS= read -r u; do
+            [ -n "$u" ] || continue
+            n=$((n+1))
+            code=$(curl -sS --connect-timeout 10 --max-time 25 -o "/tmp/view$n.html" -w '%{http_code}' -A 'Mozilla/5.0' "$u" || true)
+            bytes=$(wc -c < "/tmp/view$n.html")
+            magic=$(xxd -p -l 8 "/tmp/view$n.html")
+            echo "$n code=$code bytes=$bytes magic=$magic $u"
+            if [ "$code" = 200 ] && grep -qi '<!DOCTYPE html' "/tmp/view$n.html"; then
+              found="/tmp/view$n.html"
+              echo "VIEWER=$u"
+              break
+            fi
+          done < /tmp/mementos.txt
+          test -n "$found"
+          cp "$found" /tmp/viewer.html
+          echo '=== VIEWER HEAD ==='
+          sed -n '1,320p' /tmp/viewer.html
+          echo '=== ATTRIBUTES/URLS ==='
+          grep -Eoin '(src|href|data-[a-z0-9_-]+)=["'"'][^"'"']+["'"']' /tmp/viewer.html | head -300 || true
           echo '=== KEYWORDS ==='
-          grep -Ein 'download|pdf|iframe|embed|object|content|resource|raw|original|fetch|api' /tmp/viewer.html | head -200 || true
+          grep -Ein 'download|pdf|iframe|embed|object|content|resource|raw|original|fetch|api|blob|file|viewer|warc' /tmp/viewer.html | head -300 || true
+          echo '=== SCRIPT SOURCES ==='
+          grep -Eoi '<script[^>]+src=["'"'][^"'"']+' /tmp/viewer.html | sed -E 's/.*src=["'"']//g' | tee /tmp/scripts.txt || true
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin
+          class P(HTMLParser):
+              def __init__(self): super().__init__(); self.s=[]
+              def handle_starttag(self,t,a):
+                  if t=='script':
+                      d=dict(a)
+                      if d.get('src'): self.s.append(d['src'])
+          h=open('/tmp/viewer.html').read(); p=P(); p.feed(h)
+          base='https://warp.ndl.go.jp/'
+          open('/tmp/script-urls.txt','w').write('\n'.join(urljoin(base,x) for x in p.s)+'\n')
+          print('\n'.join(urljoin(base,x) for x in p.s))
+          PY
+          i=0
+          while IFS= read -r s; do
+            [ -n "$s" ] || continue
+            i=$((i+1))
+            curl -sS --connect-timeout 10 --max-time 25 -A 'Mozilla/5.0' "$s" -o "/tmp/script$i.js" || continue
+            echo "=== SCRIPT $i $s ==="
+            grep -Ein 'download|pdf|content|resource|raw|original|fetch|api|blob|file|viewer|warc' "/tmp/script$i.js" | head -200 || true
+          done < /tmp/script-urls.txt
