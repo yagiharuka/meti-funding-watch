@@ -39,7 +39,7 @@ const GRANT_COLUMNS = Object.freeze([
   ["budgetItem", ["支出元(目)名称"]],
   ["date", ["交付決定日"]],
   ["publicInterestClass", ["公益法人の区分", "公益法人の区"]],
-  ["jurisdictionClass", ["国所管、都道府県", "国所管、"]],
+  ["jurisdictionClass", ["国所管、都道府県", "国所管、", "県所管の区分"]],
 ]);
 
 const COMPETITIVE_COLUMNS = Object.freeze([
