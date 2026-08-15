@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 3,
+  "generatedAt": "2026-08-06T00:00:00.000Z",
+  "lastSuccessfulSourceRefresh": "2026-08-06",
+  "refreshStatus": "cached-official-source-route-changed",
+  "sourceUrl": "https://rssystem.go.jp/download-csv",
+  "reviewSheetYears": [
+    2024,
+    2025
+  ],
+  "unavailableReviewSheetYears": [
+    {
+      "reviewSheetYear": 2026,
+      "reason": "2026年度レビューシートは2026年8月15日時点で経産省が9月以降公開予定と案内"
+    }
+  ],
+  "programsFile": "programs.json",
+  "paymentFiles": [
+    "payments-0.json",
+    "payments-1.json",
+    "payments-2.json",
+    "payments-3.json",
+    "payments-4.json",
+    "payments-5.json",
+    "payments-6.json",
+    "payments-7.json",
+    "payments-8.json",
+    "payments-9.json",
+    "payments-a.json",
+    "payments-b.json",
+    "payments-c.json",
+    "payments-d.json",
+    "payments-e.json",
+    "payments-f.json"
+  ],
+  "programCount": 1005,
+  "paymentCount": 13944,
+  "sourceReceipts": [],
+  "bootstrapProvenance": {
+    "commit": "21beab2198ec3c60955db83464171dd56dad152b",
+    "description": "2026-08-06に行政事業レビュー公式CSVから取得・生成した検証済みキャッシュ。RSシステムの直接CSV経路変更後も値を補完せず保持。"
+  },
+  "semantics": {
+    "paymentAmount": "行政事業レビュー公式CSV「支出先の合計支出額」掲載値",
+    "aggregationWarning": "上流・中間・終端の支出先を相互に合算しない。契約額・交付決定額・GビズINFO掲載値とも合算しない。",
+    "negativeSearchWarning": "未掲載・未収録・移行年度の詳細欠落があるため、0件を受給なしとは解釈しない。"
+  }
+}
