@@ -1,0 +1,40 @@
+name: Diagnose administrative review source
+on:
+  push:
+    paths: [".github/workflows/diagnose-review-source.yml"]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe official review endpoints
+        shell: bash
+        run: |
+          python - <<'PY'
+          import urllib.request, urllib.error
+          from urllib.parse import quote
+          urls=[
+            'https://rssystem.go.jp/api/projects/fiscal-years/',
+            'https://rssystem.go.jp/download-csv',
+          ]
+          for year in (2024,2025,2026):
+            for fn in (
+              f'1-1_RS_{year}_基本情報_組織情報.zip',
+              f'2-1_RS_{year}_予算・執行_サマリ.zip',
+              f'5-1_RS_{year}_支出先_支出情報.zip',
+              f'5-2_RS_{year}_支出先_支出ブロックのつながり.zip',
+            ):
+              urls.append('https://rssystem.go.jp/files/'+str(year)+'/rs/'+quote(fn))
+          for u in urls:
+            try:
+              req=urllib.request.Request(u,headers={'User-Agent':'meti-funding-watch/0.1 (+public-data-research)','Accept':'*/*'})
+              with urllib.request.urlopen(req,timeout=30) as r:
+                data=r.read(100)
+                print('OK',r.status,r.headers.get('content-type'),r.headers.get('content-length'),r.geturl(),data[:20].hex())
+            except urllib.error.HTTPError as e:
+              body=e.read(200)
+              print('HTTP',e.code,e.headers.get('content-type'),u,body[:80])
+            except Exception as e:
+              print('ERR',u,repr(e))
+          PY
