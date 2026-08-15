@@ -9,86 +9,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture and inspect first accessible PDF viewer
+      - name: Verify one raw WARP PDF from viewer iframe
         shell: bash
         run: |
           set -euo pipefail
-          ORIGINAL='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
-          curl -sS -f -A 'Mozilla/5.0' "https://warp.ndl.go.jp/collections/timemap/$ORIGINAL" -o /tmp/timemap.txt
+          VIEWER='https://warp.ndl.go.jp/web/20211201021011/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
+          sleep 8
+          curl -sS -f --connect-timeout 10 --max-time 30 -A 'Mozilla/5.0' "$VIEWER" -o /tmp/viewer.html
           python - <<'PY'
-          import re
-          s=open('/tmp/timemap.txt').read()
-          urls=re.findall(r'<(https://warp\.ndl\.go\.jp/web/\d{14}/https://www\.chubu\.meti\.go\.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin\.pdf)>;\s*rel="[^"]*memento[^"]*"',s)
-          urls=list(dict.fromkeys(urls))
-          # Use sparse historical candidates only; stop at first HTTP 200.
-          picks=[urls[i] for i in [0,4,8,12,16,20,24,28,32,36,40,44] if i < len(urls)]
-          open('/tmp/picks.txt','w').write('\n'.join(picks)+'\n')
-          print('CANDIDATES',len(picks))
-          PY
-          found=''
-          n=0
-          while IFS= read -r u; do
-            [ -n "$u" ] || continue
-            n=$((n+1))
-            sleep 6
-            code=$(curl -sS --connect-timeout 10 --max-time 30 -D "/tmp/h$n.txt" -o "/tmp/v$n.bin" -w '%{http_code}' -A 'Mozilla/5.0' "$u" || true)
-            bytes=$(wc -c < "/tmp/v$n.bin")
-            echo "$n code=$code bytes=$bytes $u"
-            if [ "$code" = 200 ] && grep -qi '<!DOCTYPE html' "/tmp/v$n.bin"; then
-              cp "/tmp/v$n.bin" /tmp/viewer.html
-              printf '%s\n' "$u" > /tmp/viewer-url.txt
-              found=1
-              break
-            fi
-          done < /tmp/picks.txt
-          test -n "$found"
-          python - <<'PY'
-          import re
-          from html import unescape
           from html.parser import HTMLParser
           from urllib.parse import urljoin
-          h=open('/tmp/viewer.html',errors='replace').read()
-          base=open('/tmp/viewer-url.txt').read().strip()
-          print('VIEWER',base,'SIZE',len(h))
-          print('TEXT_MATCHES')
-          for pat in [r'PDFをダウンロード',r'Download PDF',r'download',r'iframe',r'embed',r'object',r'blob',r'fetch',r'content',r'resource',r'original']:
-              for m in re.finditer(pat,h,re.I):
-                  a=max(0,m.start()-350); b=min(len(h),m.end()+500)
-                  print('CTX',unescape(h[a:b]).replace('\n',' ')[:1000])
           class P(HTMLParser):
-              def __init__(self): super().__init__(); self.attrs=[]; self.scripts=[]; self.inline=[]; self._script=False; self._buf=[]
+              def __init__(self): super().__init__(); self.src=None
               def handle_starttag(self,t,a):
-                  d=dict(a); self.attrs.append((t,d))
-                  if t=='script':
-                      if d.get('src'): self.scripts.append(urljoin(base,d['src']))
-                      else: self._script=True; self._buf=[]
-              def handle_data(self,d):
-                  if self._script:self._buf.append(d)
-              def handle_endtag(self,t):
-                  if t=='script' and self._script:
-                      self.inline.append(''.join(self._buf)); self._script=False
-          p=P(); p.feed(h)
-          print('ATTRS')
-          for t,d in p.attrs:
-              s=' '.join(f'{k}={v}' for k,v in d.items())
-              if re.search(r'pdf|download|iframe|embed|object|blob|fetch|content|resource|original|web/',s,re.I): print(t,s[:1200])
-          print('EXTERNAL_SCRIPTS')
-          for u in dict.fromkeys(p.scripts): print(u)
-          open('/tmp/scripts.txt','w').write('\n'.join(dict.fromkeys(p.scripts))+'\n')
-          print('INLINE_SCRIPTS')
-          for i,s in enumerate(p.inline,1):
-              if re.search(r'pdf|download|blob|fetch|content|resource|original|web/',s,re.I): print(i,s[:6000])
+                  if t=='iframe' and dict(a).get('id')=='pywb-frame': self.src=dict(a).get('src')
+          p=P(); p.feed(open('/tmp/viewer.html',errors='replace').read())
+          assert p.src, 'iframe source missing'
+          raw=urljoin('https://warp.ndl.go.jp/',p.src)
+          print('RAW_URL',raw)
+          open('/tmp/raw-url.txt','w').write(raw+'\n')
           PY
-          i=0
-          while IFS= read -r u; do
-            [ -n "$u" ] || continue
-            i=$((i+1))
-            curl -sS --connect-timeout 10 --max-time 30 -A 'Mozilla/5.0' "$u" -o "/tmp/s$i.js" || continue
-            echo "=== SCRIPT $i $u size=$(wc -c < /tmp/s$i.js) ==="
-            python - "$i" <<'PY'
-          import sys,re
-          i=sys.argv[1]; s=open(f'/tmp/s{i}.js',errors='replace').read()
-          for m in re.finditer(r'pdf|download|blob|fetch\(|content|resource|original|memento|web/',s,re.I):
-              a=max(0,m.start()-250); b=min(len(s),m.end()+450); print(s[a:b].replace('\n',' ')[:900])
-          PY
-          done < /tmp/scripts.txt
+          RAW=$(cat /tmp/raw-url.txt)
+          sleep 8
+          code=$(curl -sS --connect-timeout 10 --max-time 60 -D /tmp/raw.headers -o /tmp/raw.bin -w '%{http_code}' -A 'Mozilla/5.0' -e "$VIEWER" "$RAW" || true)
+          echo CODE=$code
+          cat /tmp/raw.headers
+          echo BYTES=$(wc -c < /tmp/raw.bin)
+          echo MAGIC=$(xxd -p -l 8 /tmp/raw.bin)
+          test "$code" = 200
+          test "$(head -c 5 /tmp/raw.bin)" = '%PDF-'
+          sha256sum /tmp/raw.bin
