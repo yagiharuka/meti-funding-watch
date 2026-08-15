@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/preflight-chubu-history.yml"
-      - ".openai/chubu-history-changes.b64"
+      - ".openai/chubu-history-parts/**"
 
 permissions:
   contents: read
@@ -23,7 +23,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode .openai/chubu-history-changes.b64 > /tmp/chubu-history-changes.tgz
+          test "$(find .openai/chubu-history-parts -maxdepth 1 -type f -name 'part-*' | wc -l)" -eq 10
+          cat .openai/chubu-history-parts/part-* | base64 --decode > /tmp/chubu-history-changes.tgz
           echo "2c1228d01bdd6a31d139e2ba2b5e76a4f677478a76dd2e409af8b7e026082b16  /tmp/chubu-history-changes.tgz" | sha256sum --check --strict
           python - <<'PY'
           from pathlib import Path
