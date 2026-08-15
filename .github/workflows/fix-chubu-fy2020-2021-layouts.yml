@@ -1,0 +1,43 @@
+name: Fix Chubu FY2020-FY2021 layouts
+on:
+  push:
+    paths: [".github/workflows/fix-chubu-fy2020-2021-layouts.yml"]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply source-derived goods layouts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/official-chubu-fy2020-2021-sources.mjs')
+          s=p.read_text()
+          marker='''const DISCRETIONARY_COLUMNS = Object.freeze([\n'''
+          insert='''const COMPETITIVE_GOODS_COLUMNS = Object.freeze([\n  ["program", ["物品役務等の"]],\n  ["officer", ["契約担当官等の"]],\n  ["date", ["契約を締結"]],\n  ["organization", ["商号又は名称", "契約の相手方の商"]],\n  ["address", ["住所"]],\n  ["corporateNumber", ["法人番号"]],\n  ["method", ["一般競争入札・", "指名競争入札の別"]],\n  ["plannedAmount", ["予定価格"]],\n  ["amount", ["契約金額"]],\n  ["awardRate", ["落札率"]],\n  ["publicInterestClass", ["公益法人"]],\n  ["jurisdictionClass", ["国所管、", "都道府県"]],\n  ["bidderCount", ["応札・"]],\n  ["notes", ["備考"]],\n]);\n\nconst DISCRETIONARY_GOODS_COLUMNS = Object.freeze([\n  ["program", ["物品役務等の"]],\n  ["officer", ["契約担当官等の"]],\n  ["date", ["契約を締結"]],\n  ["organization", ["方の商号", "契約の相手方の商号"]],\n  ["address", ["の住所", "契約の相手方の住所"]],\n  ["corporateNumber", ["法人番号"]],\n  ["legalReason", ["随意契約によること", "とした会計法令の"]],\n  ["plannedAmount", ["予定価格"]],\n  ["amount", ["契約金額"]],\n  ["awardRate", ["落札率"]],\n  ["reemployedOfficerCount", ["再就職", "再就職の役員"]],\n  ["publicInterestClass", ["公益法人"]],\n  ["jurisdictionClass", ["国所管、", "都道府県"]],\n  ["bidderCount", ["応札・"]],\n  ["notes", ["備考"]],\n]);\n\n'''
+          assert marker in s
+          s=s.replace(marker,insert+marker,1)
+          old='''function contractDocument({ id, fiscalYear, type, costClass, rawUrl, originalUrl, expectedBytes, expectedSha256, expectedRowsPerPage, leftPoints, cellAssignmentCoordinate }) {\n  const competitive = type === "competitive";\n  const expectedRecordCount = expectedRowsPerPage.reduce((a, b) => a + b, 0);\n  const definitions = competitive ? COMPETITIVE_COLUMNS : DISCRETIONARY_COLUMNS;'''
+          new='''function contractDocument({ id, fiscalYear, type, costClass, rawUrl, originalUrl, expectedBytes, expectedSha256, expectedRowsPerPage, leftPoints, cellAssignmentCoordinate, goodsLayout = false }) {\n  const competitive = type === "competitive";\n  const expectedRecordCount = expectedRowsPerPage.reduce((a, b) => a + b, 0);\n  const definitions = goodsLayout\n    ? (competitive ? COMPETITIVE_GOODS_COLUMNS : DISCRETIONARY_GOODS_COLUMNS)\n    : (competitive ? COMPETITIVE_COLUMNS : DISCRETIONARY_COLUMNS);'''
+          assert old in s
+          s=s.replace(old,new,1)
+          replacements={
+            'leftPoints: [15, 85, 170, 230, 355, 440, 495, 535, 580, 620, 650, 670, 720, 775] })': 'leftPoints: [15, 85, 170, 230, 300, 355, 440, 495, 535, 580, 620, 650, 720, 775], goodsLayout: true })',
+            'leftPoints: [15, 65, 145, 195, 305, 250, 365, 510, 555, 600, 625, 660, 700, 740, 785], cellAssignmentCoordinate: "left" })': 'leftPoints: [15, 65, 145, 195, 250, 305, 365, 510, 555, 600, 625, 660, 700, 740, 785], cellAssignmentCoordinate: "left", goodsLayout: true })',
+            'leftPoints: [45, 105, 190, 245, 360, 295, 430, 485, 530, 575, 605, 645, 690, 745], cellAssignmentCoordinate: "left" })': 'leftPoints: [45, 105, 190, 245, 295, 360, 430, 485, 530, 575, 605, 645, 690, 745], cellAssignmentCoordinate: "left", goodsLayout: true })',
+            'leftPoints: [45, 95, 170, 215, 310, 260, 365, 500, 545, 580, 610, 640, 680, 715, 755], cellAssignmentCoordinate: "left" })': 'leftPoints: [45, 95, 170, 215, 260, 310, 365, 500, 545, 580, 610, 640, 680, 715, 755], cellAssignmentCoordinate: "left", goodsLayout: true })',
+          }
+          for a,b in replacements.items():
+              assert a in s, a
+              s=s.replace(a,b,1)
+          p.write_text(s)
+          PY
+          node --check scripts/official-chubu-fy2020-2021-sources.mjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/official-chubu-fy2020-2021-sources.mjs
+          git commit -m 'fix(official): separate historical Chubu goods layouts'
+          git push
