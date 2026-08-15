@@ -14,44 +14,45 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Fetch index and historical sources
+      - name: Fetch saved official index and historical sources
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .audit-chubu-hist/files
-          INDEX='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
-          curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' "$INDEX" -o .audit-chubu-hist/index.html
+          INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -c .audit-chubu-hist/cookies.txt "$INDEX" -o .audit-chubu-hist/index.html
           python - <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
-          from urllib.parse import urljoin
+          from urllib.parse import urljoin, urlparse
           class P(HTMLParser):
               def __init__(self): super().__init__(); self.a=[]
               def handle_starttag(self, tag, attrs):
                   if tag=='a':
-                      d=dict(attrs); h=d.get('href')
+                      h=dict(attrs).get('href')
                       if h: self.a.append(h)
           s=Path('.audit-chubu-hist/index.html').read_text(errors='replace')
           p=P(); p.feed(s)
-          base='https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          base='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
           keys=('r3fy','r2fy','r1fy','21-','20-','19-','2019','2020','2021')
           hits=[]
           for h in p.a:
-              low=h.lower()
-              if any(k in low for k in keys) and (low.endswith('.pdf') or low.endswith('.xlsx') or low.endswith('.xls')):
+              low=h.lower().split('?')[0]
+              if any(k in low for k in keys) and low.endswith(('.pdf','.xlsx','.xls')):
                   hits.append(urljoin(base,h))
-          for u in dict.fromkeys(hits): print(u)
-          Path('.audit-chubu-hist/urls.txt').write_text('\n'.join(dict.fromkeys(hits))+'\n')
+          hits=list(dict.fromkeys(hits))
+          print('COUNT',len(hits))
+          for u in hits: print(u)
+          Path('.audit-chubu-hist/urls.txt').write_text('\n'.join(hits)+'\n')
           PY
-          echo '=== HISTORICAL URLS ==='
-          cat .audit-chubu-hist/urls.txt
+          test "$(grep -c . .audit-chubu-hist/urls.txt)" -eq 18
           i=0
           while IFS= read -r u; do
             [ -n "$u" ] || continue
             i=$((i+1))
             fn=$(basename "${u%%\?*}")
             out=".audit-chubu-hist/files/${i}__${fn}"
-            curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -e "$INDEX" "$u" -o "$out"
+            curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -b .audit-chubu-hist/cookies.txt -c .audit-chubu-hist/cookies.txt -e "$INDEX" "$u" -o "$out"
             printf '%02d\t%s\t%s\t%s\n' "$i" "$(wc -c < "$out")" "$(sha256sum "$out" | cut -d' ' -f1)" "$u"
           done < .audit-chubu-hist/urls.txt | tee .audit-chubu-hist/receipts.tsv
       - name: Inspect file structures
@@ -61,28 +62,26 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import path from 'node:path';
+          import crypto from 'node:crypto';
           import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
           import XLSX from 'xlsx';
           const dir='.audit-chubu-hist/files';
           for (const name of fs.readdirSync(dir).sort()) {
             const p=path.join(dir,name); const b=fs.readFileSync(p);
-            console.log(`\n=== ${name} bytes=${b.length} sha=${(await import('node:crypto')).createHash('sha256').update(b).digest('hex')} ===`);
+            console.log(`\n=== ${name} bytes=${b.length} sha=${crypto.createHash('sha256').update(b).digest('hex')} ===`);
             if (b.subarray(0,5).toString('ascii') === '%PDF-') {
               const pdf=await pdfjsLib.getDocument({data:new Uint8Array(b)}).promise;
               console.log('PDF pages',pdf.numPages);
               for(let n=1;n<=pdf.numPages;n++){
                 const page=await pdf.getPage(n); const vp=page.getViewport({scale:1}); const tc=await page.getTextContent();
                 const items=tc.items.filter(x=>x.str?.trim());
-                const dates=items.filter(x=>/^(?:令和\s*[23]年|20(?:19|20|21)年|20(?:19|20|21)\/)/.test(x.str.trim()));
-                console.log(`p${n} size=${vp.width}x${vp.height} items=${items.length} dateLike=${dates.length}`);
-                if(n===1) console.log('HEAD',items.slice(0,80).map(x=>`${Math.round(x.transform[4])},${Math.round(x.transform[5])}:${x.str}`).join(' | '));
+                console.log(`p${n} size=${vp.width}x${vp.height} items=${items.length}`);
+                if(n===1) console.log('HEAD',items.slice(0,100).map(x=>`${Math.round(x.transform[4])},${Math.round(x.transform[5])}:${x.str}`).join(' | '));
               }
             } else {
-              try {
-                const wb=XLSX.read(b,{type:'buffer',cellDates:false,raw:true});
-                console.log('XLSX sheets',wb.SheetNames);
-                for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); console.log('SHEET',sn,'ref',ws['!ref'],'rows',rows.length); console.log('HEADROWS',JSON.stringify(rows.slice(0,8))); }
-              } catch(e) { console.log('NONPDF parse error',e.message); }
+              const wb=XLSX.read(b,{type:'buffer',cellDates:false,raw:true});
+              console.log('XLSX sheets',wb.SheetNames);
+              for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); console.log('SHEET',sn,'ref',ws['!ref'],'rows',rows.length); console.log('HEADROWS',JSON.stringify(rows.slice(0,10))); }
             }
           }
           NODE
