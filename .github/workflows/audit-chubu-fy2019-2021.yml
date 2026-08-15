@@ -9,33 +9,130 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify one raw WARP PDF from viewer iframe
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Capture verified historical source files
         shell: bash
         run: |
           set -euo pipefail
-          VIEWER='https://warp.ndl.go.jp/web/20211201021011/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r3fy-4-9-hojyokin.pdf'
-          sleep 8
-          curl -sS -f --connect-timeout 10 --max-time 30 -A 'Mozilla/5.0' "$VIEWER" -o /tmp/viewer.html
+          mkdir -p .audit-chubu-hist/files
+          INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          curl -sS -f -A 'Mozilla/5.0' "$INDEX" -o .audit-chubu-hist/index.html
           python - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin
+          class P(HTMLParser):
+              def __init__(self): super().__init__(); self.a=[]
+              def handle_starttag(self,t,a):
+                  if t=='a' and dict(a).get('href'): self.a.append(dict(a)['href'])
+          h=Path('.audit-chubu-hist/index.html').read_text(errors='replace'); p=P(); p.feed(h)
+          base='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          keys=('r3fy','r2fy','21-','20-')
+          out=[]
+          for href in p.a:
+              low=href.lower().split('?')[0]
+              pdf=any(k in low for k in keys) and low.endswith('.pdf')
+              legacy='/a41kaikei/kouhyou/data/' in low and low.endswith(('.xlsx','.xls'))
+              if not (pdf or legacy): continue
+              old=urljoin(base,href)
+              original='https://'+old.split('/https://',1)[1]
+              if original not in out: out.append(original)
+          assert len(out)==18, len(out)
+          Path('.audit-chubu-hist/original-urls.txt').write_text('\n'.join(out)+'\n')
+          print('official-index sources',len(out))
+          for u in out: print(u)
+          PY
+          : > .audit-chubu-hist/receipts.tsv
+          : > .audit-chubu-hist/raw-urls.tsv
+          i=0
+          while IFS= read -r original; do
+            [ -n "$original" ] || continue
+            i=$((i+1))
+            fn=$(basename "${original%%\?*}")
+            echo "=== [$i/18] $fn ==="
+            tm="https://warp.ndl.go.jp/collections/timemap/$original"
+            curl -sS -f --retry 4 --retry-all-errors --retry-delay 3 -A 'Mozilla/5.0' "$tm" -o /tmp/timemap.txt
+            python - "$original" <<'PY'
+          import re,sys
+          original=sys.argv[1]
+          s=open('/tmp/timemap.txt').read()
+          esc=re.escape(original)
+          urls=re.findall(r'<(https://warp\.ndl\.go\.jp/web/\d{14}/'+esc+r')>;\s*rel="[^"]*memento[^"]*"',s)
+          urls=list(dict.fromkeys(urls))
+          assert urls, original
+          # Prefer the earliest capture, then sparse fallbacks if transient throttling occurs.
+          picks=[]
+          for idx in [0,1,2,4,8,12,16,20,24,28,32,36,40,44,-1]:
+              if -len(urls) <= idx < len(urls) and urls[idx] not in picks: picks.append(urls[idx])
+          open('/tmp/viewers.txt','w').write('\n'.join(picks)+'\n')
+          print('mementos',len(urls),'candidates',len(picks))
+          PY
+            viewer=''
+            n=0
+            while IFS= read -r candidate; do
+              [ -n "$candidate" ] || continue
+              n=$((n+1))
+              sleep 4
+              code=$(curl -sS --connect-timeout 10 --max-time 40 -o /tmp/viewer.html -w '%{http_code}' -A 'Mozilla/5.0' "$candidate" || true)
+              if [ "$code" = 200 ] && grep -q 'id="pywb-frame"' /tmp/viewer.html; then viewer="$candidate"; break; fi
+              echo "viewer candidate $n HTTP $code"
+            done < /tmp/viewers.txt
+            test -n "$viewer"
+            python - <<'PY'
           from html.parser import HTMLParser
           from urllib.parse import urljoin
           class P(HTMLParser):
               def __init__(self): super().__init__(); self.src=None
               def handle_starttag(self,t,a):
-                  if t=='iframe' and dict(a).get('id')=='pywb-frame': self.src=dict(a).get('src')
-          p=P(); p.feed(open('/tmp/viewer.html',errors='replace').read())
-          assert p.src, 'iframe source missing'
-          raw=urljoin('https://warp.ndl.go.jp/',p.src)
-          print('RAW_URL',raw)
-          open('/tmp/raw-url.txt','w').write(raw+'\n')
+                  d=dict(a)
+                  if t=='iframe' and d.get('id')=='pywb-frame': self.src=d.get('src')
+          p=P(); p.feed(open('/tmp/viewer.html',errors='replace').read()); assert p.src
+          open('/tmp/raw-url.txt','w').write(urljoin('https://warp.ndl.go.jp/',p.src)+'\n')
           PY
-          RAW=$(cat /tmp/raw-url.txt)
-          sleep 8
-          code=$(curl -sS --connect-timeout 10 --max-time 60 -D /tmp/raw.headers -o /tmp/raw.bin -w '%{http_code}' -A 'Mozilla/5.0' -e "$VIEWER" "$RAW" || true)
-          echo CODE=$code
-          cat /tmp/raw.headers
-          echo BYTES=$(wc -c < /tmp/raw.bin)
-          echo MAGIC=$(xxd -p -l 8 /tmp/raw.bin)
-          test "$code" = 200
-          test "$(head -c 5 /tmp/raw.bin)" = '%PDF-'
-          sha256sum /tmp/raw.bin
+            raw=$(cat /tmp/raw-url.txt)
+            sleep 4
+            out=".audit-chubu-hist/files/$(printf '%02d' "$i")__${fn}"
+            code=$(curl -sS --connect-timeout 10 --max-time 90 --retry 4 --retry-all-errors --retry-delay 4 -o "$out" -w '%{http_code}' -A 'Mozilla/5.0' -e "$viewer" "$raw" || true)
+            test "$code" = 200
+            bytes=$(wc -c < "$out")
+            sha=$(sha256sum "$out" | cut -d' ' -f1)
+            magic=$(xxd -p -l 8 "$out")
+            case "$fn" in
+              *.pdf) test "$(head -c 5 "$out")" = '%PDF-' ;;
+              *.xlsx) test "$(xxd -p -l 4 "$out")" = '504b0304' ;;
+              *.xls) test "$(xxd -p -l 8 "$out")" = 'd0cf11e0a1b11ae1' ;;
+            esac
+            printf '%02d\t%s\t%s\t%s\t%s\n' "$i" "$bytes" "$sha" "$magic" "$original" | tee -a .audit-chubu-hist/receipts.tsv
+            printf '%02d\t%s\t%s\n' "$i" "$viewer" "$raw" >> .audit-chubu-hist/raw-urls.tsv
+          done < .audit-chubu-hist/original-urls.txt
+          test "$i" -eq 18
+      - name: Inspect structures
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto';
+          import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'; import XLSX from 'xlsx';
+          const dir='.audit-chubu-hist/files';
+          for (const name of fs.readdirSync(dir).sort()) {
+            const p=path.join(dir,name), b=fs.readFileSync(p), sha=crypto.createHash('sha256').update(b).digest('hex');
+            console.log(`\n=== ${name} bytes=${b.length} sha=${sha} ===`);
+            if (b.subarray(0,5).toString('ascii')==='%PDF-') {
+              const pdf=await pdfjsLib.getDocument({data:new Uint8Array(b)}).promise; console.log('PDF pages',pdf.numPages);
+              for(let n=1;n<=pdf.numPages;n++) { const pg=await pdf.getPage(n), vp=pg.getViewport({scale:1}), tc=await pg.getTextContent(); const items=tc.items.filter(x=>x.str?.trim()); console.log(`p${n} size=${vp.width}x${vp.height} items=${items.length}`); if(n===1) console.log('HEAD',items.slice(0,120).map(x=>`${Math.round(x.transform[4])},${Math.round(x.transform[5])}:${x.str}`).join(' | ')); }
+            } else {
+              const wb=XLSX.read(b,{type:'buffer',cellDates:false,raw:true}); console.log('WORKBOOK',wb.SheetNames);
+              for(const sn of wb.SheetNames){ const ws=wb.Sheets[sn], rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); console.log('SHEET',sn,'ref',ws['!ref'],'rows',rows.length); console.log('HEADROWS',JSON.stringify(rows.slice(0,12))); }
+            }
+          }
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chubu-fy2019-2021-audit-${{ github.run_id }}
+          path: .audit-chubu-hist
+          include-hidden-files: true
+          retention-days: 90
