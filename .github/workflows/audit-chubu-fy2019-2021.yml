@@ -19,8 +19,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .audit-chubu-hist/files
-          INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
-          curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -c .audit-chubu-hist/cookies.txt "$INDEX" -o .audit-chubu-hist/index.html
+          OLD_INDEX='https://warp.ndl.go.jp/20260613/20260601101404/https://www.chubu.meti.go.jp/a41kaikei/kouhyou/index.html'
+          NEW_PREFIX='https://warp.ndl.go.jp/web/20260601101404/'
+          curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -c .audit-chubu-hist/cookies.txt "$OLD_INDEX" -o .audit-chubu-hist/index.html
           python - <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
@@ -41,7 +42,9 @@ jobs:
               historical_pdf=any(k in low for k in keys) and low.endswith('.pdf')
               legacy_excel='/a41kaikei/kouhyou/data/' in low and low.endswith(('.xlsx','.xls'))
               if historical_pdf or legacy_excel:
-                  hits.append(urljoin(base,h))
+                  old=urljoin(base,h)
+                  original=old.split('/https://',1)[1]
+                  hits.append('https://warp.ndl.go.jp/web/20260601101404/https://'+original)
           hits=list(dict.fromkeys(hits))
           print('COUNT',len(hits))
           for u in hits: print(u)
@@ -54,7 +57,7 @@ jobs:
             i=$((i+1))
             fn=$(basename "${u%%\?*}")
             out=".audit-chubu-hist/files/${i}__${fn}"
-            curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -b .audit-chubu-hist/cookies.txt -c .audit-chubu-hist/cookies.txt -e "$INDEX" "$u" -o "$out"
+            curl -fL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 90 -A 'Mozilla/5.0' -b .audit-chubu-hist/cookies.txt -c .audit-chubu-hist/cookies.txt -e "$OLD_INDEX" "$u" -o "$out"
             printf '%02d\t%s\t%s\t%s\n' "$i" "$(wc -c < "$out")" "$(sha256sum "$out" | cut -d' ' -f1)" "$u"
           done < .audit-chubu-hist/urls.txt | tee .audit-chubu-hist/receipts.tsv
       - name: Inspect file structures
