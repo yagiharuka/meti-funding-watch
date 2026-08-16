@@ -326,7 +326,13 @@ async function fetchReviewArchive(url, label) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetchChecked(url, { accept: "application/zip" });
+      const reviewSheetYear = new URL(url).pathname.split("/").find((part) => /^20\d{2}$/.test(part));
+      const response = await fetchChecked(url, {
+        accept: "application/zip, application/octet-stream;q=0.9, */*;q=0.8",
+        referer: `${SOURCE.indexUrl}/${reviewSheetYear ?? ""}`,
+        "cache-control": "no-cache",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/127 Safari/537.36 meti-funding-watch/0.1",
+      });
       const buffer = Buffer.from(await response.arrayBuffer());
       if (buffer.length >= 4 && buffer.subarray(0, 4).toString("hex") === "504b0304") return buffer;
       lastError = new Error(`${label}: ZIPではない応答を受信しました（${response.headers.get("content-type") || "content-type不明"}）`);
