@@ -84,6 +84,9 @@ const manifest = {
   carryForwardReviewSheetYears: yearly.filter((item) => item.carryForward).map((item) => item.reviewSheetYear).sort((a, b) => a - b),
   rowAccounting: summarizeAccounting(yearly),
   sourceReceipts,
+  ...(sourceReceipts.length === 0 && previous?.manifest.bootstrapProvenance
+    ? { bootstrapProvenance: previous.manifest.bootstrapProvenance }
+    : {}),
   semantics: {
     paymentAmount: "行政事業レビュー公式CSV『支出先の合計支出額』掲載値",
     aggregationWarning: "上流・中間・終端の支出先を相互に合算しない。契約額・交付決定額・GビズINFO掲載値とも合算しない。",
