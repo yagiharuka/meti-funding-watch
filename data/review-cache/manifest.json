@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 3,
-  "generatedAt": "2026-08-06T00:00:00.000Z",
+  "schemaVersion": 4,
+  "generatedAt": "2026-08-16T01:34:06.322Z",
   "lastSuccessfulSourceRefresh": "2026-08-06",
-  "refreshStatus": "cached-official-source-route-changed",
+  "refreshStatus": "carry-forward",
   "sourceUrl": "https://rssystem.go.jp/download-csv",
   "reviewSheetYears": [
     2024,
@@ -10,8 +10,19 @@
   ],
   "unavailableReviewSheetYears": [
     {
+      "reviewSheetYear": 2024,
+      "reason": "2024 2-1_RS_2024_予算・執行_サマリ.zip: ZIPシグネチャがありません",
+      "carryForwardUsed": true
+    },
+    {
+      "reviewSheetYear": 2025,
+      "reason": "2025 1-1_RS_2025_基本情報_組織情報.zip: ZIPシグネチャがありません",
+      "carryForwardUsed": true
+    },
+    {
       "reviewSheetYear": 2026,
-      "reason": "2026年度レビューシートは2026年8月15日時点で経産省が9月以降公開予定と案内"
+      "reason": "2026 1-1_RS_2026_基本情報_組織情報.zip: ZIPシグネチャがありません",
+      "carryForwardUsed": false
     }
   ],
   "programsFile": "programs.json",
@@ -33,16 +44,51 @@
     "payments-e.json",
     "payments-f.json"
   ],
+  "excludedRowsFile": "excluded-rows.json",
   "programCount": 1005,
   "paymentCount": 13944,
+  "excludedRowCount": 0,
+  "carryForwardReviewSheetYears": [
+    2024,
+    2025
+  ],
+  "rowAccounting": {
+    "status": "partial_unknown_legacy_cache",
+    "byYear": {
+      "2024": {
+        "status": "unknown_legacy_cache",
+        "sourcePaymentRowCount": null,
+        "publishedPaymentRowCount": 7004,
+        "excludedPaymentRowCount": null,
+        "excludedByReason": null,
+        "amountStatusCounts": null
+      },
+      "2025": {
+        "status": "unknown_legacy_cache",
+        "sourcePaymentRowCount": null,
+        "publishedPaymentRowCount": 6940,
+        "excludedPaymentRowCount": null,
+        "excludedByReason": null,
+        "amountStatusCounts": null
+      }
+    },
+    "totals": {
+      "sourcePaymentRowCount": null,
+      "publishedPaymentRowCount": 13944,
+      "excludedPaymentRowCount": null,
+      "excludedByReason": null,
+      "amountStatusCounts": null
+    }
+  },
   "sourceReceipts": [],
   "bootstrapProvenance": {
     "commit": "21beab2198ec3c60955db83464171dd56dad152b",
     "description": "2026-08-06に行政事業レビュー公式CSVから取得・生成した検証済みキャッシュ。RSシステムの直接CSV経路変更後も値を補完せず保持。"
   },
   "semantics": {
-    "paymentAmount": "行政事業レビュー公式CSV「支出先の合計支出額」掲載値",
+    "paymentAmount": "行政事業レビュー公式CSV『支出先の合計支出額』掲載値",
     "aggregationWarning": "上流・中間・終端の支出先を相互に合算しない。契約額・交付決定額・GビズINFO掲載値とも合算しない。",
-    "negativeSearchWarning": "未掲載・未収録・移行年度の詳細欠落があるため、0件を受給なしとは解釈しない。"
+    "negativeSearchWarning": "未掲載・未収録・移行年度の詳細欠落があるため、0件を受給なしとは解釈しない。",
+    "routeWarning": "経路CSVに根拠がない経路は生成しない。複数上流がある場合は単一経路に決め打ちしない。"
   }
 }
