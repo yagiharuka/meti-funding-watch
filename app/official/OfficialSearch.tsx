@@ -57,11 +57,14 @@ export default function OfficialSearch() {
   const [executor, setExecutor] = useState("all");
   const [year, setYear] = useState("all");
   const [page, setPage] = useState(0);
+  const [retryToken, setRetryToken] = useState(0);
   const [officialUpdateOutcome, setOfficialUpdateOutcome] = useState<"succeeded" | "failed" | "unknown">("unknown");
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
         const [manifestResponse, releaseResponse, updateStatus] = await Promise.all([
@@ -122,7 +125,7 @@ export default function OfficialSearch() {
       }
     })();
     return () => { active = false; controller.abort(); };
-  }, []);
+  }, [retryToken]);
 
   const executors = useMemo(() => [...new Set(records.map((row) => row.executorName))].sort(localeCompare), [records]);
   const years = useMemo(() => [...new Set(records.map((row) => row.fiscalYear))].sort((a, b) => b - a), [records]);
@@ -192,7 +195,11 @@ export default function OfficialSearch() {
         {hasFilters && <button onClick={clearFilters}>条件をクリア</button>}
       </div>
       {error ? (
-        <div className="adoption-error" role="alert"><strong>検索データの整合性を確認できませんでした。</strong><p>{error}。未検証の明細は表示していません。</p></div>
+        <div className="adoption-error" role="alert">
+          <strong>検索データの整合性を確認できませんでした。</strong>
+          <p>{error}。未検証の明細は表示していません。通信状況を確認して、もう一度お試しください。</p>
+          <button type="button" onClick={() => setRetryToken((value) => value + 1)}>明細をもう一度読み込む</button>
+        </div>
       ) : (
         <div className="records-table official-results-table" role="region" aria-label="公式契約結果・補助金交付決定の明細一覧" tabIndex={0}>
           <table>

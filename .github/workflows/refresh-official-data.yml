@@ -12,6 +12,9 @@ on:
       - "scripts/official-*.mjs"
       - "data/official-source-registry.json"
       - "evidence/official-bootstrap/**"
+      - "tests/official-data.test.mjs"
+      - "tests/official-evidence-receipts.test.mjs"
+      - "tests/official-golden-records.test.mjs"
 
 permissions:
   contents: write

@@ -138,6 +138,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .adoption-error strong { color: var(--ink); }
 .adoption-error p { font-size: 11px; line-height: 1.7; }
 .adoption-error a, .adoption-source-note a { color: var(--green); font-weight: 800; }
+.adoption-error button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--green); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .adoption-source-note { max-width: 1440px; margin: 18px auto 0; color: var(--muted); font-size: 11px; line-height: 1.8; }
 
 .official-hero { max-width: 1440px; margin: 0 auto; padding: clamp(54px, 7vw, 92px) clamp(22px, 5vw, 78px) 48px; }
