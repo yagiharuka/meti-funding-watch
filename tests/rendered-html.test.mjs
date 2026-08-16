@@ -169,7 +169,7 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
   assert.doesNotMatch(publicUi, /_next\/data/);
   assert.match(publicUi, /行政事業レビュー/);
   assert.match(publicUi, /0件でも「資金を受けていない」とは判断できません/);
-  assert.match(publicUi, /公開CSVから経路を特定できません/);
+  assert.match(publicUi, /レビューシートCSVでは支出元を確認できません/);
   assert.match(publicUi, /シート年度であり、支出年度の推定値ではありません/);
   assert.match(publicUi, /原資料行数は未照合/);
   assert.match(publicUi, /経済産業省・GビズINFOその他の公表元が運営するサイトではありません/);

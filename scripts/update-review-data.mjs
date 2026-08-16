@@ -57,7 +57,8 @@ await rm(temporaryPath, { recursive: true, force: true });
 await mkdir(temporaryPath, { recursive: true });
 const paymentGroups = new Map();
 for (const payment of payments) {
-  const bucket = payment.id.at(-1) || "0";
+  const suffix = payment.id.slice(-2);
+  const bucket = (Number.parseInt(suffix, 16) & 0x3f).toString(16).padStart(2, "0");
   if (!paymentGroups.has(bucket)) paymentGroups.set(bucket, []);
   paymentGroups.get(bucket).push(payment);
 }

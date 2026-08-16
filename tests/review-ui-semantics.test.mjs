@@ -36,5 +36,13 @@ test("publishes an executor-year-series coverage matrix and review freshness war
   assert.match(officialPageSource, /契.*契約結果/);
   assert.match(officialPageSource, /補.*補助金等交付決定/);
   assert.match(reviewSearchSource, /鮮度要確認/);
-  assert.match(reviewSearchSource, /最終検証済みキャッシュ/);
+  assert.match(reviewSearchSource, /最終検証済みデータ/);
+});
+
+test("makes disclosed review routes understandable without legacy-cache wording", () => {
+  assert.match(reviewSearchSource, /NEDOから先を見る/);
+  assert.match(reviewSearchSource, /NEDOが直接の支出元として記載された支出先/);
+  assert.match(reviewSearchSource, /レビューシートCSVの経路情報/);
+  assert.match(reviewSearchSource, /複数経路のため直接上流のみ表示/);
+  assert.doesNotMatch(reviewSearchSource, /旧キャッシュから復元した経路|旧キャッシュから復元した一経路|旧公式CSVキャッシュから復元|旧キャッシュのためCSV行番号不明|公開経路上の位置/);
 });
