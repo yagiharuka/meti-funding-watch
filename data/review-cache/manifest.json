@@ -1,92 +1,209 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-08-16T09:51:44.688Z",
-  "lastSuccessfulSourceRefreshAt": null,
-  "lastSuccessfulSourceRefreshDate": "2026-08-06",
-  "lastSuccessfulSourceRefresh": "2026-08-06",
-  "refreshStatus": "carry-forward",
+  "generatedAt": "2026-08-16T09:50:00.000Z",
+  "lastSuccessfulSourceRefreshAt": "2026-08-16T09:50:00.000Z",
+  "lastSuccessfulSourceRefreshDate": "2026-08-16",
+  "lastSuccessfulSourceRefresh": "2026-08-16",
+  "refreshStatus": "fresh",
   "sourceUrl": "https://rssystem.go.jp/download-csv",
   "reviewSheetYears": [
     2024,
     2025
   ],
-  "unavailableReviewSheetYears": [
-    {
-      "reviewSheetYear": 2024,
-      "reason": "2024 1-1_RS_2024_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
-      "carryForwardUsed": true
-    },
-    {
-      "reviewSheetYear": 2025,
-      "reason": "2025 1-1_RS_2025_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
-      "carryForwardUsed": true
-    },
-    {
-      "reviewSheetYear": 2026,
-      "reason": "2026 1-1_RS_2026_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
-      "carryForwardUsed": false
-    }
-  ],
+  "unavailableReviewSheetYears": [],
   "programsFile": "programs.json",
   "paymentFiles": [
-    "payments-0.json",
-    "payments-1.json",
-    "payments-2.json",
-    "payments-3.json",
-    "payments-4.json",
-    "payments-5.json",
-    "payments-6.json",
-    "payments-7.json",
-    "payments-8.json",
-    "payments-9.json",
-    "payments-a.json",
-    "payments-b.json",
-    "payments-c.json",
-    "payments-d.json",
-    "payments-e.json",
-    "payments-f.json"
+    "payments-00.json",
+    "payments-01.json",
+    "payments-02.json",
+    "payments-03.json",
+    "payments-04.json",
+    "payments-05.json",
+    "payments-06.json",
+    "payments-07.json",
+    "payments-08.json",
+    "payments-09.json",
+    "payments-0a.json",
+    "payments-0b.json",
+    "payments-0c.json",
+    "payments-0d.json",
+    "payments-0e.json",
+    "payments-0f.json",
+    "payments-10.json",
+    "payments-11.json",
+    "payments-12.json",
+    "payments-13.json",
+    "payments-14.json",
+    "payments-15.json",
+    "payments-16.json",
+    "payments-17.json",
+    "payments-18.json",
+    "payments-19.json",
+    "payments-1a.json",
+    "payments-1b.json",
+    "payments-1c.json",
+    "payments-1d.json",
+    "payments-1e.json",
+    "payments-1f.json",
+    "payments-20.json",
+    "payments-21.json",
+    "payments-22.json",
+    "payments-23.json",
+    "payments-24.json",
+    "payments-25.json",
+    "payments-26.json",
+    "payments-27.json",
+    "payments-28.json",
+    "payments-29.json",
+    "payments-2a.json",
+    "payments-2b.json",
+    "payments-2c.json",
+    "payments-2d.json",
+    "payments-2e.json",
+    "payments-2f.json",
+    "payments-30.json",
+    "payments-31.json",
+    "payments-32.json",
+    "payments-33.json",
+    "payments-34.json",
+    "payments-35.json",
+    "payments-36.json",
+    "payments-37.json",
+    "payments-38.json",
+    "payments-39.json",
+    "payments-3a.json",
+    "payments-3b.json",
+    "payments-3c.json",
+    "payments-3d.json",
+    "payments-3e.json",
+    "payments-3f.json"
   ],
   "excludedRowsFile": "excluded-rows.json",
   "programCount": 1005,
-  "paymentCount": 13944,
-  "excludedRowCount": 0,
-  "carryForwardReviewSheetYears": [
-    2024,
-    2025
-  ],
+  "paymentCount": 31873,
+  "excludedRowCount": 3829,
+  "carryForwardReviewSheetYears": [],
   "rowAccounting": {
-    "status": "partial_unknown_legacy_cache",
+    "status": "complete",
     "byYear": {
       "2024": {
-        "status": "unknown_legacy_cache",
-        "sourcePaymentRowCount": null,
-        "publishedPaymentRowCount": 7004,
-        "excludedPaymentRowCount": null,
-        "excludedByReason": null,
-        "amountStatusCounts": null
+        "status": "complete",
+        "sourcePaymentRowCount": 17889,
+        "publishedPaymentRowCount": 15980,
+        "excludedPaymentRowCount": 1909,
+        "excludedByReason": {
+          "organization_blank": 1909,
+          "block_blank": 11
+        },
+        "amountStatusCounts": {
+          "positive": 7005,
+          "zero": 138,
+          "negative": 0,
+          "blank": 10746,
+          "invalid": 0
+        }
       },
       "2025": {
-        "status": "unknown_legacy_cache",
-        "sourcePaymentRowCount": null,
-        "publishedPaymentRowCount": 6940,
-        "excludedPaymentRowCount": null,
-        "excludedByReason": null,
-        "amountStatusCounts": null
+        "status": "complete",
+        "sourcePaymentRowCount": 17813,
+        "publishedPaymentRowCount": 15893,
+        "excludedPaymentRowCount": 1920,
+        "excludedByReason": {
+          "organization_blank": 1920,
+          "block_blank": 4
+        },
+        "amountStatusCounts": {
+          "positive": 6977,
+          "zero": 110,
+          "negative": 0,
+          "blank": 10726,
+          "invalid": 0
+        }
       }
     },
     "totals": {
-      "sourcePaymentRowCount": null,
-      "publishedPaymentRowCount": 13944,
-      "excludedPaymentRowCount": null,
-      "excludedByReason": null,
-      "amountStatusCounts": null
+      "sourcePaymentRowCount": 35702,
+      "publishedPaymentRowCount": 31873,
+      "excludedPaymentRowCount": 3829,
+      "excludedByReason": {
+        "organization_blank": 3829,
+        "block_blank": 15
+      },
+      "amountStatusCounts": {
+        "positive": 13982,
+        "zero": 248,
+        "negative": 0,
+        "blank": 21472,
+        "invalid": 0
+      }
     }
   },
-  "sourceReceipts": [],
-  "bootstrapProvenance": {
-    "commit": "21beab2198ec3c60955db83464171dd56dad152b",
-    "description": "2026-08-06に行政事業レビュー公式CSVから取得・生成した検証済みキャッシュ。RSシステムの直接CSV経路変更後も値を補完せず保持。"
-  },
+  "sourceReceipts": [
+    {
+      "reviewSheetYear": 2024,
+      "kind": "organizations",
+      "filename": "1-1_RS_2024_基本情報_組織情報.zip",
+      "url": "https://rssystem.go.jp/files/2024/rs/1-1_RS_2024_%E5%9F%BA%E6%9C%AC%E6%83%85%E5%A0%B1_%E7%B5%84%E7%B9%94%E6%83%85%E5%A0%B1.zip",
+      "bytes": 260140,
+      "sha256": "408ac54ebef0f13c224d2de538cb3dccff5d4a92d9f0a1bd9b7cffad3bd49fc5"
+    },
+    {
+      "reviewSheetYear": 2024,
+      "kind": "budgets",
+      "filename": "2-1_RS_2024_予算・執行_サマリ.zip",
+      "url": "https://rssystem.go.jp/files/2024/rs/2-1_RS_2024_%E4%BA%88%E7%AE%97%E3%83%BB%E5%9F%B7%E8%A1%8C_%E3%82%B5%E3%83%9E%E3%83%AA.zip",
+      "bytes": 1490664,
+      "sha256": "a054b9e8e87850ffbf9ab5ec478eaf5a344259989d868dda02bb1b92fbf1909e"
+    },
+    {
+      "reviewSheetYear": 2024,
+      "kind": "payments",
+      "filename": "5-1_RS_2024_支出先_支出情報.zip",
+      "url": "https://rssystem.go.jp/files/2024/rs/5-1_RS_2024_%E6%94%AF%E5%87%BA%E5%85%88_%E6%94%AF%E5%87%BA%E6%83%85%E5%A0%B1.zip",
+      "bytes": 5920574,
+      "sha256": "4624b0c1e179cbe2c6edcff4bbf30e4108ff8bb3f2751c74f7e216821afe895d"
+    },
+    {
+      "reviewSheetYear": 2024,
+      "kind": "flows",
+      "filename": "5-2_RS_2024_支出先_支出ブロックのつながり.zip",
+      "url": "https://rssystem.go.jp/files/2024/rs/5-2_RS_2024_%E6%94%AF%E5%87%BA%E5%85%88_%E6%94%AF%E5%87%BA%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF%E3%81%AE%E3%81%A4%E3%81%AA%E3%81%8C%E3%82%8A.zip",
+      "bytes": 553926,
+      "sha256": "b60e0aee00dc2f93a6de9d0f2347445e12f3c88c0f4d86330659f21108376821"
+    },
+    {
+      "reviewSheetYear": 2025,
+      "kind": "organizations",
+      "filename": "1-1_RS_2025_基本情報_組織情報.zip",
+      "url": "https://rssystem.go.jp/files/2025/rs/1-1_RS_2025_%E5%9F%BA%E6%9C%AC%E6%83%85%E5%A0%B1_%E7%B5%84%E7%B9%94%E6%83%85%E5%A0%B1.zip",
+      "bytes": 258071,
+      "sha256": "a9d353df76661fd140ca9fa38db9ab6059441bc7c657dd36fdf60ddb6fb1736b"
+    },
+    {
+      "reviewSheetYear": 2025,
+      "kind": "budgets",
+      "filename": "2-1_RS_2025_予算・執行_サマリ.zip",
+      "url": "https://rssystem.go.jp/files/2025/rs/2-1_RS_2025_%E4%BA%88%E7%AE%97%E3%83%BB%E5%9F%B7%E8%A1%8C_%E3%82%B5%E3%83%9E%E3%83%AA.zip",
+      "bytes": 1757530,
+      "sha256": "6540aa6a8902a061656233c4888e164b3596e9592a86cde4df9d1afe6064d1b6"
+    },
+    {
+      "reviewSheetYear": 2025,
+      "kind": "payments",
+      "filename": "5-1_RS_2025_支出先_支出情報.zip",
+      "url": "https://rssystem.go.jp/files/2025/rs/5-1_RS_2025_%E6%94%AF%E5%87%BA%E5%85%88_%E6%94%AF%E5%87%BA%E6%83%85%E5%A0%B1.zip",
+      "bytes": 6078771,
+      "sha256": "e379dbc4aa4653b06f9a310cdb84fc795c880799cc68c5c5c7f8de194be2634c"
+    },
+    {
+      "reviewSheetYear": 2025,
+      "kind": "flows",
+      "filename": "5-2_RS_2025_支出先_支出ブロックのつながり.zip",
+      "url": "https://rssystem.go.jp/files/2025/rs/5-2_RS_2025_%E6%94%AF%E5%87%BA%E5%85%88_%E6%94%AF%E5%87%BA%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF%E3%81%AE%E3%81%A4%E3%81%AA%E3%81%8C%E3%82%8A.zip",
+      "bytes": 566177,
+      "sha256": "0a2636df78c68fcd94b1296ff1aa9580d936658121039e3a204025c99bed3a68"
+    }
+  ],
   "semantics": {
     "paymentAmount": "行政事業レビュー公式CSV『支出先の合計支出額』掲載値",
     "aggregationWarning": "上流・中間・終端の支出先を相互に合算しない。契約額・交付決定額・GビズINFO掲載値とも合算しない。",

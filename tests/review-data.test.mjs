@@ -23,7 +23,7 @@ test("publishes administrative review as an isolated verified series", async () 
   }
   assert.equal(manifest.programsFile, "programs.json");
   assert.equal(manifest.excludedRowsFile, "excluded-rows.json");
-  assert.ok(manifest.paymentFiles.every((name) => /^payments-[0-9a-f]\.json$/.test(name)));
+  assert.ok(manifest.paymentFiles.every((name) => /^payments-[0-9a-f]{1,2}\.json$/.test(name)));
   const programs = JSON.parse(await readFile(new URL(manifest.programsFile, root), "utf8"));
   const payments = (await Promise.all(manifest.paymentFiles.map(async (name) => JSON.parse(await readFile(new URL(name, root), "utf8"))))).flat();
   const excludedRows = JSON.parse(await readFile(new URL(manifest.excludedRowsFile, root), "utf8"));
