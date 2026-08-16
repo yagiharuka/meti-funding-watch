@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-08-16T09:47:15.074Z",
+  "generatedAt": "2026-08-16T09:49:43.242Z",
   "lastSuccessfulSourceRefreshAt": null,
   "lastSuccessfulSourceRefreshDate": "2026-08-06",
   "lastSuccessfulSourceRefresh": "2026-08-06",
@@ -18,12 +18,12 @@
     },
     {
       "reviewSheetYear": 2025,
-      "reason": "2025 2-1_RS_2025_予算・執行_サマリ.zip: ZIPではない応答を受信しました（text/html）",
+      "reason": "2025 1-1_RS_2025_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
       "carryForwardUsed": true
     },
     {
       "reviewSheetYear": 2026,
-      "reason": "2026 5-1_RS_2026_支出先_支出情報.zip: ZIPではない応答を受信しました（text/html）",
+      "reason": "2026 1-1_RS_2026_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
       "carryForwardUsed": false
     }
   ],
