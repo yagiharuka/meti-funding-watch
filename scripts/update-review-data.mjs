@@ -139,7 +139,8 @@ async function loadReviewSheetYear(reviewSheetYear) {
     ["payments", `5-1_RS_${reviewSheetYear}_支出先_支出情報.zip`],
     ["flows", `5-2_RS_${reviewSheetYear}_支出先_支出ブロックのつながり.zip`],
   ];
-  const downloaded = await Promise.all(specs.map(async ([kind, filename]) => {
+  const downloaded = [];
+  for (const [kind, filename] of specs) {
     const url = new URL(`${reviewSheetYear}/rs/${filename}`, SOURCE.filesBaseUrl).href;
     let buffer;
     let fixtureOnly = false;
@@ -153,8 +154,9 @@ async function loadReviewSheetYear(reviewSheetYear) {
     } else {
       buffer = await fetchReviewArchive(url, `${reviewSheetYear} ${filename}`);
     }
-    return decodeReviewArchive({ reviewSheetYear, kind, filename, url, buffer, fixtureOnly });
-  }));
+    downloaded.push(decodeReviewArchive({ reviewSheetYear, kind, filename, url, buffer, fixtureOnly }));
+    if (!fixturePath) await new Promise((resolvePromise) => setTimeout(resolvePromise, 750));
+  }
   const byKind = Object.fromEntries(downloaded.map((item) => [item.kind, item.csv]));
   const programById = new Map();
   for (const { row } of csvObjectRows(byKind.organizations)) {
