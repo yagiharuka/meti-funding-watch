@@ -29,11 +29,13 @@ type ReviewManifest = {
 
 const PAGE_SIZE = 50;
 const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
-const flowLabels: Record<FlowLevel, string> = {
-  disclosed_intermediary: "公開グラフ上で下流支出あり",
-  terminal_in_disclosed_graph: "公開グラフ上の終端（最終受益者とは限らない）",
-  unclassified: "経路上の位置を確認できず",
-};
+const organizationAliases: Array<[RegExp, string]> = [
+  [/新エネルギー・産業技術総合開発機構/, "NEDO ネド"],
+  [/情報処理推進機構/, "IPA"],
+  [/中小企業基盤整備機構/, "中小機構"],
+  [/石油天然ガス・金属鉱物資源機構/, "JOGMEC"],
+  [/日本貿易振興機構/, "JETRO ジェトロ"],
+];
 
 export default function ReviewSearch() {
   const [manifest, setManifest] = useState<ReviewManifest | null>(null);
@@ -42,8 +44,8 @@ export default function ReviewSearch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [upstream, setUpstream] = useState("");
   const [year, setYear] = useState("all");
-  const [flow, setFlow] = useState<"all" | FlowLevel>("all");
   const [mode, setMode] = useState<"payments" | "programs">("payments");
   const [page, setPage] = useState(0);
 
@@ -77,12 +79,15 @@ export default function ReviewSearch() {
 
   const normalized = normalize(query);
   const terms = useMemo(() => normalized.split(" ").filter(Boolean), [normalized]);
+  const upstreamTerms = useMemo(() => normalize(upstream).split(" ").filter(Boolean), [upstream]);
   const filteredPayments = useMemo(() => payments.filter((row) => {
     if (year !== "all" && String(row.reviewSheetYear) !== year) return false;
-    if (flow !== "all" && row.flowLevel !== flow) return false;
-    const haystack = normalize([row.organization, row.corporateNumber, row.program, row.sourceAgency ?? "", row.organizationType, ...(row.route ?? []), ...row.directUpstreamNames].join(" "));
-    return terms.every((term) => haystack.includes(term));
-  }).sort((a, b) => (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY) || a.organization.localeCompare(b.organization, "ja")), [payments, terms, year, flow]);
+    const upstreamNames = reviewUpstreamNames(row);
+    const haystack = normalize([row.organization, row.corporateNumber, row.program, row.organizationType, ...(row.route ?? []), ...upstreamNames].map(searchableOrganization).join(" "));
+    const upstreamHaystack = normalize(upstreamNames.map(searchableOrganization).join(" "));
+    return terms.every((term) => haystack.includes(term))
+      && upstreamTerms.every((term) => upstreamHaystack.includes(term));
+  }).sort((a, b) => (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY) || a.organization.localeCompare(b.organization, "ja")), [payments, terms, upstreamTerms, year]);
   const filteredPrograms = useMemo(() => programs.filter((row) => {
     if (year !== "all" && String(row.reviewSheetYear) !== year) return false;
     const haystack = normalize([row.projectNumber, row.name, row.organization].join(" "));
@@ -92,33 +97,34 @@ export default function ReviewSearch() {
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const effective = Math.min(page, pages - 1);
   const visible = rows.slice(effective * PAGE_SIZE, (effective + 1) * PAGE_SIZE);
-  const hasFilters = Boolean(query.trim()) || year !== "all" || flow !== "all";
+  const hasFilters = Boolean(query.trim()) || Boolean(upstream.trim()) || year !== "all";
 
   function resetPage(action: () => void) { action(); setPage(0); }
-  function clear() { setQuery(""); setYear("all"); setFlow("all"); setPage(0); }
+  function clear() { setQuery(""); setUpstream(""); setYear("all"); setPage(0); }
 
   return (
     <section className="official-search-section" aria-labelledby="review-search-title">
       <div className="section-heading compact">
         <div><p className="eyebrow">SEPARATE REFERENCE SERIES</p><h2 id="review-search-title">レビューシート検索</h2></div>
-        <p>支出先と事業を別表示します。支出先額は上流・中間・下流を足し上げません。</p>
+        <p>支出元から支出先まで、レビューシートに記載された経路を表示します。支出先額は上流・中間・下流を足し上げません。</p>
       </div>
       <div className="review-mode-tabs" role="group" aria-label="行政事業レビューの表示対象">
         <button className={mode === "payments" ? "active" : undefined} onClick={() => resetPage(() => setMode("payments"))}>支出先</button>
         <button className={mode === "programs" ? "active" : undefined} onClick={() => resetPage(() => setMode("programs"))}>事業・予算執行</button>
       </div>
       <div className="filters official-search-filters">
-        <label className="search-field"><span className="sr-only">名称等で検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder={mode === "payments" ? "支出先名・法人番号・事業名で検索" : "事業名・予算事業ID・担当組織で検索"} value={query} onChange={(e) => resetPage(() => setQuery(e.target.value))} /></label>
+        <label className="search-field"><span className="sr-only">名称等で検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder={mode === "payments" ? "支出先・支出元・事業名で検索" : "事業名・予算事業ID・担当組織で検索"} value={query} onChange={(e) => resetPage(() => setQuery(e.target.value))} /></label>
+        {mode === "payments" && <label className="search-field review-upstream-field"><span className="sr-only">支出元で絞る</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder="支出元で絞る（例：NEDO）" value={upstream} onChange={(e) => resetPage(() => setUpstream(e.target.value))} /></label>}
         <label><span className="sr-only">レビューシート年度</span><select value={year} onChange={(e) => resetPage(() => setYear(e.target.value))}><option value="all">収録レビューシート年度すべて</option>{[...(manifest?.reviewSheetYears ?? [])].sort((a,b)=>b-a).map((y)=><option key={y} value={y}>{y}年度シート</option>)}</select></label>
-        {mode === "payments" && <label><span className="sr-only">経路上の位置</span><select value={flow} onChange={(e) => resetPage(() => setFlow(e.target.value as typeof flow))}><option value="all">経路上の位置すべて</option>{Object.entries(flowLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>}
       </div>
+      {mode === "payments" && <p className="filter-note">「支出元で絞る」にNEDOと入力すると、レビューシート上でNEDOから支出された先を表示します。経路が確認できない行は、この絞り込みには含みません。</p>}
       <p className="official-coverage-note"><strong>否定検索には使えません：</strong>{manifest ? `${manifest.reviewSheetYears.join("・")}年度シートを収録。` : "収録年度を確認中。"} 2021–2023年度の移行データは支出先詳細・経路が欠けるため、この支出先検索には含めません。0件でも「資金を受けていない」とは判断できません。</p>
       {manifest && manifest.rowAccounting.status !== "complete" && <p className="official-warning"><strong>原資料行数は未照合：</strong>現在の旧検証済みキャッシュでは、0円・負数・空欄や必須項目欠落を含む原資料行数と除外件数を復元できません。表示中の{manifest.paymentCount.toLocaleString("ja-JP")}行を原資料の全行とは扱わないでください。</p>}
       {manifest && manifest.refreshStatus !== "fresh" && <p className="official-warning"><strong>鮮度要確認：</strong>この系列には{formatAcquisition(manifest)}に行政事業レビュー公式CSVから取得できた最終検証済みキャッシュを含みます。取得できなかった年度は前回値を維持し、新しい値として上書きしていません。</p>}
       <div className="result-bar"><span role="status" aria-live="polite">{loading ? <strong>レビュー明細を読込中</strong> : error ? <strong>レビュー明細を取得できません</strong> : <><strong>{rows.length.toLocaleString("ja-JP")}</strong>{mode === "payments" ? "支出先掲載行" : "事業"}</>}</span>{hasFilters && <button onClick={clear}>条件をクリア</button>}</div>
       {error ? <div className="adoption-error" role="alert"><strong>行政事業レビューを表示できません。</strong><p>{error}</p></div> : (
         <div className="records-table official-results-table" role="region" aria-label="行政事業レビュー検索結果" tabIndex={0}>
-          {mode === "payments" ? <table><thead><tr><th>支出先</th><th>事業</th><th>レビュー掲載の支出先額</th><th>公開経路上の位置</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewPayment[]).map((row)=><tr key={row.id}><td data-label="支出先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td><td data-label="事業"><span className="program-name">{row.program}</span><small>{row.sourceAgency ? `公開CSV上の単一の直接上流：${row.sourceAgency}` : "単一の直接上流は特定できません"}</small></td><td className="amount" data-label="レビュー掲載の支出先額">{formatReviewAmount(row)}<small>支出先の合計支出額（他系列と合算不可）</small></td><td data-label="公開経路上の位置"><strong>{flowLabels[row.flowLevel]}</strong><small>{describeRoute(row)}</small></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート<small>シート年度であり、支出年度の推定値ではありません</small></td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a><small>支出先ブロック {row.block}{row.sourceRowNumber ? `／CSV ${row.sourceRowNumber}行目` : "／旧キャッシュのためCSV行番号不明"}</small></td></tr>)}</tbody></table> : <table><thead><tr><th>事業</th><th>担当組織</th><th>当初予算</th><th>執行額</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewProgram[]).map((row)=><tr key={row.id}><td data-label="事業"><strong>{row.name}</strong><small>予算事業ID {row.projectNumber}</small></td><td data-label="担当組織">{row.organization}</td><td className="amount" data-label="当初予算">{row.initialBudget === null ? "記載なし" : yen.format(row.initialBudget)}<small>{row.budgetFiscalYear}年度のレビューシート掲載値</small></td><td className="amount" data-label="執行額">{row.execution === null ? "記載なし" : yen.format(row.execution)}<small>{row.executionFiscalYear ? `${row.executionFiscalYear}年度` : "年度不明"}{row.executionRate === null ? "" : `／執行率 ${row.executionRate}`}</small></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート</td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a></td></tr>)}</tbody></table>}
+          {mode === "payments" ? <table><thead><tr><th>支出先</th><th>事業</th><th>レビュー掲載の支出先額</th><th>レビューシート記載の支出経路</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewPayment[]).map((row)=><tr key={row.id}><td data-label="支出先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td><td data-label="事業"><span className="program-name">{row.program}</span></td><td className="amount" data-label="レビュー掲載の支出先額">{formatReviewAmount(row)}<small>支出先の合計支出額（他系列と合算不可）</small></td><td className="review-route" data-label="支出経路"><strong>{describeRoute(row)}</strong></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート<small>シート年度であり、支出年度の推定値ではありません</small></td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a><small>支出先ブロック {row.block}{row.sourceRowNumber ? `／CSV ${row.sourceRowNumber}行目` : "／旧キャッシュのためCSV行番号不明"}</small></td></tr>)}</tbody></table> : <table><thead><tr><th>事業</th><th>担当組織</th><th>当初予算</th><th>執行額</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewProgram[]).map((row)=><tr key={row.id}><td data-label="事業"><strong>{row.name}</strong><small>予算事業ID {row.projectNumber}</small></td><td data-label="担当組織">{row.organization}</td><td className="amount" data-label="当初予算">{row.initialBudget === null ? "記載なし" : yen.format(row.initialBudget)}<small>{row.budgetFiscalYear}年度のレビューシート掲載値</small></td><td className="amount" data-label="執行額">{row.execution === null ? "記載なし" : yen.format(row.execution)}<small>{row.executionFiscalYear ? `${row.executionFiscalYear}年度` : "年度不明"}{row.executionRate === null ? "" : `／執行率 ${row.executionRate}`}</small></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート</td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a></td></tr>)}</tbody></table>}
           {!loading && !visible.length && <div className="empty-state zero-result-warning"><strong>収録済みレビューシートでは確認できませんでした</strong><span>これは「資金を受けていない」という意味ではありません。未収録年度・支出先詳細がない年度・レビューに掲載されない支出があり得ます。</span></div>}
         </div>
       )}
@@ -142,6 +148,8 @@ function formatAcquisition(manifest: ReviewManifest) {
 }
 function formatReviewAmount(row: ReviewPayment) { if (row.amount !== null) return yen.format(row.amount); return row.amountStatus === "blank" ? "原資料では空欄" : `数値として解釈できません（${row.amountRaw || "記載なし"}）`; }
 function describeRoute(row: ReviewPayment) { if (row.route) return `${row.route.join(" → ")}（${row.routeStatus === "legacy_single_route_unverified" ? "旧キャッシュから復元した一経路。唯一の経路とは限りません" : "単一経路を確認"}）`; if (row.directUpstreamNames.length) return `直接上流：${row.directUpstreamNames.join("／")}（単一経路には決めていません）`; return "公開CSVから経路を特定できません"; }
+function reviewUpstreamNames(row: ReviewPayment) { return [...new Set([row.sourceAgency, ...row.directUpstreamNames].filter((value): value is string => Boolean(value)))]; }
+function searchableOrganization(value: string) { return `${value} ${organizationAliases.filter(([pattern]) => pattern.test(value)).map(([, aliases]) => aliases).join(" ")}`; }
 function validateManifest(m: ReviewManifest) { if (!m || m.schemaVersion !== 4 || !Array.isArray(m.reviewSheetYears) || !Array.isArray(m.paymentFiles) || !m.rowAccounting || !Number.isSafeInteger(m.programCount) || !Number.isSafeInteger(m.paymentCount)) throw new Error("行政事業レビューmanifestが不正です"); }
 function validatePayment(r: ReviewPayment) { if (!r || !r.id || !r.organization || (r.amount !== null && !Number.isSafeInteger(r.amount)) || !["positive","zero","negative","blank","invalid"].includes(r.amountStatus) || !["disclosed_intermediary","terminal_in_disclosed_graph","unclassified"].includes(r.flowLevel) || (r.route !== null && !Array.isArray(r.route)) || !r.sourceUrl?.startsWith("https://")) throw new Error("行政事業レビュー支出先明細が不正です"); }
 function validateProgram(r: ReviewProgram) { if (!r || !r.id || !r.projectNumber || !r.name || !r.sourceUrl?.startsWith("https://")) throw new Error("行政事業レビュー事業明細が不正です"); }

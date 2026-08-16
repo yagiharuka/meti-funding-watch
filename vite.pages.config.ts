@@ -67,7 +67,7 @@ type PublicOfficialRow = {
 export default defineConfig({
   root: fileURLToPath(new URL("./pages-site", import.meta.url)),
   publicDir: fileURLToPath(new URL("./public", import.meta.url)),
-  base: "/meti-funding-watch/",
+  base: "./",
   plugins: [
     {
       name: "clean-pages-output",

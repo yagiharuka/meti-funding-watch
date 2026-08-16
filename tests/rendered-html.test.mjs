@@ -162,6 +162,8 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
   assert.match(publicUi, /meti-funding-watch\.haru620328\.chatgpt\.site\/api\/adoptions/);
   assert.doesNotMatch(publicUi, /meti-funding-watch\.haru620328\.chatgpt\.site\/api\/funding(?:[?"'`/]|$)/);
   assert.match(publicUi, /公開明細のID集合がreleaseと一致しません/);
+  assert.ok(javascriptAssets.some((filename) => /^funding-search\.worker-.*\.js$/.test(filename)));
+  assert.doesNotMatch(javascript, /new URL\([`'"]\/assets\/funding-search\.worker-/);
   assert.match(publicUi, /採択は補助金交付の候補者として選定された段階/);
   assert.doesNotMatch(publicUi, /補助金採択者検索を開く/);
   assert.doesNotMatch(publicUi, /_next\/data/);

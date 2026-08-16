@@ -63,8 +63,6 @@ export default function OfficialSearch() {
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    setLoading(true);
-    setError(null);
     (async () => {
       try {
         const [manifestResponse, releaseResponse, updateStatus] = await Promise.all([
@@ -160,6 +158,12 @@ export default function OfficialSearch() {
     setQuery(""); setCategory("all"); setExecutor("all"); setYear("all"); setPage(0);
   }
 
+  function retryDetails() {
+    setLoading(true);
+    setError(null);
+    setRetryToken((value) => value + 1);
+  }
+
   return (
     <section className="official-search-section" id="official-records" aria-labelledby="official-search-title">
       <div className="section-heading compact">
@@ -198,7 +202,7 @@ export default function OfficialSearch() {
         <div className="adoption-error" role="alert">
           <strong>検索データの整合性を確認できませんでした。</strong>
           <p>{error}。未検証の明細は表示していません。通信状況を確認して、もう一度お試しください。</p>
-          <button type="button" onClick={() => setRetryToken((value) => value + 1)}>明細をもう一度読み込む</button>
+          <button type="button" onClick={retryDetails}>明細をもう一度読み込む</button>
         </div>
       ) : (
         <div className="records-table official-results-table" role="region" aria-label="公式契約結果・補助金交付決定の明細一覧" tabIndex={0}>

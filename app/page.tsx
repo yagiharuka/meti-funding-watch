@@ -317,6 +317,7 @@ export default function Home() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchTotalPages, setSearchTotalPages] = useState(1);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [agencies, setAgencies] = useState<string[]>([]);
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
@@ -393,7 +394,7 @@ export default function Home() {
         setDetailLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     if (!release) return;
@@ -628,6 +629,20 @@ export default function Home() {
     setPage(0);
   }
 
+  function retryDetails() {
+    requestIdRef.current += 1;
+    setManifest(null);
+    setRelease(null);
+    setSearchReady(false);
+    setSearchError(null);
+    setDataset((current) => ({ ...current, records: [] }));
+    setSearchTotal(0);
+    setSearchTotalPages(1);
+    setDetailLoading(true);
+    setDataMode("loading");
+    setLoadAttempt((value) => value + 1);
+  }
+
   function changeYear(nextYear: string) {
     markSearchPending();
     setAgency("all");
@@ -813,6 +828,7 @@ export default function Home() {
             <div className="empty-state">
               <strong>{searchError ? "検索条件を処理できませんでした" : detailLoading ? "明細データを読み込んでいます" : dataMode === "unavailable" ? "明細データを取得できません" : "収録済みのGビズINFO掲載行では確認できませんでした"}</strong>
               <span>{searchError ?? (detailLoading ? "少しお待ちください。" : dataMode === "unavailable" ? "時間をおいて再読み込みしてください。" : "これは経産省関係の資金を受けていないという意味ではありません。GビズINFOに法人番号付きで掲載された収録行の範囲で確認できなかった結果です。")}</span>
+              {dataMode === "unavailable" && <button className="retry-button" type="button" onClick={retryDetails}>明細をもう一度読み込む</button>}
             </div>
           )}
         </div>
