@@ -151,8 +151,7 @@ async function loadReviewSheetYear(reviewSheetYear) {
       ));
       fixtureOnly = true;
     } else {
-      const response = await fetchChecked(url);
-      buffer = Buffer.from(await response.arrayBuffer());
+      buffer = await fetchReviewArchive(url, `${reviewSheetYear} ${filename}`);
     }
     return decodeReviewArchive({ reviewSheetYear, kind, filename, url, buffer, fixtureOnly });
   }));
@@ -321,6 +320,21 @@ function parseArguments(args) {
 }
 function collectFiscalYears(value) { if (Array.isArray(value)) return value.flatMap(collectFiscalYears); if (value && typeof value === "object") return Object.values(value).flatMap(collectFiscalYears); const year = Number(value); return Number.isInteger(year) ? [year] : []; }
 async function fetchChecked(url, extraHeaders = {}) { const response = await fetch(url, { headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)", ...extraHeaders }, signal: AbortSignal.timeout(3 * 60_000) }); if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`); return response; }
+async function fetchReviewArchive(url, label) {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetchChecked(url, { accept: "application/zip" });
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length >= 4 && buffer.subarray(0, 4).toString("hex") === "504b0304") return buffer;
+      lastError = new Error(`${label}: ZIPではない応答を受信しました（${response.headers.get("content-type") || "content-type不明"}）`);
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < 3) await new Promise((resolvePromise) => setTimeout(resolvePromise, attempt * 1_500));
+  }
+  throw lastError ?? new Error(`${label}: 公式ZIPを取得できませんでした`);
+}
 function validate(programs, payments, receipts) {
   if (!programs.length || !payments.length) throw new Error("行政事業レビューの出力が空です");
   if (new Set(programs.map((row) => row.id)).size !== programs.length) throw new Error("行政事業レビュー事業IDが重複しています");
