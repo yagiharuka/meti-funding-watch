@@ -3,12 +3,13 @@ name: Update administrative review data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "45 20 * * *"
+    - cron: "45 20 * * 1"
   push:
     branches: [main]
     paths:
       - ".github/workflows/update-review-data.yml"
       - "scripts/update-review-data.mjs"
+      - "scripts/review-data-model.mjs"
       - "package.json"
       - "package-lock.json"
 
@@ -33,7 +34,7 @@ jobs:
       - name: Refresh administrative review official CSVs
         run: npm run update:review
       - name: Verify review data
-        run: node --test tests/review-data.test.mjs
+        run: npm run build:pages && node --test tests/review-data-model.test.mjs tests/review-data.test.mjs
       - name: Commit refreshed review data
         run: |
           if git diff --quiet -- data/review-cache; then

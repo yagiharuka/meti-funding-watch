@@ -1,8 +1,10 @@
 import { fileURLToPath, URL } from "node:url";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+
+import { REVIEW_SCHEMA_VERSION, migrateLegacyPayment } from "./scripts/review-data-model.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const pagesOutDir = fileURLToPath(new URL("./dist-pages", import.meta.url));
@@ -111,12 +113,11 @@ export default defineConfig({
           commitments,
         };
 
-        await Promise.all([
-          writeFile(
-            new URL("./dist-pages/data/manifest.json", import.meta.url),
-            `${JSON.stringify(publicManifest, null, 2)}\n`,
-          ),
-          ...Object.values(commitments).map(async (filename) => {
+        await writeFile(
+          new URL("./dist-pages/data/manifest.json", import.meta.url),
+          `${JSON.stringify(publicManifest, null, 2)}\n`,
+        );
+        for (const filename of Object.values(commitments)) {
             const rows = JSON.parse(
               await readFile(new URL(`./data/pages/${filename}`, import.meta.url), "utf8"),
             ) as Array<Record<string, unknown>>;
@@ -173,8 +174,7 @@ export default defineConfig({
               new URL(`./dist-pages/data/${filename}`, import.meta.url),
               `${JSON.stringify(publicRows)}\n`,
             );
-          }),
-        ]);
+        }
         await copyOfficialData(dataDirectory);
         await copyReviewData(dataDirectory);
       },
@@ -221,8 +221,9 @@ async function copyOfficialData(dataDirectory: string) {
   }
   const ids = new Set<string>();
   let recordCount = 0;
-  await Promise.all(filenames.map(async (filename) => {
-    const text = await readFile(new URL(filename, sourceDirectory), "utf8");
+  for (const filename of filenames) {
+    const sourceFile = new URL(filename, sourceDirectory);
+    const text = await readFile(sourceFile, "utf8");
     const rows = JSON.parse(text) as PublicOfficialRow[];
     if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
     for (const [index, row] of rows.entries()) {
@@ -249,8 +250,8 @@ async function copyOfficialData(dataDirectory: string) {
       ids.add(row.id);
     }
     recordCount += rows.length;
-    await writeFile(new URL(filename, outputDirectory), text);
-  }));
+    await copyFile(sourceFile, new URL(filename, outputDirectory));
+  }
   if (recordCount !== manifest.recordCount) {
     throw new Error(`公式資料manifestと明細行数が一致しません: ${manifest.recordCount}/${recordCount}`);
   }
@@ -260,31 +261,108 @@ async function copyOfficialData(dataDirectory: string) {
 
 type ReviewManifest = {
   schemaVersion: number; generatedAt: string; refreshStatus?: string; sourceUrl: string; reviewSheetYears: number[];
-  programsFile: string; paymentFiles: string[]; programCount: number; paymentCount: number; sourceReceipts: unknown[];
+  programsFile: string; paymentFiles: string[]; excludedRowsFile?: string; programCount: number; paymentCount: number;
+  excludedRowCount?: number; rowAccounting?: { status: string }; carryForwardReviewSheetYears?: number[]; sourceReceipts: unknown[];
+  semantics?: Record<string, string>; [key: string]: unknown;
 };
 
 async function copyReviewData(dataDirectory: string) {
   const sourceDirectory = new URL("./data/review-cache/", import.meta.url);
   const outputDirectory = new URL("./review/", new URL(`file://${dataDirectory.replace(/\/$/, "")}/`));
   await mkdir(outputDirectory, { recursive: true });
-  const manifestText = await readFile(new URL("manifest.json", sourceDirectory), "utf8");
-  const manifest = JSON.parse(manifestText) as ReviewManifest;
-  const receiptStateOk = Array.isArray(manifest.sourceReceipts) && (manifest.sourceReceipts.length >= 4 || manifest.refreshStatus === "cached-official-source-route-changed");
-  if (manifest.schemaVersion !== 3 || typeof manifest.generatedAt !== "string" || !manifest.sourceUrl?.startsWith("https://")
+  const sourceManifestText = await readFile(new URL("manifest.json", sourceDirectory), "utf8");
+  const sourceManifest = JSON.parse(sourceManifestText) as ReviewManifest;
+  if (sourceManifest.schemaVersion === 3) {
+    await publishLegacyReviewCache(sourceDirectory, outputDirectory, sourceManifest);
+    return;
+  }
+  const manifest = sourceManifest;
+  const receiptStateOk = Array.isArray(manifest.sourceReceipts) && (manifest.sourceReceipts.length >= 4
+    || (Array.isArray(manifest.carryForwardReviewSheetYears) && manifest.carryForwardReviewSheetYears.length > 0));
+  if (manifest.schemaVersion !== REVIEW_SCHEMA_VERSION || typeof manifest.generatedAt !== "string" || !manifest.sourceUrl?.startsWith("https://")
     || !Array.isArray(manifest.reviewSheetYears) || !manifest.reviewSheetYears.length
     || manifest.programsFile !== "programs.json" || !Array.isArray(manifest.paymentFiles) || !manifest.paymentFiles.length
-    || !Number.isSafeInteger(manifest.programCount) || !Number.isSafeInteger(manifest.paymentCount) || !receiptStateOk) throw new Error("行政事業レビューmanifestが不正です");
-  const files = [manifest.programsFile, ...manifest.paymentFiles];
-  let programs = 0; let payments = 0; const ids = new Set<string>();
+    || manifest.excludedRowsFile !== "excluded-rows.json" || !manifest.rowAccounting
+    || !Number.isSafeInteger(manifest.programCount) || !Number.isSafeInteger(manifest.paymentCount)
+    || !Number.isSafeInteger(manifest.excludedRowCount) || !receiptStateOk) throw new Error("行政事業レビューmanifestが不正です");
+  const files = [manifest.programsFile, ...manifest.paymentFiles, manifest.excludedRowsFile];
+  let programs = 0; let payments = 0; let excludedRows = 0; const ids = new Set<string>();
   for (const filename of files) {
-    if (filename !== "programs.json" && !/^payments-[0-9a-f]\.json$/.test(filename)) throw new Error(`行政事業レビュー公開ファイル名が不正です: ${filename}`);
+    if (filename !== "programs.json" && filename !== "excluded-rows.json" && !/^payments-[0-9a-f]\.json$/.test(filename)) throw new Error(`行政事業レビュー公開ファイル名が不正です: ${filename}`);
     const text = await readFile(new URL(filename, sourceDirectory), "utf8");
     const rows = JSON.parse(text) as Array<Record<string, unknown>>;
     if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
     for (const row of rows) { if (typeof row.id !== "string" || !row.id || ids.has(row.id)) throw new Error(`行政事業レビューIDが不正または重複: ${filename}`); ids.add(row.id); }
-    if (filename === "programs.json") programs += rows.length; else payments += rows.length;
+    if (filename === "programs.json") programs += rows.length;
+    else if (filename === "excluded-rows.json") excludedRows += rows.length;
+    else payments += rows.length;
     await writeFile(new URL(filename, outputDirectory), text);
   }
-  if (programs !== manifest.programCount || payments !== manifest.paymentCount) throw new Error("行政事業レビューmanifestと公開行数が一致しません");
-  await writeFile(new URL("manifest.json", outputDirectory), manifestText);
+  if (programs !== manifest.programCount || payments !== manifest.paymentCount || excludedRows !== manifest.excludedRowCount) throw new Error("行政事業レビューmanifestと公開行数が一致しません");
+  await writeFile(new URL("manifest.json", outputDirectory), sourceManifestText);
+}
+
+async function publishLegacyReviewCache(sourceDirectory: URL, outputDirectory: URL, manifest: ReviewManifest) {
+  if (typeof manifest.generatedAt !== "string" || !manifest.sourceUrl?.startsWith("https://")
+    || !Array.isArray(manifest.reviewSheetYears) || !manifest.reviewSheetYears.length
+    || manifest.programsFile !== "programs.json" || !Array.isArray(manifest.paymentFiles) || !manifest.paymentFiles.length
+    || !Number.isSafeInteger(manifest.programCount) || !Number.isSafeInteger(manifest.paymentCount)
+    || !Array.isArray(manifest.sourceReceipts)) throw new Error("旧行政事業レビューmanifestが不正です");
+  const programsText = await readFile(new URL(manifest.programsFile, sourceDirectory), "utf8");
+  const programs = JSON.parse(programsText) as Array<Record<string, unknown>>;
+  if (!Array.isArray(programs) || programs.length !== manifest.programCount) throw new Error("旧行政事業レビュー事業数が不正です");
+  await writeFile(new URL("programs.json", outputDirectory), programsText);
+  let legacyIndex = 0;
+  let paymentCount = 0;
+  const ids = new Set<string>();
+  const publishedByYear: Record<string, number> = Object.fromEntries(manifest.reviewSheetYears.map((year) => [String(year), 0]));
+  for (const filename of manifest.paymentFiles) {
+    if (!/^payments-[0-9a-f]\.json$/.test(filename)) throw new Error(`旧行政事業レビュー公開ファイル名が不正です: ${filename}`);
+    const legacyRows = JSON.parse(await readFile(new URL(filename, sourceDirectory), "utf8")) as Array<Record<string, unknown>>;
+    if (!Array.isArray(legacyRows)) throw new Error(`${filename}が配列ではありません`);
+    const rows = legacyRows.map((row) => migrateLegacyPayment(row, legacyIndex++)) as Array<Record<string, unknown>>;
+    for (const row of rows) {
+      if (typeof row.id !== "string" || !row.id || ids.has(row.id)) throw new Error(`旧行政事業レビューIDが不正または重複: ${filename}`);
+      ids.add(row.id);
+      const year = String(row.reviewSheetYear);
+      publishedByYear[year] = (publishedByYear[year] ?? 0) + 1;
+    }
+    paymentCount += rows.length;
+    await writeFile(new URL(filename, outputDirectory), `${JSON.stringify(rows)}\n`);
+  }
+  if (paymentCount !== manifest.paymentCount) throw new Error("旧行政事業レビュー支出先数が不正です");
+  const excludedRowsFile = "excluded-rows.json";
+  await writeFile(new URL(excludedRowsFile, outputDirectory), "[]\n");
+  const byYear = Object.fromEntries(manifest.reviewSheetYears.map((reviewSheetYear) => [reviewSheetYear, {
+    status: "unknown_legacy_cache",
+    sourcePaymentRowCount: null,
+    publishedPaymentRowCount: publishedByYear[String(reviewSheetYear)] ?? 0,
+    excludedPaymentRowCount: null,
+    excludedByReason: null,
+    amountStatusCounts: null,
+  }]));
+  const publicManifest = {
+    ...manifest,
+    schemaVersion: REVIEW_SCHEMA_VERSION,
+    excludedRowsFile,
+    excludedRowCount: 0,
+    carryForwardReviewSheetYears: [...manifest.reviewSheetYears],
+    rowAccounting: {
+      status: "partial_unknown_legacy_cache",
+      byYear,
+      totals: {
+        sourcePaymentRowCount: null,
+        publishedPaymentRowCount: paymentCount,
+        excludedPaymentRowCount: null,
+        excludedByReason: null,
+        amountStatusCounts: null,
+      },
+    },
+    semantics: {
+      ...manifest.semantics,
+      routeWarning: "経路CSVに根拠がない経路は生成しない。旧キャッシュの中間支出先判定は根拠を復元できないため未分類へ倒した。",
+      rowAccountingWarning: "旧キャッシュでは0円・負数・空欄等の原資料行と除外件数を復元できないため、不明として表示する。次回の公式CSV取得成功時から完全計数する。",
+    },
+  };
+  await writeFile(new URL("manifest.json", outputDirectory), `${JSON.stringify(publicManifest, null, 2)}\n`);
 }

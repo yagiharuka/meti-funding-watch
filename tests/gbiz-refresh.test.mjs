@@ -149,7 +149,7 @@ test("rejects identity changes and corrections above the automatic limit", () =>
   );
 });
 
-test("workflow publishes only verified prior data with an explicit failure status", async () => {
+test("workflow keeps official and Gbiz refresh outcomes independent", async () => {
   const workflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
   assert.match(workflow, /- name: Refresh official detail data[\s\S]*?id: official_refresh[\s\S]*?run: npm run update:official/);
   assert.match(workflow, /jobs:[\s\S]*?update:[\s\S]*?timeout-minutes: 60/);
@@ -162,11 +162,16 @@ test("workflow publishes only verified prior data with an explicit failure statu
   );
   assert.match(workflow, /continue-on-error: true/);
   assert.match(workflow, /Confirm failed refresh did not alter verified data/);
-  assert.match(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages data\/official/);
+  assert.match(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages/);
+  assert.doesNotMatch(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages data\/official/);
   assert.match(workflow, /PAGES_UPDATE_OUTCOME:/);
   assert.match(workflow, /PAGES_OFFICIAL_UPDATE_OUTCOME:/);
   assert.match(workflow, /EXPECTED_OFFICIAL_OUTCOME:/);
-  assert.match(workflow, /PAGES_OFFICIAL_UPDATE_OUTCOME:.*steps\.official_refresh\.outcome == 'success'.*steps\.refresh\.outcome == 'success'/);
+  const officialOutcome = workflow.match(/PAGES_OFFICIAL_UPDATE_OUTCOME:.*$/m)?.[0] ?? "";
+  assert.match(officialOutcome, /steps\.official_refresh\.outcome/);
+  assert.doesNotMatch(officialOutcome, /steps\.refresh\.outcome/);
+  assert.match(workflow, /Refresh official detail data[\s\S]*?if: github\.event_name != 'push'/);
+  assert.match(workflow, /Refresh Gbiz public data[\s\S]*?if: github\.event_name != 'push'/);
   assert.match(workflow, /UPDATE_PHASE: gbiz-data-refresh/);
   assert.match(workflow, /Verify the published release from the live site/);
   assert.match(workflow, /node scripts\/verify-live-pages\.mjs/);

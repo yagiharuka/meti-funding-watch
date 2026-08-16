@@ -162,7 +162,12 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
   assert.doesNotMatch(publicUi, /_next\/data/);
   assert.match(publicUi, /行政事業レビュー/);
   assert.match(publicUi, /0件でも「資金を受けていない」とは判断できません/);
-  assert.doesNotMatch(publicUi, /合計|交付金額|期間指定API/);
+  assert.match(publicUi, /公開CSVから経路を特定できません/);
+  assert.match(publicUi, /シート年度であり、支出年度の推定値ではありません/);
+  assert.match(publicUi, /原資料行数は未照合/);
+  assert.doesNotMatch(publicUi, /支出対象年度の目安/);
+  assert.doesNotMatch(publicUi, /契約額[^\n]{0,120}交付決定額[^\n]{0,120}(?:合計|総額)/);
+  assert.doesNotMatch(publicUi, /総支払額|実支払額です|期間指定API/);
 });
 
 function sha256(value) {

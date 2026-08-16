@@ -69,11 +69,12 @@ if (officialIds.length !== officialManifest.recordCount || new Set(officialIds).
 const reviewDirectory = new URL("review/", dataDirectory);
 const reviewManifestText = await readFile(new URL("manifest.json", reviewDirectory), "utf8");
 const reviewManifest = JSON.parse(reviewManifestText);
-if (reviewManifest.schemaVersion !== 3 || !Number.isSafeInteger(reviewManifest.programCount) || !Number.isSafeInteger(reviewManifest.paymentCount)) {
+if (reviewManifest.schemaVersion !== 4 || !Number.isSafeInteger(reviewManifest.programCount) || !Number.isSafeInteger(reviewManifest.paymentCount)
+  || !Number.isSafeInteger(reviewManifest.excludedRowCount) || reviewManifest.excludedRowsFile !== "excluded-rows.json") {
   throw new Error("公開releaseの行政事業レビューmanifestが不正です");
 }
 const reviewFiles = {};
-for (const filename of [reviewManifest.programsFile, ...reviewManifest.paymentFiles]) {
+for (const filename of [reviewManifest.programsFile, ...reviewManifest.paymentFiles, reviewManifest.excludedRowsFile]) {
   const fileUrl = new URL(filename, reviewDirectory); const text = await readFile(fileUrl, "utf8"); const rows = JSON.parse(text);
   if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
   reviewFiles[filename] = { sha256: sha256(text), bytes: (await stat(fileUrl)).size, rows: rows.length };

@@ -19,7 +19,7 @@ export default function ViewTabs({ active }: ViewTabsProps) {
         <strong>契約結果・交付決定</strong><span>経産省・各機関の公式資料</span>
       </a>
       <a className={active === "review" ? "active" : undefined} href={href("review")} aria-current={active === "review" ? "page" : undefined}>
-        <strong>行政事業レビュー</strong><span>事業・執行・支出先（別系列）</span>
+        <strong>行政事業レビュー</strong><span>事業・予算執行・支出先（別系列）</span>
       </a>
     </nav>
   );
