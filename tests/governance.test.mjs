@@ -24,11 +24,15 @@ test("publishes every verified series after its data-only bot commit", async () 
   assert.match(source, /inputs\.publish_only != true/g);
   for (const refreshWorkflow of [review, gbiz, official]) {
     assert.match(refreshWorkflow, /actions: write/);
-    assert.match(refreshWorkflow, /group: funding-series-refresh/);
     assert.match(refreshWorkflow, /cancel-in-progress: false/);
+    assert.match(refreshWorkflow, /for attempt in 1 2 3/);
+    assert.match(refreshWorkflow, /git pull --rebase origin main/);
     assert.match(refreshWorkflow, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
     assert.match(refreshWorkflow, /if: steps\.commit_data\.outputs\.changed == 'true'/);
   }
+  assert.match(review, /group: administrative-review-update/);
+  assert.match(gbiz, /group: gbiz-data-refresh/);
+  assert.match(official, /group: official-data-refresh/);
 });
 
 test("keeps only durable refresh, discovery, and publication workflows", async () => {

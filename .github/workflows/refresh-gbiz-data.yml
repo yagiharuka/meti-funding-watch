@@ -18,7 +18,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: funding-series-refresh
+  group: gbiz-data-refresh
   cancel-in-progress: false
 
 jobs:
@@ -59,8 +59,16 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add data/funding-data.json data/funding-summary.json data/pages
           git commit -m "chore(data): refresh Gbiz funding data"
-          git push
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push raced with another series; retrying ($attempt/3)."
+          done
+          echo "::error::Could not publish Gbiz data after three rebases."
+          exit 1
       - name: Publish the refreshed snapshot
         if: steps.commit_data.outputs.changed == 'true'
         env:
