@@ -22,6 +22,12 @@ on:
       - "package-lock.json"
       - "vite.pages.config.ts"
   workflow_dispatch:
+    inputs:
+      publish_only:
+        description: "外部取得を行わず、mainの検証済みデータだけを公開する"
+        required: false
+        default: false
+        type: boolean
 
 permissions: {}
 
@@ -64,7 +70,7 @@ jobs:
 
       - name: Refresh official detail data
         id: official_refresh
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && inputs.publish_only != true
         continue-on-error: true
         timeout-minutes: 20
         env:
@@ -80,7 +86,7 @@ jobs:
 
       - name: Refresh Gbiz public data
         id: refresh
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && inputs.publish_only != true
         continue-on-error: true
         run: npm run update:data
 

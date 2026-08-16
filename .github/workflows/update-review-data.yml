@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: administrative-review-update
@@ -36,9 +37,11 @@ jobs:
       - name: Verify review data
         run: npm run build:pages && node --test tests/review-data-model.test.mjs tests/review-data.test.mjs
       - name: Commit refreshed review data
+        id: commit_data
         run: |
           if git diff --quiet -- data/review-cache; then
             echo "Administrative review data unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name github-actions[bot]
@@ -46,3 +49,9 @@ jobs:
           git add data/review-cache
           git commit -m "chore(data): refresh administrative review data"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Publish the refreshed snapshot
+        if: steps.commit_data.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true

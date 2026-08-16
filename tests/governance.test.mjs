@@ -5,7 +5,12 @@ import test from "node:test";
 const workflows = new URL("../.github/workflows/", import.meta.url);
 
 test("publishes every verified series after its data-only bot commit", async () => {
-  const source = await readFile(new URL("update-data.yml", workflows), "utf8");
+  const [source, review, gbiz, official] = await Promise.all([
+    readFile(new URL("update-data.yml", workflows), "utf8"),
+    readFile(new URL("update-review-data.yml", workflows), "utf8"),
+    readFile(new URL("refresh-gbiz-data.yml", workflows), "utf8"),
+    readFile(new URL("refresh-official-data.yml", workflows), "utf8"),
+  ]);
   for (const requiredPath of [
     "data/funding-data.json",
     "data/funding-summary.json",
@@ -15,6 +20,13 @@ test("publishes every verified series after its data-only bot commit", async () 
   ]) assert.match(source, new RegExp(requiredPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(source, /permissions: \{\}/);
   assert.match(source, /deploy:\n\s+permissions:\n\s+contents: read/);
+  assert.match(source, /publish_only:/);
+  assert.match(source, /inputs\.publish_only != true/g);
+  for (const refreshWorkflow of [review, gbiz, official]) {
+    assert.match(refreshWorkflow, /actions: write/);
+    assert.match(refreshWorkflow, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
+    assert.match(refreshWorkflow, /if: steps\.commit_data\.outputs\.changed == 'true'/);
+  }
 });
 
 test("keeps only durable refresh, discovery, and publication workflows", async () => {

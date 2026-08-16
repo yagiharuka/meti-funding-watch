@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: official-data-refresh
@@ -46,9 +47,11 @@ jobs:
       - name: Validate official snapshot before commit
         run: node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs
       - name: Commit only official data
+        id: commit_data
         run: |
           if git diff --quiet -- data/official; then
             echo "Official data unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           test -z "$(git status --porcelain -- data/funding-data.json data/funding-summary.json data/pages data/review-cache)"
@@ -57,3 +60,9 @@ jobs:
           git add data/official
           git commit -m "chore(data): refresh official funding data"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Publish the refreshed snapshot
+        if: steps.commit_data.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true

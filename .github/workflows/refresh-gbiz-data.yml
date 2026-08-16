@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: gbiz-data-refresh
@@ -46,9 +47,11 @@ jobs:
       - name: Validate Gbiz snapshot before commit
         run: node --test tests/funding-data.test.mjs tests/gbiz-refresh.test.mjs
       - name: Commit only Gbiz data
+        id: commit_data
         run: |
           if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages; then
             echo "Gbiz data unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           test -z "$(git status --porcelain -- data/official data/review-cache)"
@@ -57,3 +60,9 @@ jobs:
           git add data/funding-data.json data/funding-summary.json data/pages
           git commit -m "chore(data): refresh Gbiz funding data"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Publish the refreshed snapshot
+        if: steps.commit_data.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true
