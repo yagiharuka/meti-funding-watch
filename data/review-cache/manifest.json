@@ -1,6 +1,8 @@
 {
   "schemaVersion": 4,
   "generatedAt": "2026-08-16T01:34:06.322Z",
+  "lastSuccessfulSourceRefreshAt": null,
+  "lastSuccessfulSourceRefreshDate": "2026-08-06",
   "lastSuccessfulSourceRefresh": "2026-08-06",
   "refreshStatus": "carry-forward",
   "sourceUrl": "https://rssystem.go.jp/download-csv",

@@ -122,17 +122,22 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
   const adoptionIndex = await readFile(new URL("../dist-pages/adoptions/index.html", import.meta.url), "utf8");
   const officialIndex = await readFile(new URL("../dist-pages/official/index.html", import.meta.url), "utf8");
   const reviewIndex = await readFile(new URL("../dist-pages/review/index.html", import.meta.url), "utf8");
+  const correctionsIndex = await readFile(new URL("../dist-pages/corrections/index.html", import.meta.url), "utf8");
   const assetDirectory = new URL("../dist-pages/assets/", import.meta.url);
   const javascriptAssets = (await readdir(assetDirectory))
     .filter((filename) => filename.endsWith(".js"));
   const javascript = (await Promise.all(javascriptAssets.map((filename) =>
     readFile(new URL(filename, assetDirectory), "utf8")))).join("\n");
-  const publicUi = `${publicIndex}\n${adoptionIndex}\n${officialIndex}\n${reviewIndex}\n${javascript}`;
+  const publicUi = `${publicIndex}\n${adoptionIndex}\n${officialIndex}\n${reviewIndex}\n${correctionsIndex}\n${javascript}`;
 
   assert.match(publicIndex, /<title>経産省関係の調達（委託を含む）・補助金情報/);
   assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
   assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\/title>/);
   assert.match(reviewIndex, /<title>行政事業レビュー/);
+  assert.match(correctionsIndex, /<title>訂正・確認の方針｜非公式サイト<\/title>/);
+  for (const html of [publicIndex, adoptionIndex, officialIndex, reviewIndex, correctionsIndex]) {
+    assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/);
+  }
   assert.match(publicIndex, /GビズINFO掲載行と、経済産業省本省・外局・地方経済産業局等13機関/);
   assert.match(publicIndex, /系列を分けて検索する非公式サイト/);
   assert.match(officialIndex, /13機関の公開済み契約結果・補助金等交付決定の一部/);
@@ -165,6 +170,8 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
   assert.match(publicUi, /公開CSVから経路を特定できません/);
   assert.match(publicUi, /シート年度であり、支出年度の推定値ではありません/);
   assert.match(publicUi, /原資料行数は未照合/);
+  assert.match(publicUi, /経済産業省・GビズINFOその他の公表元が運営するサイトではありません/);
+  assert.match(publicUi, /GitHubの訂正・確認フォームを開く/);
   assert.doesNotMatch(publicUi, /支出対象年度の目安/);
   assert.doesNotMatch(publicUi, /契約額[^\n]{0,120}交付決定額[^\n]{0,120}(?:合計|総額)/);
   assert.doesNotMatch(publicUi, /総支払額|実支払額です|期間指定API/);

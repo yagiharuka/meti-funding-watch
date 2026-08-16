@@ -15,8 +15,11 @@ test("publishes administrative review as an isolated verified series", async () 
     assert.match(manifest.bootstrapProvenance?.commit ?? "", /^[0-9a-f]{40}$/);
     assert.match(manifest.bootstrapProvenance?.description ?? "", /公式CSV/);
     assert.match(manifest.lastSuccessfulSourceRefresh ?? "", /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(manifest.lastSuccessfulSourceRefreshAt, null);
+    assert.match(manifest.lastSuccessfulSourceRefreshDate ?? "", /^\d{4}-\d{2}-\d{2}$/);
   } else {
     assert.ok(manifest.sourceReceipts.length >= manifest.reviewSheetYears.length * 4);
+    assert.match(manifest.lastSuccessfulSourceRefreshAt ?? "", /^\d{4}-\d{2}T/);
   }
   assert.equal(manifest.programsFile, "programs.json");
   assert.equal(manifest.excludedRowsFile, "excluded-rows.json");

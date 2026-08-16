@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { unzipSync } from "fflate";
+import { resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { strToU8, unzipSync, zipSync } from "fflate";
 
 import {
   AMOUNT_STATUSES,
@@ -21,9 +23,13 @@ const SOURCE = {
   fiscalYearsUrl: "https://rssystem.go.jp/api/projects/fiscal-years/",
   filesBaseUrl: "https://rssystem.go.jp/files/",
 };
-const outputPath = new URL("../data/review-cache/", import.meta.url);
-const temporaryPath = new URL("../data/.review-cache-next/", import.meta.url);
-const previousPath = new URL("../data/.review-cache-previous/", import.meta.url);
+const options = parseArguments(process.argv.slice(2));
+const outputPath = directoryUrl(options.outputDirectory ?? fileURLToPath(new URL("../data/review-cache/", import.meta.url)));
+const outputFilePath = fileURLToPath(outputPath).replace(/[\\/]$/, "");
+const temporaryPath = directoryUrl(`${outputFilePath}.next`);
+const previousPath = directoryUrl(`${outputFilePath}.previous`);
+const fixturePath = options.fixtureDirectory ? directoryUrl(options.fixtureDirectory) : null;
+const generatedAt = parseClock(options.now).toISOString();
 
 const previous = await loadPreviousCache();
 const candidates = await discoverReviewSheetYears();
@@ -67,10 +73,17 @@ await Promise.all([
 ]);
 const manifest = {
   schemaVersion: REVIEW_SCHEMA_VERSION,
-  generatedAt: new Date().toISOString(),
+  generatedAt,
+  lastSuccessfulSourceRefreshAt: yearly.some((item) => !item.carryForward)
+    ? generatedAt
+    : previous?.manifest.lastSuccessfulSourceRefreshAt ?? null,
+  lastSuccessfulSourceRefreshDate: yearly.some((item) => !item.carryForward)
+    ? jstCalendarDate(generatedAt)
+    : previous?.manifest.lastSuccessfulSourceRefreshDate ?? previous?.manifest.lastSuccessfulSourceRefresh ?? null,
+  // Deprecated compatibility field. It is a calendar date, not a timestamp.
   lastSuccessfulSourceRefresh: yearly.some((item) => !item.carryForward)
-    ? new Date().toISOString().slice(0, 10)
-    : previous?.manifest.lastSuccessfulSourceRefresh ?? null,
+    ? jstCalendarDate(generatedAt)
+    : previous?.manifest.lastSuccessfulSourceRefreshDate ?? previous?.manifest.lastSuccessfulSourceRefresh ?? null,
   refreshStatus: yearly.every((item) => item.carryForward) ? "carry-forward" : unavailable.length ? "partial-carry-forward" : "fresh",
   sourceUrl: SOURCE.indexUrl,
   reviewSheetYears: yearly.map((item) => item.reviewSheetYear).sort((a, b) => a - b),
@@ -100,6 +113,13 @@ console.log(`Administrative review: ${manifest.reviewSheetYears.join("・")} she
 if (unavailable.length) console.log(`Unavailable candidate years: ${JSON.stringify(unavailable)}`);
 
 async function discoverReviewSheetYears() {
+  if (fixturePath) {
+    const years = JSON.parse(await readFile(new URL("years.json", fixturePath), "utf8"));
+    if (!Array.isArray(years) || !years.length || years.some((year) => !Number.isInteger(year))) {
+      throw new Error("レビュー固定フィクスチャのyears.jsonが不正です");
+    }
+    return [...new Set(years)].sort((a, b) => a - b);
+  }
   try {
     const response = await fetchChecked(SOURCE.fiscalYearsUrl, { accept: "application/json" });
     const contentType = response.headers.get("content-type") || "";
@@ -121,14 +141,17 @@ async function loadReviewSheetYear(reviewSheetYear) {
   ];
   const downloaded = await Promise.all(specs.map(async ([kind, filename]) => {
     const url = new URL(`${reviewSheetYear}/rs/${filename}`, SOURCE.filesBaseUrl).href;
-    const response = await fetchChecked(url);
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.length < 4 || buffer.subarray(0, 4).toString("hex") !== "504b0304") throw new Error(`${reviewSheetYear} ${filename}: ZIPシグネチャがありません`);
-    const archive = unzipSync(new Uint8Array(buffer));
-    const csvName = Object.keys(archive).find((name) => name.endsWith(".csv"));
-    if (!csvName) throw new Error(`${reviewSheetYear} ${filename}: ZIP内にCSVがありません`);
-    const csv = new TextDecoder("utf-8").decode(archive[csvName]).replace(/^\uFEFF/, "");
-    return { kind, filename, csv, receipt: { reviewSheetYear, kind, filename, url, bytes: buffer.length, sha256: sha256(buffer) } };
+    let buffer;
+    let fixtureOnly = false;
+    if (fixturePath) {
+      const csv = await readFile(new URL(`${reviewSheetYear}/${kind}.csv`, fixturePath), "utf8");
+      buffer = Buffer.from(zipSync({ [filename.replace(/\.zip$/, ".csv")]: strToU8(csv) }, { level: 0 }));
+      fixtureOnly = true;
+    } else {
+      const response = await fetchChecked(url);
+      buffer = Buffer.from(await response.arrayBuffer());
+    }
+    return decodeReviewArchive({ reviewSheetYear, kind, filename, url, buffer, fixtureOnly });
   }));
   const byKind = Object.fromEntries(downloaded.map((item) => [item.kind, item.csv]));
   const programById = new Map();
@@ -254,6 +277,45 @@ async function atomicReplaceDirectory() {
 }
 
 function sha256(value) { return createHash("sha256").update(value).digest("hex"); }
+function decodeReviewArchive({ reviewSheetYear, kind, filename, url, buffer, fixtureOnly }) {
+  if (buffer.length < 4 || buffer.subarray(0, 4).toString("hex") !== "504b0304") throw new Error(`${reviewSheetYear} ${filename}: ZIPシグネチャがありません`);
+  const archive = unzipSync(new Uint8Array(buffer));
+  const csvName = Object.keys(archive).find((name) => name.endsWith(".csv"));
+  if (!csvName) throw new Error(`${reviewSheetYear} ${filename}: ZIP内にCSVがありません`);
+  const csv = new TextDecoder("utf-8").decode(archive[csvName]).replace(/^\uFEFF/, "");
+  return {
+    kind,
+    filename,
+    csv,
+    receipt: { reviewSheetYear, kind, filename, url, bytes: buffer.length, sha256: sha256(buffer), ...(fixtureOnly ? { fixtureOnly: true } : {}) },
+  };
+}
+function directoryUrl(value) { return new URL(`${pathToFileURL(resolve(value)).href.replace(/\/$/, "")}/`); }
+function parseClock(value) {
+  const date = value ? new Date(value) : new Date();
+  if (!Number.isFinite(date.getTime())) throw new Error(`--nowがISO 8601日時ではありません: ${value}`);
+  return date;
+}
+function jstCalendarDate(value) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(value));
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+function parseArguments(args) {
+  const parsed = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const key = args[index];
+    const value = args[index + 1];
+    if (!["--fixture-dir", "--output-dir", "--now"].includes(key) || !value || value.startsWith("--")) {
+      throw new Error(`不明または値のない引数です: ${key}`);
+    }
+    if (key === "--fixture-dir") parsed.fixtureDirectory = value;
+    if (key === "--output-dir") parsed.outputDirectory = value;
+    if (key === "--now") parsed.now = value;
+    index += 1;
+  }
+  return parsed;
+}
 function collectFiscalYears(value) { if (Array.isArray(value)) return value.flatMap(collectFiscalYears); if (value && typeof value === "object") return Object.values(value).flatMap(collectFiscalYears); const year = Number(value); return Number.isInteger(year) ? [year] : []; }
 async function fetchChecked(url, extraHeaders = {}) { const response = await fetch(url, { headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)", ...extraHeaders }, signal: AbortSignal.timeout(3 * 60_000) }); if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`); return response; }
 function validate(programs, payments, receipts) {

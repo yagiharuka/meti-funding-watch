@@ -12,18 +12,18 @@ on:
       - "scripts/**"
       - "data/source-registry.json"
       - "data/official-source-registry.json"
+      - "data/funding-data.json"
+      - "data/funding-summary.json"
+      - "data/pages/**"
+      - "data/official/**"
+      - "data/review-cache/**"
       - "tests/**"
       - "package.json"
       - "package-lock.json"
       - "vite.pages.config.ts"
   workflow_dispatch:
 
-permissions:
-  contents: write
-  issues: write
-  pages: write
-  id-token: write
-  attestations: write
+permissions: {}
 
 concurrency:
   group: funding-data-update
@@ -31,6 +31,12 @@ concurrency:
 
 jobs:
   update:
+    permissions:
+      contents: write
+      issues: write
+      pages: write
+      id-token: write
+      attestations: write
     outputs:
       published_commit: ${{ steps.published.outputs.commit_sha }}
       refresh_outcome: ${{ steps.refresh.outcome == 'skipped' && 'unknown' || steps.refresh.outcome }}
@@ -172,6 +178,11 @@ jobs:
         run: node scripts/report-update-status.mjs
 
   deploy:
+    permissions:
+      contents: read
+      issues: write
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

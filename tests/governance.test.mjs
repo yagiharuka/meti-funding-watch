@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+import test from "node:test";
+
+const workflows = new URL("../.github/workflows/", import.meta.url);
+
+test("publishes every verified series after its data-only bot commit", async () => {
+  const source = await readFile(new URL("update-data.yml", workflows), "utf8");
+  for (const requiredPath of [
+    "data/funding-data.json",
+    "data/funding-summary.json",
+    "data/pages/**",
+    "data/official/**",
+    "data/review-cache/**",
+  ]) assert.match(source, new RegExp(requiredPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(source, /permissions: \{\}/);
+  assert.match(source, /deploy:\n\s+permissions:\n\s+contents: read/);
+});
+
+test("keeps only durable refresh, discovery, and publication workflows", async () => {
+  assert.deepEqual((await readdir(workflows)).sort(), [
+    "discover-official-sources.yml",
+    "refresh-gbiz-data.yml",
+    "refresh-official-data.yml",
+    "update-data.yml",
+    "update-review-data.yml",
+  ]);
+});
+
+test("documents the non-official status, correction route, temporary noindex, and unresolved reuse terms", async () => {
+  const [readme, notice, robots, issueForm, dependabot] = await Promise.all([
+    readFile(new URL("../README.md", import.meta.url), "utf8"),
+    readFile(new URL("../DATA_AND_CODE_USE.md", import.meta.url), "utf8"),
+    readFile(new URL("../public/robots.txt", import.meta.url), "utf8"),
+    readFile(new URL("../.github/ISSUE_TEMPLATE/correction.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/dependabot.yml", import.meta.url), "utf8"),
+  ]);
+  assert.match(readme, /非公式サイト/);
+  assert.match(readme, /外部データの取得と公開は分離/);
+  assert.doesNotMatch(readme, /update-data\.yml` が毎日6時30分/);
+  assert.match(readme, /訂正・確認フォーム/);
+  assert.match(notice, /明示的なLICENSEが追加されるまでは/);
+  assert.match(robots, /Disallow: \//);
+  assert.match(issueForm, /個人情報、未公表情報/);
+  assert.match(dependabot, /package-ecosystem: npm/);
+  assert.match(dependabot, /package-ecosystem: github-actions/);
+});

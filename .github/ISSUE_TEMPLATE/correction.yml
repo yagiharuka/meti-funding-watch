@@ -1,0 +1,56 @@
+name: 掲載内容の訂正・確認依頼
+description: 当サイトの転記、法人番号、名称、原資料との不一致を報告します。
+title: "[訂正確認] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        このリポジトリは非公式サイトです。個人情報、未公表情報、連絡先などを本文へ書かないでください。
+        原資料自体の訂正は当サイトでは行えません。原資料との差異を確認し、対応記録を公開します。
+  - type: input
+    id: page
+    attributes:
+      label: 該当ページまたはレコードのURL
+      placeholder: https://yagiharuka.github.io/meti-funding-watch/...
+    validations:
+      required: true
+  - type: input
+    id: identity
+    attributes:
+      label: レコードID・sourceKey・法人名
+      description: 分かる範囲で記載してください。
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 確認してほしい内容
+      options:
+        - 原資料と当サイトの転記が違う
+        - 法人名または法人番号の対応が違う
+        - 金額・日付・年度・区分が違う
+        - 同じ行が重複または欠落している
+        - 表示や説明が誤解を招く
+        - その他
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: 内容
+      description: 公開情報だけを使い、期待する表示と現在の表示を記載してください。
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 根拠となる公開原資料のURL
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: 確認
+      options:
+        - label: このIssueが公開されることを理解し、個人情報・未公表情報を記載していません。
+          required: true

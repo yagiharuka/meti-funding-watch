@@ -19,7 +19,7 @@ type ReviewProgram = {
   executionFiscalYear: number | null; execution: number | null; executionRate: number | null; sourceUrl: string;
 };
 type ReviewManifest = {
-  schemaVersion: 4; generatedAt: string; lastSuccessfulSourceRefresh?: string; refreshStatus?: string; sourceUrl: string; reviewSheetYears: number[];
+  schemaVersion: 4; generatedAt: string; lastSuccessfulSourceRefresh?: string; lastSuccessfulSourceRefreshAt?: string | null; lastSuccessfulSourceRefreshDate?: string | null; refreshStatus?: string; sourceUrl: string; reviewSheetYears: number[];
   programsFile: string; paymentFiles: string[]; programCount: number; paymentCount: number;
   excludedRowsFile: string; excludedRowCount: number;
   rowAccounting: { status: "complete" | "partial_unknown_legacy_cache"; totals: { sourcePaymentRowCount: number | null; publishedPaymentRowCount: number; excludedPaymentRowCount: number | null } };
@@ -114,7 +114,7 @@ export default function ReviewSearch() {
       </div>
       <p className="official-coverage-note"><strong>否定検索には使えません：</strong>{manifest ? `${manifest.reviewSheetYears.join("・")}年度シートを収録。` : "収録年度を確認中。"} 2021–2023年度の移行データは支出先詳細・経路が欠けるため、この支出先検索には含めません。0件でも「資金を受けていない」とは判断できません。</p>
       {manifest && manifest.rowAccounting.status !== "complete" && <p className="official-warning"><strong>原資料行数は未照合：</strong>現在の旧検証済みキャッシュでは、0円・負数・空欄や必須項目欠落を含む原資料行数と除外件数を復元できません。表示中の{manifest.paymentCount.toLocaleString("ja-JP")}行を原資料の全行とは扱わないでください。</p>}
-      {manifest && manifest.refreshStatus !== "fresh" && <p className="official-warning"><strong>鮮度要確認：</strong>この系列には{manifest.lastSuccessfulSourceRefresh ?? "2026-08-06"}に行政事業レビュー公式CSVから取得できた最終検証済みキャッシュを含みます。取得できなかった年度は前回値を維持し、新しい値として上書きしていません。</p>}
+      {manifest && manifest.refreshStatus !== "fresh" && <p className="official-warning"><strong>鮮度要確認：</strong>この系列には{formatAcquisition(manifest)}に行政事業レビュー公式CSVから取得できた最終検証済みキャッシュを含みます。取得できなかった年度は前回値を維持し、新しい値として上書きしていません。</p>}
       <div className="result-bar"><span role="status" aria-live="polite">{loading ? <strong>レビュー明細を読込中</strong> : error ? <strong>レビュー明細を取得できません</strong> : <><strong>{rows.length.toLocaleString("ja-JP")}</strong>{mode === "payments" ? "支出先掲載行" : "事業"}</>}</span>{hasFilters && <button onClick={clear}>条件をクリア</button>}</div>
       {error ? <div className="adoption-error" role="alert"><strong>行政事業レビューを表示できません。</strong><p>{error}</p></div> : (
         <div className="records-table official-results-table" role="region" aria-label="行政事業レビュー検索結果" tabIndex={0}>
@@ -123,12 +123,23 @@ export default function ReviewSearch() {
         </div>
       )}
       {!error && rows.length > PAGE_SIZE && <nav className="pagination" aria-label="レビュー検索結果のページ送り"><button disabled={effective===0} onClick={()=>setPage(Math.max(0,effective-1))}>← 前へ</button><span>{effective+1} / {pages}</span><button disabled={effective+1>=pages} onClick={()=>setPage(Math.min(pages-1,effective+1))}>次へ →</button></nav>}
-      {manifest && <p className="official-search-updated">レビュー系列の最終検証済み取得：{manifest.lastSuccessfulSourceRefresh ?? new Date(manifest.generatedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}{manifest.sourceReceipts.length ? `／原資料receipt ${manifest.sourceReceipts.length}ファイル` : "／旧公式CSVキャッシュから復元（新経路の原資料receipt再取得待ち）"}</p>}
+      {manifest && <p className="official-search-updated">レビュー系列の最終検証済み取得：{formatAcquisition(manifest)}{manifest.sourceReceipts.length ? `／原資料receipt ${manifest.sourceReceipts.length}ファイル` : "／旧公式CSVキャッシュから復元（新経路の原資料receipt再取得待ち）"}</p>}
     </section>
   );
 }
 
 function normalize(value: string) { return value.normalize("NFKC").toLocaleLowerCase("ja-JP").replace(/[\s　]+/g," ").trim(); }
+function formatAcquisition(manifest: ReviewManifest) {
+  if (manifest.lastSuccessfulSourceRefreshAt) {
+    return new Date(manifest.lastSuccessfulSourceRefreshAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", dateStyle: "long", timeStyle: "short" });
+  }
+  const date = manifest.lastSuccessfulSourceRefreshDate ?? manifest.lastSuccessfulSourceRefresh;
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split("-").map(Number);
+    return `${year}年${month}月${day}日（取得時刻の記録なし）`;
+  }
+  return "取得日時不明";
+}
 function formatReviewAmount(row: ReviewPayment) { if (row.amount !== null) return yen.format(row.amount); return row.amountStatus === "blank" ? "原資料では空欄" : `数値として解釈できません（${row.amountRaw || "記載なし"}）`; }
 function describeRoute(row: ReviewPayment) { if (row.route) return `${row.route.join(" → ")}（${row.routeStatus === "legacy_single_route_unverified" ? "旧キャッシュから復元した一経路。唯一の経路とは限りません" : "単一経路を確認"}）`; if (row.directUpstreamNames.length) return `直接上流：${row.directUpstreamNames.join("／")}（単一経路には決めていません）`; return "公開CSVから経路を特定できません"; }
 function validateManifest(m: ReviewManifest) { if (!m || m.schemaVersion !== 4 || !Array.isArray(m.reviewSheetYears) || !Array.isArray(m.paymentFiles) || !m.rowAccounting || !Number.isSafeInteger(m.programCount) || !Number.isSafeInteger(m.paymentCount)) throw new Error("行政事業レビューmanifestが不正です"); }

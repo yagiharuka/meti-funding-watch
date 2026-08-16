@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import AdoptionsPage from "@/app/adoptions/page";
+import SiteNotice from "@/app/SiteNotice";
 import "@/app/globals.css";
 
 const root = document.getElementById("root");
@@ -12,6 +13,7 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
+    <SiteNotice />
     <AdoptionsPage />
   </StrictMode>,
 );

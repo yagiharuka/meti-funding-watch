@@ -194,6 +194,7 @@ export default defineConfig({
         adoptions: fileURLToPath(new URL("./pages-site/adoptions/index.html", import.meta.url)),
         official: fileURLToPath(new URL("./pages-site/official/index.html", import.meta.url)),
         review: fileURLToPath(new URL("./pages-site/review/index.html", import.meta.url)),
+        corrections: fileURLToPath(new URL("./pages-site/corrections/index.html", import.meta.url)),
       },
     },
   },
@@ -344,6 +345,8 @@ async function publishLegacyReviewCache(sourceDirectory: URL, outputDirectory: U
   const publicManifest = {
     ...manifest,
     schemaVersion: REVIEW_SCHEMA_VERSION,
+    lastSuccessfulSourceRefreshAt: manifest.lastSuccessfulSourceRefreshAt ?? null,
+    lastSuccessfulSourceRefreshDate: manifest.lastSuccessfulSourceRefreshDate ?? manifest.lastSuccessfulSourceRefresh ?? null,
     excludedRowsFile,
     excludedRowCount: 0,
     carryForwardReviewSheetYears: [...manifest.reviewSheetYears],

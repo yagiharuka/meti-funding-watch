@@ -38,6 +38,8 @@ const byYear = Object.fromEntries(manifest.reviewSheetYears.map((reviewSheetYear
 const migratedManifest = {
   ...manifest,
   schemaVersion: REVIEW_SCHEMA_VERSION,
+  lastSuccessfulSourceRefreshAt: manifest.lastSuccessfulSourceRefreshAt ?? null,
+  lastSuccessfulSourceRefreshDate: manifest.lastSuccessfulSourceRefreshDate ?? manifest.lastSuccessfulSourceRefresh ?? null,
   paymentFiles,
   excludedRowsFile: "excluded-rows.json",
   excludedRowCount: 0,

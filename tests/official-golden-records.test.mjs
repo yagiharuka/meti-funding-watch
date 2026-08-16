@@ -4,6 +4,11 @@ import test from "node:test";
 
 const rows = JSON.parse(await readFile(new URL("../data/official/records-2022.json", import.meta.url), "utf8"));
 const bySourceKey = new Map(rows.map((row) => [row.sourceKey, row]));
+const provenance = {
+  sourceDocumentUrl: "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r4fy_4-9.pdf",
+  sourceSheet: "PDF 1/7",
+  humanReviewedDate: "2026-08-15",
+};
 
 const golden = [
   {
@@ -53,5 +58,9 @@ test("keeps human-reviewed Chubu FY2022 golden values stable", () => {
     assert.equal(actual.date, expected.date, `${expected.sourceKey}: date`);
     assert.equal(actual.category, "grant_decision", `${expected.sourceKey}: category`);
     assert.equal(actual.datasetId, "chubu-2022-grant-decisions-h1", `${expected.sourceKey}: dataset`);
+    assert.equal(actual.sourceDocumentUrl, provenance.sourceDocumentUrl, `${expected.sourceKey}: source document`);
+    assert.equal(actual.sourceSheet, provenance.sourceSheet, `${expected.sourceKey}: source page`);
+    assert.equal(actual.sourceRowNumber, Number(expected.sourceKey.match(/no-(\d+)$/)?.[1]), `${expected.sourceKey}: source row`);
   }
+  assert.match(provenance.humanReviewedDate, /^\d{4}-\d{2}-\d{2}$/);
 });

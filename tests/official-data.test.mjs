@@ -23,6 +23,10 @@ test("publishes a reconciled set of verified official rows without mixing amount
   assert.equal(new Set(records.map((row) => row.id)).size, records.length);
   assert.equal(new Set(records.map((row) => row.sourceKey)).size, records.length);
   assert.deepEqual(manifest.seriesCounts, countBy(records, (row) => row.category));
+  assert.equal(manifest.seriesCounts.contract_result + manifest.seriesCounts.grant_decision, manifest.recordCount);
+  assert.ok(Number.isSafeInteger(manifest.recordCount) && manifest.recordCount > 0);
+  assert.equal(manifest.coverage.executorCount, 13);
+  assert.equal(Object.keys(manifest.coverage.executors).length, manifest.coverage.executorCount);
   assert.equal(manifest.sourceDocuments.reduce((sum, source) => sum + source.records, 0), records.length);
   const executorCounts = countBy(records, (row) => row.executorId);
   for (const [executorId, coverage] of Object.entries(manifest.coverage.executors)) {
@@ -33,7 +37,7 @@ test("publishes a reconciled set of verified official rows without mixing amount
     );
   }
   const publishedYears = [...new Set(records.map((row) => row.fiscalYear))].sort((a, b) => a - b);
-  assert.deepEqual(publishedYears, manifest.coverage.fiscalYears ?? publishedYears);
+  assert.deepEqual(publishedYears, manifest.coverage.fiscalYears);
   assert.ok(records.every((row) => row.amountStage.includes(row.category === "contract_result" ? "契約" : "交付決定")));
   assert.ok(records.every((row) => row.program !== "事業名" && !row.program.includes("物品役務等の 名称及び数量")));
   assert.ok(records.every((row) => row.program !== "交付決定なし"));
@@ -49,17 +53,17 @@ test("publishes a reconciled set of verified official rows without mixing amount
 
 test("binds every published source document to a SHA, row count, and registered official URL", () => {
   assert.ok(OFFICIAL_DOCUMENTS.length >= 7);
-  assert.equal(manifest.sourceDocuments.length, manifest.coverage.sourceDocumentCount ?? manifest.sourceDocuments.length);
+  assert.equal(manifest.sourceDocuments.length, manifest.coverage.sourceDocumentCount);
   const definitions = new Map(OFFICIAL_DOCUMENTS.map((item) => [item.id, item]));
   const receipts = new Map(manifest.sourceDocuments.map((item) => [item.id, item]));
   const sourceFailures = manifest.sourceFailures ?? [];
   assert.equal(receipts.size, manifest.sourceDocuments.length);
   assert.equal(new Set(sourceFailures.map((failure) => failure.id)).size, sourceFailures.length);
   assert.ok(sourceFailures.every((failure) => !receipts.has(failure.id)));
-  assert.equal(sourceFailures.length, manifest.coverage.failedSourceDocumentCount ?? 0);
+  assert.equal(sourceFailures.length, manifest.coverage.failedSourceDocumentCount);
   assert.equal(
     manifest.sourceDocuments.length + sourceFailures.length,
-    manifest.coverage.attemptedSourceDocumentCount ?? manifest.sourceDocuments.length,
+    manifest.coverage.attemptedSourceDocumentCount,
   );
   const fallbackReceipts = manifest.sourceDocuments.filter((receipt) => receipt.fallbackUsed);
   assert.equal(

@@ -1,8 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import ReviewPage from "@/app/review/page";
+
+import CorrectionsPage from "@/app/corrections/page";
 import SiteNotice from "@/app/SiteNotice";
 import "@/app/globals.css";
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Application root was not found");
-createRoot(root).render(<StrictMode><SiteNotice /><ReviewPage /></StrictMode>);
+createRoot(root).render(<StrictMode><SiteNotice /><CorrectionsPage /></StrictMode>);
