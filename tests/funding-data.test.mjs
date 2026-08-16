@@ -409,6 +409,10 @@ test("validates every published corporate number including its check digit", () 
 });
 
 test("presents a Gbiz-only record search without unsupported claims", () => {
+  const recordsSection = pageSource.slice(
+    pageSource.indexOf('<section className="records-section"'),
+    pageSource.indexOf('<section className="source-section"'),
+  );
   assert.match(pageSource, /法人等/);
   assert.match(pageSource, /データ出典：GビズINFO/);
   assert.match(pageSource, /全支出・実支払を示すものではありません/);
@@ -426,11 +430,11 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /funding-search\.worker\.ts/);
   assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
 
-  assert.doesNotMatch(pageSource, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
-  assert.doesNotMatch(pageSource, /受取先|支出元・実施機関|契約額/);
-  assert.doesNotMatch(pageSource, /\broute\b/);
-  assert.doesNotMatch(pageSource, /合計|交付金額|期間指定API/);
-  assert.doesNotMatch(pageSource, /未収録行|検索結果は網羅的では/);
+  assert.doesNotMatch(recordsSection, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
+  assert.doesNotMatch(recordsSection, /受取先|支出元・実施機関|契約額/);
+  assert.doesNotMatch(recordsSection, /\broute\b/);
+  assert.doesNotMatch(recordsSection, /合計|交付金額|期間指定API/);
+  assert.doesNotMatch(recordsSection, /未収録行|検索結果は網羅的では/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure/);
   assert.doesNotMatch(styleSource, /\.route\b|award_decision|\.finalized\b|\.paid\b/);
 });

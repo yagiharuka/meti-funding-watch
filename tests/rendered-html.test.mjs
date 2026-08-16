@@ -132,17 +132,15 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
 
   assert.match(publicIndex, /<title>経産省関係の調達（委託を含む）・補助金情報/);
   assert.match(adoptionIndex, /<title>中小企業庁の補助金採択者情報<\/title>/);
-  assert.match(officialIndex, /<title>公式契約結果・補助金交付決定<\/title>/);
+  assert.match(officialIndex, /<title>公式資料の所在・収録状況<\/title>/);
   assert.match(reviewIndex, /<title>行政事業レビュー/);
   assert.match(correctionsIndex, /<title>訂正・確認の方針｜非公式サイト<\/title>/);
   for (const html of [publicIndex, adoptionIndex, officialIndex, reviewIndex, correctionsIndex]) {
     assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/);
   }
-  assert.match(publicIndex, /GビズINFO掲載行と、経済産業省本省・外局・地方経済産業局等13機関/);
-  assert.match(publicIndex, /系列を分けて検索する非公式サイト/);
-  assert.match(officialIndex, /13機関の公開済み契約結果・補助金等交付決定の一部/);
-  assert.match(publicIndex, /全年度・全公表区分・実支払を網羅しません/);
-  assert.match(officialIndex, /全年度・全公表区分・実支払を網羅しません/);
+  assert.match(publicIndex, /公式入口・取得状態・検索収録範囲/);
+  assert.match(publicIndex, /3系列の検証済み掲載行を分けて検索/);
+  assert.match(officialIndex, /13機関の公式入口と収録状況/);
   assert.notEqual(
     publicIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
     adoptionIndex.match(/<script[^>]+src="([^"]+\.js)"/)?.[1],
@@ -150,6 +148,8 @@ test("builds isolated Gbiz, official, and review GitHub Pages artifacts", async 
   assert.match(publicUi, /調達（委託を含む）・補助金/);
   assert.match(publicUi, /中小企業庁の補助金採択者情報/);
   assert.match(publicUi, /執行機関別の公式入口/);
+  assert.match(publicUi, /まず原資料と収録範囲を選ぶ/);
+  assert.match(publicUi, /公式資料の所在・収録状況/);
   assert.match(publicUi, /公式資料の明細検索/);
   assert.match(publicUi, /交付先・契約相手、法人番号、事業名で検索/);
   assert.match(publicUi, /13執行機関・全年度・全公表区分の完全収録ではなく/);

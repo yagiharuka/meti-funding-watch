@@ -111,12 +111,14 @@ test("keeps contract, grant-decision, Gbiz, and payment meanings separate", () =
 });
 
 test("adds the official catalog and review series as separate visible tabs without restoring Mirasapo", () => {
-  assert.match(viewTabsSource, /契約結果・交付決定/);
-  assert.match(viewTabsSource, /経産省・各機関の公式資料/);
+  assert.match(viewTabsSource, /資料・収録状況/);
+  assert.match(viewTabsSource, /公式入口・契約結果・交付決定/);
   assert.match(viewTabsSource, /行政事業レビュー/);
   assert.match(viewTabsSource, /事業・予算執行・支出先/);
   assert.doesNotMatch(viewTabsSource, /補助金採択者情報（中小企業庁のみ）|href=.*adoptions\//);
-  assert.match(pageSource, /公式契約結果・補助金交付決定/);
+  assert.match(pageSource, /公式資料の所在・収録状況/);
   assert.match(pageSource, /4系列の違い/);
   assert.match(pageSource, /機関×年度×系列の検索収録/);
+  assert.ok(pageSource.indexOf("機関×年度×系列の検索収録") < pageSource.indexOf("<OfficialSearch />"));
+  assert.ok(pageSource.indexOf("執行機関別の公式入口") < pageSource.indexOf("<OfficialSearch />"));
 });

@@ -16,7 +16,7 @@ export default function ViewTabs({ active }: ViewTabsProps) {
         <strong>調達（委託を含む）・補助金</strong><span>GビズINFO</span>
       </a>
       <a className={active === "official" ? "active" : undefined} href={href("official")} aria-current={active === "official" ? "page" : undefined}>
-        <strong>契約結果・交付決定</strong><span>経産省・各機関の公式資料</span>
+        <strong>資料・収録状況</strong><span>公式入口・契約結果・交付決定</span>
       </a>
       <a className={active === "review" ? "active" : undefined} href={href("review")} aria-current={active === "review" ? "page" : undefined}>
         <strong>行政事業レビュー</strong><span>事業・予算執行・支出先（別系列）</span>

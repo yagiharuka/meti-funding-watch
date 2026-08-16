@@ -29,16 +29,14 @@ test("describes Gbiz results as published rows and uses the official category wo
 
 test("describes the three search series separately without claiming complete coverage", () => {
   for (const source of [layoutSource, pageHtml]) {
-    assert.match(source, /GビズINFO掲載行/);
-    assert.match(source, /13機関/);
-    assert.match(source, /系列を分けて検索/);
-    assert.match(source, /全年度・全公表区分・実支払を網羅しません/);
+    assert.match(source, /公式入口・取得状態・検索収録範囲/);
+    assert.match(source, /3系列の検証済み掲載行を分けて検索/);
   }
   for (const source of [officialPageSource, officialPageHtml]) {
-    assert.match(source, /13機関の公開済み契約結果・補助金等交付決定の一部/);
-    assert.match(source, /全年度・全公表区分・実支払を網羅しません/);
+    assert.match(source, /13機関の公式入口と収録状況/);
+    assert.match(source, /検証済みの契約結果・補助金等交付決定の掲載行/);
   }
-  assert.match(readme, /意味の異なる次の3系列を混ぜずに検索/);
+  assert.match(readme, /原資料の所在・取得状態・検索収録範囲を先に確認/);
   assert.match(readme, /26の機関×系列のうち25系列/);
   assert.match(readme, /契約額欄、交付決定額欄、GビズINFO掲載値は意味が異なる/);
 });

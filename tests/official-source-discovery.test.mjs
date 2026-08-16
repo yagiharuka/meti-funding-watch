@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import {
   classifyDiscoveredLinks,
@@ -73,14 +73,12 @@ test("issue copy states that candidates are not automatically published", () => 
   assert.match(body, /原資料の形式と意味を検証/);
 });
 
-test("daily workflow runs discovery separately without making candidates publication inputs", async () => {
-  const [workflow, dataWorkflow] = await Promise.all([
-    readFile(new URL("../.github/workflows/discover-official-sources.yml", import.meta.url), "utf8"),
-    readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8"),
-  ]);
-  assert.match(workflow, /schedule:[\s\S]*?cron:[^\n]+[\s\S]*?npm ci[\s\S]*?npm run discover:official/);
-  assert.match(workflow, /official-source-discovery-\$\{\{ github\.run_id \}\}/);
-  assert.match(workflow, /Report candidates or unreachable official entrances/);
-  assert.doesNotMatch(workflow, /git add|git push|pages: write/);
-  assert.doesNotMatch(dataWorkflow, /discover:official|official-source-discovery/);
+test("keeps source discovery as a manual audit command outside automatic workflows", async () => {
+  const workflowDirectory = new URL("../.github/workflows/", import.meta.url);
+  const workflowSources = await Promise.all((await readdir(workflowDirectory))
+    .filter((name) => name.endsWith(".yml"))
+    .map((name) => readFile(new URL(name, workflowDirectory), "utf8")));
+  const packageSource = await readFile(new URL("../package.json", import.meta.url), "utf8");
+  assert.match(packageSource, /"discover:official": "node scripts\/official-source-discovery\.mjs"/);
+  assert.doesNotMatch(workflowSources.join("\n"), /discover:official|official-source-discovery/);
 });

@@ -35,14 +35,24 @@ test("publishes every verified series after its data-only bot commit", async () 
   assert.match(official, /group: official-data-refresh/);
 });
 
-test("keeps only durable refresh, discovery, and publication workflows", async () => {
+test("keeps only fixture CI, durable refresh, and publication workflows", async () => {
   assert.deepEqual((await readdir(workflows)).sort(), [
-    "discover-official-sources.yml",
+    "ci.yml",
     "refresh-gbiz-data.yml",
     "refresh-official-data.yml",
     "update-data.yml",
     "update-review-data.yml",
   ]);
+});
+
+test("pull request CI uses repository fixtures and never refreshes external data", async () => {
+  const ci = await readFile(new URL("ci.yml", workflows), "utf8");
+  assert.match(ci, /pull_request:/);
+  assert.match(ci, /permissions:\n\s+contents: read/);
+  assert.match(ci, /npm ci/);
+  assert.match(ci, /npm run lint/);
+  assert.match(ci, /npm test/);
+  assert.doesNotMatch(ci, /update:data|update:official|update:review|discover:official/);
 });
 
 test("documents the non-official status, correction route, temporary noindex, and unresolved reuse terms", async () => {

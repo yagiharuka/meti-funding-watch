@@ -6,8 +6,8 @@ import officialManifest from "@/data/official/manifest.json";
 import sourceRegistry from "@/data/official-source-registry.json";
 
 export const metadata: Metadata = {
-  title: "公式契約結果・補助金交付決定",
-  description: "経済産業省本省、外局、地方経済産業局等13機関の公開済み契約結果・補助金等交付決定の一部を横断検索できます。全年度・全公表区分・実支払を網羅しません。",
+  title: "公式資料の所在・収録状況",
+  description: "経済産業省本省、外局、地方経済産業局等13機関の公式入口と収録状況を確認し、検証済みの契約結果・補助金等交付決定の掲載行を検索できます。",
 };
 
 const registry = sourceRegistry;
@@ -99,17 +99,21 @@ export default function OfficialSourcesPage() {
       <ViewTabs active="official" />
 
       <section className="official-hero" id="top" aria-labelledby="official-title">
-        <p className="eyebrow">DIRECT OFFICIAL SOURCES</p>
-        <h1 id="official-title">公式契約結果・補助金交付決定</h1>
+        <p className="eyebrow">SOURCE INDEX & COVERAGE</p>
+        <h1 id="official-title">公式資料の所在・収録状況</h1>
         <p className="official-lead">
-          公式資料に掲載された直接契約と補助金等の交付決定を、交付先・契約相手、法人番号、事業名から検索できます。
-          現在の検索収録は{searchableExecutorNames.join("・")}の公表資料の一部です。
-          収録年度は機関・系列ごとに異なり、全体では{yearList}です。
+          経産省関係13機関の公式入口と、資料を取得・解析して検索できる範囲を先に示します。
+          現在の明細検索は{searchableExecutorNames.join("・")}の公表資料の一部で、収録年度は機関・系列ごとに異なり、全体では{yearList}です。
         </p>
         <p className="official-warning">
           契約額と交付決定額は段階が異なり、いずれも実支払額ではありません。
           GビズINFOの掲載値とも合算しません。再委託先、間接補助先、基金・所管法人からの下流支出は、この一覧では網羅しません。
         </p>
+        <div className="hero-actions">
+          <a className="primary-action" href="#coverage-matrix">収録状況を見る</a>
+          <a className="secondary-action" href="#source-catalog">公式入口を見る</a>
+          <a className="secondary-action" href="#official-records">検証済み明細を検索</a>
+        </div>
       </section>
 
       <aside className="official-ingestion-summary" aria-labelledby="official-ingestion-title">
@@ -121,8 +125,6 @@ export default function OfficialSourcesPage() {
         </span>
         <small>日次更新は登録済みURLを再取得します。新年度・新URL・新機関は自動発見せず、確認・検証後に追加します。</small>
       </aside>
-
-      <OfficialSearch />
 
       <section className="official-section" aria-labelledby="meaning-title">
         <div className="section-heading compact">
@@ -196,7 +198,7 @@ export default function OfficialSourcesPage() {
         )}
       </section>
 
-      <section className="official-section coverage-matrix-section" aria-labelledby="coverage-matrix-title">
+      <section className="official-section coverage-matrix-section" id="coverage-matrix" aria-labelledby="coverage-matrix-title">
         <div className="section-heading compact">
           <div><p className="eyebrow">SEARCH COVERAGE</p><h2 id="coverage-matrix-title">機関×年度×系列の検索収録</h2></div>
           <p>「未収録」は0件という意味ではありません。公式資料を検索DBへ取り込めていない状態です。</p>
@@ -219,7 +221,7 @@ export default function OfficialSourcesPage() {
         <p className="coverage-matrix-legend"><strong>契</strong>＝契約結果、<strong>補</strong>＝補助金等交付決定。0件確認は登録資料を解析して掲載行0を確認した状態です。収録ありでも、その年度の全公表区分を完全照合したことを意味しません。</p>
       </section>
 
-      <section className="official-section official-catalog" aria-labelledby="catalog-title">
+      <section className="official-section official-catalog" id="source-catalog" aria-labelledby="catalog-title">
         <div className="section-heading compact">
           <div><p className="eyebrow">SOURCE CATALOG</p><h2 id="catalog-title">執行機関別の公式入口</h2></div>
           <p>基準日：{registry.asOf}。公式ページの掲載期間やファイル形式は機関・年度ごとに異なります。</p>
@@ -262,9 +264,11 @@ export default function OfficialSourcesPage() {
         </div>
       </section>
 
+      <OfficialSearch />
+
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>公式契約結果・補助金交付決定</span></div>
-        <p>公式資料を取得・整形した非公式検索サイトです。検索明細の収録範囲は各行に明示します。</p>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>公式資料の所在・収録状況</span></div>
+        <p>公式入口と収録状態を整理し、検証済みの掲載行だけを検索できる非公式サイトです。</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>
     </main>
