@@ -77,6 +77,8 @@ test("verifies the release and searches verified static chunks with a worker fal
   assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json\?load=\$\{cacheKey\}`/);
   assert.match(pageSource, /await sha256\(manifestBytes\).*candidateRelease\.manifestSha256/);
   assert.match(pageSource, /sourceSnapshots\.gbiz/);
+  assert.match(pageSource, /corrections\\\/index\\\.html/);
+  assert.match(pageSource, /\\\.\(\?:svg\|txt\)/);
   assert.match(pageSource, /new Worker\(new URL\("\.\/funding-search\.worker\.ts"/);
   assert.match(fundingWorkerSource, /message\.release\.files\[filename\]/);
   assert.match(fundingWorkerSource, /metadata\.bytes/);

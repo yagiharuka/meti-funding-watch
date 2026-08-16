@@ -238,7 +238,7 @@ function validateRelease(value: unknown): asserts value is DataRelease {
   if (!("index.html" in release.appShell)) throw new Error("公開releaseの画面情報が不正です");
   for (const [filename, metadata] of Object.entries(release.appShell)) {
     if (
-      !/^(?:index\.html|adoptions\/index\.html|official\/index\.html|review\/index\.html|assets\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\.svg)$/.test(filename)
+      !/^(?:index\.html|adoptions\/index\.html|official\/index\.html|review\/index\.html|corrections\/index\.html|assets\/[A-Za-z0-9._-]+|[A-Za-z0-9._-]+\.(?:svg|txt))$/.test(filename)
       || !metadata || typeof metadata !== "object"
       || !isSha256(metadata.sha256)
       || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0
