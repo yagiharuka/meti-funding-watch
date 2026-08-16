@@ -188,9 +188,18 @@ test("isolates a first-run evidence mismatch as an explicit source failure", asy
   const document = { ...original, evidenceReceipt: { ...original.evidenceReceipt, expectedSha256: "0".repeat(64) } };
   const buffer = Buffer.alloc(document.evidenceReceipt.expectedBytes);
   buffer.set(Buffer.from("504b0304", "hex"));
-  const { fetched, sourceFailures } = await (await import("../scripts/update-official-data.mjs")).fetchOfficialDocuments(
-    [document], [], async () => new Response(buffer),
-  );
+  const previousBootstrapDirectory = process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY;
+  delete process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY;
+  let result;
+  try {
+    result = await (await import("../scripts/update-official-data.mjs")).fetchOfficialDocuments(
+      [document], [], async () => new Response(buffer),
+    );
+  } finally {
+    if (previousBootstrapDirectory === undefined) delete process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY;
+    else process.env.OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY = previousBootstrapDirectory;
+  }
+  const { fetched, sourceFailures } = result;
   assert.deepEqual(fetched, []);
   assert.equal(sourceFailures.length, 1);
   assert.equal(sourceFailures[0].reasonCode, "evidence_mismatch");
