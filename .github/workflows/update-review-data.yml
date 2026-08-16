@@ -18,7 +18,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: administrative-review-update
+  group: funding-series-refresh
   cancel-in-progress: false
 
 jobs:

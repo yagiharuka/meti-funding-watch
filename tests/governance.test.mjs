@@ -24,6 +24,8 @@ test("publishes every verified series after its data-only bot commit", async () 
   assert.match(source, /inputs\.publish_only != true/g);
   for (const refreshWorkflow of [review, gbiz, official]) {
     assert.match(refreshWorkflow, /actions: write/);
+    assert.match(refreshWorkflow, /group: funding-series-refresh/);
+    assert.match(refreshWorkflow, /cancel-in-progress: false/);
     assert.match(refreshWorkflow, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
     assert.match(refreshWorkflow, /if: steps\.commit_data\.outputs\.changed == 'true'/);
   }
