@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-08-16T03:38:03.715Z",
+  "generatedAt": "2026-08-16T03:43:39.314Z",
   "lastSuccessfulSourceRefreshAt": null,
   "lastSuccessfulSourceRefreshDate": "2026-08-06",
   "lastSuccessfulSourceRefresh": "2026-08-06",
@@ -23,7 +23,7 @@
     },
     {
       "reviewSheetYear": 2026,
-      "reason": "2026 5-2_RS_2026_支出先_支出ブロックのつながり.zip: ZIPシグネチャがありません",
+      "reason": "2026 1-1_RS_2026_基本情報_組織情報.zip: ZIPシグネチャがありません",
       "carryForwardUsed": false
     }
   ],
