@@ -297,6 +297,54 @@ function validateSearchRows(rows: unknown): FundingRecord[] {
   return rows as FundingRecord[];
 }
 
+function sortFundingRecords(rows: FundingRecord[]) {
+  return rows.sort((left, right) =>
+    (right.fiscalYear ?? Number.NEGATIVE_INFINITY) - (left.fiscalYear ?? Number.NEGATIVE_INFINITY)
+    || (right.date ?? "").localeCompare(left.date ?? "")
+    || left.organization.localeCompare(right.organization, "ja"));
+}
+
+async function loadVerifiedFundingRecords(
+  publicBaseUrl: string,
+  manifest: DataChunkManifest,
+  release: DataRelease,
+  signal: AbortSignal,
+) {
+  const records: FundingRecord[] = [];
+  const ids = new Set<string>();
+  const entries = Object.entries(manifest.commitments)
+    .sort(([left], [right]) => left.localeCompare(right));
+
+  for (const [yearKey, filename] of entries) {
+    const metadata = release.files[filename];
+    if (!metadata) throw new Error(`${filename}のrelease情報がありません`);
+    const dataUrl = new URL(`data/${filename}`, publicBaseUrl);
+    dataUrl.searchParams.set("release", release.commitSha);
+    const response = await fetch(dataUrl, { cache: "no-store", signal });
+    if (!response.ok) throw new Error(`${filename}を取得できません（HTTP ${response.status}）`);
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
+    if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
+    const rows = validateSearchRows(parseJsonBytes<unknown>(bytes, filename));
+    if (rows.length !== metadata.rows) throw new Error(`${filename}の行数が一致しません`);
+    for (const row of rows) {
+      if (yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== yearKey) {
+        throw new Error(`${filename}の年度がmanifestと一致しません`);
+      }
+      if (ids.has(row.id)) throw new Error("公開明細IDが重複しています");
+      ids.add(row.id);
+      records.push(row);
+    }
+  }
+
+  if (records.length !== release.recordCount) throw new Error("公開明細の総行数がreleaseと一致しません");
+  const idSetBytes = new TextEncoder().encode(`${[...ids].sort().join("\n")}\n`);
+  if (await sha256(idSetBytes.buffer) !== release.idSetSha256) {
+    throw new Error("公開明細のID集合がreleaseと一致しません");
+  }
+  return sortFundingRecords(records);
+}
+
 function initialSearchParam(name: string, fallback: string) {
   if (typeof window === "undefined") return fallback;
   return new URLSearchParams(window.location.search).get(name) ?? fallback;
@@ -320,6 +368,8 @@ export default function Home() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [agencies, setAgencies] = useState<string[]>([]);
   const workerRef = useRef<Worker | null>(null);
+  const fallbackRecordsRef = useRef<FundingRecord[] | null>(null);
+  const [searchBackend, setSearchBackend] = useState<"worker" | "main" | null>(null);
   const requestIdRef = useRef(0);
   const [query, setQuery] = useState(() => sanitizeFundingSearchQuery(initialSearchParam("q", "")));
   const deferredQuery = useDeferredValue(query);
@@ -339,9 +389,10 @@ export default function Home() {
   useEffect(() => {
     const controller = new AbortController();
     const publicBaseUrl = getPublicBaseUrl();
+    const cacheKey = `${Date.now()}-${loadAttempt}`;
     Promise.all([
-      fetch(`${publicBaseUrl}data/manifest.json`, { cache: "no-store", signal: controller.signal }),
-      fetch(`${publicBaseUrl}release.json`, { cache: "no-store", signal: controller.signal }),
+      fetch(`${publicBaseUrl}data/manifest.json?load=${cacheKey}`, { cache: "no-store", signal: controller.signal }),
+      fetch(`${publicBaseUrl}release.json?load=${cacheKey}`, { cache: "no-store", signal: controller.signal }),
     ])
       .then(async ([manifestResponse, releaseResponse]) => {
         if (!manifestResponse.ok) throw new Error(`Data manifest: ${manifestResponse.status}`);
@@ -424,8 +475,37 @@ export default function Home() {
   useEffect(() => {
     if (!manifest || !release) return;
     let active = true;
+    let fallbackStarted = false;
+    const fallbackController = new AbortController();
     const worker = new Worker(new URL("./funding-search.worker.ts", import.meta.url), { type: "module" });
     workerRef.current = worker;
+
+    const startMainThreadFallback = () => {
+      if (!active || fallbackStarted || fallbackRecordsRef.current) return;
+      fallbackStarted = true;
+      workerRef.current?.terminate();
+      workerRef.current = null;
+      setSearchReady(false);
+      setSearchBackend(null);
+      setDetailLoading(true);
+      loadVerifiedFundingRecords(getPublicBaseUrl(), manifest, release, fallbackController.signal)
+        .then((records) => {
+          if (!active) return;
+          fallbackRecordsRef.current = records;
+          setAgencies([...new Set(records.map((row) => row.sourceAgency))]
+            .sort((left, right) => left.localeCompare(right, "ja")));
+          setSearchBackend("main");
+          setSearchReady(true);
+        })
+        .catch((error: unknown) => {
+          if (!active || (error instanceof DOMException && error.name === "AbortError")) return;
+          setDataset((current) => ({ ...current, records: [] }));
+          setSearchTotal(0);
+          setSearchTotalPages(1);
+          setDataMode("unavailable");
+          setDetailLoading(false);
+        });
+    };
 
     worker.onmessage = (event: MessageEvent<FundingWorkerResponse>) => {
       if (!active) return;
@@ -437,6 +517,7 @@ export default function Home() {
           return;
         }
         setAgencies(message.agencies);
+        setSearchBackend("worker");
         setSearchReady(true);
         return;
       }
@@ -451,12 +532,7 @@ export default function Home() {
           setDetailLoading(false);
           return;
         }
-        setSearchReady(false);
-        setDataset((current) => ({ ...current, records: [] }));
-        setSearchTotal(0);
-        setSearchTotalPages(1);
-        setDataMode("unavailable");
-        setDetailLoading(false);
+        startMainThreadFallback();
         return;
       }
       if (message.requestId !== requestIdRef.current) return;
@@ -487,13 +563,7 @@ export default function Home() {
       setDataMode("github");
       setDetailLoading(false);
     };
-    worker.onerror = () => {
-      if (!active) return;
-      setSearchReady(false);
-      setDataset((current) => ({ ...current, records: [] }));
-      setDataMode("unavailable");
-      setDetailLoading(false);
-    };
+    worker.onerror = startMainThreadFallback;
     worker.postMessage({
       type: "initialize",
       publicBaseUrl: getPublicBaseUrl(),
@@ -503,13 +573,14 @@ export default function Home() {
 
     return () => {
       active = false;
+      fallbackController.abort();
       workerRef.current = null;
       worker.terminate();
     };
   }, [manifest, release]);
 
   useEffect(() => {
-    if (!searchReady || !workerRef.current || !release || query !== deferredQuery) return;
+    if (!searchReady || !release || query !== deferredQuery) return;
     const requestId = ++requestIdRef.current;
     const requestedAgency = agency === "all" || agencies.includes(agency) ? agency : "all";
     const parameters = new URLSearchParams({
@@ -519,12 +590,39 @@ export default function Home() {
       year,
       page: String(page + 1),
     });
-    workerRef.current.postMessage({
-      type: "search",
-      requestId,
-      parameters: parameters.toString(),
+    if (searchBackend === "worker" && workerRef.current) {
+      workerRef.current.postMessage({
+        type: "search",
+        requestId,
+        parameters: parameters.toString(),
+      });
+      return;
+    }
+    if (searchBackend !== "main" || !fallbackRecordsRef.current) return;
+    const needle = deferredQuery.trim().toLocaleLowerCase("ja-JP");
+    const matching = fallbackRecordsRef.current.filter((row) => {
+      if (needle && !`${row.organization} ${row.corporateNumber}`.toLocaleLowerCase("ja-JP").includes(needle)) return false;
+      if (requestedAgency !== "all" && row.sourceAgency !== requestedAgency) return false;
+      if (stage !== "all" && row.stage !== stage) return false;
+      if (year === "unclassified" && row.fiscalYear !== null) return false;
+      if (/^\d{4}$/.test(year) && String(row.fiscalYear) !== year) return false;
+      return true;
     });
-  }, [agencies, agency, deferredQuery, page, query, release, searchReady, stage, year]);
+    const totalRecords = matching.length;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+    const effectivePage = Math.min(page + 1, totalPages);
+    const offset = (effectivePage - 1) * pageSize;
+    setDataset((current) => ({
+      ...current,
+      generatedAt: manifest?.generatedAt ?? current.generatedAt,
+      records: matching.slice(offset, offset + pageSize),
+    }));
+    setSearchTotal(totalRecords);
+    setSearchTotalPages(totalPages);
+    setSearchError(null);
+    setDataMode("github");
+    setDetailLoading(false);
+  }, [agencies, agency, deferredQuery, manifest?.generatedAt, page, query, release, searchBackend, searchReady, stage, year]);
 
   const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
@@ -631,6 +729,8 @@ export default function Home() {
 
   function retryDetails() {
     requestIdRef.current += 1;
+    fallbackRecordsRef.current = null;
+    setSearchBackend(null);
     setManifest(null);
     setRelease(null);
     setSearchReady(false);

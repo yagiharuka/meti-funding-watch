@@ -66,7 +66,9 @@ async function initialize(message: InitializeMessage) {
   for (const [yearKey, filename] of entries) {
     const metadata = message.release.files[filename];
     if (!metadata) throw new Error(`${filename}のrelease情報がありません`);
-    const response = await fetch(new URL(`data/${filename}`, message.publicBaseUrl), { cache: "no-store" });
+    const dataUrl = new URL(`data/${filename}`, message.publicBaseUrl);
+    dataUrl.searchParams.set("release", message.release.commitSha);
+    const response = await fetch(dataUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`${filename}を取得できません（HTTP ${response.status}）`);
     const bytes = await response.arrayBuffer();
     if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);

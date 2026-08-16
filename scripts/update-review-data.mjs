@@ -145,7 +145,10 @@ async function loadReviewSheetYear(reviewSheetYear) {
     let fixtureOnly = false;
     if (fixturePath) {
       const csv = await readFile(new URL(`${reviewSheetYear}/${kind}.csv`, fixturePath), "utf8");
-      buffer = Buffer.from(zipSync({ [filename.replace(/\.zip$/, ".csv")]: strToU8(csv) }, { level: 0 }));
+      buffer = Buffer.from(zipSync(
+        { [filename.replace(/\.zip$/, ".csv")]: strToU8(csv) },
+        { level: 0, mtime: new Date("1980-01-01T00:00:00.000Z") },
+      ));
       fixtureOnly = true;
     } else {
       const response = await fetchChecked(url);

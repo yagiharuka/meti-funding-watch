@@ -73,8 +73,8 @@ test("search state is reflected in the URL", () => {
   assert.match(adoptionSource, /popstate/);
 });
 
-test("verifies the release and searches verified static chunks in a worker", () => {
-  assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json`/);
+test("verifies the release and searches verified static chunks with a worker fallback", () => {
+  assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json\?load=\$\{cacheKey\}`/);
   assert.match(pageSource, /await sha256\(manifestBytes\).*candidateRelease\.manifestSha256/);
   assert.match(pageSource, /sourceSnapshots\.gbiz/);
   assert.match(pageSource, /new Worker\(new URL\("\.\/funding-search\.worker\.ts"/);
@@ -82,6 +82,10 @@ test("verifies the release and searches verified static chunks in a worker", () 
   assert.match(fundingWorkerSource, /metadata\.bytes/);
   assert.match(fundingWorkerSource, /metadata\.sha256/);
   assert.match(fundingWorkerSource, /message\.release\.idSetSha256/);
+  assert.match(fundingWorkerSource, /searchParams\.set\("release", message\.release\.commitSha\)/);
+  assert.match(pageSource, /loadVerifiedFundingRecords\(getPublicBaseUrl\(\), manifest, release/);
+  assert.match(pageSource, /setSearchBackend\("main"\)/);
+  assert.match(pageSource, /await sha256\(idSetBytes\.buffer\) !== release\.idSetSha256/);
   assert.match(pageSource, /records\.length > pageSize/);
   assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
 });
@@ -101,7 +105,7 @@ test("invalidates stale funding searches and keeps request errors recoverable", 
     "the old request must be invalidated before rows are cleared",
   );
   assert.match(pageSource, /query !== deferredQuery/);
-  assert.match(pageSource, /\[agencies, agency, deferredQuery, page, query, release/);
+  assert.match(pageSource, /\[agencies, agency, deferredQuery, manifest\?\.generatedAt, page, query, release/);
   const requestError = pageSource.slice(
     pageSource.indexOf('if (message.type === "error")'),
     pageSource.indexOf("const candidate = message.result"),
@@ -109,7 +113,7 @@ test("invalidates stale funding searches and keeps request errors recoverable", 
   assert.match(requestError, /message\.requestId !== undefined/);
   assert.match(requestError, /setSearchError/);
   assert.match(requestError, /setDataMode\("github"\)/);
-  assert.ok(requestError.indexOf("setDataMode(\"github\")") < requestError.indexOf("setSearchReady(false)"));
+  assert.ok(requestError.indexOf("setDataMode(\"github\")") < requestError.indexOf("startMainThreadFallback()"));
   assert.match(pageSource, /sanitizeFundingSearchQuery\(initialSearchParam\("q"/);
   assert.match(pageSource, /sanitizeFundingSearchPage\(initialSearchParam\("page"/);
 });
