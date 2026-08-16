@@ -20,7 +20,7 @@ test("creates a deterministic review snapshot with a verifiable SHA-256", async 
     await execFileAsync("sha256sum", ["-c", `${first.archiveName}.sha256`], { cwd: firstDirectory });
     const { stdout } = await execFileAsync("tar", ["-tzf", first.archiveName], { cwd: firstDirectory });
     assert.match(stdout, /review-cache\/manifest\.json/);
-    assert.match(stdout, /review-cache\/payments-[0-9a-f]\.json/);
+    assert.match(stdout, /review-cache\/payments-[0-9a-f]{1,2}\.json/);
   } finally {
     await Promise.all([
       rm(firstDirectory, { recursive: true, force: true }),

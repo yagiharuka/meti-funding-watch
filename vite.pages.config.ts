@@ -289,7 +289,7 @@ async function copyReviewData(dataDirectory: string) {
   const files = [manifest.programsFile, ...manifest.paymentFiles, manifest.excludedRowsFile];
   let programs = 0; let payments = 0; let excludedRows = 0; const ids = new Set<string>();
   for (const filename of files) {
-    if (filename !== "programs.json" && filename !== "excluded-rows.json" && !/^payments-[0-9a-f]\.json$/.test(filename)) throw new Error(`行政事業レビュー公開ファイル名が不正です: ${filename}`);
+    if (filename !== "programs.json" && filename !== "excluded-rows.json" && !/^payments-[0-9a-f]{1,2}\.json$/.test(filename)) throw new Error(`行政事業レビュー公開ファイル名が不正です: ${filename}`);
     const text = await readFile(new URL(filename, sourceDirectory), "utf8");
     const rows = JSON.parse(text) as Array<Record<string, unknown>>;
     if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
@@ -318,7 +318,7 @@ async function publishLegacyReviewCache(sourceDirectory: URL, outputDirectory: U
   const ids = new Set<string>();
   const publishedByYear: Record<string, number> = Object.fromEntries(manifest.reviewSheetYears.map((year) => [String(year), 0]));
   for (const filename of manifest.paymentFiles) {
-    if (!/^payments-[0-9a-f]\.json$/.test(filename)) throw new Error(`旧行政事業レビュー公開ファイル名が不正です: ${filename}`);
+    if (!/^payments-[0-9a-f]{1,2}\.json$/.test(filename)) throw new Error(`旧行政事業レビュー公開ファイル名が不正です: ${filename}`);
     const legacyRows = JSON.parse(await readFile(new URL(filename, sourceDirectory), "utf8")) as Array<Record<string, unknown>>;
     if (!Array.isArray(legacyRows)) throw new Error(`${filename}が配列ではありません`);
     const rows = legacyRows.map((row) => migrateLegacyPayment(row, legacyIndex++)) as Array<Record<string, unknown>>;
