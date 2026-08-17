@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T21:21:35.150Z",
+  "generatedAt": "2026-08-17T21:27:32.720Z",
   "sources": [
     {
       "id": "gbiz",
@@ -7,9 +7,9 @@
       "recordCount": 69514,
       "method": "GビズINFO全件CSVを毎日再取得",
       "frequency": "日次確認",
-      "lastChecked": "2026-08-17",
+      "lastChecked": "2026-08-18",
       "status": "healthy",
-      "dashboardCheckedAt": "2026-08-16T21:21:10.634Z",
+      "dashboardCheckedAt": "2026-08-17T21:27:11.470Z",
       "dashboardRecordCount": 69528,
       "dashboardSubsidyCount": 51380,
       "dashboardProcurementCount": 18148,
@@ -26,14 +26,14 @@
       "dashboardMinusCsvEligibleSubsidyCount": 5,
       "dashboardMinusCsvEligibleProcurementCount": 9,
       "dashboardComparisonStatus": "different",
-      "csvRetrievedAt": "2026-08-16T21:21:22.548Z",
-      "csvSubsidyFileBytes": 175574581,
-      "csvProcurementFileBytes": 102381898,
-      "csvSubsidySha256": "b2343ceb2c22a652f2f648732e9bf5c48ac1e0c70e38cd9b5044dd3cdb9dbc40",
-      "csvProcurementSha256": "8da37e5b516ea7f3a4b78dd670fa2f5a538be953ab845657d9719e68cdec45ed",
+      "csvRetrievedAt": "2026-08-17T21:27:22.296Z",
+      "csvSubsidyFileBytes": 175574689,
+      "csvProcurementFileBytes": 102381889,
+      "csvSubsidySha256": "3c1a8a04213bcc8fc6e74f97eb68a58cd46a4e034613c120e523de483a2f0fb8",
+      "csvProcurementSha256": "e83d1ce98172c7013ef7533ba213ba61ac22d99792210c2227c221fa4a9208a4",
       "csvTotalSubsidyRows": 545877,
       "csvTotalProcurementRows": 308613,
-      "lastSuccessfulImportAt": "2026-08-16T21:21:35.150Z",
+      "lastSuccessfulImportAt": "2026-08-17T21:27:32.720Z",
       "continuityBaselineRecordCount": 69514,
       "continuityRetainedRecordCount": 69514,
       "continuityRemovedRecordCount": 0,
@@ -64,23 +64,23 @@
         "dataset": "Hojokinjoho",
         "finalUrl": "https://info.gbiz.go.jp/hojin/Download",
         "contentType": "application/octet-stream",
-        "contentLength": 175574584,
+        "contentLength": 175574692,
         "contentEncoding": null,
-        "contentDisposition": "attachment; filename=\"Hojokinjoho_UTF-8_20260817.csv\"",
+        "contentDisposition": "attachment; filename=\"Hojokinjoho_UTF-8_20260818.csv\"",
         "etag": null,
         "lastModified": null,
-        "receivedBytes": 175574581
+        "receivedBytes": 175574689
       },
       "csvProcurementReceipt": {
         "dataset": "Chotatsujoho",
         "finalUrl": "https://info.gbiz.go.jp/hojin/Download",
         "contentType": "application/octet-stream",
-        "contentLength": 102381901,
+        "contentLength": 102381892,
         "contentEncoding": null,
-        "contentDisposition": "attachment; filename=\"Chotatsujoho_UTF-8_20260817.csv\"",
+        "contentDisposition": "attachment; filename=\"Chotatsujoho_UTF-8_20260818.csv\"",
         "etag": null,
         "lastModified": null,
-        "receivedBytes": 102381898
+        "receivedBytes": 102381889
       },
       "missingSourceKeyRows": 0
     }
