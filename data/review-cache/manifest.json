@@ -1,16 +1,32 @@
 {
   "schemaVersion": 4,
-  "generatedAt": "2026-08-16T11:13:40.555Z",
+  "generatedAt": "2026-08-17T21:02:29.257Z",
   "lastSuccessfulSourceRefreshAt": "2026-08-16T11:13:40.555Z",
   "lastSuccessfulSourceRefreshDate": "2026-08-16",
   "lastSuccessfulSourceRefresh": "2026-08-16",
-  "refreshStatus": "fresh",
+  "refreshStatus": "carry-forward",
   "sourceUrl": "https://rssystem.go.jp/download-csv",
   "reviewSheetYears": [
     2024,
     2025
   ],
-  "unavailableReviewSheetYears": [],
+  "unavailableReviewSheetYears": [
+    {
+      "reviewSheetYear": 2024,
+      "reason": "2024 1-1_RS_2024_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
+      "carryForwardUsed": true
+    },
+    {
+      "reviewSheetYear": 2025,
+      "reason": "2025 1-1_RS_2025_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
+      "carryForwardUsed": true
+    },
+    {
+      "reviewSheetYear": 2026,
+      "reason": "2026 1-1_RS_2026_基本情報_組織情報.zip: ZIPではない応答を受信しました（text/html）",
+      "carryForwardUsed": false
+    }
+  ],
   "programsFile": "programs.json",
   "paymentFiles": [
     "payments-00.json",
@@ -82,7 +98,10 @@
   "programCount": 1005,
   "paymentCount": 31873,
   "excludedRowCount": 3829,
-  "carryForwardReviewSheetYears": [],
+  "carryForwardReviewSheetYears": [
+    2024,
+    2025
+  ],
   "rowAccounting": {
     "status": "complete",
     "byYear": {
