@@ -4,23 +4,47 @@ const token = process.env.GBIZINFO_API_TOKEN?.trim();
 if (!token) throw new Error("GBIZINFO_API_TOKEN is not configured");
 
 const outputDirectory = new URL("../gbiz-api-probe/", import.meta.url);
-const corporateNumbers = [
-  "1000020140007",
-  "1000020290009",
-  "1010505000765",
-  "2230005000235",
-  "5000020240001",
+const targets = [
+  {
+    corporateNumber: "5240002041641",
+    reason: "中小企業庁・証明日空欄・0円・名称に交付申請等",
+  },
+  {
+    corporateNumber: "9070001021591",
+    reason: "中小企業庁・証明日空欄・非0円・名称に交付申請等",
+  },
+  {
+    corporateNumber: "2010005005900",
+    reason: "中小企業庁・証明日空欄・名称にも年度表記なし",
+  },
+  {
+    corporateNumber: "3190001012064",
+    reason: "中小企業庁・証明日空欄・2026年取得の交付申請等",
+  },
+  {
+    corporateNumber: "8010401024011",
+    reason: "経済産業省・証明日空欄・高額補助金",
+  },
 ];
-const versions = ["v1", "v2"];
+const endpoints = [
+  {
+    version: "v1",
+    baseUrl: "https://info.gbiz.go.jp/hojin/v1/hojin",
+  },
+  {
+    version: "v2",
+    baseUrl: "https://api.info.gbiz.go.jp/hojin/v2/hojin",
+  },
+];
 
 await mkdir(outputDirectory, { recursive: true });
 
 const startedAt = new Date().toISOString();
 const requests = [];
 
-for (const version of versions) {
-  for (const corporateNumber of corporateNumbers) {
-    const url = `https://info.gbiz.go.jp/hojin/${version}/hojin/${corporateNumber}/subsidy`;
+for (const { version, baseUrl } of endpoints) {
+  for (const { corporateNumber, reason } of targets) {
+    const url = `${baseUrl}/${corporateNumber}/subsidy`;
     const fetchedAt = new Date().toISOString();
     let response;
     let text;
@@ -38,6 +62,7 @@ for (const version of versions) {
       requests.push({
         version,
         corporateNumber,
+        reason,
         url,
         fetchedAt,
         fetchError: error instanceof Error ? error.message : String(error),
@@ -55,6 +80,7 @@ for (const version of versions) {
     requests.push({
       version,
       corporateNumber,
+      reason,
       url,
       fetchedAt,
       httpStatus: response.status,
@@ -71,7 +97,7 @@ for (const version of versions) {
 const report = {
   startedAt,
   completedAt: new Date().toISOString(),
-  corporateNumbers,
+  targets,
   authentication: {
     configured: true,
     tokenValueRecorded: false,
@@ -89,8 +115,14 @@ const summary = renderSummary(report);
 await writeFile(new URL("summary.md", outputDirectory), summary);
 console.log(summary);
 
-if (!requests.some((request) => request.httpStatus >= 200 && request.httpStatus < 300)) {
-  throw new Error("No authenticated Gbiz subsidy API request succeeded");
+const failedCurrentApiRequests = requests.filter(
+  (request) => request.version === "v2"
+    && !(request.httpStatus >= 200 && request.httpStatus < 300),
+);
+if (failedCurrentApiRequests.length) {
+  throw new Error(
+    `Current Gbiz v2 subsidy API failed for ${failedCurrentApiRequests.length}/${targets.length} targets`,
+  );
 }
 
 function collectKeyPaths(value) {
@@ -120,13 +152,15 @@ function renderSummary({ startedAt: start, completedAt, requests: items }) {
     `- 開始: ${start}`,
     `- 完了: ${completedAt}`,
     "- 認証: GitHub Actions Secret `GBIZINFO_API_TOKEN` を `X-hojinInfo-api-token` ヘッダーに設定（値は記録していません）",
+    "- v1: 旧ホストの継続提供エンドポイント",
+    "- v2: 現行ホスト `api.info.gbiz.go.jp` のエンドポイント",
     "",
-    "| API | 法人番号 | HTTP | bytes | ルートキー |",
-    "|---|---:|---:|---:|---|",
+    "| API | 法人番号 | 抽出理由 | HTTP | bytes | ルートキー |",
+    "|---|---:|---|---:|---:|---|",
   ];
   for (const item of items) {
     lines.push(
-      `| ${item.version} | ${item.corporateNumber} | ${item.httpStatus ?? "取得失敗"} | ${item.responseBytes ?? "-"} | ${(item.rootKeys ?? []).join(" / ") || "-"} |`,
+      `| ${item.version} | ${item.corporateNumber} | ${item.reason} | ${item.httpStatus ?? "取得失敗"} | ${item.responseBytes ?? "-"} | ${(item.rootKeys ?? []).join(" / ") || "-"} |`,
     );
   }
   lines.push("", "## レスポンス内のキーパス", "");
