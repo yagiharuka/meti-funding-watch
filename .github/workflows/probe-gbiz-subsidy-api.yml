@@ -1,0 +1,43 @@
+name: Probe Gbiz subsidy API
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/probe-gbiz-subsidy-api.yml"
+      - "scripts/probe-gbiz-subsidy-api.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Probe authenticated API responses
+        run: node scripts/probe-gbiz-subsidy-api.mjs
+
+      - name: Add the probe summary to this run
+        if: always() && hashFiles('gbiz-api-probe/summary.md') != ''
+        run: cat gbiz-api-probe/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve exact API responses
+        if: always() && hashFiles('gbiz-api-probe/report.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gbiz-subsidy-api-probe-${{ github.run_id }}
+          path: gbiz-api-probe
+          retention-days: 90
