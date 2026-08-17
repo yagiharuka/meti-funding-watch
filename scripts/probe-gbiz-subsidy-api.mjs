@@ -34,6 +34,7 @@ const endpoints = [
   {
     version: "v2",
     baseUrl: "https://api.info.gbiz.go.jp/hojin/v2/hojin",
+    metadata: true,
   },
 ];
 
@@ -42,9 +43,10 @@ await mkdir(outputDirectory, { recursive: true });
 const startedAt = new Date().toISOString();
 const requests = [];
 
-for (const { version, baseUrl } of endpoints) {
+for (const { version, baseUrl, metadata = false } of endpoints) {
   for (const { corporateNumber, reason } of targets) {
-    const url = `${baseUrl}/${corporateNumber}/subsidy`;
+    const url = new URL(`${baseUrl}/${corporateNumber}/subsidy`);
+    if (metadata) url.searchParams.set("metadata_flg", "true");
     const fetchedAt = new Date().toISOString();
     let response;
     let text;
@@ -63,7 +65,7 @@ for (const { version, baseUrl } of endpoints) {
         version,
         corporateNumber,
         reason,
-        url,
+        url: url.href,
         fetchedAt,
         fetchError: error instanceof Error ? error.message : String(error),
       });
@@ -81,7 +83,7 @@ for (const { version, baseUrl } of endpoints) {
       version,
       corporateNumber,
       reason,
-      url,
+      url: url.href,
       fetchedAt,
       httpStatus: response.status,
       contentType: response.headers.get("content-type"),
@@ -153,7 +155,7 @@ function renderSummary({ startedAt: start, completedAt, requests: items }) {
     `- 完了: ${completedAt}`,
     "- 認証: GitHub Actions Secret `GBIZINFO_API_TOKEN` を `X-hojinInfo-api-token` ヘッダーに設定（値は記録していません）",
     "- v1: 旧ホストの継続提供エンドポイント",
-    "- v2: 現行ホスト `api.info.gbiz.go.jp` のエンドポイント",
+    "- v2: 現行ホスト `api.info.gbiz.go.jp` へ `metadata_flg=true` を指定",
     "",
     "| API | 法人番号 | 抽出理由 | HTTP | bytes | ルートキー |",
     "|---|---:|---|---:|---:|---|",
