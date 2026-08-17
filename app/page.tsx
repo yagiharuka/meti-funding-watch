@@ -847,6 +847,7 @@ export default function Home() {
           <strong>法人等別の調達（委託を含む）・補助金掲載情報</strong>
           <span>GビズINFO</span>
         </div>
+        <p className="source-index-principle"><strong>補助金掲載値の注意：</strong>GビズINFOの全件CSVとREST APIには、交付決定・変更・確定・支払などの手続段階を識別する項目がありません。0円や名称に「交付申請等」を含む行も原文のまま表示し、金額段階を推測しません。認定日がない行は年度不明です。</p>
 
         <div className="filters" aria-label="検索条件">
           <label className="search-field">

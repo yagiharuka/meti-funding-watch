@@ -420,6 +420,8 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /GビズINFO掲載区分/);
   assert.match(pageSource, /調達CSV（委託を含む）/);
   assert.match(pageSource, /補助金CSV/);
+  assert.match(pageSource, /手続段階を識別する項目がありません/);
+  assert.match(pageSource, /0円や名称に「交付申請等」を含む行も原文のまま表示/);
   assert.match(pageSource, /調達（委託を含む）・補助金/);
   assert.match(pageSource, /認定日・受注日の記載がない/);
   assert.match(pageSource, /取得時CSVの抽出対象行を取込確認/);
