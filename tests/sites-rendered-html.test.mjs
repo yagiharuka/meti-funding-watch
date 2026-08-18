@@ -55,9 +55,11 @@ test("renders two main series and the reconciliation log", async () => {
   assert.match(official, /機関公表資料との照合の記録/);
   assert.match(official, /照合\s*(?:<!-- -->)?50(?:<!-- -->)?\s*件/);
   const visibleOfficial = official.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  assert.equal((visibleOfficial.match(/class="reconciliation-card"/g) ?? []).length, 2);
+  assert.match(visibleOfficial, /掲載順末尾50行/);
   assert.equal((visibleOfficial.match(/class="not-reviewed"/g) ?? []).length, 95);
   assert.equal((visibleOfficial.match(/class="reviewed-sample"/g) ?? []).length, 1);
-  assert.match(visibleOfficial, /その他未照合/);
+  assert.match(visibleOfficial, /中間65行は未照合/);
   assert.match(review, /レビューシート検索/);
   assert.match(review, /経路はCSVで根拠を確認できる範囲だけを表示/);
 });

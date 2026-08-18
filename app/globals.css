@@ -190,6 +190,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .reconciliation-section { background: #f7f4ec; }
 .reconciliation-card { max-width: 920px; margin: 0 auto 22px; padding: clamp(22px, 4vw, 34px); border: 1px solid #cad5cc; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgba(32,59,50,.06); }
+.reconciliation-sample + .reconciliation-sample { margin-top: 52px; padding-top: 42px; border-top: 1px solid var(--line); }
 .reconciliation-attempted { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 20px; }
 .reconciliation-attempted strong { color: var(--ink); font-family: Georgia, serif; font-size: clamp(24px, 4vw, 38px); }
 .reconciliation-attempted span { color: var(--muted); font-size: 12px; }
@@ -204,6 +205,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .reconciliation-table caption { padding: 14px 18px; color: #52645d; font-size: 11px; font-weight: 800; text-align: left; }
 .reconciliation-table td:nth-child(4), .reconciliation-table td:nth-child(5) { min-width: 200px; }
 .reconciliation-table td a { display: block; width: fit-content; margin-top: 7px; color: var(--green); font-weight: 800; }
+.reconciliation-note { display: block; margin-top: 8px; color: #765a16; font-size: 10px; line-height: 1.65; }
 .reconciliation-status { display: inline-block; padding: 6px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .reconciliation-status.matched { background: #e2f5ec; color: #075c47; }
 .reconciliation-status.amount_mismatch { background: #fff2d9; color: #805000; }
