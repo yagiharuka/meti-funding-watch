@@ -63,9 +63,7 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   assert.match(ui, /機関公表資料の掲載順先頭50行/);
   assert.match(ui, /原典PDF/);
   assert.match(ui, /GビズINFO掲載行/);
-  assert.match(ui, /GビズINFO画面のステータス/);
-  assert.match(ui, /法人詳細画面には「交付決定」「確定」「－」などのステータス欄/);
-  assert.match(ui, /未取得/);
+  assert.doesNotMatch(ui, /GビズINFO画面のステータス/);
   assert.match(ui, /未照合/);
   assert.doesNotMatch(ui, /収録率|カバレッジ/);
   assert.doesNotMatch(ui, /契約額[^\n]{0,120}交付決定額[^\n]{0,120}(?:合計|総額)/);

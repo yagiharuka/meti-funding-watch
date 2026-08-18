@@ -150,18 +150,6 @@ const stageLabels: Record<Stage, string> = {
   subsidy_published: "補助金",
 };
 
-function sourceStatusCell(row: FundingRecord) {
-  if (row.stage === "contracted") {
-    return <span className="source-status not-applicable">対象外</span>;
-  }
-  return (
-    <>
-      <span className="source-status unavailable">未取得</span>
-      <small>法人詳細画面にはステータス欄あり</small>
-    </>
-  );
-}
-
 const yen = new Intl.NumberFormat("ja-JP", {
   style: "currency",
   currency: "JPY",
@@ -853,7 +841,7 @@ export default function Home() {
           <strong>法人等別の調達（委託を含む）・補助金掲載情報</strong>
           <span>GビズINFO</span>
         </div>
-        <p className="source-index-principle"><strong>補助金ステータスの注意：</strong>GビズINFOの法人詳細画面には「交付決定」「確定」「－」などのステータス欄があります。一方、当サイトが一括取得する全件CSVとREST APIにはその項目がないため、下表では「未取得」と明示し、各行から法人詳細画面へリンクします。掲載値を一律に交付決定額や確定額とは扱いません。認定日がない行は年度不明です。</p>
+        <p className="source-index-principle"><strong>補助金掲載値の注意：</strong>当サイトが取得する全件CSVとREST APIには、法人詳細画面に表示される手続ステータスの項目がありません。掲載値を交付決定額・確定額・実支払額のいずれとも自動判定しません。認定日がない行は年度不明です。</p>
 
         <div className="filters" aria-label="検索条件">
           <label className="search-field">
@@ -915,18 +903,17 @@ export default function Home() {
         <div className="records-table" role="region" aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧" tabIndex={0}>
           <table>
             <caption className="sr-only">GビズINFOに掲載された調達（委託を含む）・補助金情報</caption>
-            <thead><tr><th scope="col">法人等の名称</th><th scope="col">活動名称・件名</th><th scope="col">公表組織</th><th scope="col">情報種別</th><th scope="col">GビズINFO画面のステータス</th><th scope="col">GビズINFO掲載値</th><th scope="col">認定日・受注日</th><th scope="col">掲載ページ</th></tr></thead>
+            <thead><tr><th scope="col">法人等の名称</th><th scope="col">活動名称・件名</th><th scope="col">公表組織</th><th scope="col">情報種別</th><th scope="col">GビズINFO掲載値</th><th scope="col">認定日・受注日</th><th scope="col">掲載ページ</th></tr></thead>
             <tbody>{visibleRows.map((row) => (
               <tr key={row.id} id={row.id}>
                 <td data-label="法人等の名称"><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
                 <td data-label="活動名称・件名"><span className="program-name">{row.program || "活動名称・件名の記載なし"}</span></td>
                 <td data-label="公表組織">{row.sourceAgency || "公表組織の記載なし"}</td>
                 <td data-label="情報種別"><span className={`stage-badge ${row.stage}`}>{stageLabels[row.stage]}</span></td>
-                <td data-label="画面のステータス">{sourceStatusCell(row)}</td>
                 <td className="amount" data-label="掲載値">{formatPublishedValue(row)}</td>
                 <td data-label="認定日・受注日">{formatDate(row.date)}<small>{row.fiscalYear === null ? "年度不明" : `${row.fiscalYear}年度（日付基準）`}</small></td>
                 <td data-label="掲載ページ">
-                  <a className="source-link" href={`https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${row.corporateNumber}${row.stage === "subsidy_published" ? "#subsidy" : "#procurement"}`} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>{row.stage === "subsidy_published" ? "公式画面で確認" : "GビズINFO"} ↗</a>
+                  <a className="source-link" href={`https://info.gbiz.go.jp/hojin/ichiran?hojinBango=${row.corporateNumber}${row.stage === "subsidy_published" ? "#subsidy" : "#procurement"}`} target="_blank" rel="noreferrer" aria-label={`${row.organization}のGビズINFO掲載ページを新しいタブで開く`}>GビズINFO ↗</a>
                   <small title="取得した全件CSV内の一意識別子">出典キー：{row.sourceKey}</small>
                 </td>
               </tr>

@@ -28,13 +28,12 @@ test("describes Gbiz results as published rows and uses the official category wo
   assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報（非公式）<\/title>/);
 });
 
-test("discloses that the Gbiz page has subsidy statuses omitted from bulk data", () => {
-  assert.match(pageSource, /法人詳細画面には「交付決定」「確定」「－」などのステータス欄/);
-  assert.match(pageSource, /全件CSVとREST APIにはその項目がない/);
-  assert.match(pageSource, /GビズINFO画面のステータス/);
-  assert.match(pageSource, /<span className="source-status unavailable">未取得<\/span>/);
+test("does not render a status field that cannot be populated from bulk data", () => {
+  assert.match(pageSource, /法人詳細画面に表示される手続ステータスの項目がありません/);
+  assert.match(pageSource, /掲載値を交付決定額・確定額・実支払額のいずれとも自動判定しません/);
+  assert.doesNotMatch(pageSource, /GビズINFO画面のステータス|sourceStatusCell|source-status unavailable/);
   assert.match(pageSource, /\?hojinBango=\$\{row\.corporateNumber\}\$\{row\.stage === "subsidy_published" \? "#subsidy" : "#procurement"\}/);
-  assert.match(readme, /法人詳細画面には「交付決定」「確定」「－」などのステータス欄/);
+  assert.match(readme, /当サイトにはステータスを表示せず/);
   assert.doesNotMatch(pageSource, /subsidy_published: "補助金CSV"/);
 });
 
