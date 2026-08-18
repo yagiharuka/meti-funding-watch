@@ -46,10 +46,11 @@ test("correction review produces a deduplicated issue-ready table", () => {
   assert.match(buildFailureBody({ runUrl: "https://github.test/run", snapshot: { correctionCandidates: [] }, failure: { message: "停止" } }), /前回データを維持/);
 });
 
-test("workflow reports failures and deploys GitHub Pages without an external search sync", () => {
+test("publish workflow deploys committed data without external acquisition or search sync", () => {
   assert.match(workflow, /issues: write/);
   assert.match(workflow, /node scripts\/report-update-status\.mjs/);
-  assert.match(workflow, /deploy:[\s\S]*needs: update/);
+  assert.match(workflow, /deploy:[\s\S]*needs: publish/);
+  assert.doesNotMatch(workflow, /npm run update:(?:data|official|review)/);
   assert.doesNotMatch(workflow, /sync-search:|audience=meti-funding-watch-sync|haru620328\.chatgpt\.site\/api\/funding\/sync/);
   assert.match(pageSource, /funding-search\.worker\.ts/);
   assert.match(fundingWorkerSource, /idSetSha256/);

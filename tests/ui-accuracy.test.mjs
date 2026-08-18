@@ -27,18 +27,17 @@ test("describes Gbiz results as published rows and uses the official category wo
   assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報(?:（GビズINFO）)?<\/title>/);
 });
 
-test("describes the three search series separately without claiming complete coverage", () => {
+test("describes two main series and a bounded reconciliation log", () => {
   for (const source of [layoutSource, pageHtml]) {
-    assert.match(source, /公式入口・取得状態・検索収録範囲/);
-    assert.match(source, /3系列の検証済み掲載行を分けて検索/);
+    assert.match(source, /GビズINFOと行政事業レビューを主系列/);
+    assert.match(source, /機関公表資料との照合結果/);
   }
   for (const source of [officialPageSource, officialPageHtml]) {
-    assert.match(source, /13機関の公式入口と収録状況/);
-    assert.match(source, /検証済みの契約結果・補助金等交付決定の掲載行/);
+    assert.match(source, /機関公表資料.*GビズINFO掲載値/);
+    assert.match(source, /照合/);
   }
-  assert.match(readme, /原資料の所在・取得状態・検索収録範囲を先に確認/);
-  assert.match(readme, /26の機関×系列のうち25系列/);
-  assert.match(readme, /契約額欄、交付決定額欄、GビズINFO掲載値は意味が異なる/);
+  assert.match(readme, /2つの主系列/);
+  assert.match(readme, /照合の記録/);
 });
 
 test("uses non-authoritative freshness wording", () => {
@@ -124,8 +123,8 @@ test("shows update failures and staleness without disabling verified search data
   assert.match(pageSource, /update-status\.json/);
   assert.match(pageSource, /evaluatePublicUpdateHealth/);
   assert.match(pageSource, /直近の自動更新に失敗しました/);
-  assert.match(pageSource, /最終取込成功から30時間以上経過/);
-  assert.match(pageSource, /日次自動更新の状態を確認できません/);
+  assert.match(pageSource, /最終取込成功から8日以上経過/);
+  assert.match(pageSource, /週次自動更新の状態を確認できません/);
   assert.match(pageSource, /updateHealth === "failed"/);
   assert.match(pageSource, /badge\.svg\?branch=main&event=schedule/);
   assert.match(pageSource, /setInterval\(\(\) => setStatusClock\(Date\.now\(\)\), 5 \* 60 \* 1000\)/);

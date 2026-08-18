@@ -149,36 +149,23 @@ test("rejects identity changes and corrections above the automatic limit", () =>
   );
 });
 
-test("workflow keeps official and Gbiz refresh outcomes independent", async () => {
-  const workflow = await readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8");
-  assert.match(workflow, /- name: Refresh official detail data[\s\S]*?id: official_refresh[\s\S]*?run: npm run update:official/);
-  assert.match(workflow, /jobs:[\s\S]*?update:[\s\S]*?timeout-minutes: 60/);
-  assert.match(workflow, /- name: Refresh official detail data[\s\S]*?id: official_refresh[\s\S]*?continue-on-error: true[\s\S]*?timeout-minutes: 20[\s\S]*?run: npm run update:official/);
-  assert.match(workflow, /Preserve last verified official detail data after a source failure[\s\S]*?git restore --source=HEAD -- data\/official/);
-  assert.match(workflow, /- name: Refresh Gbiz public data[\s\S]*?id: refresh[\s\S]*?run: npm run update:data/);
-  assert.ok(
-    workflow.indexOf("Refresh official detail data") < workflow.indexOf("Refresh Gbiz public data"),
-    "an official-source failure must not prevent the independent Gbiz refresh attempt",
-  );
-  assert.match(workflow, /continue-on-error: true/);
-  assert.match(workflow, /Confirm failed refresh did not alter verified data/);
-  assert.match(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages/);
-  assert.doesNotMatch(workflow, /git restore --source=HEAD -- data\/funding-data\.json data\/funding-summary\.json data\/pages data\/official/);
-  assert.match(workflow, /PAGES_UPDATE_OUTCOME:/);
-  assert.match(workflow, /PAGES_OFFICIAL_UPDATE_OUTCOME:/);
-  assert.match(workflow, /EXPECTED_OFFICIAL_OUTCOME:/);
-  const officialOutcome = workflow.match(/PAGES_OFFICIAL_UPDATE_OUTCOME:.*$/m)?.[0] ?? "";
-  assert.match(officialOutcome, /steps\.official_refresh\.outcome/);
-  assert.doesNotMatch(officialOutcome, /steps\.refresh\.outcome/);
-  assert.match(workflow, /Refresh official detail data[\s\S]*?if: github\.event_name != 'push'/);
-  assert.match(workflow, /Refresh Gbiz public data[\s\S]*?if: github\.event_name != 'push'/);
-  assert.match(workflow, /UPDATE_PHASE: gbiz-data-refresh/);
-  assert.match(workflow, /Verify the published release from the live site/);
-  assert.match(workflow, /node scripts\/verify-live-pages\.mjs/);
-  assert.match(workflow, /Fail the workflow unless a fresh release was verified/);
-  assert.match(workflow, /Preserve source snapshot and correction evidence/);
-  assert.match(workflow, /Attest the verified public release/);
-  assert.doesNotMatch(workflow, /uses: actions\/[a-z-]+@v\d/);
+test("keeps official acquisition manual and publication free of external refreshes", async () => {
+  const [publish, official, gbiz] = await Promise.all([
+    readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/refresh-official-data.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/refresh-gbiz-data.yml", import.meta.url), "utf8"),
+  ]);
+  assert.match(official, /workflow_dispatch:/);
+  assert.doesNotMatch(official, /schedule:|push:/);
+  assert.match(official, /npm run update:official/);
+  assert.match(gbiz, /schedule:[\s\S]*cron: "0 21 \* \* 1"/);
+  assert.match(gbiz, /npm run update:data/);
+  assert.doesNotMatch(publish, /npm run update:(?:official|data|review)/);
+  assert.doesNotMatch(publish, /PAGES_OFFICIAL_UPDATE_OUTCOME|EXPECTED_OFFICIAL_OUTCOME|official_refresh/);
+  assert.match(publish, /Verify the published release from the live site/);
+  assert.match(publish, /node scripts\/verify-live-pages\.mjs/);
+  assert.match(publish, /Attest the verified public release/);
+  assert.doesNotMatch(publish, /uses: actions\/[a-z-]+@v\d/);
 });
 
 test("production automatically publishes bounded non-identity corrections", async () => {

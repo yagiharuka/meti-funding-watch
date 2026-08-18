@@ -29,7 +29,7 @@ test("renders development preview metadata", async () => {
   assert.match(await response.text(), developmentPreviewMeta);
 });
 
-test("renders the source index before searches while keeping review searchable", async () => {
+test("renders two main series and the reconciliation log", async () => {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("coverage-test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
@@ -50,11 +50,11 @@ test("renders the source index before searches while keeping review searchable",
   const [home, official, review] = await Promise.all([
     homeResponse.text(), officialResponse.text(), reviewResponse.text(),
   ]);
-  assert.match(home, /まず原資料と収録範囲を選ぶ/);
-  assert.ok(home.indexOf("まず原資料と収録範囲を選ぶ") < home.indexOf("調達（委託を含む）・補助金の掲載情報"));
-  assert.match(official, /公式資料の所在・収録状況/);
-  assert.ok(official.indexOf("機関×年度×系列の検索収録") < official.indexOf("公式資料の明細検索"));
-  assert.ok(official.indexOf("執行機関別の公式入口") < official.indexOf("公式資料の明細検索"));
+  assert.match(home, /2つの主系列と照合記録を選ぶ/);
+  assert.ok(home.indexOf("2つの主系列と照合記録を選ぶ") < home.indexOf("調達（委託を含む）・補助金の掲載情報"));
+  assert.match(official, /機関公表資料との照合の記録/);
+  assert.match(official, /照合 50件/);
+  assert.match(official, /未照合/);
   assert.match(review, /レビューシート検索/);
   assert.match(review, /経路はCSVで根拠を確認できる範囲だけを表示/);
 });

@@ -4,7 +4,7 @@ import test from "node:test";
 
 const workflows = new URL("../.github/workflows/", import.meta.url);
 
-test("publishes every verified series after its data-only bot commit", async () => {
+test("publishes only the two main series and keeps official refresh manual", async () => {
   const [source, review, gbiz, official] = await Promise.all([
     readFile(new URL("update-data.yml", workflows), "utf8"),
     readFile(new URL("update-review-data.yml", workflows), "utf8"),
@@ -15,14 +15,14 @@ test("publishes every verified series after its data-only bot commit", async () 
     "data/funding-data.json",
     "data/funding-summary.json",
     "data/pages/**",
-    "data/official/**",
+    "data/official-reconciliation.json",
     "data/review-cache/**",
   ]) assert.match(source, new RegExp(requiredPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(source, /permissions: \{\}/);
   assert.match(source, /deploy:\n\s+permissions:\n\s+contents: read/);
   assert.match(source, /publish_only:/);
-  assert.match(source, /inputs\.publish_only != true/g);
-  for (const refreshWorkflow of [review, gbiz, official]) {
+  assert.doesNotMatch(source, /npm run update:(?:data|official|review)/);
+  for (const refreshWorkflow of [review, gbiz]) {
     assert.match(refreshWorkflow, /actions: write/);
     assert.match(refreshWorkflow, /cancel-in-progress: false/);
     assert.match(refreshWorkflow, /for attempt in 1 2 3/);
@@ -30,6 +30,10 @@ test("publishes every verified series after its data-only bot commit", async () 
     assert.match(refreshWorkflow, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
     assert.match(refreshWorkflow, /if: steps\.commit_data\.outputs\.changed == 'true'/);
   }
+  assert.match(official, /workflow_dispatch:/);
+  assert.doesNotMatch(official, /schedule:|push:/);
+  assert.match(official, /npm run update:official/);
+  assert.doesNotMatch(official, /gh workflow run update-data\.yml/);
   assert.match(review, /group: administrative-review-update/);
   assert.match(gbiz, /group: gbiz-data-refresh/);
   assert.match(official, /group: official-data-refresh/);
@@ -38,6 +42,7 @@ test("publishes every verified series after its data-only bot commit", async () 
 test("keeps only fixture CI, durable refresh, and publication workflows", async () => {
   assert.deepEqual((await readdir(workflows)).sort(), [
     "ci.yml",
+    "discover-official-sources.yml",
     "refresh-gbiz-data.yml",
     "refresh-official-data.yml",
     "update-data.yml",
