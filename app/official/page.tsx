@@ -25,6 +25,7 @@ type ReconciliationItem = {
 const comparison = reconciliationData.comparisons[0] as Omit<(typeof reconciliationData.comparisons)[number], "items"> & {
   items: ReconciliationItem[];
 };
+const reviewPlanYears = reconciliationData.reviewPlan.fiscalYears;
 
 const statusLabels: Record<ReconciliationStatus, string> = {
   matched: "一致",
@@ -157,17 +158,41 @@ export default function OfficialReconciliationPage() {
           </div>
           <p>空欄ではなく、実施状況を明記します。</p>
         </div>
-        <div className="unreviewed-grid">
-          {sourceRegistry.executors.map((executor) => (
-            <article key={executor.id}>
-              <h3>{executor.name}</h3>
-              <p>
-                {executor.id === comparison.executorId
-                  ? `${comparison.periodLabel}の掲載順先頭${comparison.attemptedCount}行以外は未照合`
-                  : "未照合"}
-              </p>
-            </article>
-          ))}
+        <p className="reconciliation-plan-note">
+          下表は照合状況を明示するための表示範囲です。機関公表資料の母集団や収録対象範囲を示すものではありません。
+        </p>
+        <div className="unreviewed-matrix" role="region" aria-label="機関と年度ごとの照合状況" tabIndex={0}>
+          <table>
+            <caption>機関×年度の照合状況</caption>
+            <thead>
+              <tr>
+                <th scope="col">機関</th>
+                {reviewPlanYears.map((year) => <th scope="col" key={year}>{year}年度</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {sourceRegistry.executors.map((executor) => (
+                <tr key={executor.id}>
+                  <th scope="row">{executor.name}</th>
+                  {reviewPlanYears.map((year) => {
+                    const isReviewedSample = executor.id === comparison.executorId && year === comparison.fiscalYear;
+                    return (
+                      <td key={year} data-label={`${year}年度`}>
+                        {isReviewedSample ? (
+                          <a className="reviewed-sample" href="#reconciliation-records">
+                            一部照合
+                            <small>{comparison.periodLabel}・掲載順先頭{comparison.attemptedCount}行のみ／その他未照合</small>
+                          </a>
+                        ) : (
+                          <span className="not-reviewed">未照合</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         <p className="official-warning">
           沖縄総合事務局は収録・照合の対象外です。過去に取得したデータは履歴として保持しています。

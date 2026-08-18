@@ -21,12 +21,15 @@ test("publishes only the two main series and keeps official refresh manual", asy
   assert.match(source, /permissions: \{\}/);
   assert.match(source, /deploy:\n\s+permissions:\n\s+contents: read/);
   assert.match(source, /publish_only:/);
+  assert.match(source, /group: funding-data-publication/);
+  assert.match(source, /cancel-in-progress: true/);
   assert.doesNotMatch(source, /npm run update:(?:data|official|review)/);
   for (const refreshWorkflow of [review, gbiz]) {
     assert.match(refreshWorkflow, /actions: write/);
     assert.match(refreshWorkflow, /cancel-in-progress: false/);
     assert.match(refreshWorkflow, /for attempt in 1 2 3/);
     assert.match(refreshWorkflow, /git pull --rebase origin main/);
+    assert.match(refreshWorkflow, /GITHUB_TOKENで作ったbot commitはpush workflowを起動しない/);
     assert.match(refreshWorkflow, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
     assert.match(refreshWorkflow, /if: steps\.commit_data\.outputs\.changed == 'true'/);
   }

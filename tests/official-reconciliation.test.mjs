@@ -14,6 +14,9 @@ const gbizRows = JSON.parse(
 const pageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
 const fundingPageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 const workerSource = await readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8");
+const sourceRegistry = JSON.parse(
+  await readFile(new URL("../data/official-source-registry.json", import.meta.url), "utf8"),
+);
 
 test("publishes the reviewed Chubu FY2022 first-50 reconciliation", () => {
   assert.equal(reconciliation.schemaVersion, 1);
@@ -90,4 +93,21 @@ test("labels the denominator, unreviewed scope, and row-level evidence without a
   assert.match(fundingPageSource, /<tr key=\{row\.id\} id=\{row\.id\}>/);
   assert.match(fundingPageSource, /row\.id.*row\.sourceKey/);
   assert.match(workerSource, /row\.id.*row\.sourceKey/);
+});
+
+test("renders an explicit institution-by-year review plan with every other cell unreviewed", () => {
+  assert.deepEqual(reconciliation.reviewPlan.fiscalYears, [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
+  assert.match(reconciliation.reviewPlan.note, /母集団や収録対象範囲を表すものではない/);
+  assert.match(pageSource, /sourceRegistry\.executors\.map/);
+  assert.match(pageSource, /reviewPlanYears\.map/);
+  assert.match(pageSource, /一部照合/);
+  assert.match(pageSource, /未照合/);
+  assert.equal(sourceRegistry.executors.length * reconciliation.reviewPlan.fiscalYears.length, 96);
+  assert.equal(reconciliation.comparisons.length, 1);
+});
+
+test("keeps the Gbiz partiality and corporate-number limitation visible", () => {
+  assert.match(fundingPageSource, /法人番号付きでGビズINFOに掲載された/);
+  assert.match(fundingPageSource, /経産省の全支出ではありません/);
+  assert.match(fundingPageSource, /正確性・完全性・最新性を保証しません/);
 });

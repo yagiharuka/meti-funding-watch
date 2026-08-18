@@ -33,7 +33,8 @@ permissions: {}
 
 concurrency:
   group: funding-data-publication
-  cancel-in-progress: false
+  # 15分差の系列更新が重なった場合は、古い公開を止めて最新mainだけを公開する。
+  cancel-in-progress: true
 
 jobs:
   publish:
