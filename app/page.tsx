@@ -758,7 +758,6 @@ export default function Home() {
           <span>経産省関連の事業費額（非公式）</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
-          <a href="#source-index">資料の案内</a>
           <a href="#records">GビズINFO検索</a>
           <a href="#sources">更新状況</a>
         </nav>
@@ -800,31 +799,6 @@ export default function Home() {
             <a className="secondary-action" href="#records">GビズINFOを検索</a>
           </div>
         </div>
-      </section>
-
-      <section className="source-index-section" id="source-index" aria-labelledby="source-index-title">
-        <div className="section-heading compact">
-          <div>
-            <p className="eyebrow">TWO MAIN SERIES & CHECK RECORDS</p>
-            <h2 id="source-index-title">2つの主系列を選ぶ</h2>
-          </div>
-          <p>主系列は相互に合算しません。機関公表資料は主系列ではなく、個別の照合にだけ使います。</p>
-        </div>
-        <div className="source-index-grid">
-          <article>
-            <span className="source-index-number">01</span>
-            <h3>GビズINFO掲載行</h3>
-            <p>法人番号付きでGビズINFOに掲載された、経産省関係機関の調達・補助金情報です。経産省の全支出ではありません。</p>
-            <a href="#records">掲載行を検索する →</a>
-          </article>
-          <article>
-            <span className="source-index-number">02</span>
-            <h3>行政事業レビュー</h3>
-            <p>公式CSVの事業・予算執行・支出先・公開支出経路を、GビズINFOとは別の主系列として確認します。</p>
-            <a href="review/">レビュー系列を検索する →</a>
-          </article>
-        </div>
-        <p className="source-index-principle"><strong>このサイトが保証する範囲：</strong>原資料の所在、取得・検証状態、検索対象として明示した掲載行です。未収録を「該当なし」、掲載額を「実支払総額」とは扱いません。</p>
       </section>
 
       <section className="records-section" id="records">
