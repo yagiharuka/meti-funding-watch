@@ -20,11 +20,13 @@ type ReconciliationItem = {
   officialAmount: number | null;
   gbizRecordId: string | null;
   gbizAmount: number | null;
+  note?: string;
 };
 
-const comparison = reconciliationData.comparisons[0] as Omit<(typeof reconciliationData.comparisons)[number], "items"> & {
+type ReconciliationComparison = Omit<(typeof reconciliationData.comparisons)[number], "items"> & {
   items: ReconciliationItem[];
 };
+const comparisons = reconciliationData.comparisons as ReconciliationComparison[];
 const reviewPlanYears = reconciliationData.reviewPlan.fiscalYears;
 
 const statusLabels: Record<ReconciliationStatus, string> = {
@@ -45,10 +47,13 @@ function formatAmount(value: number | null) {
 }
 
 export default function OfficialReconciliationPage() {
-  const statusCount = Object.values(comparison.counts).reduce((sum, value) => sum + value, 0);
-  if (statusCount !== comparison.attemptedCount || comparison.items.length !== comparison.attemptedCount) {
-    throw new Error("照合件数と内訳が一致しません");
+  for (const comparison of comparisons) {
+    const statusCount = Object.values(comparison.counts).reduce((sum, value) => sum + value, 0);
+    if (statusCount !== comparison.attemptedCount || comparison.items.length !== comparison.attemptedCount) {
+      throw new Error(`${comparison.id}: 照合件数と内訳が一致しません`);
+    }
   }
+  const firstComparison = comparisons[0];
 
   return (
     <main>
@@ -81,73 +86,80 @@ export default function OfficialReconciliationPage() {
         <div className="section-heading compact">
           <div>
             <p className="eyebrow">CHECKED SAMPLE</p>
-            <h2 id="reconciliation-title">{comparison.executorName}／{comparison.periodLabel}</h2>
+            <h2 id="reconciliation-title">{firstComparison.executorName}／{firstComparison.periodLabel}</h2>
           </div>
           <p>確認日：{reconciliationData.asOf}</p>
         </div>
 
-        <div className="reconciliation-card">
-          <p className="reconciliation-attempted">
-            <strong>照合 {comparison.attemptedCount}件</strong>
-            <span>（{comparison.sampleDefinition}）</span>
-          </p>
-          <dl className="reconciliation-counts" aria-label="照合結果の内訳">
-            <div><dt>一致</dt><dd>{comparison.counts.matched}件</dd></div>
-            <div><dt>額が不一致</dt><dd>{comparison.counts.amountMismatch}件</dd></div>
-            <div><dt>片側のみ</dt><dd>{comparison.counts.oneSided}件</dd></div>
-            <div><dt>照合不能</dt><dd>{comparison.counts.unresolvable}件</dd></div>
-          </dl>
-          <p className="reconciliation-denominator">
-            分母：機関公表資料の掲載順先頭50行について、GビズINFOとの照合を試みた50件。
-          </p>
-        </div>
+        {comparisons.map((comparison) => (
+          <article className="reconciliation-sample" id={comparison.id} key={comparison.id}>
+            <div className="reconciliation-card">
+              <p className="reconciliation-attempted">
+                <strong>照合 {comparison.attemptedCount}件</strong>
+                <span>（{comparison.sampleDefinition}）</span>
+              </p>
+              <dl className="reconciliation-counts" aria-label={`${comparison.sampleDefinition}の照合結果内訳`}>
+                <div><dt>一致</dt><dd>{comparison.counts.matched}件</dd></div>
+                <div><dt>額が不一致</dt><dd>{comparison.counts.amountMismatch}件</dd></div>
+                <div><dt>片側のみ</dt><dd>{comparison.counts.oneSided}件</dd></div>
+                <div><dt>照合不能</dt><dd>{comparison.counts.unresolvable}件</dd></div>
+              </dl>
+              <p className="reconciliation-denominator">
+                分母：{comparison.sampleDefinition}について、GビズINFOとの照合を試みた{comparison.attemptedCount}件。
+              </p>
+            </div>
 
-        <div className="reconciliation-table" role="region" aria-label="中部経済産業局の照合結果50件" tabIndex={0}>
-          <table>
-            <caption>各行の原典とGビズINFO掲載行</caption>
-            <thead>
-              <tr>
-                <th scope="col">掲載順</th>
-                <th scope="col">相手方</th>
-                <th scope="col">判定</th>
-                <th scope="col">機関公表資料</th>
-                <th scope="col">GビズINFO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {comparison.items.map((item) => (
-                <tr key={item.officialRecordId}>
-                  <th scope="row">{item.sequence}</th>
-                  <td>{item.recipient}</td>
-                  <td><span className={`reconciliation-status ${item.status}`}>{statusLabels[item.status]}</span></td>
-                  <td>
-                    <strong>{formatAmount(item.officialAmount)}</strong>
-                    <a href={comparison.sourceDocumentUrl} target="_blank" rel="noreferrer">
-                      原典PDF ↗
-                    </a>
-                    <small>{item.officialSourceKey}</small>
-                  </td>
-                  <td>
-                    {item.gbizRecordId ? (
-                      <>
-                        <strong>{formatAmount(item.gbizAmount)}</strong>
-                        <a href={`../?q=${item.gbizRecordId}&year=${comparison.fiscalYear}#${item.gbizRecordId}`}>
-                          GビズINFO掲載行
+            <div className="reconciliation-table" role="region" aria-label={`${comparison.executorName} ${comparison.sampleDefinition}の照合結果`} tabIndex={0}>
+              <table>
+                <caption>{comparison.sampleDefinition}：各行の原典とGビズINFO掲載行</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">掲載順</th>
+                    <th scope="col">相手方</th>
+                    <th scope="col">判定</th>
+                    <th scope="col">機関公表資料</th>
+                    <th scope="col">GビズINFO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparison.items.map((item) => (
+                    <tr key={item.officialRecordId}>
+                      <th scope="row">{item.sequence}</th>
+                      <td>
+                        {item.recipient}
+                        {item.note && <small className="reconciliation-note">確認メモ：{item.note}</small>}
+                      </td>
+                      <td><span className={`reconciliation-status ${item.status}`}>{statusLabels[item.status]}</span></td>
+                      <td>
+                        <strong>{formatAmount(item.officialAmount)}</strong>
+                        <a href={comparison.sourceDocumentUrl} target="_blank" rel="noreferrer">
+                          原典PDF ↗
                         </a>
-                        <small>{item.gbizRecordId}</small>
-                      </>
-                    ) : (
-                      <>
-                        <strong>該当行なし</strong>
-                        <span>GビズINFO側の該当行を確認できず</span>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <small>{item.officialSourceKey}</small>
+                      </td>
+                      <td>
+                        {item.gbizRecordId ? (
+                          <>
+                            <strong>{formatAmount(item.gbizAmount)}</strong>
+                            <a href={`../?q=${item.gbizRecordId}&year=${comparison.fiscalYear}#${item.gbizRecordId}`}>
+                              GビズINFO掲載行
+                            </a>
+                            <small>{item.gbizRecordId}</small>
+                          </>
+                        ) : (
+                          <>
+                            <strong>該当行なし</strong>
+                            <span>GビズINFO側の該当行を確認できず</span>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        ))}
       </section>
 
       <section className="official-section" id="unreviewed" aria-labelledby="unreviewed-title">
@@ -175,13 +187,15 @@ export default function OfficialReconciliationPage() {
                 <tr key={executor.id}>
                   <th scope="row">{executor.name}</th>
                   {reviewPlanYears.map((year) => {
-                    const isReviewedSample = executor.id === comparison.executorId && year === comparison.fiscalYear;
+                    const isReviewedSample = comparisons.some(
+                      (comparison) => executor.id === comparison.executorId && year === comparison.fiscalYear,
+                    );
                     return (
                       <td key={year} data-label={`${year}年度`}>
                         {isReviewedSample ? (
                           <a className="reviewed-sample" href="#reconciliation-records">
                             一部照合
-                            <small>{comparison.periodLabel}・掲載順先頭{comparison.attemptedCount}行のみ／その他未照合</small>
+                            <small>令和4年度上期・掲載順先頭50行と末尾50行のみ／中間65行は未照合</small>
                           </a>
                         ) : (
                           <span className="not-reviewed">未照合</span>
@@ -201,7 +215,7 @@ export default function OfficialReconciliationPage() {
 
       <footer className="site-footer">
         <span>機関公表資料のparserと既存取得データは、手動照合と履歴確認のため保持しています。</span>
-        <a href={comparison.sourceDocumentUrl} target="_blank" rel="noreferrer">今回の原典PDF ↗</a>
+        <a href={firstComparison.sourceDocumentUrl} target="_blank" rel="noreferrer">今回の原典PDF ↗</a>
       </footer>
     </main>
   );
