@@ -3,15 +3,7 @@ name: Refresh Gbiz funding data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 21 * * *"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/refresh-gbiz-data.yml"
-      - "scripts/update-data.mjs"
-      - "scripts/gbiz-*.mjs"
-      - "scripts/gbiz-values.mjs"
-      - "data/source-registry.json"
+    - cron: "0 21 * * 1"
 
 permissions:
   contents: write
@@ -69,6 +61,7 @@ jobs:
           done
           echo "::error::Could not publish Gbiz data after three rebases."
           exit 1
+      # GITHUB_TOKENで作ったbot commitはpush workflowを起動しないため、公開を明示的に依頼する。
       - name: Publish the refreshed snapshot
         if: steps.commit_data.outputs.changed == 'true'
         env:

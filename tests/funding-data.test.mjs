@@ -473,7 +473,7 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.match(viewTabsSource, /調達（委託を含む）・補助金/);
   assert.doesNotMatch(viewTabsSource, /補助金採択者情報（中小企業庁のみ）|href=.*adoptions\//);
   assert.match(viewTabsSource, /active === "official"/);
-  assert.match(viewTabsSource, /契約結果・交付決定/);
+  assert.match(viewTabsSource, /機関公表資料との比較/);
   assert.match(officialPageSource, /<ViewTabs active="official"/);
   assert.match(viewTabsSource, /aria-current/);
   assert.doesNotMatch(`${adoptionPageSource}\n${adoptionSearchSource}\n${adoptionApiSource}\n${viewTabsSource}`, /_next\/data|217,?9\d{2}/);
@@ -549,16 +549,14 @@ test("fails closed before replacing records when source counts cannot be reconci
   assert.match(updateSource, /assertUniqueRecordIds\(newRecords\)/);
   assert.match(updateSource, /process\.env\.CI === "true"/);
   assert.match(updateWorkflow, /- "scripts\/\*\*"/);
-  assert.match(updateWorkflow, /npm run update:data/);
-  assert.match(updateWorkflow, /continue-on-error: true/);
-  assert.match(updateWorkflow, /if: steps\.refresh\.outcome == 'success'/);
+  assert.doesNotMatch(updateWorkflow, /npm run update:(?:data|official|review)/);
   assert.match(updateWorkflow, /npm run test:pages/);
   assert.doesNotMatch(updateWorkflow, /run: npm test/);
   assert.match(updateWorkflow, /Rebuild the artifact from the commit that will be published/);
   assert.match(updateWorkflow, /node --test tests\/rendered-html\.test\.mjs/);
   assert.match(updateWorkflow, /node scripts\/verify-live-pages\.mjs/);
   assert.match(updateWorkflow, /actions\/upload-pages-artifact@[0-9a-f]{40} # v4/);
-  assert.match(updateWorkflow, /needs: update/);
+  assert.match(updateWorkflow, /needs: publish/);
   assert.match(updateWorkflow, /actions\/deploy-pages@[0-9a-f]{40} # v4/);
   assert.doesNotMatch(updateWorkflow, /workflow_run/);
 });

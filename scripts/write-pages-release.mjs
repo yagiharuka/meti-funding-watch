@@ -39,33 +39,6 @@ if (new Set(ids).size !== ids.length) {
   throw new Error("公開releaseの明細IDが重複しています");
 }
 
-const officialDirectory = new URL("official/", dataDirectory);
-const officialManifestText = await readFile(new URL("manifest.json", officialDirectory), "utf8");
-const officialManifest = JSON.parse(officialManifestText);
-if (
-  officialManifest.schemaVersion !== 1 || typeof officialManifest.generatedAt !== "string"
-  || !Number.isSafeInteger(officialManifest.recordCount) || officialManifest.recordCount < 1
-  || !officialManifest.files || typeof officialManifest.files !== "object"
-) throw new Error("公開releaseの公式資料manifestが不正です");
-const officialIds = [];
-const officialFiles = {};
-for (const filename of Object.values(officialManifest.files).sort()) {
-  if (!/^records-\d{4}\.json$/.test(filename)) throw new Error(`公式資料の公開ファイル名が不正です: ${filename}`);
-  const fileUrl = new URL(filename, officialDirectory);
-  const text = await readFile(fileUrl, "utf8");
-  const rows = JSON.parse(text);
-  if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
-  officialIds.push(...rows.map((row) => row.id));
-  officialFiles[filename] = {
-    sha256: sha256(text),
-    bytes: (await stat(fileUrl)).size,
-    rows: rows.length,
-  };
-}
-if (officialIds.length !== officialManifest.recordCount || new Set(officialIds).size !== officialIds.length) {
-  throw new Error("公開releaseの公式資料行数またはID一意性が不正です");
-}
-
 const reviewDirectory = new URL("review/", dataDirectory);
 const reviewManifestText = await readFile(new URL("manifest.json", reviewDirectory), "utf8");
 const reviewManifest = JSON.parse(reviewManifestText);
@@ -132,13 +105,6 @@ const release = {
     paymentCount: reviewManifest.paymentCount,
     manifestSha256: sha256(reviewManifestText),
     files: reviewFiles,
-  },
-  official: {
-    generatedAt: officialManifest.generatedAt,
-    recordCount: officialIds.length,
-    manifestSha256: sha256(officialManifestText),
-    idSetSha256: sha256(`${[...officialIds].sort().join("\n")}\n`),
-    files: officialFiles,
   },
 };
 await writeFile(

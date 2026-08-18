@@ -1,4 +1,4 @@
-name: Update public funding data
+name: Publish verified funding data
 
 on:
   push:
@@ -12,10 +12,10 @@ on:
       - "scripts/**"
       - "data/source-registry.json"
       - "data/official-source-registry.json"
+      - "data/official-reconciliation.json"
       - "data/funding-data.json"
       - "data/funding-summary.json"
       - "data/pages/**"
-      - "data/official/**"
       - "data/review-cache/**"
       - "tests/**"
       - "package.json"
@@ -24,33 +24,30 @@ on:
   workflow_dispatch:
     inputs:
       publish_only:
-        description: "外部取得を行わず、mainの検証済みデータだけを公開する"
+        description: "mainの検証済みデータだけを公開する（外部取得は行わない）"
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions: {}
 
 concurrency:
-  group: funding-data-update
-  cancel-in-progress: false
+  group: funding-data-publication
+  # 15分差の系列更新が重なった場合は、古い公開を止めて最新mainだけを公開する。
+  cancel-in-progress: true
 
 jobs:
-  update:
+  publish:
     permissions:
-      contents: write
+      contents: read
       issues: write
       pages: write
       id-token: write
       attestations: write
     outputs:
       published_commit: ${{ steps.published.outputs.commit_sha }}
-      refresh_outcome: ${{ steps.refresh.outcome == 'skipped' && 'unknown' || steps.refresh.outcome }}
-      official_refresh_outcome: ${{ steps.official_refresh.outcome == 'skipped' && 'unknown' || steps.official_refresh.outcome }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -64,76 +61,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Record update attempt time
+      - name: Record publication attempt time
         id: attempt
         run: echo "attempted_at=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_OUTPUT"
 
-      - name: Refresh official detail data
-        id: official_refresh
-        if: github.event_name != 'push' && inputs.publish_only != true
-        continue-on-error: true
-        timeout-minutes: 20
-        env:
-          OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
-        run: npm run update:official
-
-      - name: Preserve last verified official detail data after a source failure
-        if: steps.official_refresh.outcome == 'failure'
-        run: |
-          echo "::warning::公式資料明細の取得に失敗したため、前回の検証済み明細を維持します。"
-          git restore --source=HEAD -- data/official
-          test -z "$(git status --porcelain -- data/official)"
-
-      - name: Refresh Gbiz public data
-        id: refresh
-        if: github.event_name != 'push' && inputs.publish_only != true
-        continue-on-error: true
-        run: npm run update:data
-
-      - name: Preserve source snapshot and correction evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: gbiz-source-evidence-${{ github.run_id }}
-          path: |
-            .audit/gbiz
-            .audit/official
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Report refresh failure
-        if: steps.refresh.outcome == 'failure'
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_SERVER_URL: ${{ github.server_url }}
-          UPDATE_OUTCOME: failure
-          UPDATE_PHASE: gbiz-data-refresh
-        run: node scripts/report-update-status.mjs
-
-      - name: Confirm failed refresh did not alter verified data
-        if: steps.refresh.outcome == 'failure'
-        run: |
-          git restore --source=HEAD -- data/funding-data.json data/funding-summary.json data/pages
-          test -z "$(git status --porcelain -- data/funding-data.json data/funding-summary.json data/pages)"
-
-      - name: Verify data and GitHub Pages build
+      - name: Verify committed data and GitHub Pages build
         run: npm run test:pages
-
-      - name: Commit changed data
-        if: steps.refresh.outcome == 'success' || steps.official_refresh.outcome == 'success'
-        run: |
-          if git diff --quiet -- data/funding-data.json data/funding-summary.json data/pages data/official; then
-            echo "No data changes"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- data/funding-data.json data/funding-summary.json data/pages data/official
-          git commit -m "chore(data): refresh verified funding series"
-          git push
 
       - name: Record the commit included in the public artifact
         id: published
@@ -141,8 +74,7 @@ jobs:
 
       - name: Rebuild the artifact from the commit that will be published
         env:
-          PAGES_UPDATE_OUTCOME: ${{ steps.refresh.outcome == 'skipped' && 'unknown' || steps.refresh.outcome == 'success' && 'succeeded' || 'failed' }}
-          PAGES_OFFICIAL_UPDATE_OUTCOME: ${{ steps.official_refresh.outcome == 'skipped' && 'unknown' || steps.official_refresh.outcome == 'success' && 'succeeded' || 'failed' }}
+          PAGES_UPDATE_OUTCOME: unknown
           PAGES_UPDATE_ATTEMPTED_AT: ${{ steps.attempt.outputs.attempted_at }}
         run: |
           npm run build:pages
@@ -193,7 +125,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: update
+    needs: publish
     steps:
       - name: Check out status reporter
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -213,13 +145,12 @@ jobs:
           PAGES_URL: ${{ steps.deployment.outputs.page_url }}
           EXPECTED_RUN_ID: ${{ github.run_id }}
           EXPECTED_RUN_ATTEMPT: ${{ github.run_attempt }}
-          EXPECTED_OUTCOME: ${{ needs.update.outputs.refresh_outcome == 'unknown' && 'unknown' || needs.update.outputs.refresh_outcome == 'success' && 'succeeded' || 'failed' }}
-          EXPECTED_OFFICIAL_OUTCOME: ${{ needs.update.outputs.official_refresh_outcome == 'unknown' && 'unknown' || needs.update.outputs.official_refresh_outcome == 'success' && 'succeeded' || 'failed' }}
-          EXPECTED_COMMIT: ${{ needs.update.outputs.published_commit }}
+          EXPECTED_OUTCOME: unknown
+          EXPECTED_COMMIT: ${{ needs.publish.outputs.published_commit }}
         run: node scripts/verify-live-pages.mjs
 
       - name: Report verified publication success
-        if: needs.update.outputs.refresh_outcome != 'failure' && steps.deployment.outcome == 'success' && steps.verify.outcome == 'success'
+        if: steps.deployment.outcome == 'success' && steps.verify.outcome == 'success'
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -243,14 +174,13 @@ jobs:
           FAILURE_REASON: GitHub Pagesの公開または公開後検証に失敗
         run: node scripts/report-update-status.mjs
 
-      - name: Fail the workflow unless a fresh release was verified
+      - name: Fail the workflow unless the verified release is live
         if: always()
         env:
-          REFRESH_OUTCOME: ${{ needs.update.outputs.refresh_outcome }}
           DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
         run: |
-          if [[ "$REFRESH_OUTCOME" == "failure" || "$DEPLOY_OUTCOME" != "success" || "$VERIFY_OUTCOME" != "success" ]]; then
+          if [[ "$DEPLOY_OUTCOME" != "success" || "$VERIFY_OUTCOME" != "success" ]]; then
             echo "::error::A fresh verified release was not published."
             exit 1
           fi

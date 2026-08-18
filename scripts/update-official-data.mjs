@@ -12,7 +12,6 @@ import {
 } from "./official-kansai-kyushu-sources.mjs";
 import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
 import { METI_ANRE_OFFICIAL_DOCUMENTS } from "./official-meti-anre-history.mjs";
-import { OKINAWA_GRANT_DOCUMENTS } from "./official-okinawa-sources.mjs";
 import { parseOfficialPdf } from "./official-pdf.mjs";
 import { parseRegionalOfficialHtml, REGIONAL_OFFICIAL_DOCUMENTS } from "./official-regional-history.mjs";
 import { REGIONAL_PDF_DOCUMENTS } from "./official-regional-pdf-sources.mjs";
@@ -182,7 +181,6 @@ export const OFFICIAL_DOCUMENTS = applyVerifiedLiveFallbacks(applyVerifiedWarpCa
   ...CHUBU_CONTRACT_DOCUMENTS,
   ...KANSAI_KYUSHU_GRANT_DOCUMENTS,
   ...KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
-  ...OKINAWA_GRANT_DOCUMENTS,
 ]));
 
 export async function parseOfficialWorkbook(buffer, document) {

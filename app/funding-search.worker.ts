@@ -121,7 +121,7 @@ function search(message: SearchMessage) {
 
     const needle = query.toLocaleLowerCase("ja-JP");
     const matching = records.filter((row) => {
-      if (needle && !`${row.organization} ${row.corporateNumber}`.toLocaleLowerCase("ja-JP").includes(needle)) return false;
+      if (needle && !`${row.organization} ${row.corporateNumber} ${row.id} ${row.sourceKey}`.toLocaleLowerCase("ja-JP").includes(needle)) return false;
       if (agency !== "all" && row.sourceAgency !== agency) return false;
       if (stage !== "all" && row.stage !== stage) return false;
       if (year === "unclassified" && row.fiscalYear !== null) return false;

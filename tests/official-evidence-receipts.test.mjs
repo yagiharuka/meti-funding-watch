@@ -15,7 +15,6 @@ import {
 } from "../scripts/official-meti-anre-history.mjs";
 import { REGIONAL_OFFICIAL_DOCUMENTS } from "../scripts/official-regional-history.mjs";
 import { REGIONAL_PDF_DOCUMENTS } from "../scripts/official-regional-pdf-sources.mjs";
-import { OKINAWA_GRANT_DOCUMENTS } from "../scripts/official-okinawa-sources.mjs";
 import {
   assertOfficialEvidenceRecordCount,
   assertOfficialEvidenceSourceReceipt,
@@ -35,13 +34,12 @@ const evidenceDocuments = [
   ...CHUBU_CONTRACT_DOCUMENTS,
   ...KANSAI_KYUSHU_GRANT_DOCUMENTS,
   ...KANSAI_KYUSHU_CONTRACT_DOCUMENTS,
-  ...OKINAWA_GRANT_DOCUMENTS,
 ];
 
 const publishedManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 
 test("binds every receipted production document to one complete evidence receipt", () => {
-  assert.equal(evidenceDocuments.length, 366); // prior receipted sources + 6 Chubu FY2023 verified PDFs
+  assert.equal(evidenceDocuments.length, 360); // Okinawa is retained only as historical data
   assert.ok(evidenceDocuments.every((document) => OFFICIAL_DOCUMENTS.includes(document)));
   for (const document of evidenceDocuments) {
     assert.deepEqual(Object.keys(document.evidenceReceipt).sort(), [
@@ -62,7 +60,7 @@ test("keeps the deterministic evidence override limited to receipted documents",
   assert.match(updaterSource, /allowBootstrapEvidence && bootstrapEvidenceDirectory && document\.evidenceReceipt/);
   assert.match(updaterSource, /OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY/);
   const workflowSource = await (await import("node:fs/promises")).readFile(
-    new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8",
+    new URL("../.github/workflows/refresh-official-data.yml", import.meta.url), "utf8",
   );
   assert.match(workflowSource, /OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence\/official-bootstrap/);
 });

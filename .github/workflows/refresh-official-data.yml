@@ -1,20 +1,9 @@
+# 2026-08-18: 1人運用での維持コストを抑えるため、機関公表資料は
+# GビズINFOとの照合用に位置付け、外部取得は手動実行時だけ行います。
 name: Refresh official funding data
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "30 20 * * *"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/refresh-official-data.yml"
-      - "scripts/update-official-data.mjs"
-      - "scripts/official-*.mjs"
-      - "data/official-source-registry.json"
-      - "evidence/official-bootstrap/**"
-      - "tests/official-data.test.mjs"
-      - "tests/official-evidence-receipts.test.mjs"
-      - "tests/official-golden-records.test.mjs"
 
 permissions:
   contents: write
@@ -72,8 +61,3 @@ jobs:
           done
           echo "::error::Could not publish official data after three rebases."
           exit 1
-      - name: Publish the refreshed snapshot
-        if: steps.commit_data.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run update-data.yml --ref main -f publish_only=true

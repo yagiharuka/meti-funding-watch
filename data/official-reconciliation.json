@@ -1,0 +1,528 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-18",
+  "reviewPlan": {
+    "fiscalYears": [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026],
+    "note": "照合状況を明示するための表示範囲であり、機関公表資料の母集団や収録対象範囲を表すものではない。"
+  },
+  "comparisons": [
+    {
+      "id": "chubu-2022-h1-first-50",
+      "executorId": "chubu",
+      "executorName": "中部経済産業局",
+      "fiscalYear": 2022,
+      "periodLabel": "令和4年度上期",
+      "sampleDefinition": "機関公表資料の掲載順先頭50行",
+      "sourceDocumentUrl": "https://www.chubu.meti.go.jp/a41kaikei/kouhyou/data/hojyokin/r4fy_4-9.pdf",
+      "attemptedCount": 50,
+      "counts": {
+        "matched": 44,
+        "amountMismatch": 4,
+        "oneSided": 2,
+        "unresolvable": 0
+      },
+      "items": [
+        {
+          "sequence": 1,
+          "status": "matched",
+          "officialRecordId": "official-fdee40a03b2a919dcee9",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-1",
+          "recipient": "一般財団法人金属系材料研究開発センター",
+          "officialAmount": 25045158,
+          "gbizRecordId": "gbiz-0bbf1e8a84a1aba9",
+          "gbizAmount": 25045158
+        },
+        {
+          "sequence": 2,
+          "status": "matched",
+          "officialRecordId": "official-8e95d20768fcafbfaf36",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-2",
+          "recipient": "公益財団法人石川県産業創出支援機構",
+          "officialAmount": 40270665,
+          "gbizRecordId": "gbiz-410067e58ce62422",
+          "gbizAmount": 40270665
+        },
+        {
+          "sequence": 3,
+          "status": "matched",
+          "officialRecordId": "official-bea57b2a373ee7651a62",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-3",
+          "recipient": "公益財団法人石川県産業創出支援機構",
+          "officialAmount": 45000000,
+          "gbizRecordId": "gbiz-5c005231a8361407",
+          "gbizAmount": 45000000
+        },
+        {
+          "sequence": 4,
+          "status": "matched",
+          "officialRecordId": "official-d756fd76cb0284441e87",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-4",
+          "recipient": "公益財団法人富山県新世紀産業機構",
+          "officialAmount": 30753082,
+          "gbizRecordId": "gbiz-9e07af212a569316",
+          "gbizAmount": 30753082
+        },
+        {
+          "sequence": 5,
+          "status": "matched",
+          "officialRecordId": "official-6612aec0d1a80fcdea1e",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-5",
+          "recipient": "株式会社加藤製作所",
+          "officialAmount": 8488666,
+          "gbizRecordId": "gbiz-d1d0809ad817c6d1",
+          "gbizAmount": 8488666
+        },
+        {
+          "sequence": 6,
+          "status": "one_sided",
+          "officialRecordId": "official-8643564242b0e5c8e988",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-6",
+          "recipient": "国立大学法人東海国立大学機構",
+          "officialAmount": 2275312,
+          "gbizRecordId": null,
+          "gbizAmount": null
+        },
+        {
+          "sequence": 7,
+          "status": "matched",
+          "officialRecordId": "official-99c038de38c323fadab9",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-7",
+          "recipient": "公益財団法人岐阜県産業経済振興センター",
+          "officialAmount": 23287121,
+          "gbizRecordId": "gbiz-4ea8fb62a63f7a01",
+          "gbizAmount": 23287121
+        },
+        {
+          "sequence": 8,
+          "status": "matched",
+          "officialRecordId": "official-01b6b016fd813e8dc90e",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-8",
+          "recipient": "公益財団法人中部科学技術センター",
+          "officialAmount": 29678369,
+          "gbizRecordId": "gbiz-484d975c8c4b9970",
+          "gbizAmount": 29678369
+        },
+        {
+          "sequence": 9,
+          "status": "matched",
+          "officialRecordId": "official-8dbabe13beb0c1570d70",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-9",
+          "recipient": "公益財団法人中部科学技術センター",
+          "officialAmount": 34156870,
+          "gbizRecordId": "gbiz-836e611705fdd427",
+          "gbizAmount": 34156870
+        },
+        {
+          "sequence": 10,
+          "status": "matched",
+          "officialRecordId": "official-d44018560e7191bf84fa",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-10",
+          "recipient": "公益財団法人名古屋産業科学研究所",
+          "officialAmount": 34179834,
+          "gbizRecordId": "gbiz-ce1c7c183f4453fa",
+          "gbizAmount": 34179834
+        },
+        {
+          "sequence": 11,
+          "status": "matched",
+          "officialRecordId": "official-9ce2348b28442ab89f04",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-11",
+          "recipient": "公益財団法人名古屋産業振興公社",
+          "officialAmount": 25340897,
+          "gbizRecordId": "gbiz-2bf5fb3b4d7a391d",
+          "gbizAmount": 25340897
+        },
+        {
+          "sequence": 12,
+          "status": "matched",
+          "officialRecordId": "official-5335db2bda528bbb8bdf",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-12",
+          "recipient": "愛知県信用保証協会",
+          "officialAmount": 68026977,
+          "gbizRecordId": "gbiz-c46a2e241145a126",
+          "gbizAmount": 68026977
+        },
+        {
+          "sequence": 13,
+          "status": "matched",
+          "officialRecordId": "official-f3c33ba492402070981a",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-13",
+          "recipient": "岐阜県信用保証協会",
+          "officialAmount": 14663623,
+          "gbizRecordId": "gbiz-625d29726494dafe",
+          "gbizAmount": 14663623
+        },
+        {
+          "sequence": 14,
+          "status": "amount_mismatch",
+          "officialRecordId": "official-056117bcde59110d2f76",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-14",
+          "recipient": "富山県信用保証協会",
+          "officialAmount": 10019000,
+          "gbizRecordId": "gbiz-3bf1a18ff3673253",
+          "gbizAmount": 11060240
+        },
+        {
+          "sequence": 15,
+          "status": "matched",
+          "officialRecordId": "official-e835447433541796961c",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-15",
+          "recipient": "石川県信用保証協会",
+          "officialAmount": 15673000,
+          "gbizRecordId": "gbiz-99d42d36bf14307a",
+          "gbizAmount": 15673000
+        },
+        {
+          "sequence": 16,
+          "status": "matched",
+          "officialRecordId": "official-d036b1a27f825c37ae7f",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-16",
+          "recipient": "岐阜市信用保証協会",
+          "officialAmount": 3058283,
+          "gbizRecordId": "gbiz-da6f01606fea0b12",
+          "gbizAmount": 3058283
+        },
+        {
+          "sequence": 17,
+          "status": "matched",
+          "officialRecordId": "official-0419eceb821636bdc498",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-17",
+          "recipient": "三重県信用保証協会",
+          "officialAmount": 10625000,
+          "gbizRecordId": "gbiz-eadaab11580420da",
+          "gbizAmount": 10625000
+        },
+        {
+          "sequence": 18,
+          "status": "matched",
+          "officialRecordId": "official-beeab555642a637b1308",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-18",
+          "recipient": "名古屋市信用保証協会",
+          "officialAmount": 18565976,
+          "gbizRecordId": "gbiz-f27842c041c0f65b",
+          "gbizAmount": 18565976
+        },
+        {
+          "sequence": 19,
+          "status": "matched",
+          "officialRecordId": "official-b2f26ec2ff22ce7fbf9c",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-19",
+          "recipient": "公益財団法人石川県産業創出支援機構",
+          "officialAmount": 44500000,
+          "gbizRecordId": "gbiz-7f9e82aaf570aa82",
+          "gbizAmount": 44500000
+        },
+        {
+          "sequence": 20,
+          "status": "matched",
+          "officialRecordId": "official-bd68d1c1235b844e7ba3",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-20",
+          "recipient": "公益財団法人岐阜県産業経済振興センター",
+          "officialAmount": 34089802,
+          "gbizRecordId": "gbiz-3129deea9b74e7e2",
+          "gbizAmount": 34089802
+        },
+        {
+          "sequence": 21,
+          "status": "matched",
+          "officialRecordId": "official-9d74d86058b88ddb2da7",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-21",
+          "recipient": "公益財団法人岐阜県産業経済振興センター",
+          "officialAmount": 29999215,
+          "gbizRecordId": "gbiz-fbc4fc66563b2a48",
+          "gbizAmount": 29999215
+        },
+        {
+          "sequence": 22,
+          "status": "matched",
+          "officialRecordId": "official-ff865305cf79307d96f7",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-22",
+          "recipient": "公益財団法人名古屋産業振興公社",
+          "officialAmount": 29918403,
+          "gbizRecordId": "gbiz-fd9e3a6f2aa9dd3b",
+          "gbizAmount": 29918403
+        },
+        {
+          "sequence": 23,
+          "status": "matched",
+          "officialRecordId": "official-0a1a6b5bff8466846351",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-23",
+          "recipient": "公益財団法人名古屋産業科学研究所",
+          "officialAmount": 30077743,
+          "gbizRecordId": "gbiz-5f5d11c68427e2e3",
+          "gbizAmount": 30077743
+        },
+        {
+          "sequence": 24,
+          "status": "matched",
+          "officialRecordId": "official-999bad2481bd5ec7d1e2",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-24",
+          "recipient": "公益財団法人名古屋産業科学研究所",
+          "officialAmount": 23710547,
+          "gbizRecordId": "gbiz-c347c17b7c206685",
+          "gbizAmount": 23710547
+        },
+        {
+          "sequence": 25,
+          "status": "matched",
+          "officialRecordId": "official-ee58826d4b82f8e4ba93",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-25",
+          "recipient": "公益財団法人名古屋産業科学研究所",
+          "officialAmount": 26872169,
+          "gbizRecordId": "gbiz-e5f574d3bb0fb990",
+          "gbizAmount": 26872169
+        },
+        {
+          "sequence": 26,
+          "status": "matched",
+          "officialRecordId": "official-f464761feaa93487530e",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-26",
+          "recipient": "公益財団法人名古屋産業科学研究所",
+          "officialAmount": 23443384,
+          "gbizRecordId": "gbiz-8fa0dad61e2846e8",
+          "gbizAmount": 23443384
+        },
+        {
+          "sequence": 27,
+          "status": "matched",
+          "officialRecordId": "official-bb49ac2c8c2fadb43410",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-27",
+          "recipient": "公益財団法人岐阜県産業経済振興センター",
+          "officialAmount": 30202512,
+          "gbizRecordId": "gbiz-a482384c460b4e45",
+          "gbizAmount": 30202512
+        },
+        {
+          "sequence": 28,
+          "status": "matched",
+          "officialRecordId": "official-dc675c40ca664543da26",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-28",
+          "recipient": "公益財団法人名古屋産業振興公社",
+          "officialAmount": 32360473,
+          "gbizRecordId": "gbiz-724c31fbfb024471",
+          "gbizAmount": 32360473
+        },
+        {
+          "sequence": 29,
+          "status": "matched",
+          "officialRecordId": "official-ee6d842e30dfaf621f3a",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-29",
+          "recipient": "公益財団法人中部科学技術センター",
+          "officialAmount": 36305020,
+          "gbizRecordId": "gbiz-2c694304615971ce",
+          "gbizAmount": 36305020
+        },
+        {
+          "sequence": 30,
+          "status": "matched",
+          "officialRecordId": "official-45c569233243c2cc2953",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-30",
+          "recipient": "公益財団法人岐阜県産業経済振興センター",
+          "officialAmount": 22450684,
+          "gbizRecordId": "gbiz-f9b419e35110c314",
+          "gbizAmount": 22450684
+        },
+        {
+          "sequence": 31,
+          "status": "matched",
+          "officialRecordId": "official-f2f30c7a7a27699043be",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-31",
+          "recipient": "公益財団法人中部科学技術センター",
+          "officialAmount": 21833716,
+          "gbizRecordId": "gbiz-f271efd72c85e45e",
+          "gbizAmount": 21833716
+        },
+        {
+          "sequence": 32,
+          "status": "matched",
+          "officialRecordId": "official-f31d1a1b9a005b9a97d6",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-32",
+          "recipient": "株式会社東邦鋼機製作所",
+          "officialAmount": 16999999,
+          "gbizRecordId": "gbiz-145d5b32514864a3",
+          "gbizAmount": 16999999
+        },
+        {
+          "sequence": 33,
+          "status": "one_sided",
+          "officialRecordId": "official-5382f621701b8f8cfb1b",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-33",
+          "recipient": "国立大学法人三重大学",
+          "officialAmount": 13000001,
+          "gbizRecordId": null,
+          "gbizAmount": null
+        },
+        {
+          "sequence": 34,
+          "status": "matched",
+          "officialRecordId": "official-5978e9c5e85e80e55120",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-34",
+          "recipient": "公益財団法人富山県新世紀産業機構",
+          "officialAmount": 36818409,
+          "gbizRecordId": "gbiz-e3a841b37d5a6ddb",
+          "gbizAmount": 36818409
+        },
+        {
+          "sequence": 35,
+          "status": "matched",
+          "officialRecordId": "official-9b180765d089b467b4ff",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-35",
+          "recipient": "公益財団法人名古屋産業科学研究所",
+          "officialAmount": 22416038,
+          "gbizRecordId": "gbiz-deb8df287f8436e3",
+          "gbizAmount": 22416038
+        },
+        {
+          "sequence": 36,
+          "status": "matched",
+          "officialRecordId": "official-3fedde0e4157c261284f",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-36",
+          "recipient": "一般財団法人素形材センター",
+          "officialAmount": 32797402,
+          "gbizRecordId": "gbiz-ce244ceb8c2e3ea6",
+          "gbizAmount": 32797402
+        },
+        {
+          "sequence": 37,
+          "status": "matched",
+          "officialRecordId": "official-bd5f7487bf42327ef4b2",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-37",
+          "recipient": "公益財団法人名古屋産業振興公社",
+          "officialAmount": 17618144,
+          "gbizRecordId": "gbiz-f4b814a8665dd6bd",
+          "gbizAmount": 17618144
+        },
+        {
+          "sequence": 38,
+          "status": "matched",
+          "officialRecordId": "official-385b5473585e1116588d",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-38",
+          "recipient": "公益財団法人富山県新世紀産業機構",
+          "officialAmount": 26131851,
+          "gbizRecordId": "gbiz-a8125f8f5ae58b7e",
+          "gbizAmount": 26131851
+        },
+        {
+          "sequence": 39,
+          "status": "matched",
+          "officialRecordId": "official-5a800e90b624e651ebaa",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-39",
+          "recipient": "公益財団法人名古屋産業振興公社",
+          "officialAmount": 43271598,
+          "gbizRecordId": "gbiz-6acb206323d87d73",
+          "gbizAmount": 43271598
+        },
+        {
+          "sequence": 40,
+          "status": "matched",
+          "officialRecordId": "official-2dca667f1e07427af90f",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-40",
+          "recipient": "三重県",
+          "officialAmount": 47680,
+          "gbizRecordId": "gbiz-58dd34fc4b6e295c",
+          "gbizAmount": 47680
+        },
+        {
+          "sequence": 41,
+          "status": "matched",
+          "officialRecordId": "official-1ca787b6312a94a20395",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-41",
+          "recipient": "三重県",
+          "officialAmount": 7897000,
+          "gbizRecordId": "gbiz-e72c2630d4855c6a",
+          "gbizAmount": 7897000
+        },
+        {
+          "sequence": 42,
+          "status": "amount_mismatch",
+          "officialRecordId": "official-8971b14396f80dd2fb81",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-42",
+          "recipient": "三重県",
+          "officialAmount": 4400000,
+          "gbizRecordId": "gbiz-eaf3f68de030d230",
+          "gbizAmount": 0
+        },
+        {
+          "sequence": 43,
+          "status": "amount_mismatch",
+          "officialRecordId": "official-b6744bb725aac958a492",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-43",
+          "recipient": "三重県",
+          "officialAmount": 3771000,
+          "gbizRecordId": "gbiz-96901d65d4ce01a8",
+          "gbizAmount": 0
+        },
+        {
+          "sequence": 44,
+          "status": "matched",
+          "officialRecordId": "official-f343929bf1cfe060ce58",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-44",
+          "recipient": "三重県",
+          "officialAmount": 2000000,
+          "gbizRecordId": "gbiz-2b29c0359a8b7ab9",
+          "gbizAmount": 2000000
+        },
+        {
+          "sequence": 45,
+          "status": "matched",
+          "officialRecordId": "official-0917c912f328d2a7e6d0",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-45",
+          "recipient": "愛知県",
+          "officialAmount": 10166000,
+          "gbizRecordId": "gbiz-b8628c02143597be",
+          "gbizAmount": 10166000
+        },
+        {
+          "sequence": 46,
+          "status": "matched",
+          "officialRecordId": "official-275762c10f342c579384",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-46",
+          "recipient": "愛知県",
+          "officialAmount": 27295000,
+          "gbizRecordId": "gbiz-184e96fee3cd600c",
+          "gbizAmount": 27295000
+        },
+        {
+          "sequence": 47,
+          "status": "amount_mismatch",
+          "officialRecordId": "official-f5d3f79394d4a2b13405",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-47",
+          "recipient": "愛知県",
+          "officialAmount": 16000000,
+          "gbizRecordId": "gbiz-b2bc34f7c1c4173a",
+          "gbizAmount": 24000000
+        },
+        {
+          "sequence": 48,
+          "status": "matched",
+          "officialRecordId": "official-f90ed98712da3cd9bf97",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-48",
+          "recipient": "長野県",
+          "officialAmount": 4400000,
+          "gbizRecordId": "gbiz-80141744a4e94240",
+          "gbizAmount": 4400000
+        },
+        {
+          "sequence": 49,
+          "status": "matched",
+          "officialRecordId": "official-c8cd51e889fd2c66d157",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-49",
+          "recipient": "飯田市長",
+          "officialAmount": 5000000,
+          "gbizRecordId": "gbiz-3b93f38bf0080d98",
+          "gbizAmount": 5000000
+        },
+        {
+          "sequence": 50,
+          "status": "matched",
+          "officialRecordId": "official-2aa9e6b3313eaa254275",
+          "officialSourceKey": "chubu-2022-grant-decisions-h1:no-50",
+          "recipient": "長野県知事",
+          "officialAmount": 10529000,
+          "gbizRecordId": "gbiz-46ddc5bc36e26f26",
+          "gbizAmount": 10529000
+        }
+      ]
+    }
+  ]
+}

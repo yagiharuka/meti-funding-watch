@@ -3,7 +3,6 @@ import { buildPublicUpdateStatus } from "./pages-update-status.mjs";
 
 const release = JSON.parse(await readFile(new URL("../dist-pages/release.json", import.meta.url), "utf8"));
 const summary = JSON.parse(await readFile(new URL("../data/funding-summary.json", import.meta.url), "utf8"));
-const officialManifest = JSON.parse(await readFile(new URL("../data/official/manifest.json", import.meta.url), "utf8"));
 const gbiz = summary.sources?.find((source) => source.id === "gbiz");
 if (!gbiz) throw new Error("更新状態に必要なGビズINFO情報がありません");
 
@@ -23,9 +22,6 @@ const status = buildPublicUpdateStatus({
   runUrl,
   release,
   lastSuccessfulImportAt: gbiz.lastSuccessfulImportAt ?? null,
-  officialOutcome: process.env.PAGES_OFFICIAL_UPDATE_OUTCOME ?? "unknown",
-  officialAttemptedAt: process.env.PAGES_UPDATE_ATTEMPTED_AT ?? new Date().toISOString(),
-  officialGeneratedAt: officialManifest.generatedAt,
 });
 
 await writeFile(

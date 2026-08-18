@@ -1,4 +1,4 @@
-export const PAGE_UPDATE_STALE_AFTER_MS = 30 * 60 * 60 * 1000;
+export const PAGE_UPDATE_STALE_AFTER_MS = 8 * 24 * 60 * 60 * 1000;
 const allowedOutcomes = new Set(["succeeded", "failed", "unknown"]);
 
 export function buildPublicUpdateStatus({
@@ -9,9 +9,6 @@ export function buildPublicUpdateStatus({
   runUrl = null,
   release,
   lastSuccessfulImportAt = null,
-  officialOutcome = null,
-  officialAttemptedAt = attemptedAt,
-  officialGeneratedAt = null,
 }) {
   const value = {
     schemaVersion: 1,
@@ -28,18 +25,6 @@ export function buildPublicUpdateStatus({
       lastSuccessfulImportAt,
     },
   };
-  if (officialOutcome !== null) {
-    value.official = {
-      attempt: {
-        attemptedAt: officialAttemptedAt,
-        outcome: officialOutcome,
-      },
-      published: {
-        generatedAt: officialGeneratedAt,
-        lastSuccessfulImportAt: officialGeneratedAt,
-      },
-    };
-  }
   return validatePublicUpdateStatus(value);
 }
 
@@ -47,7 +32,6 @@ export function validatePublicUpdateStatus(value) {
   if (!value || typeof value !== "object") throw new Error("更新状態の形式が不正です");
   const attempt = value.attempt;
   const published = value.publishedRelease;
-  const official = value.official;
   if (
     value.schemaVersion !== 1
     || !attempt || typeof attempt !== "object"
@@ -60,15 +44,6 @@ export function validatePublicUpdateStatus(value) {
     || typeof published.commitSha !== "string" || !/^[0-9a-f]{40}$/i.test(published.commitSha)
     || !isIsoTimestamp(published.generatedAt)
     || (published.lastSuccessfulImportAt !== null && !isIsoTimestamp(published.lastSuccessfulImportAt))
-    || (official !== undefined && (
-      !official || typeof official !== "object"
-      || !official.attempt || typeof official.attempt !== "object"
-      || !allowedOutcomes.has(official.attempt.outcome)
-      || !isIsoTimestamp(official.attempt.attemptedAt)
-      || !official.published || typeof official.published !== "object"
-      || !isIsoTimestamp(official.published.generatedAt)
-      || !isIsoTimestamp(official.published.lastSuccessfulImportAt)
-    ))
   ) {
     throw new Error("更新状態の形式が不正です");
   }

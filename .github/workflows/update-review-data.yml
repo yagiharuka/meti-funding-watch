@@ -4,14 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "45 20 * * 1"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/update-review-data.yml"
-      - "scripts/update-review-data.mjs"
-      - "scripts/review-data-model.mjs"
-      - "package.json"
-      - "package-lock.json"
 
 permissions:
   contents: write
@@ -58,6 +50,7 @@ jobs:
           done
           echo "::error::Could not publish review data after three rebases."
           exit 1
+      # GITHUB_TOKENで作ったbot commitはpush workflowを起動しないため、公開を明示的に依頼する。
       - name: Publish the refreshed snapshot
         if: steps.commit_data.outputs.changed == 'true'
         env:

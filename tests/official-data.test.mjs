@@ -25,7 +25,7 @@ test("publishes a reconciled set of verified official rows without mixing amount
   assert.deepEqual(manifest.seriesCounts, countBy(records, (row) => row.category));
   assert.equal(manifest.seriesCounts.contract_result + manifest.seriesCounts.grant_decision, manifest.recordCount);
   assert.ok(Number.isSafeInteger(manifest.recordCount) && manifest.recordCount > 0);
-  assert.equal(manifest.coverage.executorCount, 13);
+  assert.equal(manifest.coverage.executorCount, 12);
   assert.equal(Object.keys(manifest.coverage.executors).length, manifest.coverage.executorCount);
   assert.equal(manifest.sourceDocuments.reduce((sum, source) => sum + source.records, 0), records.length);
   const executorCounts = countBy(records, (row) => row.executorId);
