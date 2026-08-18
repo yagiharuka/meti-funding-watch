@@ -417,11 +417,12 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /データ出典：GビズINFO/);
   assert.match(pageSource, /全支出・実支払を示すものではありません/);
   assert.match(pageSource, /経済産業省を原資とする支出かどうかはGビズINFOだけでは判別できません/);
-  assert.match(pageSource, /GビズINFO掲載区分/);
-  assert.match(pageSource, /調達CSV（委託を含む）/);
-  assert.match(pageSource, /補助金CSV/);
-  assert.match(pageSource, /手続段階を識別する項目がありません/);
-  assert.match(pageSource, /0円や名称に「交付申請等」を含む行も原文のまま表示/);
+  assert.match(pageSource, /GビズINFO情報種別/);
+  assert.match(pageSource, /調達（委託を含む）/);
+  assert.match(pageSource, /subsidy_published: "補助金"/);
+  assert.match(pageSource, /法人詳細画面には「交付決定」「確定」「－」などのステータス欄/);
+  assert.match(pageSource, /全件CSVとREST APIにはその項目がない/);
+  assert.match(pageSource, /掲載値を一律に交付決定額や確定額とは扱いません/);
   assert.match(pageSource, /調達（委託を含む）・補助金/);
   assert.match(pageSource, /認定日・受注日の記載がない/);
   assert.match(pageSource, /取得時CSVの抽出対象行を取込確認/);

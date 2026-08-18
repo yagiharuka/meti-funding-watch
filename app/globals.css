@@ -266,6 +266,9 @@ td small { display: block; margin-top: 5px; color: #5f716a; font-size: 10px; }
 .stage-badge { display: inline-block; padding: 6px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .stage-badge.contracted { background: #e8efff; color: #2858ba; }
 .stage-badge.subsidy_published { background: #fff2d9; color: #965c00; }
+.source-status { display: inline-block; padding: 6px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.source-status.unavailable { border: 1px solid #c98724; background: #fff8e7; color: #80530f; }
+.source-status.not-applicable { background: #edf1ef; color: #62716b; }
 .amount { color: var(--ink); font-family: Georgia, serif; font-size: 14px; font-weight: 700; white-space: nowrap; text-align: right; }
 .amount small { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; font-weight: 500; text-align: right; }
 .source-link { color: var(--green); font-weight: 800; white-space: nowrap; }
