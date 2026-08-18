@@ -1,6 +1,15 @@
 {
   "schemaVersion": 2,
   "asOf": "2026-08-14",
+  "excludedExecutors": [
+    {
+      "id": "okinawa",
+      "name": "沖縄総合事務局（経済産業部）",
+      "effectiveDate": "2026-08-18",
+      "reason": "収録・照合の対象外。既存取得データは履歴として保持し、今後の手動取得でも更新しない。",
+      "historicalData": "data/official/retired-okinawa-records.json"
+    }
+  ],
   "series": {
     "contracts": {
       "label": "公式契約結果",
@@ -85,14 +94,6 @@
       "name": "九州経済産業局",
       "contracts": "https://www.kyushu.meti.go.jp/under/chotatu/chotatu.html",
       "grantDecisions": "https://www.kyushu.meti.go.jp/support2/hojokin_kaizi.html"
-    },
-    {
-      "id": "okinawa",
-      "name": "沖縄総合事務局（経済産業部）",
-      "contracts": "https://www.ogb.go.jp/soumu/soumu_tyouta.html",
-      "grantDecisions": "https://www.ogb.go.jp/keisan/3842/saitaku/f_03/014671",
-      "contractScopeNote": "総合事務局全体XLSXは経済産業部を行単位で識別できず、共通調達も配賦不能のため明細未収録",
-      "grantScopeNote": "経済産業部PDFのFY2019下期およびFY2020～FY2024を収録。原資料に法人番号欄なし。FY2019上期・FY2010～FY2018は未収録、FY2025以降は未登録"
     }
   ]
 }
