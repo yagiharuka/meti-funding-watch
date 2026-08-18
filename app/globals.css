@@ -53,7 +53,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .update-chip.watch i, .health.watch { background: #d17b22; box-shadow: 0 0 0 4px rgba(209,123,34,.14); }
 
 .view-tabs {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
   max-width: 1440px; margin: 24px auto 0; padding: 8px;
   border: 1px solid #d2ddd4; border-radius: 18px; background: #e9eee8;
 }
@@ -87,7 +87,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .source-index-section { padding: 0 clamp(22px, 5vw, 78px) 96px; }
 .source-index-section .section-heading.compact { margin-bottom: 22px; }
 .source-index-section .section-heading.compact h2 { font-size: clamp(28px, 3.5vw, 46px); }
-.source-index-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; max-width: 1440px; margin: 0 auto; }
+.source-index-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; max-width: 1440px; margin: 0 auto; }
 .source-index-grid article { display: flex; flex-direction: column; min-height: 240px; padding: 24px; border: 1px solid #d3ddd5; border-radius: 18px; background: #fff; box-shadow: 0 18px 46px rgba(32,59,50,.05); }
 .source-index-number { color: var(--green); font-family: Georgia, serif; font-size: 13px; font-weight: 700; }
 .source-index-grid h3 { margin: 28px 0 10px; font-size: 20px; letter-spacing: -.03em; }
@@ -421,7 +421,7 @@ footer a { color: var(--green); font-weight: 700; }
 .review-route strong { max-width: 360px; color: var(--green); font-size: 12px; line-height: 1.75; }
 .review-limitations { background: #edf1eb; }
 @media (max-width: 720px) {
-  .view-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .view-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .coverage-year-matrix { border-radius: 12px; }
   .review-mode-tabs { overflow-x: auto; }
 }

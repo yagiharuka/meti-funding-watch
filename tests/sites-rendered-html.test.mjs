@@ -50,8 +50,8 @@ test("renders two main series and the reconciliation log", async () => {
   const [home, official, review] = await Promise.all([
     homeResponse.text(), officialResponse.text(), reviewResponse.text(),
   ]);
-  assert.match(home, /2つの主系列と照合記録を選ぶ/);
-  assert.ok(home.indexOf("2つの主系列と照合記録を選ぶ") < home.indexOf("調達（委託を含む）・補助金の掲載情報"));
+  assert.match(home, /2つの主系列を選ぶ/);
+  assert.ok(home.indexOf("2つの主系列を選ぶ") < home.indexOf("調達（委託を含む）・補助金の掲載情報"));
   assert.match(official, /機関公表資料との照合の記録/);
   assert.match(official, /照合\s*(?:<!-- -->)?50(?:<!-- -->)?\s*件/);
   const visibleOfficial = official.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");

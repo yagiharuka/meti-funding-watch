@@ -806,7 +806,7 @@ export default function Home() {
         <div className="section-heading compact">
           <div>
             <p className="eyebrow">TWO MAIN SERIES & CHECK RECORDS</p>
-            <h2 id="source-index-title">2つの主系列と照合記録を選ぶ</h2>
+            <h2 id="source-index-title">2つの主系列を選ぶ</h2>
           </div>
           <p>主系列は相互に合算しません。機関公表資料は主系列ではなく、個別の照合にだけ使います。</p>
         </div>
@@ -822,12 +822,6 @@ export default function Home() {
             <h3>行政事業レビュー</h3>
             <p>公式CSVの事業・予算執行・支出先・公開支出経路を、GビズINFOとは別の主系列として確認します。</p>
             <a href="review/">レビュー系列を検索する →</a>
-          </article>
-          <article>
-            <span className="source-index-number">03</span>
-            <h3>機関公表資料との照合</h3>
-            <p>GビズINFO掲載値との比較を実施した範囲と、各件の判定・原典を確認します。未実施の範囲は未照合と表示します。</p>
-            <a href="official/">照合の記録を見る →</a>
           </article>
         </div>
         <p className="source-index-principle"><strong>このサイトが保証する範囲：</strong>原資料の所在、取得・検証状態、検索対象として明示した掲載行です。未収録を「該当なし」、掲載額を「実支払総額」とは扱いません。</p>

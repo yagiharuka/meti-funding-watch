@@ -68,7 +68,7 @@ export default function OfficialReconciliationPage() {
 
       <section className="official-hero" id="top" aria-labelledby="official-title">
         <p className="eyebrow">RECONCILIATION LOG</p>
-        <h1 id="official-title">機関公表資料との照合の記録</h1>
+        <h1 id="official-title">機関公表資料との照合の記録（非公式）</h1>
         <p className="official-lead">
           機関公表資料は自動更新する主系列ではなく、GビズINFO掲載値を確認するための照合資料として扱います。
           ここに示す分母は、機関公表資料のうち実際に照合を試みた件数です。

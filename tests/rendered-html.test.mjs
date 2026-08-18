@@ -57,7 +57,7 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   const ui = `${home}\n${official}\n${review}\n${javascript}`;
 
   assert.match(official, /<title>機関公表資料との照合の記録（非公式）<\/title>/);
-  assert.match(ui, /2つの主系列と照合記録を選ぶ/);
+  assert.match(ui, /2つの主系列を選ぶ/);
   assert.match(ui, /機関公表資料との照合の記録/);
   assert.match(ui, /照合を試みた件数/);
   assert.match(ui, /機関公表資料の掲載順先頭50行/);

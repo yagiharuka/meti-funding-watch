@@ -33,9 +33,8 @@ test("excludes Okinawa from active collection while retaining every historical r
   assert.match(pageSource, /沖縄総合事務局は収録・照合の対象外/);
 });
 test("presents official material only as row-level reconciliation evidence", () => {
-  assert.match(tabsSource, /照合の記録/);
-  assert.match(tabsSource, /機関公表資料との比較/);
-  assert.match(pageSource, /機関公表資料との照合の記録/);
+  assert.doesNotMatch(tabsSource, /照合の記録|機関公表資料との比較/);
+  assert.match(pageSource, /機関公表資料との照合の記録（非公式）/);
   assert.match(pageSource, /照合を試みた件数/);
   assert.match(pageSource, /未照合/);
   assert.match(pageSource, /原典PDF/);

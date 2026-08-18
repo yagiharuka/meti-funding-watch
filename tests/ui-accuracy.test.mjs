@@ -10,6 +10,7 @@ const pageHtml = await readFile(new URL("../pages-site/index.html", import.meta.
 const officialPageHtml = await readFile(new URL("../pages-site/official/index.html", import.meta.url), "utf8");
 const layoutSource = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
+const tabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
 const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 
 test("resets hidden agency state whenever the fiscal year changes", () => {
@@ -38,6 +39,9 @@ test("describes two main series and a bounded reconciliation log", () => {
   }
   assert.match(readme, /2つの主系列/);
   assert.match(readme, /照合の記録/);
+  assert.doesNotMatch(pageSource, /<h3>機関公表資料との照合/);
+  assert.doesNotMatch(tabsSource, /<strong>照合の記録/);
+  assert.match(officialPageSource, /<h1 id="official-title">機関公表資料との照合の記録（非公式）<\/h1>/);
 });
 
 test("uses non-authoritative freshness wording", () => {
