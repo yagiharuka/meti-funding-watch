@@ -601,7 +601,7 @@ export default function Home() {
     if (searchBackend !== "main" || !fallbackRecordsRef.current) return;
     const needle = deferredQuery.trim().toLocaleLowerCase("ja-JP");
     const matching = fallbackRecordsRef.current.filter((row) => {
-      if (needle && !`${row.organization} ${row.corporateNumber}`.toLocaleLowerCase("ja-JP").includes(needle)) return false;
+      if (needle && !`${row.organization} ${row.corporateNumber} ${row.id} ${row.sourceKey}`.toLocaleLowerCase("ja-JP").includes(needle)) return false;
       if (requestedAgency !== "all" && row.sourceAgency !== requestedAgency) return false;
       if (stage !== "all" && row.stage !== stage) return false;
       if (year === "unclassified" && row.fiscalYear !== null) return false;
@@ -702,9 +702,9 @@ export default function Home() {
   const updateWarning = updateHealth === "failed"
     ? "直近の自動更新に失敗しました。現在は前回検証済みのデータを表示しています。"
     : updateHealth === "stale"
-      ? "最終取込成功から30時間以上経過しています。日次自動更新が遅延している可能性があります。"
+      ? "最終取込成功から8日以上経過しています。週次自動更新が遅延している可能性があります。"
       : updateHealth === "unknown"
-        ? "日次自動更新の状態を確認できません。表示中のデータの検証日時をご確認ください。"
+        ? "週次自動更新の状態を確認できません。表示中のデータの検証日時をご確認ください。"
         : null;
   const displayedLastSuccess = publicUpdateStatus?.publishedRelease.lastSuccessfulImportAt
     ?? gbizSource?.lastSuccessfulImportAt
@@ -769,11 +769,11 @@ export default function Home() {
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">SOURCE INDEX & VERIFIED RECORDS</p>
-          <h1>経産省関係の公表資料を、<em>出所と収録範囲</em>から探す</h1>
+          <p className="eyebrow">TWO MAIN SERIES & CHECK RECORDS</p>
+          <h1>経産省関係の公表資料を、<em>2つの主系列</em>から探す</h1>
           <p className="hero-lead">
-            公式資料の所在、取得・変更の確認状況、検索できる範囲を先に示します。
-            明細検索は公表元と意味を確認できる掲載行に限り、全支出や受取総額を示しません。
+            GビズINFOと行政事業レビューを主系列として自動更新します。
+            機関公表資料はGビズINFO掲載値を確認した照合記録として、対象を限定して示します。
           </p>
           <p className="hero-scope-warning">
             このサイトは経済産業省の全支出・実支払を示すものではありません。
@@ -796,7 +796,7 @@ export default function Home() {
             </p>
           )}
           <div className="hero-actions">
-            <a className="primary-action" href="official/#coverage-matrix">公式資料・収録状況を見る</a>
+            <a className="primary-action" href="official/#reconciliation-records">照合の記録を見る</a>
             <a className="secondary-action" href="#records">GビズINFOを検索</a>
           </div>
         </div>
@@ -805,29 +805,29 @@ export default function Home() {
       <section className="source-index-section" id="source-index" aria-labelledby="source-index-title">
         <div className="section-heading compact">
           <div>
-            <p className="eyebrow">THREE SEPARATE SOURCES</p>
-            <h2 id="source-index-title">まず原資料と収録範囲を選ぶ</h2>
+            <p className="eyebrow">TWO MAIN SERIES & CHECK RECORDS</p>
+            <h2 id="source-index-title">2つの主系列と照合記録を選ぶ</h2>
           </div>
-          <p>3系列は金額の意味も公表範囲も異なります。同じ法人が現れても、系列をまたいで合算しません。</p>
+          <p>主系列は相互に合算しません。機関公表資料は主系列ではなく、個別の照合にだけ使います。</p>
         </div>
         <div className="source-index-grid">
           <article>
             <span className="source-index-number">01</span>
-            <h3>公式資料・収録状況</h3>
-            <p>13機関の公式入口、年度・系列別の収録状況、取得できなかった資料を確認します。検証済み掲載行の検索は、その後に利用できます。</p>
-            <a href="official/">カバレッジと公式入口を見る →</a>
-          </article>
-          <article>
-            <span className="source-index-number">02</span>
             <h3>GビズINFO掲載行</h3>
             <p>法人番号付きでGビズINFOに掲載された、経産省関係機関の調達・補助金情報です。経産省の全支出ではありません。</p>
             <a href="#records">掲載行を検索する →</a>
           </article>
           <article>
-            <span className="source-index-number">03</span>
+            <span className="source-index-number">02</span>
             <h3>行政事業レビュー</h3>
-            <p>公式CSVの事業・予算執行・支出先・公開支出経路を、他の2系列と分けて確認します。階層をまたいだ合算はしません。</p>
+            <p>公式CSVの事業・予算執行・支出先・公開支出経路を、GビズINFOとは別の主系列として確認します。</p>
             <a href="review/">レビュー系列を検索する →</a>
+          </article>
+          <article>
+            <span className="source-index-number">03</span>
+            <h3>機関公表資料との照合</h3>
+            <p>GビズINFO掲載値との比較を実施した範囲と、各件の判定・原典を確認します。未実施の範囲は未照合と表示します。</p>
+            <a href="official/">照合の記録を見る →</a>
           </article>
         </div>
         <p className="source-index-principle"><strong>このサイトが保証する範囲：</strong>原資料の所在、取得・検証状態、検索対象として明示した掲載行です。未収録を「該当なし」、掲載額を「実支払総額」とは扱いません。</p>
@@ -911,7 +911,7 @@ export default function Home() {
             <caption className="sr-only">GビズINFOに掲載された調達（委託を含む）・補助金情報</caption>
             <thead><tr><th scope="col">法人等の名称</th><th scope="col">活動名称・件名</th><th scope="col">公表組織</th><th scope="col">GビズINFO掲載区分</th><th scope="col">GビズINFO掲載値</th><th scope="col">認定日・受注日</th><th scope="col">掲載ページ</th></tr></thead>
             <tbody>{visibleRows.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id} id={row.id}>
                 <td data-label="法人等の名称"><strong>{row.organization}</strong><small>{row.corporateNumber}</small></td>
                 <td data-label="活動名称・件名"><span className="program-name">{row.program || "活動名称・件名の記載なし"}</span></td>
                 <td data-label="公表組織">{row.sourceAgency || "公表組織の記載なし"}</td>
@@ -946,7 +946,7 @@ export default function Home() {
       <section className="source-section" id="sources">
         <div className="section-heading light">
           <div><p className="eyebrow">DATA UPDATES</p><h2>データ更新状況</h2></div>
-          <p>当サイトは毎日、GビズINFO全件CSVの再取得を試みます。GビズINFO側の原データ更新時期は出典ごとに異なります。</p>
+          <p>当サイトは週1回、GビズINFO全件CSVの再取得を試みます。GビズINFO側の原データ更新時期は出典ごとに異なります。</p>
         </div>
         {gbizSource && (
           <div className="source-grid">
@@ -954,7 +954,7 @@ export default function Home() {
               <div><span className={`health ${updateHealth === "healthy" ? "healthy" : "watch"}`} />GビズINFO</div>
               <strong>{gbizSource.recordCount.toLocaleString("ja-JP")}行を収録</strong>
               <dl>
-                <div><dt>取得方式</dt><dd>全件CSVの再取得を毎日試行</dd></div>
+                <div><dt>取得方式</dt><dd>全件CSVの再取得を週1回試行</dd></div>
                 <div><dt>掲載行の日付範囲</dt><dd>{formatCoverageYears(coverageYears, dataset.coverage?.gbiz.unclassifiedDateCount)}</dd></div>
                 <div><dt>{gbizSource.lastSuccessfulImportAt ? "取得時CSVの最終取込成功" : "成功履歴"}</dt><dd>{gbizSource.lastSuccessfulImportAt ? formatTimestamp(gbizSource.lastSuccessfulImportAt) : "未記録"}</dd></div>
                 <div><dt>公式ダッシュボード確認日時</dt><dd>{formatTimestamp(gbizSource.dashboardCheckedAt ?? gbizSource.lastChecked)}</dd></div>
@@ -969,11 +969,11 @@ export default function Home() {
                 公式ダッシュボードと全件CSVは別のスナップショットです。両者の差は取込漏れとはみなさず、参考照合として表示します。
                 公開条件は、取得CSVの対象行と本サイト取込行が区分別にも一致することです。
               </p>
-              <a className="workflow-status-link" href="https://github.com/yagiharuka/meti-funding-watch/actions/workflows/update-data.yml?query=event%3Aschedule" target="_blank" rel="noreferrer">
+              <a className="workflow-status-link" href="https://github.com/yagiharuka/meti-funding-watch/actions/workflows/refresh-gbiz-data.yml?query=event%3Aschedule" target="_blank" rel="noreferrer">
                 {/* The badge is generated by GitHub Actions and is not an optimizable site asset. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="https://github.com/yagiharuka/meti-funding-watch/actions/workflows/update-data.yml/badge.svg?branch=main&event=schedule" alt="日次自動更新ワークフローの最新状態" />
-                <span>日次自動更新の実行履歴 ↗</span>
+                <img src="https://github.com/yagiharuka/meti-funding-watch/actions/workflows/refresh-gbiz-data.yml/badge.svg?branch=main&event=schedule" alt="週次自動更新ワークフローの最新状態" />
+                <span>週次自動更新の実行履歴 ↗</span>
               </a>
               <a className="source-link" href="https://info.gbiz.go.jp/hojin/dashboard" target="_blank" rel="noreferrer">GビズINFO公式画面 ↗</a>
             </article>

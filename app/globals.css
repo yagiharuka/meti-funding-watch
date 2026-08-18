@@ -188,6 +188,34 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .official-limitations strong { display: block; color: var(--ink); font-size: 13px; }
 .official-limitations p { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.75; }
 
+.reconciliation-section { background: #f7f4ec; }
+.reconciliation-card { max-width: 920px; margin: 0 auto 22px; padding: clamp(22px, 4vw, 34px); border: 1px solid #cad5cc; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgba(32,59,50,.06); }
+.reconciliation-attempted { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 20px; }
+.reconciliation-attempted strong { color: var(--ink); font-family: Georgia, serif; font-size: clamp(24px, 4vw, 38px); }
+.reconciliation-attempted span { color: var(--muted); font-size: 12px; }
+.reconciliation-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border: 1px solid var(--line); border-radius: 13px; overflow: hidden; }
+.reconciliation-counts div { padding: 15px; border-right: 1px solid var(--line); }
+.reconciliation-counts div:last-child { border-right: 0; }
+.reconciliation-counts dt { color: #5b6d66; font-size: 11px; font-weight: 700; }
+.reconciliation-counts dd { margin: 6px 0 0; color: var(--ink); font-family: Georgia, serif; font-size: 23px; font-weight: 700; }
+.reconciliation-denominator { margin: 18px 0 0; color: #40534c; font-size: 12px; line-height: 1.75; }
+.reconciliation-table { max-width: 1440px; margin: 0 auto; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.reconciliation-table table { min-width: 920px; }
+.reconciliation-table caption { padding: 14px 18px; color: #52645d; font-size: 11px; font-weight: 800; text-align: left; }
+.reconciliation-table td:nth-child(4), .reconciliation-table td:nth-child(5) { min-width: 200px; }
+.reconciliation-table td a { display: block; width: fit-content; margin-top: 7px; color: var(--green); font-weight: 800; }
+.reconciliation-status { display: inline-block; padding: 6px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.reconciliation-status.matched { background: #e2f5ec; color: #075c47; }
+.reconciliation-status.amount_mismatch { background: #fff2d9; color: #805000; }
+.reconciliation-status.one_sided { background: #fee8e5; color: #8e3026; }
+.reconciliation-status.unresolvable { background: #f0f2f0; color: #59645f; }
+.unreviewed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; max-width: 1440px; margin: 0 auto; }
+.unreviewed-grid article { padding: 17px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
+.unreviewed-grid h3 { margin: 0; color: var(--ink); font-size: 13px; }
+.unreviewed-grid p { margin: 8px 0 0; color: #596c65; font-size: 11px; line-height: 1.65; }
+#reconciliation-records, #unreviewed, .records-table tr[id] { scroll-margin-top: 90px; }
+.records-table tr:target { background: #fff8d8; outline: 3px solid #e4bc50; outline-offset: -3px; }
+
 .records-section, .source-section { padding: 0 clamp(22px, 5vw, 78px) 110px; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; max-width: 1440px; margin: 0 auto 34px; }
 .section-heading .eyebrow { margin-bottom: 10px; }
@@ -339,6 +367,10 @@ footer a { color: var(--green); font-weight: 700; }
   .official-hero { padding-top: 48px; }
   .official-search-section { padding-bottom: 58px; }
   .official-section { padding-bottom: 58px; }
+  .reconciliation-counts { grid-template-columns: 1fr 1fr; }
+  .reconciliation-counts div:nth-child(2) { border-right: 0; }
+  .reconciliation-counts div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .reconciliation-table { border-radius: 12px; }
   .population-matrix, .official-source-table { overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
   .population-matrix table, .population-matrix thead, .population-matrix tbody, .population-matrix tr, .population-matrix th, .population-matrix td,
   .official-source-table table, .official-source-table thead, .official-source-table tbody, .official-source-table tr, .official-source-table th, .official-source-table td { display: block; width: 100%; min-width: 0; }
