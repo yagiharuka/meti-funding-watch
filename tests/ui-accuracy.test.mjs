@@ -138,7 +138,7 @@ test("shows update failures and staleness without disabling verified search data
   assert.match(pageSource, /evaluatePublicUpdateHealth/);
   assert.match(pageSource, /直近の自動更新に失敗しました/);
   assert.match(pageSource, /最終取込成功から8日以上経過/);
-  assert.match(pageSource, /週次自動更新の状態を確認できません/);
+  assert.doesNotMatch(pageSource, /週次自動更新の状態を確認できません/);
   assert.match(pageSource, /updateHealth === "failed"/);
   assert.match(pageSource, /badge\.svg\?branch=main&event=schedule/);
   assert.match(pageSource, /setInterval\(\(\) => setStatusClock\(Date\.now\(\)\), 5 \* 60 \* 1000\)/);

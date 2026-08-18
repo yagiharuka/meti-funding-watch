@@ -743,9 +743,7 @@ export default function Home() {
     ? "直近の自動更新に失敗しました。現在は前回検証済みのデータを表示しています。"
     : updateHealth === "stale"
       ? "最終取込成功から8日以上経過しています。週次自動更新が遅延している可能性があります。"
-      : updateHealth === "unknown"
-        ? "週次自動更新の状態を確認できません。表示中のデータの検証日時をご確認ください。"
-        : null;
+      : null;
   const displayedLastSuccess = publicUpdateStatus?.publishedRelease.lastSuccessfulImportAt
     ?? gbizSource?.lastSuccessfulImportAt
     ?? dataset.generatedAt;
