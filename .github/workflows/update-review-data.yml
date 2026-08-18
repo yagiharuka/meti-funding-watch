@@ -3,7 +3,8 @@ name: Update administrative review data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "45 20 * * 1"
+    # RSシステムの週初めの配布切替と重ならないよう、火曜10:00 JSTに実行する。
+    - cron: "0 1 * * 2"
 
 permissions:
   contents: write
@@ -25,7 +26,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Refresh administrative review official CSVs
-        run: npm run update:review
+        run: npm run update:review -- --require-fresh
       - name: Verify review data
         run: npm run build:pages && node --test tests/review-data-model.test.mjs tests/review-data.test.mjs
       - name: Commit refreshed review data

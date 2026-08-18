@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -17,6 +17,7 @@ test("runs the review ZIP/CSV pipeline offline from a fixed fixture", async () =
     "--fixture-dir", "tests/fixtures/review",
     "--output-dir", output,
     "--now", "2026-08-16T01:34:06.322Z",
+    "--require-fresh",
   ];
   try {
     await execFileAsync(process.execPath, args, { cwd: projectRoot, timeout: 30_000 });
@@ -53,6 +54,41 @@ test("runs the review ZIP/CSV pipeline offline from a fixed fixture", async () =
 
     assert.deepEqual(second.manifest.sourceReceipts, first.manifest.sourceReceipts);
     assert.deepEqual(second.payments.map((row) => row.id), first.payments.map((row) => row.id));
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("strict review refresh rejects carry-forward and preserves the prior cache", async () => {
+  const temporary = await mkdtemp(join(fileURLToPath(projectRoot), ".tmp-review-strict-"));
+  const output = join(temporary, "review-cache");
+  const unavailableFixture = join(temporary, "unavailable-fixture");
+  try {
+    await execFileAsync(process.execPath, [
+      "scripts/update-review-data.mjs",
+      "--fixture-dir", "tests/fixtures/review",
+      "--output-dir", output,
+      "--now", "2026-08-16T01:34:06.322Z",
+      "--require-fresh",
+    ], { cwd: projectRoot, timeout: 30_000 });
+    await mkdir(unavailableFixture, { recursive: true });
+    await writeFile(join(unavailableFixture, "years.json"), "[2025]\n");
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        "scripts/update-review-data.mjs",
+        "--fixture-dir", unavailableFixture,
+        "--output-dir", output,
+        "--now", "2026-08-18T01:00:00.000Z",
+        "--require-fresh",
+      ], { cwd: projectRoot, timeout: 30_000 }),
+      (error) => {
+        assert.match(error.stderr, /前回値は公開用データへ置き換えません/);
+        return true;
+      },
+    );
+    const retained = await readOutput(output);
+    assert.equal(retained.manifest.refreshStatus, "fresh");
+    assert.equal(retained.manifest.generatedAt, "2026-08-16T01:34:06.322Z");
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

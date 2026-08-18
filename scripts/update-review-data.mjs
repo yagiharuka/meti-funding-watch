@@ -109,6 +109,11 @@ const manifest = {
   },
 };
 await writeFile(new URL("manifest.json", temporaryPath), `${JSON.stringify(manifest, null, 2)}\n`);
+if (options.requireFresh && manifest.refreshStatus !== "fresh") {
+  const unavailableYears = unavailable.map((item) => item.reviewSheetYear).join("・") || "不明";
+  await rm(temporaryPath, { recursive: true, force: true });
+  throw new Error(`行政事業レビューを新規取得できない年度があります（${unavailableYears}年度）。前回値は公開用データへ置き換えません`);
+}
 await atomicReplaceDirectory();
 console.log(`Administrative review: ${manifest.reviewSheetYears.join("・")} sheets / ${programs.length} programs / ${payments.length} payment rows / ${sourceReceipts.length} source receipts`);
 if (unavailable.length) console.log(`Unavailable candidate years: ${JSON.stringify(unavailable)}`);
@@ -121,16 +126,23 @@ async function discoverReviewSheetYears() {
     }
     return [...new Set(years)].sort((a, b) => a - b);
   }
+  let discoveryError = null;
   try {
     const response = await fetchChecked(SOURCE.fiscalYearsUrl, { accept: "application/json" });
     const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("json")) {
-      const years = [...new Set(collectFiscalYears(await response.json()))].filter((year) => year >= 2024).sort((a, b) => a - b);
-      if (years.length) return years;
-    }
-  } catch {}
-  const current = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Tokyo", year: "numeric" }).format(new Date()));
-  return Array.from({ length: Math.max(1, current - 2024 + 1) }, (_, index) => 2024 + index);
+    if (!contentType.includes("json")) throw new Error(`年度一覧がJSONではありません（${contentType || "content-type不明"}）`);
+    const years = [...new Set(collectFiscalYears(await response.json()))].filter((year) => year >= 2024).sort((a, b) => a - b);
+    if (!years.length) throw new Error("年度一覧に2024年度以降がありません");
+    return years;
+  } catch (error) {
+    discoveryError = error instanceof Error ? error.message : String(error);
+  }
+  if (options.requireFresh) throw new Error(`行政事業レビューの年度一覧を取得できません: ${discoveryError}`);
+  const previousYears = [...new Set(previous?.manifest.reviewSheetYears ?? [])]
+    .filter((year) => Number.isInteger(year) && year >= 2024)
+    .sort((a, b) => a - b);
+  if (previousYears.length) return previousYears;
+  throw new Error(`行政事業レビューの年度一覧を取得できず、前回年度もありません: ${discoveryError}`);
 }
 
 async function loadReviewSheetYear(reviewSheetYear) {
@@ -310,6 +322,10 @@ function parseArguments(args) {
   const parsed = {};
   for (let index = 0; index < args.length; index += 1) {
     const key = args[index];
+    if (key === "--require-fresh") {
+      parsed.requireFresh = true;
+      continue;
+    }
     const value = args[index + 1];
     if (!["--fixture-dir", "--output-dir", "--now"].includes(key) || !value || value.startsWith("--")) {
       throw new Error(`不明または値のない引数です: ${key}`);

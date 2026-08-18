@@ -38,6 +38,8 @@ test("publishes only the two main series and keeps official refresh manual", asy
   assert.match(official, /npm run update:official/);
   assert.doesNotMatch(official, /gh workflow run update-data\.yml/);
   assert.match(review, /group: administrative-review-update/);
+  assert.match(review, /cron: "0 1 \* \* 2"/);
+  assert.match(review, /npm run update:review -- --require-fresh/);
   assert.match(gbiz, /group: gbiz-data-refresh/);
   assert.match(official, /group: official-data-refresh/);
 });
