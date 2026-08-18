@@ -25,15 +25,14 @@ test("makes negative-search limitations visible instead of implying no funding",
   assert.match(pageSource, /収録済みのGビズINFO掲載行では確認できませんでした/);
   assert.match(pageSource, /資金を受けていないという意味ではありません/);
   assert.match(officialPageSource, /照合結果は対象資料の全掲載行や、他の機関・年度を代表しません/);
-  assert.match(reviewSearchSource, /0件でも「資金を受けていない」とは判断できません/);
+  assert.doesNotMatch(reviewSearchSource, /否定検索には使えません/);
 });
 
-test("publishes a bounded reconciliation log and review freshness warning", () => {
+test("publishes a bounded reconciliation log without the review freshness warning", () => {
   assert.match(officialPageSource, /照合を試みた件数/);
   assert.match(officialPageSource, /未照合/);
   assert.doesNotMatch(officialPageSource, /収録率|網羅|カバレッジ/);
-  assert.match(reviewSearchSource, /鮮度要確認/);
-  assert.match(reviewSearchSource, /最終検証済みデータ/);
+  assert.doesNotMatch(reviewSearchSource, /鮮度要確認/);
 });
 
 test("makes disclosed review routes understandable without legacy-cache wording", () => {

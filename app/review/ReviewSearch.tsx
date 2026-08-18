@@ -125,9 +125,7 @@ export default function ReviewSearch() {
         </div>
         <p className="filter-note">たとえば「NEDOから先を見る」を選ぶと、レビューシートCSVでNEDOが直接の支出元として記載された支出先を表示します。支出元を確認できない行は、この絞り込みには含みません。</p>
       </>}
-      <p className="official-coverage-note"><strong>否定検索には使えません：</strong>{manifest ? `${manifest.reviewSheetYears.join("・")}年度シートを収録。` : "収録年度を確認中。"} 2021–2023年度の移行データは支出先詳細・経路が欠けるため、この支出先検索には含めません。0件でも「資金を受けていない」とは判断できません。</p>
       {manifest && manifest.rowAccounting.status !== "complete" && <p className="official-warning"><strong>原資料行数は未照合：</strong>取得証跡と原資料行数の照合が揃っていない年度があります。表示中の{manifest.paymentCount.toLocaleString("ja-JP")}行を原資料の全行とは扱わないでください。</p>}
-      {manifest && manifest.refreshStatus !== "fresh" && <p className="official-warning"><strong>鮮度要確認：</strong>{formatAcquisition(manifest)}に行政事業レビュー公式CSVから取得できた最終検証済みデータを表示しています。取得できなかった年度は前回値を維持し、新しい値として上書きしていません。</p>}
       <div className="result-bar"><span role="status" aria-live="polite">{loading ? <strong>レビュー明細を読込中</strong> : error ? <strong>レビュー明細を取得できません</strong> : <><strong>{rows.length.toLocaleString("ja-JP")}</strong>{mode === "payments" ? "支出先掲載行" : "事業"}</>}</span>{hasFilters && <button onClick={clear}>条件をクリア</button>}</div>
       {error ? <div className="adoption-error" role="alert"><strong>行政事業レビューを表示できません。</strong><p>{error}</p></div> : (
         <div className="records-table official-results-table" role="region" aria-label="行政事業レビュー検索結果" tabIndex={0}>
