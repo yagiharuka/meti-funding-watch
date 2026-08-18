@@ -4,14 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "45 20 * * 1"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/update-review-data.yml"
-      - "scripts/update-review-data.mjs"
-      - "scripts/review-data-model.mjs"
-      - "package.json"
-      - "package-lock.json"
 
 permissions:
   contents: write

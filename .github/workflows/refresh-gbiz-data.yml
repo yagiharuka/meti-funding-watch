@@ -3,15 +3,7 @@ name: Refresh Gbiz funding data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 21 * * *"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/refresh-gbiz-data.yml"
-      - "scripts/update-data.mjs"
-      - "scripts/gbiz-*.mjs"
-      - "scripts/gbiz-values.mjs"
-      - "data/source-registry.json"
+    - cron: "0 21 * * 1"
 
 permissions:
   contents: write
