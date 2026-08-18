@@ -73,12 +73,15 @@ test("issue copy states that candidates are not automatically published", () => 
   assert.match(body, /原資料の形式と意味を検証/);
 });
 
-test("keeps source discovery as a manual audit command outside automatic workflows", async () => {
+test("keeps source discovery as a workflow-dispatch-only manual audit", async () => {
   const workflowDirectory = new URL("../.github/workflows/", import.meta.url);
-  const workflowSources = await Promise.all((await readdir(workflowDirectory))
-    .filter((name) => name.endsWith(".yml"))
-    .map((name) => readFile(new URL(name, workflowDirectory), "utf8")));
+  const workflowNames = (await readdir(workflowDirectory)).filter((name) => name.endsWith(".yml"));
+  const workflowSources = await Promise.all(workflowNames.map((name) => readFile(new URL(name, workflowDirectory), "utf8")));
+  const workflow = await readFile(new URL("discover-official-sources.yml", workflowDirectory), "utf8");
   const packageSource = await readFile(new URL("../package.json", import.meta.url), "utf8");
   assert.match(packageSource, /"discover:official": "node scripts\/official-source-discovery\.mjs"/);
-  assert.doesNotMatch(workflowSources.join("\n"), /discover:official|official-source-discovery/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /npm run discover:official/);
+  assert.doesNotMatch(workflow, /schedule:|\bpush:/);
+  assert.equal(workflowSources.filter((source) => /npm run discover:official/.test(source)).length, 1);
 });
