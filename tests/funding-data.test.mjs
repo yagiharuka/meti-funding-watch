@@ -420,9 +420,7 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /GビズINFO情報種別/);
   assert.match(pageSource, /調達（委託を含む）/);
   assert.match(pageSource, /subsidy_published: "補助金"/);
-  assert.match(pageSource, /法人詳細画面に表示される手続ステータスの項目がありません/);
-  assert.match(pageSource, /掲載値を交付決定額・確定額・実支払額のいずれとも自動判定しません/);
-  assert.doesNotMatch(pageSource, /GビズINFO画面のステータス|sourceStatusCell/);
+  assert.doesNotMatch(pageSource, /補助金掲載値の注意|法人詳細画面に表示される手続ステータス|GビズINFO画面のステータス|sourceStatusCell/);
   assert.match(pageSource, /調達（委託を含む）・補助金/);
   assert.match(pageSource, /認定日・受注日の記載がない/);
   assert.match(pageSource, /取得時CSVの抽出対象行を取込確認/);

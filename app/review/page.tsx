@@ -12,9 +12,9 @@ export default function ReviewPage() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報（非公式） トップ">
+        <a className="brand" href="../" aria-label="経産省関連の事業費額（非公式） トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span>
+          <span>経産省関連の事業費額（非公式）</span>
         </a>
       </header>
       <ViewTabs active="review" />

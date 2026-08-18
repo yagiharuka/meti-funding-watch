@@ -1,6 +1,6 @@
 {
   "name": "meti-funding-watch",
-  "displayName": "経産省関係の調達（委託を含む）・補助金情報（非公式）",
+  "displayName": "経産省関連の事業費額（非公式）",
   "version": "0.1.0",
   "private": true,
   "engines": {

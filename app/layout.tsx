@@ -4,7 +4,7 @@ import "./globals.css";
 import SiteNotice from "@/app/SiteNotice";
 
 export const metadata: Metadata = {
-  title: "経産省関係の調達（委託を含む）・補助金情報（非公式）",
+  title: "経産省関連の事業費額（非公式）",
   description: "GビズINFOと行政事業レビューを主系列として検索し、機関公表資料との照合結果を別に確認できる非公式サイトです。",
   robots: { index: false, follow: false, nocache: true },
   other: {

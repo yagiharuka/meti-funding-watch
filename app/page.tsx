@@ -753,9 +753,9 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="経産省関係の調達（委託を含む）・補助金情報（非公式） トップ">
+        <a className="brand" href="#top" aria-label="経産省関連の事業費額（非公式） トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span>
+          <span>経産省関連の事業費額（非公式）</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#source-index">資料の案内</a>
@@ -770,7 +770,7 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">TWO MAIN SERIES & CHECK RECORDS</p>
-          <h1>経産省関係の公表資料を、<em>2つの主系列</em>から探す</h1>
+          <h1>経産省関連の事業費額<em>（非公式）</em></h1>
           <p className="hero-lead">
             GビズINFOと行政事業レビューを主系列として自動更新します。
             機関公表資料はGビズINFO掲載値を確認した照合記録として、対象を限定して示します。
@@ -841,8 +841,6 @@ export default function Home() {
           <strong>法人等別の調達（委託を含む）・補助金掲載情報</strong>
           <span>GビズINFO</span>
         </div>
-        <p className="source-index-principle"><strong>補助金掲載値の注意：</strong>当サイトが取得する全件CSVとREST APIには、法人詳細画面に表示される手続ステータスの項目がありません。掲載値を交付決定額・確定額・実支払額のいずれとも自動判定しません。認定日がない行は年度不明です。</p>
-
         <div className="filters" aria-label="検索条件">
           <label className="search-field">
             <span className="sr-only">法人等の名称または法人番号で検索</span>
@@ -976,7 +974,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span></div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関連の事業費額（非公式）</span></div>
         <p>「GビズINFO」（経済産業省）のデータを当サイトで抽出・整形して作成した非公式サイトです。原データと本サイトの抽出・取込は、正確性・完全性・最新性を保証しません。</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>

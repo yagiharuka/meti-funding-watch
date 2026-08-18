@@ -24,16 +24,14 @@ test("describes Gbiz results as published rows and uses the official category wo
   assert.match(pageSource, /<strong>\{searchTotal\.toLocaleString\("ja-JP"\)\}<\/strong>掲載行/);
   assert.match(pageSource, /–\$\{visibleEnd\.toLocaleString\("ja-JP"\)\}行を表示/);
   assert.match(pageSource, /調達（委託を含む）・補助金/);
+  assert.match(pageSource, /<h1>経産省関連の事業費額<em>（非公式）<\/em><\/h1>/);
   assert.doesNotMatch(pageSource, /<strong>\{searchTotal\.toLocaleString\("ja-JP"\)\}<\/strong>件/);
-  assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報（非公式）<\/title>/);
+  assert.match(pageHtml, /<title>経産省関連の事業費額（非公式）<\/title>/);
 });
 
-test("does not render a status field that cannot be populated from bulk data", () => {
-  assert.match(pageSource, /法人詳細画面に表示される手続ステータスの項目がありません/);
-  assert.match(pageSource, /掲載値を交付決定額・確定額・実支払額のいずれとも自動判定しません/);
-  assert.doesNotMatch(pageSource, /GビズINFO画面のステータス|sourceStatusCell|source-status unavailable/);
+test("does not render an unavailable status field or its notice", () => {
+  assert.doesNotMatch(pageSource, /補助金掲載値の注意|法人詳細画面に表示される手続ステータス|GビズINFO画面のステータス|sourceStatusCell|source-status unavailable/);
   assert.match(pageSource, /\?hojinBango=\$\{row\.corporateNumber\}\$\{row\.stage === "subsidy_published" \? "#subsidy" : "#procurement"\}/);
-  assert.match(readme, /当サイトにはステータスを表示せず/);
   assert.doesNotMatch(pageSource, /subsidy_published: "補助金CSV"/);
 });
 
