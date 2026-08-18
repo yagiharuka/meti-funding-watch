@@ -86,6 +86,8 @@ test("search state is reflected in the URL", () => {
 test("verifies the release and searches verified static chunks with a worker fallback", () => {
   assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json\?load=\$\{cacheKey\}`/);
   assert.match(pageSource, /await sha256\(manifestBytes\).*candidateRelease\.manifestSha256/);
+  assert.match(pageSource, /candidateRelease\.preview\.sha256/);
+  assert.match(pageSource, /setDetailLoading\(false\)/);
   assert.match(pageSource, /sourceSnapshots\.gbiz/);
   assert.match(pageSource, /corrections\\\/index\\\.html/);
   assert.match(pageSource, /\\\.\(\?:svg\|txt\)/);
@@ -95,6 +97,7 @@ test("verifies the release and searches verified static chunks with a worker fal
   assert.match(fundingWorkerSource, /metadata\.sha256/);
   assert.match(fundingWorkerSource, /message\.release\.idSetSha256/);
   assert.match(fundingWorkerSource, /searchParams\.set\("release", message\.release\.commitSha\)/);
+  assert.match(fundingWorkerSource, /Math\.min\(4, entries\.length\)/);
   assert.match(pageSource, /loadVerifiedFundingRecords\(getPublicBaseUrl\(\), manifest, release/);
   assert.match(pageSource, /setSearchBackend\("main"\)/);
   assert.match(pageSource, /await sha256\(idSetBytes\.buffer\) !== release\.idSetSha256/);

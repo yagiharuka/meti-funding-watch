@@ -82,6 +82,7 @@ type FundingDataset = {
 type DataChunkManifest = {
   generatedAt: string;
   commitments: Record<string, string>;
+  preview: string;
 };
 
 type DataRelease = {
@@ -91,6 +92,7 @@ type DataRelease = {
   recordCount: number;
   manifestSha256: string;
   idSetSha256: string;
+  preview: { filename: string; sha256: string; bytes: number; rows: number };
   appShell: Record<string, { sha256: string; bytes: number }>;
   files: Record<string, { sha256: string; bytes: number; rows: number }>;
   sourceSnapshots: {
@@ -229,6 +231,10 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     || !Number.isSafeInteger(release.recordCount) || (release.recordCount ?? -1) < 0
     || !isSha256(release.manifestSha256)
     || !isSha256(release.idSetSha256)
+    || release.preview?.filename !== "commitments-preview.json"
+    || !isSha256(release.preview?.sha256)
+    || !Number.isSafeInteger(release.preview?.bytes) || (release.preview?.bytes ?? -1) < 0
+    || !Number.isSafeInteger(release.preview?.rows) || (release.preview?.rows ?? -1) < 1 || (release.preview?.rows ?? 101) > pageSize
     || !release.appShell || typeof release.appShell !== "object"
     || !release.files || typeof release.files !== "object"
     || !release.sourceSnapshots || typeof release.sourceSnapshots !== "object"
@@ -314,18 +320,29 @@ async function loadVerifiedFundingRecords(
   const ids = new Set<string>();
   const entries = Object.entries(manifest.commitments)
     .sort(([left], [right]) => left.localeCompare(right));
+  const loaded = new Array<{ yearKey: string; filename: string; rows: FundingRecord[] }>(entries.length);
+  let nextIndex = 0;
+  const loadNext = async () => {
+    while (nextIndex < entries.length) {
+      const index = nextIndex++;
+      const [yearKey, filename] = entries[index];
+      const metadata = release.files[filename];
+      if (!metadata) throw new Error(`${filename}のrelease情報がありません`);
+      const dataUrl = new URL(`data/${filename}`, publicBaseUrl);
+      dataUrl.searchParams.set("release", release.commitSha);
+      const response = await fetch(dataUrl, { cache: "no-store", signal });
+      if (!response.ok) throw new Error(`${filename}を取得できません（HTTP ${response.status}）`);
+      const bytes = await response.arrayBuffer();
+      if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
+      if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
+      const rows = validateSearchRows(parseJsonBytes<unknown>(bytes, filename));
+      loaded[index] = { yearKey, filename, rows };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, entries.length) }, loadNext));
 
-  for (const [yearKey, filename] of entries) {
+  for (const { yearKey, filename, rows } of loaded) {
     const metadata = release.files[filename];
-    if (!metadata) throw new Error(`${filename}のrelease情報がありません`);
-    const dataUrl = new URL(`data/${filename}`, publicBaseUrl);
-    dataUrl.searchParams.set("release", release.commitSha);
-    const response = await fetch(dataUrl, { cache: "no-store", signal });
-    if (!response.ok) throw new Error(`${filename}を取得できません（HTTP ${response.status}）`);
-    const bytes = await response.arrayBuffer();
-    if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
-    if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
-    const rows = validateSearchRows(parseJsonBytes<unknown>(bytes, filename));
     if (rows.length !== metadata.rows) throw new Error(`${filename}の行数が一致しません`);
     for (const row of rows) {
       if (yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== yearKey) {
@@ -432,12 +449,35 @@ export default function Home() {
         if (JSON.stringify(manifestFiles) !== JSON.stringify(releaseFiles)) {
           throw new Error("Data manifestとreleaseのファイル一覧が一致しません");
         }
-        return { candidate, candidateRelease };
+        if (candidate.preview !== candidateRelease.preview.filename) {
+          throw new Error("Data manifestとreleaseの初期表示ファイルが一致しません");
+        }
+        const previewResponse = await fetch(
+          `${publicBaseUrl}data/${candidate.preview}?load=${cacheKey}`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        if (!previewResponse.ok) throw new Error(`Data preview: ${previewResponse.status}`);
+        const previewBytes = await previewResponse.arrayBuffer();
+        if (previewBytes.byteLength !== candidateRelease.preview.bytes) {
+          throw new Error("Data previewのバイト数が一致しません");
+        }
+        if (await sha256(previewBytes) !== candidateRelease.preview.sha256) {
+          throw new Error("Data previewのSHA-256が一致しません");
+        }
+        const previewRows = validateSearchRows(parseJsonBytes<unknown>(previewBytes, "Data preview"));
+        if (previewRows.length !== candidateRelease.preview.rows) {
+          throw new Error("Data previewの行数が一致しません");
+        }
+        return { candidate, candidateRelease, previewRows };
       })
-      .then(({ candidate, candidateRelease }) => {
+      .then(({ candidate, candidateRelease, previewRows }) => {
         setManifest(candidate);
         setRelease(candidateRelease);
-        setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt }));
+        setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt, records: previewRows }));
+        setSearchTotal(candidateRelease.recordCount);
+        setSearchTotalPages(Math.max(1, Math.ceil(candidateRelease.recordCount / pageSize)));
+        setDataMode("github");
+        setDetailLoading(false);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;

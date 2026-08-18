@@ -20,6 +20,7 @@ if (
 ) throw new Error("公開releaseに必要なGビズINFO取得元情報がありません");
 const filenames = Object.values(manifest.commitments ?? {}).sort();
 if (!filenames.length) throw new Error("公開releaseにGビズINFO明細ファイルがありません");
+if (manifest.preview !== "commitments-preview.json") throw new Error("公開releaseの初期表示ファイルが不正です");
 
 const ids = [];
 const files = {};
@@ -38,6 +39,23 @@ for (const filename of filenames) {
 if (new Set(ids).size !== ids.length) {
   throw new Error("公開releaseの明細IDが重複しています");
 }
+const previewUrl = new URL(manifest.preview, dataDirectory);
+const previewText = await readFile(previewUrl, "utf8");
+const previewRows = JSON.parse(previewText);
+if (!Array.isArray(previewRows) || previewRows.length !== Math.min(100, ids.length)) {
+  throw new Error("公開releaseの初期表示行数が不正です");
+}
+const idSet = new Set(ids);
+if (new Set(previewRows.map((row) => row.id)).size !== previewRows.length
+  || previewRows.some((row) => !idSet.has(row.id))) {
+  throw new Error("公開releaseの初期表示IDが不正です");
+}
+const preview = {
+  filename: manifest.preview,
+  sha256: sha256(previewText),
+  bytes: (await stat(previewUrl)).size,
+  rows: previewRows.length,
+};
 
 const reviewDirectory = new URL("review/", dataDirectory);
 const reviewManifestText = await readFile(new URL("manifest.json", reviewDirectory), "utf8");
@@ -81,6 +99,7 @@ const release = {
   recordCount: ids.length,
   manifestSha256: sha256(manifestText),
   idSetSha256: sha256(`${[...ids].sort().join("\n")}\n`),
+  preview,
   appShell,
   sourceSnapshots: {
     gbiz: {

@@ -11,11 +11,12 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   const dataEntries = (await readdir(dataDirectory)).sort();
 
   assert.ok(dataEntries.includes("manifest.json"));
+  assert.ok(dataEntries.includes("commitments-preview.json"));
   assert.ok(dataEntries.includes("review"));
   assert.equal(dataEntries.includes("official"), false);
   assert.ok(dataEntries.some((name) => name.startsWith("commitments-")));
   assert.ok(dataEntries.every((name) =>
-    name === "manifest.json" || name === "review" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
+    name === "manifest.json" || name === "review" || name === "commitments-preview.json" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
 
   const ids = [];
   for (const [year, filename] of Object.entries(manifest.commitments)) {
@@ -34,6 +35,14 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   assert.equal(release.recordCount, ids.length);
   assert.equal(release.manifestSha256, sha256(manifestText));
   assert.equal(release.idSetSha256, sha256(`${[...ids].sort().join("\n")}\n`));
+  assert.equal(manifest.preview, "commitments-preview.json");
+  const previewText = await readFile(new URL(manifest.preview, dataDirectory), "utf8");
+  const previewRows = JSON.parse(previewText);
+  assert.equal(previewRows.length, Math.min(100, ids.length));
+  assert.equal(release.preview.filename, manifest.preview);
+  assert.equal(release.preview.sha256, sha256(previewText));
+  assert.equal(release.preview.bytes, (await stat(new URL(manifest.preview, dataDirectory))).size);
+  assert.equal(release.preview.rows, previewRows.length);
   assert.equal(release.commitSha, execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: new URL("..", import.meta.url),
     encoding: "utf8",

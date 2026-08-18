@@ -47,9 +47,11 @@ test("status contains no official-series freshness state", () => {
 
 test("live verifier binds status, release, manifest, chunks, and ID set", async () => {
   const rowsText = `${JSON.stringify([{ id: "row-1" }])}\n`;
+  const previewText = rowsText;
   const manifestText = `${JSON.stringify({
     generatedAt: releaseIdentity.generatedAt,
     commitments: { 2026: "commitments-2026.json" },
+    preview: "commitments-preview.json",
   }, null, 2)}\n`;
   const shellText = "<main>verified</main>\n";
   const release = {
@@ -58,6 +60,12 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
     recordCount: 1,
     manifestSha256: sha256(manifestText),
     idSetSha256: sha256("row-1\n"),
+    preview: {
+      filename: "commitments-preview.json",
+      sha256: sha256(previewText),
+      bytes: Buffer.byteLength(previewText),
+      rows: 1,
+    },
     appShell: {
       "index.html": { sha256: sha256(shellText), bytes: Buffer.byteLength(shellText) },
     },
@@ -74,6 +82,7 @@ test("live verifier binds status, release, manifest, chunks, and ID set", async 
     ["update-status.json", `${JSON.stringify(status())}\n`],
     ["data/manifest.json", manifestText],
     ["data/commitments-2026.json", rowsText],
+    ["data/commitments-preview.json", previewText],
     ["index.html", shellText],
   ]);
   const fetchImpl = async (url) => {

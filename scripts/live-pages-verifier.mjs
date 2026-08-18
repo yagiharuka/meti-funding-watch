@@ -48,6 +48,17 @@ export async function verifyLivePages({
   if (JSON.stringify(manifestFiles) !== JSON.stringify(Object.keys(release.files ?? {}).sort())) {
     throw new Error("公開manifestとreleaseのファイル一覧が一致しません");
   }
+  if (manifest.preview !== release.preview?.filename || manifest.preview !== "commitments-preview.json") {
+    throw new Error("公開manifestとreleaseの初期表示ファイルが一致しません");
+  }
+  const previewBytes = await read(`data/${manifest.preview}`);
+  if (previewBytes.byteLength !== release.preview.bytes || sha256(previewBytes) !== release.preview.sha256) {
+    throw new Error("公開初期表示の内容がreleaseと一致しません");
+  }
+  const previewRows = parseJson(previewBytes, manifest.preview);
+  if (!Array.isArray(previewRows) || previewRows.length !== release.preview.rows) {
+    throw new Error("公開初期表示の行数が一致しません");
+  }
   const ids = [];
   for (const filename of manifestFiles) {
     const bytes = await read(`data/${filename}`);
@@ -61,6 +72,11 @@ export async function verifyLivePages({
   }
   if (ids.length !== release.recordCount || new Set(ids).size !== ids.length) {
     throw new Error("公開明細の総行数またはID一意性が一致しません");
+  }
+  const idSet = new Set(ids);
+  if (new Set(previewRows.map((row) => row.id)).size !== previewRows.length
+    || previewRows.some((row) => !idSet.has(row.id))) {
+    throw new Error("公開初期表示のIDが全明細と一致しません");
   }
   if (sha256(Buffer.from(`${[...ids].sort().join("\n")}\n`)) !== release.idSetSha256) {
     throw new Error("公開明細のID集合が一致しません");

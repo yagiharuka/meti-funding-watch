@@ -12,6 +12,7 @@ const pagesOutDir = fileURLToPath(new URL("./dist-pages", import.meta.url));
 type PageDataManifest = {
   generatedAt: string;
   commitments: Record<string, string>;
+  preview: string;
 };
 
 type PublicFundingRow = {
@@ -77,12 +78,14 @@ export default defineConfig({
         const publicManifest: PageDataManifest = {
           generatedAt: sourceManifest.generatedAt,
           commitments,
+          preview: "commitments-preview.json",
         };
 
         await writeFile(
           new URL("./dist-pages/data/manifest.json", import.meta.url),
           `${JSON.stringify(publicManifest, null, 2)}\n`,
         );
+        const allPublicRows: PublicFundingRow[] = [];
         for (const filename of Object.values(commitments)) {
             const rows = JSON.parse(
               await readFile(new URL(`./data/pages/${filename}`, import.meta.url), "utf8"),
@@ -136,11 +139,22 @@ export default defineConfig({
                 sourceSystem: row.sourceSystem,
               };
             });
+            allPublicRows.push(...publicRows);
             await writeFile(
               new URL(`./dist-pages/data/${filename}`, import.meta.url),
               `${JSON.stringify(publicRows)}\n`,
             );
         }
+        const previewRows = allPublicRows
+          .sort((left, right) =>
+            (right.fiscalYear ?? Number.NEGATIVE_INFINITY) - (left.fiscalYear ?? Number.NEGATIVE_INFINITY)
+            || (right.date ?? "").localeCompare(left.date ?? "")
+            || left.organization.localeCompare(right.organization, "ja"))
+          .slice(0, 100);
+        await writeFile(
+          new URL(`./dist-pages/data/${publicManifest.preview}`, import.meta.url),
+          `${JSON.stringify(previewRows)}\n`,
+        );
         await copyReviewData(dataDirectory);
       },
     },

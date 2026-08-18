@@ -62,18 +62,19 @@ async function initialize(message: InitializeMessage) {
   const nextRecords: FundingRecord[] = [];
   const ids = new Set<string>();
   const entries = Object.entries(message.manifest.commitments).sort(([left], [right]) => left.localeCompare(right));
+  const loaded = new Array<{ yearKey: string; filename: string; rows: FundingRecord[] }>(entries.length);
+  let nextIndex = 0;
+  const loadNext = async () => {
+    while (nextIndex < entries.length) {
+      const index = nextIndex++;
+      const [yearKey, filename] = entries[index];
+      loaded[index] = { yearKey, filename, rows: await loadChunk(message, filename) };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, entries.length) }, loadNext));
 
-  for (const [yearKey, filename] of entries) {
+  for (const { yearKey, filename, rows } of loaded) {
     const metadata = message.release.files[filename];
-    if (!metadata) throw new Error(`${filename}のrelease情報がありません`);
-    const dataUrl = new URL(`data/${filename}`, message.publicBaseUrl);
-    dataUrl.searchParams.set("release", message.release.commitSha);
-    const response = await fetch(dataUrl, { cache: "no-store" });
-    if (!response.ok) throw new Error(`${filename}を取得できません（HTTP ${response.status}）`);
-    const bytes = await response.arrayBuffer();
-    if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
-    if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
-    const rows = parseRows(bytes, filename);
     if (rows.length !== metadata.rows) throw new Error(`${filename}の行数が一致しません`);
     for (const row of rows) {
       if (yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== yearKey) {
@@ -102,6 +103,19 @@ async function initialize(message: InitializeMessage) {
     releaseCommit: message.release.commitSha,
     generatedAt: message.release.generatedAt,
   });
+}
+
+async function loadChunk(message: InitializeMessage, filename: string) {
+  const metadata = message.release.files[filename];
+  if (!metadata) throw new Error(`${filename}のrelease情報がありません`);
+  const dataUrl = new URL(`data/${filename}`, message.publicBaseUrl);
+  dataUrl.searchParams.set("release", message.release.commitSha);
+  const response = await fetch(dataUrl, { cache: "no-store" });
+  if (!response.ok) throw new Error(`${filename}を取得できません（HTTP ${response.status}）`);
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength !== metadata.bytes) throw new Error(`${filename}のバイト数が一致しません`);
+  if (await sha256(bytes) !== metadata.sha256) throw new Error(`${filename}のSHA-256が一致しません`);
+  return parseRows(bytes, filename);
 }
 
 function search(message: SearchMessage) {
