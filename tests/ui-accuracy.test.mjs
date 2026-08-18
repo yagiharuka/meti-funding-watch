@@ -24,7 +24,7 @@ test("describes Gbiz results as published rows and uses the official category wo
   assert.match(pageSource, /–\$\{visibleEnd\.toLocaleString\("ja-JP"\)\}行を表示/);
   assert.match(pageSource, /調達（委託を含む）・補助金/);
   assert.doesNotMatch(pageSource, /<strong>\{searchTotal\.toLocaleString\("ja-JP"\)\}<\/strong>件/);
-  assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報(?:（GビズINFO）)?<\/title>/);
+  assert.match(pageHtml, /<title>経産省関係の調達（委託を含む）・補助金情報（非公式）<\/title>/);
 });
 
 test("describes two main series and a bounded reconciliation log", () => {

@@ -753,9 +753,9 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="経産省関係の調達（委託を含む）・補助金情報 トップ">
+        <a className="brand" href="#top" aria-label="経産省関係の調達（委託を含む）・補助金情報（非公式） トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達（委託を含む）・補助金情報</span>
+          <span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span>
         </a>
         <nav aria-label="ページ内ナビゲーション">
           <a href="#source-index">資料の案内</a>
@@ -982,7 +982,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達（委託を含む）・補助金情報</span></div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">¥</span><span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span></div>
         <p>「GビズINFO」（経済産業省）のデータを当サイトで抽出・整形して作成した非公式サイトです。原データと本サイトの抽出・取込は、正確性・完全性・最新性を保証しません。</p>
         <a href="#top">ページ上部へ ↑</a>
       </footer>

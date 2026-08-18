@@ -4,7 +4,7 @@ import ViewTabs from "@/app/ViewTabs";
 import ReviewSearch from "@/app/review/ReviewSearch";
 
 export const metadata: Metadata = {
-  title: "行政事業レビュー（参考系列）",
+  title: "行政事業レビュー（参考系列・非公式）",
   description: "行政事業レビュー公式CSVの事業・予算執行・支出先・支出経路を、契約結果・交付決定とは混ぜずに検索します。",
 };
 
@@ -12,9 +12,9 @@ export default function ReviewPage() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報 トップ">
+        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報（非公式） トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達（委託を含む）・補助金情報</span>
+          <span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span>
         </a>
       </header>
       <ViewTabs active="review" />

@@ -5,7 +5,7 @@ import reconciliationData from "@/data/official-reconciliation.json";
 import sourceRegistry from "@/data/official-source-registry.json";
 
 export const metadata: Metadata = {
-  title: "機関公表資料との照合の記録",
+  title: "機関公表資料との照合の記録（非公式）",
   description: "機関公表資料の掲載行とGビズINFO掲載値について、実際に照合を試みた範囲と各件の判定を示します。",
 };
 
@@ -58,9 +58,9 @@ export default function OfficialReconciliationPage() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報 トップ">
+        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報（非公式） トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達（委託を含む）・補助金情報</span>
+          <span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span>
         </a>
       </header>
 

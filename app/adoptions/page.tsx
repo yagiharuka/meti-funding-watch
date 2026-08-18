@@ -4,7 +4,7 @@ import ViewTabs from "@/app/ViewTabs";
 import AdoptionSearch from "@/app/adoptions/AdoptionSearch";
 
 export const metadata: Metadata = {
-  title: "中小企業庁の補助金採択者情報",
+  title: "中小企業庁の補助金採択者情報（非公式）",
   description: "中小企業庁の公式検索に掲載された、公開に同意した補助金採択者情報を検索できます。金額情報ではありません。",
 };
 
@@ -12,9 +12,9 @@ export default function AdoptionsPage() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報 トップ">
+        <a className="brand" href="../" aria-label="経産省関係の調達（委託を含む）・補助金情報（非公式） トップ">
           <span className="brand-mark" aria-hidden="true">¥</span>
-          <span>経産省関係の調達（委託を含む）・補助金情報</span>
+          <span>経産省関係の調達（委託を含む）・補助金情報（非公式）</span>
         </a>
       </header>
 

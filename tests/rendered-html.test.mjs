@@ -56,7 +56,7 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   const review = await readFile(new URL("../dist-pages/review/index.html", import.meta.url), "utf8");
   const ui = `${home}\n${official}\n${review}\n${javascript}`;
 
-  assert.match(official, /<title>機関公表資料との照合の記録<\/title>/);
+  assert.match(official, /<title>機関公表資料との照合の記録（非公式）<\/title>/);
   assert.match(ui, /2つの主系列と照合記録を選ぶ/);
   assert.match(ui, /機関公表資料との照合の記録/);
   assert.match(ui, /照合を試みた件数/);
