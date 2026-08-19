@@ -36,12 +36,15 @@ jobs:
           path: .audit/official
           if-no-files-found: warn
           retention-days: 90
-      - name: Validate official snapshot before commit
-        run: node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs
-      - name: Commit only official data
+      - name: Validate official snapshot and supplement before commit
+        run: |
+          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs
+          npm run build:pages
+          node --test tests/official-supplement.test.mjs
+      - name: Commit only official data and supplement index
         id: commit_data
         run: |
-          if git diff --quiet -- data/official; then
+          if git diff --quiet -- data/official data/official-supplement-index.json; then
             echo "Official data unchanged."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -49,7 +52,7 @@ jobs:
           test -z "$(git status --porcelain -- data/funding-data.json data/funding-summary.json data/pages data/review-cache)"
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/official
+          git add data/official data/official-supplement-index.json
           git commit -m "chore(data): refresh official funding data"
           for attempt in 1 2 3; do
             git pull --rebase origin main
@@ -61,3 +64,9 @@ jobs:
           done
           echo "::error::Could not publish official data after three rebases."
           exit 1
+      # GITHUB_TOKENで作ったbot commitはpush workflowを起動しないため、公開を明示的に依頼する。
+      - name: Publish the refreshed official snapshot
+        if: steps.commit_data.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true
