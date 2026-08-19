@@ -1,0 +1,59 @@
+name: Inspect legacy review downloads
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/inspect-legacy-review-downloads.yml
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Inspect official legacy files
+        run: |
+          mkdir -p data/audits
+          node - <<'NODE'
+          const targets = [
+            { id: 'R5-zip', url: 'https://www.gyoukaku.go.jp/review/database/database240918.zip', binary: true },
+            { id: 'R4-index', url: 'https://www.gyoukaku.go.jp/review/database/R04/index.html', binary: false },
+            { id: 'R3-xlsx', url: 'https://www.gyoukaku.go.jp/review/database/R03/database220524.xlsx', binary: true },
+          ];
+          const out = [];
+          for (const target of targets) {
+            try {
+              const response = await fetch(target.url, { headers: { 'user-agent': 'Mozilla/5.0 meti-funding-watch/1.0', accept: target.binary ? '*/*' : 'text/html,*/*' }, redirect: 'follow' });
+              const row = { id: target.id, url: target.url, status: response.status, ok: response.ok, finalUrl: response.url, contentType: response.headers.get('content-type'), contentLength: response.headers.get('content-length') };
+              if (target.binary && response.ok) {
+                const bytes = Buffer.from(await response.arrayBuffer());
+                row.bytes = bytes.length;
+                row.magic = bytes.subarray(0, 8).toString('hex');
+              } else {
+                const text = await response.text();
+                row.bytes = Buffer.byteLength(text);
+                row.links = [...text.matchAll(/href=["']([^"']+(?:xlsx|zip)[^"']*)["']/gi)].map((m) => { try { return new URL(m[1], response.url).href; } catch { return m[1]; } }).slice(0, 50);
+                row.preview = text.slice(0, 500);
+              }
+              out.push(row);
+            } catch (error) {
+              out.push({ id: target.id, url: target.url, error: error instanceof Error ? error.message : String(error) });
+            }
+          }
+          require('fs').writeFileSync('data/audits/legacy-review-download-inspection.json', JSON.stringify({ generatedAt: new Date().toISOString(), out }, null, 2) + '\n');
+          console.log(JSON.stringify(out, null, 2));
+          NODE
+      - name: Commit inspection receipt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/audits/legacy-review-download-inspection.json
+          git commit -m "旧年度レビュー公式ファイルの取得可否を記録" || exit 0
+          git push
