@@ -16,6 +16,16 @@ type FundingRecord = {
   sourceSystem: string;
 };
 
+type FundingSearchSummary = {
+  amountKnownTotal: number;
+  amountKnownCount: number;
+  amountUnknownCount: number;
+  organizations: Array<{ name: string; corporateNumber: string; records: number; amount: number }>;
+  byStage: Array<{ stage: Stage; records: number; amount: number; amountKnownCount: number }>;
+  byYear: Array<{ fiscalYear: number | null; records: number; amount: number; amountKnownCount: number }>;
+  topPrograms: Array<{ program: string; records: number; amount: number; amountKnownCount: number }>;
+};
+
 type DataChunkManifest = {
   generatedAt: string;
   commitments: Record<string, string>;
@@ -155,6 +165,7 @@ function search(message: SearchMessage) {
         page: effectivePage,
         pageSize,
         records: matching.slice(offset, offset + pageSize),
+        summary: summarizeFundingRecords(matching),
         releaseCommit: activeRelease.commitSha,
         generatedAt: activeRelease.generatedAt,
       },
@@ -166,6 +177,65 @@ function search(message: SearchMessage) {
       message: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+function summarizeFundingRecords(rows: FundingRecord[]): FundingSearchSummary {
+  let amountKnownTotal = 0;
+  let amountKnownCount = 0;
+  const organizations = new Map<string, { name: string; corporateNumber: string; records: number; amount: number }>();
+  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number }>();
+  const years = new Map<string, { fiscalYear: number | null; records: number; amount: number; amountKnownCount: number }>();
+  const programs = new Map<string, { program: string; records: number; amount: number; amountKnownCount: number }>();
+
+  for (const row of rows) {
+    const amount = row.amount ?? 0;
+    if (row.amount !== null) {
+      amountKnownTotal += row.amount;
+      amountKnownCount += 1;
+    }
+
+    const organizationKey = row.corporateNumber;
+    const organization = organizations.get(organizationKey) ?? { name: row.organization, corporateNumber: row.corporateNumber, records: 0, amount: 0 };
+    organization.records += 1;
+    organization.amount += amount;
+    organizations.set(organizationKey, organization);
+
+    const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0 };
+    stageItem.records += 1;
+    stageItem.amount += amount;
+    if (row.amount !== null) stageItem.amountKnownCount += 1;
+    stages.set(row.stage, stageItem);
+
+    const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear);
+    const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, records: 0, amount: 0, amountKnownCount: 0 };
+    yearItem.records += 1;
+    yearItem.amount += amount;
+    if (row.amount !== null) yearItem.amountKnownCount += 1;
+    years.set(yearKey, yearItem);
+
+    const programName = row.program.trim() || "活動名称・件名の記載なし";
+    const programItem = programs.get(programName) ?? { program: programName, records: 0, amount: 0, amountKnownCount: 0 };
+    programItem.records += 1;
+    programItem.amount += amount;
+    if (row.amount !== null) programItem.amountKnownCount += 1;
+    programs.set(programName, programItem);
+  }
+
+  return {
+    amountKnownTotal,
+    amountKnownCount,
+    amountUnknownCount: rows.length - amountKnownCount,
+    organizations: [...organizations.values()]
+      .sort((left, right) => right.amount - left.amount || right.records - left.records || left.name.localeCompare(right.name, "ja"))
+      .slice(0, 10),
+    byStage: [...stages.values()].sort((left, right) => left.stage.localeCompare(right.stage)),
+    byYear: [...years.values()]
+      .sort((left, right) => (right.fiscalYear ?? Number.NEGATIVE_INFINITY) - (left.fiscalYear ?? Number.NEGATIVE_INFINITY))
+      .slice(0, 5),
+    topPrograms: [...programs.values()]
+      .sort((left, right) => right.amount - left.amount || right.records - left.records || left.program.localeCompare(right.program, "ja"))
+      .slice(0, 5),
+  };
 }
 
 function parseRows(bytes: ArrayBuffer, filename: string): FundingRecord[] {
