@@ -81,13 +81,9 @@ const seedRecords = seeds.sources.flatMap((source) => {
 const records = [...metiRecords, ...seedRecords]
   .map((row) => ({
     ...row,
-    searchText: normalizeSearch([
-      row.organization,
-      row.corporateNumber,
-      row.program,
-      row.theme,
-      row.sourceName,
-    ].filter(Boolean).join(" ")),
+    // 企業同時検索では受取先だけを照合する。事業名や公表機関名に検索語が
+    // 含まれても別企業の行を返さない。
+    searchText: normalizeSearch([row.organization, row.corporateNumber].filter(Boolean).join(" ")),
   }))
   .sort((a, b) =>
     (b.fiscalYear ?? -1) - (a.fiscalYear ?? -1)
