@@ -1,0 +1,51 @@
+name: Rebuild review company index
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/rebuild-review-company-index.yml
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/build-review-company-index.mjs
+      - run: npm ci
+      - run: npm run build:pages
+      - name: Validate and commit index
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const index = JSON.parse(fs.readFileSync('data/review-company-index.json','utf8'));
+          const publicIndex = JSON.parse(fs.readFileSync('dist-pages/data/review-company-index.json','utf8'));
+          if (index.schemaVersion !== 1 || !Array.isArray(index.recipients) || !index.recipients.length) throw new Error('invalid review company index');
+          if (publicIndex.recipientCount !== index.recipientCount) throw new Error('published index mismatch');
+          for (const recipient of index.recipients) {
+            const byBucket = new Map();
+            for (const row of recipient.entries) {
+              const k = [row.reviewSheetYear,row.reviewProjectId,row.block].join('|');
+              const bucket = byBucket.get(k) || [];
+              bucket.push(row);
+              byBucket.set(k,bucket);
+            }
+            for (const bucket of byBucket.values()) {
+              if (bucket.some((r)=>r.amount!==null) && bucket.some((r)=>r.amount===null)) throw new Error('blank partner remained with amount row');
+            }
+          }
+          console.log(JSON.stringify({recipientCount:index.recipientCount, reviewSheetYears:index.reviewSheetYears}));
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/review-company-index.json
+          git commit -m "レビュー企業索引を保守的に再生成" || exit 0
+          git push
