@@ -1,5 +1,5 @@
 # This workflow is temporary and deletes itself after a verified repair.
-# retriggered 2026-08-20T00:49+09:00 after aligning the final governance assertion.
+# retriggered 2026-08-20T00:53+09:00 after all 126 Pages tests passed; fix deletion staging only.
 name: Repair current-spec tests and publish Pages
 
 on:
@@ -110,9 +110,8 @@ jobs:
             tests/rendered-html.test.mjs \
             tests/review-ui-semantics.test.mjs \
             data/official-supplement-seeds.json \
-            data/official-supplement-index.json \
-            .fix-current-spec-tests-trigger \
-            .github/workflows/fix-current-spec-tests.yml
+            data/official-supplement-index.json
+          git add -u -- .fix-current-spec-tests-trigger
           git commit -m "現行の企業統合検索仕様に検証を整合"
           for attempt in 1 2 3; do
             git pull --rebase origin main
