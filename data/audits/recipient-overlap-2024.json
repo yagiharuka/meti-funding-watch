@@ -1,0 +1,502 @@
+{
+  "generatedAt": "2026-08-19T11:56:39.003Z",
+  "basis": {
+    "gbiz": "GビズINFO収録レコードのうち、認定日/受注日から算出したfiscalYear=2024かつ有効な法人番号あり",
+    "review": "行政事業レビュー2025年度シート（2024年度執行）の支出先行のうち有効な法人番号あり",
+    "note": "GビズINFOの日付欠落レコードは2024年度集合に入らないため、レビューのみ法人についてGビズ全期間・年度不明の存在も別集計"
+  },
+  "sourceRows": {
+    "gbiz2024Rows": 1965,
+    "gbiz2024UniqueCorporations": 896,
+    "gbizUndatedRowsWithValidCorporateNumber": 39665,
+    "gbizUndatedUniqueCorporations": 39337,
+    "review2024RowsWithValidCorporateNumber": 13865,
+    "review2024UniqueCorporations": 3367,
+    "review2024TerminalRowsWithValidCorporateNumber": 9918,
+    "review2024TerminalUniqueCorporations": 2775
+  },
+  "allReviewRecipientsComparison": {
+    "onlyA": 454,
+    "onlyB": 2925,
+    "both": 442,
+    "union": 3821,
+    "a": 896,
+    "b": 3367,
+    "overlapRateOfA": 0.49330357142857145,
+    "overlapRateOfB": 0.13127413127413126,
+    "jaccard": 0.11567652447003403
+  },
+  "terminalReviewRecipientsComparison": {
+    "onlyA": 557,
+    "onlyB": 2436,
+    "both": 339,
+    "union": 3332,
+    "a": 896,
+    "b": 2775,
+    "overlapRateOfA": 0.3783482142857143,
+    "overlapRateOfB": 0.12216216216216216,
+    "jaccard": 0.1017406962785114
+  },
+  "reviewOnlyBreakdown": {
+    "total": 2925,
+    "existsSomewhereInGbizAllYears": 868,
+    "hasUndatedGbizRecord": 137,
+    "absentFromGbizDatasetEntirely": 2057
+  },
+  "topReviewOnlyBy2024ReviewAmount": [
+    {
+      "corporateNumber": "2020005008480",
+      "organization": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "amountSum": 2152013882092
+    },
+    {
+      "corporateNumber": "2010405004147",
+      "organization": "独立行政法人中小企業基盤整備機構",
+      "amountSum": 522385221800
+    },
+    {
+      "corporateNumber": "4010405009573",
+      "organization": "独立行政法人エネルギー・金属鉱物資源機構",
+      "amountSum": 403219556381
+    },
+    {
+      "corporateNumber": "8010001166930",
+      "organization": "東京電力エナジーパートナー株式会社",
+      "amountSum": 191897538424
+    },
+    {
+      "corporateNumber": "1010005016502",
+      "organization": "一般社団法人環境共創イニシアチブ",
+      "amountSum": 136125941612
+    },
+    {
+      "corporateNumber": "3010005038313",
+      "organization": "脱炭素成長型経済構造移行推進機構",
+      "amountSum": 120000000000
+    },
+    {
+      "corporateNumber": "3120001059632",
+      "organization": "関西電力株式会社",
+      "amountSum": 104872294582
+    },
+    {
+      "corporateNumber": "5010001182633",
+      "organization": "株式会社日本貿易保険",
+      "amountSum": 101000000000
+    },
+    {
+      "corporateNumber": "2180001135973",
+      "organization": "中部電力ミライズ株式会社",
+      "amountSum": 92359712467
+    },
+    {
+      "corporateNumber": "3010405006142",
+      "organization": "一般社団法人次世代自動車振興センター",
+      "amountSum": 88091261000
+    },
+    {
+      "corporateNumber": "6010401020516",
+      "organization": "東京瓦斯株式会社",
+      "amountSum": 87829709521
+    },
+    {
+      "corporateNumber": "2010005005900",
+      "organization": "全国中小企業団体中央会",
+      "amountSum": 82353116736
+    },
+    {
+      "corporateNumber": "4290001007004",
+      "organization": "九州電力株式会社",
+      "amountSum": 70553941863
+    },
+    {
+      "corporateNumber": "9120005020700",
+      "organization": "公益社団法人２０２５年日本国際博覧会協会",
+      "amountSum": 63534408982
+    },
+    {
+      "corporateNumber": "4370001011311",
+      "organization": "東北電力株式会社",
+      "amountSum": 61354298244
+    },
+    {
+      "corporateNumber": "2010405003693",
+      "organization": "独立行政法人日本貿易振興機構",
+      "amountSum": 58198612056
+    },
+    {
+      "corporateNumber": "3010405009863",
+      "organization": "原子力損害賠償・廃炉等支援機構",
+      "amountSum": 47000000000
+    },
+    {
+      "corporateNumber": "3120001077601",
+      "organization": "大阪瓦斯株式会社",
+      "amountSum": 45152634514
+    },
+    {
+      "corporateNumber": "7010601041006",
+      "organization": "日本ヒューレット・パッカード合同会社",
+      "amountSum": 35185216000
+    },
+    {
+      "corporateNumber": "9010005017583",
+      "organization": "全国商工会連合会",
+      "amountSum": 33586867694
+    },
+    {
+      "corporateNumber": "9470001001933",
+      "organization": "四国電力株式会社",
+      "amountSum": 25946370651
+    },
+    {
+      "corporateNumber": "5010005007126",
+      "organization": "独立行政法人情報処理推進機構",
+      "amountSum": 22216035000
+    },
+    {
+      "corporateNumber": "4010001133876",
+      "organization": "ＥＮＥＯＳ株式会社",
+      "amountSum": 20679801748
+    },
+    {
+      "corporateNumber": "9010005023796",
+      "organization": "国立研究開発法人日本医療研究開発機構",
+      "amountSum": 18102575158
+    },
+    {
+      "corporateNumber": "6010001167617",
+      "organization": "株式会社ＪＥＲＡ",
+      "amountSum": 17099446000
+    },
+    {
+      "corporateNumber": "8010001120391",
+      "organization": "株式会社日本政策金融公庫",
+      "amountSum": 15566199287
+    },
+    {
+      "corporateNumber": "6290001049738",
+      "organization": "株式会社ユー・エス・イー",
+      "amountSum": 15197512000
+    },
+    {
+      "corporateNumber": "6011001017522",
+      "organization": "株式会社日本経営データ・センター",
+      "amountSum": 14686863306
+    },
+    {
+      "corporateNumber": "7000020070009",
+      "organization": "福島県",
+      "amountSum": 14002210149
+    },
+    {
+      "corporateNumber": "7010401078520",
+      "organization": "株式会社ＩＮＰＥＸ",
+      "amountSum": 12768347054
+    }
+  ],
+  "topGbizOnlyBy2024GbizAmount": [
+    {
+      "corporateNumber": "6010001228815",
+      "organization": "Ｒａｐｉｄｕｓ株式会社",
+      "amountSum": 53069931200
+    },
+    {
+      "corporateNumber": "5010005038212",
+      "organization": "半導体後工程自動化・標準化技術研究組合",
+      "amountSum": 19999975600
+    },
+    {
+      "corporateNumber": "2021005012927",
+      "organization": "一般社団法人サイバーリサーチコンソーシアム",
+      "amountSum": 13256628700
+    },
+    {
+      "corporateNumber": "5140001116883",
+      "organization": "株式会社バッカス・バイオイノベーション",
+      "amountSum": 4265062700
+    },
+    {
+      "corporateNumber": "5010005016746",
+      "organization": "一般財団法人工業所有権電子情報化センター",
+      "amountSum": 3761533606
+    },
+    {
+      "corporateNumber": "5030001109246",
+      "organization": "株式会社ノベルクリスタルテクノロジー",
+      "amountSum": 2559276800
+    },
+    {
+      "corporateNumber": "9010001187141",
+      "organization": "日本積層造形株式会社",
+      "amountSum": 1995347200
+    },
+    {
+      "corporateNumber": "9010001228275",
+      "organization": "株式会社Ｓｐａｃｅ Ｃｏｍｐａｓｓ",
+      "amountSum": 1869223900
+    },
+    {
+      "corporateNumber": "5010001083303",
+      "organization": "ノーベルファーマ株式会社",
+      "amountSum": 1714979200
+    },
+    {
+      "corporateNumber": "4010005036051",
+      "organization": "技術研究組合最先端半導体技術センター",
+      "amountSum": 1563372800
+    },
+    {
+      "corporateNumber": "3011101018084",
+      "organization": "株式会社レゾナック",
+      "amountSum": 1309345400
+    },
+    {
+      "corporateNumber": "3180005020444",
+      "organization": "自動車用先端ＳｏＣ技術研究組合",
+      "amountSum": 998250000
+    },
+    {
+      "corporateNumber": "7010701030065",
+      "organization": "セーフィー株式会社",
+      "amountSum": 894616800
+    },
+    {
+      "corporateNumber": "3120005007273",
+      "organization": "日本生命保険相互会社",
+      "amountSum": 648566409
+    },
+    {
+      "corporateNumber": "1010901002167",
+      "organization": "株式会社オー・エル・エム・デジタル",
+      "amountSum": 595225200
+    },
+    {
+      "corporateNumber": "1010001139760",
+      "organization": "株式会社電通アドギア",
+      "amountSum": 573321479
+    },
+    {
+      "corporateNumber": "6010401020094",
+      "organization": "東海カーボン株式会社",
+      "amountSum": 548378800
+    },
+    {
+      "corporateNumber": "3010605002131",
+      "organization": "一般財団法人日本特許情報機構",
+      "amountSum": 506284545
+    },
+    {
+      "corporateNumber": "3122001025531",
+      "organization": "株式会社ザクティ",
+      "amountSum": 477878500
+    },
+    {
+      "corporateNumber": "2020001116353",
+      "organization": "株式会社コントレイルズ",
+      "amountSum": 442907300
+    },
+    {
+      "corporateNumber": "7140005020394",
+      "organization": "一般財団法人近畿高エネルギー加工技術研究所",
+      "amountSum": 417122200
+    },
+    {
+      "corporateNumber": "9010001157227",
+      "organization": "株式会社マクロミル",
+      "amountSum": 412557200
+    },
+    {
+      "corporateNumber": "2011101014084",
+      "organization": "東芝インフラシステムズ株式会社",
+      "amountSum": 406664500
+    },
+    {
+      "corporateNumber": "4210001003869",
+      "organization": "株式会社松浦機械製作所",
+      "amountSum": 394944000
+    },
+    {
+      "corporateNumber": "3020001030157",
+      "organization": "株式会社オカムラ",
+      "amountSum": 339350000
+    },
+    {
+      "corporateNumber": "8012401019180",
+      "organization": "大新東株式会社",
+      "amountSum": 323644250
+    },
+    {
+      "corporateNumber": "2010401135160",
+      "organization": "ＭＩ‐６株式会社",
+      "amountSum": 311858800
+    },
+    {
+      "corporateNumber": "3150001010501",
+      "organization": "三和澱粉工業株式会社",
+      "amountSum": 306920200
+    },
+    {
+      "corporateNumber": "5120001077491",
+      "organization": "東邦金属株式会社",
+      "amountSum": 305048700
+    },
+    {
+      "corporateNumber": "6180001037514",
+      "organization": "大同特殊鋼株式会社",
+      "amountSum": 280126000
+    }
+  ],
+  "topBothBy2024ReviewAmount": [
+    {
+      "corporateNumber": "4010005003159",
+      "organization": "一般社団法人全国石油協会",
+      "amountSum": 1961936542517
+    },
+    {
+      "corporateNumber": "7010005005425",
+      "organization": "国立研究開発法人産業技術総合研究所",
+      "amountSum": 182781047402
+    },
+    {
+      "corporateNumber": "8010501050089",
+      "organization": "ＴＯＰＰＡＮ株式会社",
+      "amountSum": 138335855599
+    },
+    {
+      "corporateNumber": "9012405001241",
+      "organization": "国立研究開発法人宇宙航空研究開発機構",
+      "amountSum": 100549179400
+    },
+    {
+      "corporateNumber": "8010401024011",
+      "organization": "株式会社博報堂",
+      "amountSum": 67473180620
+    },
+    {
+      "corporateNumber": "4240001006753",
+      "organization": "中国電力株式会社",
+      "amountSum": 42171827502
+    },
+    {
+      "corporateNumber": "4430001022351",
+      "organization": "北海道電力株式会社",
+      "amountSum": 33352708754
+    },
+    {
+      "corporateNumber": "6050005002007",
+      "organization": "国立研究開発法人 日本原子力研究開発機構",
+      "amountSum": 29938554717
+    },
+    {
+      "corporateNumber": "8010401050387",
+      "organization": "三菱重工業株式会社",
+      "amountSum": 28051775900
+    },
+    {
+      "corporateNumber": "3010001076738",
+      "organization": "デロイトトーマツファイナンシャルアドバイザリー合同会社",
+      "amountSum": 16990349690
+    },
+    {
+      "corporateNumber": "9010001011318",
+      "organization": "出光興産株式会社",
+      "amountSum": 12655849314
+    },
+    {
+      "corporateNumber": "3010405007512",
+      "organization": "一般社団法人太陽光発電協会",
+      "amountSum": 11158825736
+    },
+    {
+      "corporateNumber": "5000020150002",
+      "organization": "新潟県",
+      "amountSum": 10010994876
+    },
+    {
+      "corporateNumber": "4000020180009",
+      "organization": "福井県",
+      "amountSum": 7399166927
+    },
+    {
+      "corporateNumber": "9010001031943",
+      "organization": "ランドブレイン株式会社",
+      "amountSum": 6218844000
+    },
+    {
+      "corporateNumber": "1020001071491",
+      "organization": "富士通株式会社",
+      "amountSum": 6043472000
+    },
+    {
+      "corporateNumber": "4010005018545",
+      "organization": "一般財団法人電力中央研究所",
+      "amountSum": 4622910657
+    },
+    {
+      "corporateNumber": "4010001054032",
+      "organization": "株式会社野村総合研究所",
+      "amountSum": 4359285161
+    },
+    {
+      "corporateNumber": "5010005007398",
+      "organization": "国立大学法人東京大学",
+      "amountSum": 4211058920
+    },
+    {
+      "corporateNumber": "7010401088742",
+      "organization": "株式会社大林組",
+      "amountSum": 3947737000
+    },
+    {
+      "corporateNumber": "2010001029085",
+      "organization": "ボストン・コンサルティング・グループ合同会社",
+      "amountSum": 3671410000
+    },
+    {
+      "corporateNumber": "6010001030403",
+      "organization": "株式会社三菱総合研究所",
+      "amountSum": 3320197992
+    },
+    {
+      "corporateNumber": "8013401001509",
+      "organization": "パシフィックコンサルタンツ株式会社",
+      "amountSum": 2971519299
+    },
+    {
+      "corporateNumber": "2000020080004",
+      "organization": "茨城県",
+      "amountSum": 2939722000
+    },
+    {
+      "corporateNumber": "6180001121235",
+      "organization": "株式会社ティアフォー",
+      "amountSum": 2481218000
+    },
+    {
+      "corporateNumber": "1010401023102",
+      "organization": "ＰｗＣコンサルティング合同会社",
+      "amountSum": 2397242073
+    },
+    {
+      "corporateNumber": "1010001008668",
+      "organization": "ＪＦＥスチール株式会社",
+      "amountSum": 2388849100
+    },
+    {
+      "corporateNumber": "3010001108219",
+      "organization": "石油資源開発株式会社",
+      "amountSum": 2388775000
+    },
+    {
+      "corporateNumber": "7010401022916",
+      "organization": "日本電気株式会社",
+      "amountSum": 2333003900
+    },
+    {
+      "corporateNumber": "7010401001556",
+      "organization": "アクセンチュア株式会社",
+      "amountSum": 2329455000
+    }
+  ]
+}
