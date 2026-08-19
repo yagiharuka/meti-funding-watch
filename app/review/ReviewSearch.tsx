@@ -82,11 +82,11 @@ export default function ReviewSearch() {
   const upstreamTerms = useMemo(() => normalize(upstream).split(" ").filter(Boolean), [upstream]);
   const filteredPayments = useMemo(() => payments.filter((row) => {
     if (year !== "all" && String(row.reviewSheetYear) !== year) return false;
-    const upstreamNames = reviewUpstreamNames(row);
-    const haystack = normalize([row.organization, row.corporateNumber, row.program, row.organizationType, ...(row.route ?? []), ...upstreamNames].map(searchableOrganization).join(" "));
-    const upstreamHaystack = normalize(upstreamNames.map(searchableOrganization).join(" "));
-    return terms.every((term) => haystack.includes(term))
-      && upstreamTerms.every((term) => upstreamHaystack.includes(term));
+    const recipientHaystack = normalize(searchableOrganization(`${row.organization} ${row.corporateNumber}`));
+    const routeNames = [...(row.route ?? []), ...reviewUpstreamNames(row)];
+    const routeHaystack = normalize(routeNames.map(searchableOrganization).join(" "));
+    return terms.every((term) => recipientHaystack.includes(term))
+      && upstreamTerms.every((term) => routeHaystack.includes(term));
   }).sort((a, b) => (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY) || a.organization.localeCompare(b.organization, "ja")), [payments, terms, upstreamTerms, year]);
   const filteredPrograms = useMemo(() => programs.filter((row) => {
     if (year !== "all" && String(row.reviewSheetYear) !== year) return false;
@@ -107,23 +107,23 @@ export default function ReviewSearch() {
     <section className="official-search-section" aria-labelledby="review-search-title">
       <div className="section-heading compact">
         <div><p className="eyebrow">SEPARATE REFERENCE SERIES</p><h2 id="review-search-title">レビューシート検索</h2></div>
-        <p>支出元から支出先まで、レビューシートに記載された経路を表示します。支出先額は上流・中間・下流を足し上げません。</p>
+        <p>支出先企業を検索する欄と、資金経路上の支出元を絞る欄を分けています。支出先額は上流・中間・下流を足し上げません。</p>
       </div>
       <div className="review-mode-tabs" role="group" aria-label="行政事業レビューの表示対象">
         <button className={mode === "payments" ? "active" : undefined} onClick={() => resetPage(() => setMode("payments"))}>支出先</button>
         <button className={mode === "programs" ? "active" : undefined} onClick={() => resetPage(() => setMode("programs"))}>事業・予算執行</button>
       </div>
       <div className="filters official-search-filters">
-        <label className="search-field"><span className="sr-only">名称等で検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder={mode === "payments" ? "支出先・支出元・事業名で検索" : "事業名・予算事業ID・担当組織で検索"} value={query} onChange={(e) => resetPage(() => setQuery(e.target.value))} /></label>
-        {mode === "payments" && <label className="search-field review-upstream-field"><span className="sr-only">支出元で絞る</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder="支出元で絞る（例：NEDO）" value={upstream} onChange={(e) => resetPage(() => setUpstream(e.target.value))} /></label>}
+        <label className="search-field"><span className="sr-only">支出先の名称または法人番号で検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder={mode === "payments" ? "支出先の名称・法人番号で検索" : "事業名・予算事業ID・担当組織で検索"} value={query} onChange={(e) => resetPage(() => setQuery(e.target.value))} /></label>
+        {mode === "payments" && <label className="search-field review-upstream-field"><span className="sr-only">資金経路上の支出元で絞る</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder="資金経路で絞る（例：NEDO・中小機構）" value={upstream} onChange={(e) => resetPage(() => setUpstream(e.target.value))} /></label>}
         <label><span className="sr-only">レビューシート年度</span><select value={year} onChange={(e) => resetPage(() => setYear(e.target.value))}><option value="all">収録レビューシート年度すべて</option>{[...(manifest?.reviewSheetYears ?? [])].sort((a,b)=>b-a).map((y)=><option key={y} value={y}>{y}年度シート</option>)}</select></label>
       </div>
       {mode === "payments" && <>
         <div className="review-upstream-shortcuts" aria-label="主な支出元から先を見る">
-          <span>主な支出元から先を見る：</span>
-          {["NEDO", "IPA", "中小機構", "JOGMEC", "JETRO"].map((name) => <button key={name} className={upstream === name ? "active" : undefined} onClick={() => selectUpstream(name)}>{name}から先を見る</button>)}
+          <span>資金経路から絞る：</span>
+          {["NEDO", "IPA", "中小機構", "JOGMEC", "JETRO"].map((name) => <button key={name} className={upstream === name ? "active" : undefined} onClick={() => selectUpstream(name)}>{name}を経由</button>)}
         </div>
-        <p className="filter-note">たとえば「NEDOから先を見る」を選ぶと、レビューシートCSVでNEDOが直接の支出元として記載された支出先を表示します。支出元を確認できない行は、この絞り込みには含みません。</p>
+        <p className="filter-note">上の「支出先」検索は受取先の名称・法人番号だけを対象にします。NEDOや中小機構などが資金経路の途中にある案件を探す場合は、右の資金経路欄を使ってください。</p>
       </>}
       {manifest && manifest.rowAccounting.status !== "complete" && <p className="official-warning"><strong>原資料行数は未照合：</strong>取得証跡と原資料行数の照合が揃っていない年度があります。表示中の{manifest.paymentCount.toLocaleString("ja-JP")}行を原資料の全行とは扱わないでください。</p>}
       <div className="result-bar"><span role="status" aria-live="polite">{loading ? <strong>レビュー明細を読込中</strong> : error ? <strong>レビュー明細を取得できません</strong> : <><strong>{rows.length.toLocaleString("ja-JP")}</strong>{mode === "payments" ? "支出先掲載行" : "事業"}</>}</span>{hasFilters && <button onClick={clear}>条件をクリア</button>}</div>
