@@ -1,9 +1,9 @@
 {
-  "validatedAt": "2026-08-19T12:26:12.920Z",
-  "status": "failed",
+  "validatedAt": "2026-08-19T12:27:56.784Z",
+  "status": "passed",
   "installOutcome": "success",
   "buildOutcome": "success",
-  "filesOutcome": "failure",
+  "filesOutcome": "success",
   "recipientCount": 5609,
   "reviewSheetYears": [
     2024,
