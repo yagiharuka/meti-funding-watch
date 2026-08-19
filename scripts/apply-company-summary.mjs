@@ -1,5 +1,6 @@
 import fs from "node:fs";
 
+// One-shot patcher for the company-summary UI. The workflow validates the production build before committing.
 const path = "app/page.tsx";
 let source = fs.readFileSync(path, "utf8");
 
