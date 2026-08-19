@@ -1,0 +1,940 @@
+{
+  "generatedAt": "2026-08-19T11:42:12.973Z",
+  "reviewProjectId": "rs-2025-7096",
+  "reviewProjectRows": [
+    {
+      "organization": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "amount": 41000000000,
+      "amountRaw": "41000000000",
+      "block": "A",
+      "sourceAgency": "経済産業省",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構"
+      ],
+      "corporateNumber": "2020005008480",
+      "sourceRowNumber": 170497
+    },
+    {
+      "organization": "Ｐｌａｎｅｔ Ｓａｖｅｒｓ株式会社",
+      "amount": 26817000,
+      "amountRaw": "26817000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "6011001155784",
+      "sourceRowNumber": 170516
+    },
+    {
+      "organization": "株式会社ＮＡＢＬＡ Ｍｏｂｉｌｉｔｙ",
+      "amount": 27340000,
+      "amountRaw": "27340000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "3011101094811",
+      "sourceRowNumber": 170512
+    },
+    {
+      "organization": "有限責任監査法人トーマツ",
+      "amount": 37284000,
+      "amountRaw": "37284000",
+      "block": "C",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "有限責任監査法人トーマツ"
+      ],
+      "corporateNumber": "5010405001703",
+      "sourceRowNumber": 170519
+    },
+    {
+      "organization": "京都フュージョニアリング株式会社",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "6130001065395",
+      "sourceRowNumber": 170503
+    },
+    {
+      "organization": "有限責任監査法人トーマツ",
+      "amount": null,
+      "amountRaw": "",
+      "block": "C",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "有限責任監査法人トーマツ"
+      ],
+      "corporateNumber": "5010405001703",
+      "sourceRowNumber": 170520
+    },
+    {
+      "organization": "株式会社マテリアルゲート",
+      "amount": 21522000,
+      "amountRaw": "21522000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "9240001061711",
+      "sourceRowNumber": 170506
+    },
+    {
+      "organization": "ウミトロン株式会社",
+      "amount": 11493000,
+      "amountRaw": "11493000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "2010601050333",
+      "sourceRowNumber": 170500
+    },
+    {
+      "organization": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "amount": null,
+      "amountRaw": "",
+      "block": "A",
+      "sourceAgency": "経済産業省",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構"
+      ],
+      "corporateNumber": "2020005008480",
+      "sourceRowNumber": 170498
+    },
+    {
+      "organization": "有限責任監査法人トーマツ",
+      "amount": null,
+      "amountRaw": "",
+      "block": "C",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "有限責任監査法人トーマツ"
+      ],
+      "corporateNumber": "5010405001703",
+      "sourceRowNumber": 170521
+    },
+    {
+      "organization": "Ｐｌａｎｅｔ Ｓａｖｅｒｓ株式会社",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "6011001155784",
+      "sourceRowNumber": 170517
+    },
+    {
+      "organization": "株式会社グリーンケミカル",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "7020001128492",
+      "sourceRowNumber": 170505
+    },
+    {
+      "organization": "株式会社ＯＯＹＯＯ",
+      "amount": 17558000,
+      "amountRaw": "17558000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "1130001066209",
+      "sourceRowNumber": 170514
+    },
+    {
+      "organization": "株式会社３ＤＣ",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "2010401165777",
+      "sourceRowNumber": 170509
+    },
+    {
+      "organization": "株式会社ＯＯＹＯＯ",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "1130001066209",
+      "sourceRowNumber": 170515
+    },
+    {
+      "organization": "株式会社マテリアルゲート",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "9240001061711",
+      "sourceRowNumber": 170507
+    },
+    {
+      "organization": "株式会社ＦｕｌｌＤｅｐｔｈ",
+      "amount": 23250000,
+      "amountRaw": "23250000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "3050001037744",
+      "sourceRowNumber": 170510
+    },
+    {
+      "organization": "株式会社ＦｕｌｌＤｅｐｔｈ",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "3050001037744",
+      "sourceRowNumber": 170511
+    },
+    {
+      "organization": "株式会社３ＤＣ",
+      "amount": 40521000,
+      "amountRaw": "40521000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "2010401165777",
+      "sourceRowNumber": 170508
+    },
+    {
+      "organization": "ウミトロン株式会社",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "2010601050333",
+      "sourceRowNumber": 170501
+    },
+    {
+      "organization": "株式会社グリーンケミカル",
+      "amount": 51781000,
+      "amountRaw": "51781000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "7020001128492",
+      "sourceRowNumber": 170504
+    },
+    {
+      "organization": "株式会社ＮＡＢＬＡ Ｍｏｂｉｌｉｔｙ",
+      "amount": null,
+      "amountRaw": "",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "3011101094811",
+      "sourceRowNumber": 170513
+    },
+    {
+      "organization": "京都フュージョニアリング株式会社",
+      "amount": 12234000,
+      "amountRaw": "12234000",
+      "block": "B",
+      "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+      "route": [
+        "経済産業省",
+        "国立研究開発法人新エネルギー・産業技術総合開発機構",
+        "株式会社グリーンケミカルほか"
+      ],
+      "corporateNumber": "6130001065395",
+      "sourceRowNumber": 170502
+    }
+  ],
+  "results": [
+    {
+      "name": "株式会社NABLA Mobility",
+      "nedoOfficialGrantDecisionAmount": 397000000,
+      "reviewMatches": [
+        {
+          "amount": 27340000,
+          "amountRaw": "27340000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "3011101094811",
+          "sourceRowNumber": 170512
+        },
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "3011101094811",
+          "sourceRowNumber": 170513
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 27340000,
+      "gbizAllMatches": [
+        {
+          "amount": 18595977,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第六回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "1010901035852"
+        },
+        {
+          "amount": 13431900,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第五回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "8150001012294"
+        },
+        {
+          "amount": 11445000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "2130001039543"
+        },
+        {
+          "amount": 8727272,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "1170001016829"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "株式会社3DC",
+      "nedoOfficialGrantDecisionAmount": 499000000,
+      "reviewMatches": [
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "2010401165777",
+          "sourceRowNumber": 170509
+        },
+        {
+          "amount": 40521000,
+          "amountRaw": "40521000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "2010401165777",
+          "sourceRowNumber": 170508
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 40521000,
+      "gbizAllMatches": [
+        {
+          "amount": 40000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "8050001039686"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "株式会社グリーンケミカル",
+      "nedoOfficialGrantDecisionAmount": 280000000,
+      "reviewMatches": [
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "7020001128492",
+          "sourceRowNumber": 170505
+        },
+        {
+          "amount": 51781000,
+          "amountRaw": "51781000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "7020001128492",
+          "sourceRowNumber": 170504
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 51781000,
+      "gbizAllMatches": [
+        {
+          "amount": 20000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第六回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "6280001006178"
+        },
+        {
+          "amount": 15000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第八回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "7122001027623"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "京都フュージョニアリング株式会社",
+      "nedoOfficialGrantDecisionAmount": 499000000,
+      "reviewMatches": [
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "6130001065395",
+          "sourceRowNumber": 170503
+        },
+        {
+          "amount": 12234000,
+          "amountRaw": "12234000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "6130001065395",
+          "sourceRowNumber": 170502
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 12234000,
+      "gbizAllMatches": [
+        {
+          "amount": 60000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "3240001032321"
+        },
+        {
+          "amount": 20000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "6080001005142"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "株式会社FullDepth",
+      "nedoOfficialGrantDecisionAmount": 292000000,
+      "reviewMatches": [
+        {
+          "amount": 23250000,
+          "amountRaw": "23250000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "3050001037744",
+          "sourceRowNumber": 170510
+        },
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "3050001037744",
+          "sourceRowNumber": 170511
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 23250000,
+      "gbizAllMatches": [
+        {
+          "amount": 60000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "9070001026021"
+        },
+        {
+          "amount": 55666666,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第五回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "6122001030058"
+        },
+        {
+          "amount": 40000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "8050001039686"
+        },
+        {
+          "amount": 9999999,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第五回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "1011101089202"
+        },
+        {
+          "amount": 8727272,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "1170001016829"
+        },
+        {
+          "amount": 7164285,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "9020001147895"
+        },
+        {
+          "amount": 4116479,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第八回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "4170001015893"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "Planet Savers株式会社",
+      "nedoOfficialGrantDecisionAmount": 500000000,
+      "reviewMatches": [
+        {
+          "amount": 26817000,
+          "amountRaw": "26817000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "6011001155784",
+          "sourceRowNumber": 170516
+        },
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "6011001155784",
+          "sourceRowNumber": 170517
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 26817000,
+      "gbizAllMatches": [
+        {
+          "amount": 68370000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "9410001002730"
+        },
+        {
+          "amount": 15000000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "7010001203692"
+        },
+        {
+          "amount": 8727272,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第七回］事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "1170001016829"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "株式会社マテリアルゲート",
+      "nedoOfficialGrantDecisionAmount": 279000000,
+      "reviewMatches": [
+        {
+          "amount": 21522000,
+          "amountRaw": "21522000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "9240001061711",
+          "sourceRowNumber": 170506
+        },
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "9240001061711",
+          "sourceRowNumber": 170507
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 21522000,
+      "gbizAllMatches": [
+        {
+          "amount": 39800000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "2180301026377"
+        },
+        {
+          "amount": 9463937,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "2180001108483"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "株式会社OOYOO",
+      "nedoOfficialGrantDecisionAmount": 894000000,
+      "reviewMatches": [
+        {
+          "amount": 17558000,
+          "amountRaw": "17558000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "1130001066209",
+          "sourceRowNumber": 170514
+        },
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "1130001066209",
+          "sourceRowNumber": 170515
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 17558000,
+      "gbizAllMatches": [
+        {
+          "amount": 838211000,
+          "stage": "contracted",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "program": "グリーンイノベーション基金事業／ＣＯ２の分離回収等技術開発低圧・低濃度ＣＯ２分離回収の低コスト化技術開発・実証工場排ガス等からの中小規模ＣＯ２分離回収技術開発・実証／分離膜を用いた工場排ガス等からのＣＯ２分離回収システムの開発",
+          "fiscalYear": 2022,
+          "date": "2022-07-07",
+          "corporateNumber": "1130001066209"
+        },
+        {
+          "amount": 11445000,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "2130001039543"
+        }
+      ],
+      "gbizNedoMatches": [
+        {
+          "amount": 838211000,
+          "stage": "contracted",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "program": "グリーンイノベーション基金事業／ＣＯ２の分離回収等技術開発低圧・低濃度ＣＯ２分離回収の低コスト化技術開発・実証工場排ガス等からの中小規模ＣＯ２分離回収技術開発・実証／分離膜を用いた工場排ガス等からのＣＯ２分離回収システムの開発",
+          "fiscalYear": 2022,
+          "date": "2022-07-07"
+        }
+      ],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    },
+    {
+      "name": "ウミトロン株式会社",
+      "nedoOfficialGrantDecisionAmount": 381000000,
+      "reviewMatches": [
+        {
+          "amount": 11493000,
+          "amountRaw": "11493000",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "2010601050333",
+          "sourceRowNumber": 170500
+        },
+        {
+          "amount": null,
+          "amountRaw": "",
+          "block": "B",
+          "sourceAgency": "国立研究開発法人新エネルギー・産業技術総合開発機構",
+          "route": [
+            "経済産業省",
+            "国立研究開発法人新エネルギー・産業技術総合開発機構",
+            "株式会社グリーンケミカルほか"
+          ],
+          "corporateNumber": "2010601050333",
+          "sourceRowNumber": 170501
+        }
+      ],
+      "reviewPublishedAmountTotalWithinProject": 11493000,
+      "gbizAllMatches": [
+        {
+          "amount": 35624722,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "2010601050333"
+        },
+        {
+          "amount": 29052932,
+          "stage": "subsidy_published",
+          "sourceAgency": "経済産業省",
+          "program": "令和３年度 商業・サービス競争力強化支援事業費補助金（ウミトロン株式会社）",
+          "fiscalYear": 2021,
+          "date": "2021-06-10",
+          "corporateNumber": "2010601050333"
+        },
+        {
+          "amount": 22176230,
+          "stage": "subsidy_published",
+          "sourceAgency": "経済産業省",
+          "program": "令和２年度 商業・サービス競争力強化連携支援事業費補助金（ウミトロン株式会社）",
+          "fiscalYear": 2020,
+          "date": "2020-07-21",
+          "corporateNumber": "2010601050333"
+        },
+        {
+          "amount": 14629350,
+          "stage": "subsidy_published",
+          "sourceAgency": "中小企業庁",
+          "program": "［第三回］令和２年度事業再構築補助金（交付申請等）",
+          "fiscalYear": null,
+          "date": null,
+          "corporateNumber": "6021003005235"
+        }
+      ],
+      "gbizNedoMatches": [],
+      "gbizNedoSubsidyMatches": [],
+      "siteReviewPresent": true,
+      "siteGbizPresent": true,
+      "siteGbizNedoSubsidyPresent": false
+    }
+  ]
+}
