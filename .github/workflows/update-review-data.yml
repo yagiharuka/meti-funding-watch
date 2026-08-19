@@ -26,20 +26,22 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Refresh administrative review official CSVs
-        run: npm run update:review -- --require-fresh
+        run: |
+          node scripts/update-review-data.mjs --require-fresh
+          node scripts/build-review-company-index.mjs
       - name: Verify review data
         run: npm run build:pages && node --test tests/review-data-model.test.mjs tests/review-data.test.mjs
       - name: Commit refreshed review data
         id: commit_data
         run: |
-          if git diff --quiet -- data/review-cache; then
+          if git diff --quiet -- data/review-cache data/review-company-index.json; then
             echo "Administrative review data unchanged."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/review-cache
+          git add data/review-cache data/review-company-index.json
           git commit -m "chore(data): refresh administrative review data"
           for attempt in 1 2 3; do
             git pull --rebase origin main
