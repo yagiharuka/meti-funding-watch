@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
+// Publication regression coverage for the combined company-search release.
 const workflows = new URL("../.github/workflows/", import.meta.url);
 
 test("publishes only the two main series and keeps official refresh manual", async () => {
