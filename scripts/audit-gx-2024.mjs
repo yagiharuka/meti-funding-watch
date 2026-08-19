@@ -13,14 +13,20 @@ const companies = [
 ];
 
 function norm(v = "") {
-  return String(v).normalize("NFKC").toLowerCase().replace(/[\s　・･.．,，()（）株式会社合同会社]/g, "");
+  let value = String(v).normalize("NFKC").toLowerCase().replace(/[\s　・･.．,，()（）]/g, "");
+  for (const form of ["株式会社", "合同会社", "有限会社"]) {
+    if (value.startsWith(form)) value = value.slice(form.length);
+    if (value.endsWith(form)) value = value.slice(0, -form.length);
+  }
+  return value;
 }
 function matches(rowName, c) {
   const n = norm(rowName);
-  return [c.name, ...c.aliases].some((a) => {
-    const x = norm(a);
-    return x.length >= 3 && (n.includes(x) || x.includes(n));
-  });
+  return [c.name, ...c.aliases].some((a) => norm(a) === n);
+}
+function isNedo(value = "") {
+  const n = String(value).normalize("NFKC").toLowerCase();
+  return n.includes("nedo") || n.includes("新エネルギー・産業技術総合開発機構");
 }
 
 const reviewManifest = JSON.parse(await readFile("data/review-cache/manifest.json", "utf8"));
@@ -32,7 +38,7 @@ const gbizRows = funding.records ?? [];
 const results = companies.map(c => {
   const review = projectRows.filter(r => matches(r.organization, c));
   const gbiz = gbizRows.filter(r => matches(r.organization, c));
-  const gbizNedo = gbiz.filter(r => norm(r.sourceAgency).includes(norm("NEDO")) || norm(r.sourceAgency).includes(norm("新エネルギー・産業技術総合開発機構")));
+  const gbizNedo = gbiz.filter(r => isNedo(r.sourceAgency));
   const gbizNedoSubsidy = gbizNedo.filter(r => r.stage === "subsidy_published");
   return {
     name: c.name,
