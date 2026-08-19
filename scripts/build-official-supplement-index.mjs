@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const MIN_FISCAL_YEAR = 2024;
+const MIN_FISCAL_YEAR = 2021;
 const officialManifest = JSON.parse(await readFile("data/official/manifest.json", "utf8"));
 const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
 
@@ -101,7 +101,7 @@ const sourceNotes = {
   meti: {
     id: "meti",
     name: "経済産業省本省",
-    coverageNote: "既存の機関公表資料キャッシュのうち、2024年度以降の経済産業省本省の契約結果・補助金等交付決定で金額を確認できた行を表示。機関公表資料自体は手動更新の照合系列であり、全公表の網羅を主張しない。",
+    coverageNote: "既存の機関公表資料キャッシュのうち、2021年度以降の経済産業省本省の契約結果・補助金等交付決定で金額を確認できた行を表示。機関公表資料自体は手動更新の照合系列であり、全公表の網羅を主張しない。",
   },
   ...Object.fromEntries(seeds.sources.map((source) => [source.id, {
     id: source.id,
