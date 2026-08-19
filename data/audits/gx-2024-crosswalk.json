@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T11:42:12.973Z",
+  "generatedAt": "2026-08-19T11:44:08.215Z",
   "reviewProjectId": "rs-2025-7096",
   "reviewProjectRows": [
     {
@@ -356,48 +356,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 27340000,
-      "gbizAllMatches": [
-        {
-          "amount": 18595977,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第六回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "1010901035852"
-        },
-        {
-          "amount": 13431900,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第五回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "8150001012294"
-        },
-        {
-          "amount": 11445000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "2130001039543"
-        },
-        {
-          "amount": 8727272,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "1170001016829"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -432,21 +395,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 40521000,
-      "gbizAllMatches": [
-        {
-          "amount": 40000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "8050001039686"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -481,30 +434,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 51781000,
-      "gbizAllMatches": [
-        {
-          "amount": 20000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第六回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "6280001006178"
-        },
-        {
-          "amount": 15000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第八回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "7122001027623"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -539,30 +473,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 12234000,
-      "gbizAllMatches": [
-        {
-          "amount": 60000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "3240001032321"
-        },
-        {
-          "amount": 20000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "6080001005142"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -597,75 +512,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 23250000,
-      "gbizAllMatches": [
-        {
-          "amount": 60000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "9070001026021"
-        },
-        {
-          "amount": 55666666,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第五回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "6122001030058"
-        },
-        {
-          "amount": 40000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "8050001039686"
-        },
-        {
-          "amount": 9999999,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第五回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "1011101089202"
-        },
-        {
-          "amount": 8727272,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "1170001016829"
-        },
-        {
-          "amount": 7164285,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "9020001147895"
-        },
-        {
-          "amount": 4116479,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第八回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "4170001015893"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -700,39 +551,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 26817000,
-      "gbizAllMatches": [
-        {
-          "amount": 68370000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "9410001002730"
-        },
-        {
-          "amount": 15000000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "7010001203692"
-        },
-        {
-          "amount": 8727272,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第七回］事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "1170001016829"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -767,30 +590,11 @@
         }
       ],
       "reviewPublishedAmountTotalWithinProject": 21522000,
-      "gbizAllMatches": [
-        {
-          "amount": 39800000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "2180301026377"
-        },
-        {
-          "amount": 9463937,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第四回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "2180001108483"
-        }
-      ],
+      "gbizAllMatches": [],
       "gbizNedoMatches": [],
       "gbizNedoSubsidyMatches": [],
       "siteReviewPresent": true,
-      "siteGbizPresent": true,
+      "siteGbizPresent": false,
       "siteGbizNedoSubsidyPresent": false
     },
     {
@@ -834,15 +638,6 @@
           "fiscalYear": 2022,
           "date": "2022-07-07",
           "corporateNumber": "1130001066209"
-        },
-        {
-          "amount": 11445000,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第二回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "2130001039543"
         }
       ],
       "gbizNedoMatches": [
@@ -919,15 +714,6 @@
           "fiscalYear": 2020,
           "date": "2020-07-21",
           "corporateNumber": "2010601050333"
-        },
-        {
-          "amount": 14629350,
-          "stage": "subsidy_published",
-          "sourceAgency": "中小企業庁",
-          "program": "［第三回］令和２年度事業再構築補助金（交付申請等）",
-          "fiscalYear": null,
-          "date": null,
-          "corporateNumber": "6021003005235"
         }
       ],
       "gbizNedoMatches": [],
