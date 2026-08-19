@@ -21,9 +21,18 @@ jobs:
           node-version: 22
           cache: npm
       - name: Apply permanent wiring
+        id: wiring
+        continue-on-error: true
         run: node scripts/apply-official-supplement-wiring.mjs
-      - run: npm ci
+      - name: Install dependencies
+        id: install
+        if: steps.wiring.outcome == 'success'
+        continue-on-error: true
+        run: npm ci
       - name: Build and validate official supplement
+        id: validate
+        if: steps.wiring.outcome == 'success' && steps.install.outcome == 'success'
+        continue-on-error: true
         run: |
           npm run build:pages
           node --test tests/official-supplement.test.mjs
@@ -31,27 +40,60 @@ jobs:
             echo "::error::旧NEDO単独補足への参照が残っています"
             exit 1
           fi
-      - name: Commit verified wiring and generated index
+      - name: Record validation receipt
+        if: always()
+        env:
+          WIRING_OUTCOME: ${{ steps.wiring.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          mkdir -p data/audits
+          node - <<'NODE'
+          const fs = require('fs');
+          const receipt = {
+            validatedAt: new Date().toISOString(),
+            wiringOutcome: process.env.WIRING_OUTCOME || 'skipped',
+            installOutcome: process.env.INSTALL_OUTCOME || 'skipped',
+            validateOutcome: process.env.VALIDATE_OUTCOME || 'skipped',
+          };
+          receipt.status = receipt.wiringOutcome === 'success' && receipt.installOutcome === 'success' && receipt.validateOutcome === 'success' ? 'passed' : 'failed';
+          if (fs.existsSync('data/official-supplement-index.json')) {
+            const index = JSON.parse(fs.readFileSync('data/official-supplement-index.json','utf8'));
+            receipt.recordCount = index.recordCount;
+            receipt.sources = index.sources?.map((s) => ({id:s.id, recordCount:s.recordCount})) ?? [];
+          }
+          fs.writeFileSync('data/audits/official-supplement-wiring-validation.json', JSON.stringify(receipt, null, 2) + '\n');
+          NODE
+      - name: Commit validation result
         id: commit_data
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add vite.pages.config.ts .github/workflows/update-data.yml .github/workflows/refresh-official-data.yml data/official-supplement-index.json
-          if git diff --cached --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          STATUS=$(node -p "JSON.parse(require('fs').readFileSync('data/audits/official-supplement-wiring-validation.json','utf8')).status")
+          if [ "$STATUS" = "passed" ]; then
+            git add vite.pages.config.ts .github/workflows/update-data.yml .github/workflows/refresh-official-data.yml data/official-supplement-index.json data/audits/official-supplement-wiring-validation.json
+            MESSAGE="公式補足を経産省本省・NEDO・中小機構で公開"
+          else
+            git reset
+            git add data/audits/official-supplement-wiring-validation.json
+            MESSAGE="公式補足配線の検証失敗を記録"
           fi
-          git commit -m "公式補足を経産省本省・NEDO・中小機構で公開"
+          git commit -m "$MESSAGE" || { echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; }
           for attempt in 1 2 3; do
             git pull --rebase origin main
             if git push; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
+              echo "status=$STATUS" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           done
           exit 1
       - name: Publish verified main
-        if: steps.commit_data.outputs.changed == 'true'
+        if: steps.commit_data.outputs.status == 'passed'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run update-data.yml --ref main -f publish_only=true
+      - name: Fail unless validation passed
+        if: always() && steps.commit_data.outputs.status != 'passed'
+        run: exit 1
