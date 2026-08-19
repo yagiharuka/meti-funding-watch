@@ -20,6 +20,7 @@ type FundingSearchSummary = {
   amountKnownTotal: number;
   amountKnownCount: number;
   amountUnknownCount: number;
+  organizationCount: number;
   organizations: Array<{ name: string; corporateNumber: string; records: number; amount: number }>;
   byStage: Array<{ stage: Stage; records: number; amount: number; amountKnownCount: number }>;
   byYear: Array<{ fiscalYear: number | null; records: number; amount: number; amountKnownCount: number }>;
@@ -225,6 +226,7 @@ function summarizeFundingRecords(rows: FundingRecord[]): FundingSearchSummary {
     amountKnownTotal,
     amountKnownCount,
     amountUnknownCount: rows.length - amountKnownCount,
+    organizationCount: organizations.size,
     organizations: [...organizations.values()]
       .sort((left, right) => right.amount - left.amount || right.records - left.records || left.name.localeCompare(right.name, "ja"))
       .slice(0, 10),
