@@ -65,6 +65,12 @@ function displayReviewAmount(row: ReviewEntry) {
   if (row.amount !== null) return yen.format(row.amount);
   return row.amountRaw?.trim() ? `原文：${row.amountRaw}` : "金額欄なし";
 }
+function getPublicBaseUrl() {
+  if (typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site")) {
+    return "https://yagiharuka.github.io/meti-funding-watch/";
+  }
+  return typeof window === "undefined" ? "" : new URL("./", window.location.href).href;
+}
 
 export default function CombinedCompanyResults({ query }: Props) {
   const [index, setIndex] = useState<ReviewCompanyIndex | null>(null);
@@ -78,7 +84,8 @@ export default function CombinedCompanyResults({ query }: Props) {
     let active = true;
     const controller = new AbortController();
     setLoading(true);
-    fetch("data/review-company-index.json", { cache: "no-store", signal: controller.signal })
+    const indexUrl = new URL("data/review-company-index.json", getPublicBaseUrl());
+    fetch(indexUrl, { cache: "no-store", signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`行政事業レビュー企業索引を取得できません（HTTP ${response.status}）`);
         return response.json() as Promise<ReviewCompanyIndex>;
@@ -127,6 +134,7 @@ export default function CombinedCompanyResults({ query }: Props) {
         </div>
         <p>GビズINFOとは別系列です。レビュー掲載の支出先額・NEDOの交付決定額・GビズINFO掲載値は性質が違うため合算しません。</p>
       </div>
+      <p className="filter-note">企業名・法人番号の検索語だけを共通利用します。上部の公表組織・情報種別・年度フィルターはGビズINFO側だけに適用され、行政事業レビューには適用しません。</p>
 
       {loading && <div className="result-bar"><strong>行政事業レビューの企業索引を読込中</strong></div>}
       {error && <div className="adoption-error" role="alert"><strong>行政事業レビューを同時検索できません。</strong><p>{error}</p></div>}
@@ -136,12 +144,12 @@ export default function CombinedCompanyResults({ query }: Props) {
           <div className="records-table" role="region" aria-label="行政事業レビュー企業検索サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
               <caption style={{ textAlign: "left", padding: "1rem", fontWeight: 700 }}>行政事業レビュー：同じ企業検索の結果</caption>
-              <thead><tr><th>対象法人</th><th>支出先明細</th><th>金額記載あり</th><th>レビュー掲載の支出先額</th></tr></thead>
+              <thead><tr><th>対象法人</th><th>支出先明細</th><th>金額記載あり</th><th>金額記載行の単純合計</th></tr></thead>
               <tbody><tr>
                 <td><strong>{reviewMatches.length.toLocaleString("ja-JP")}法人</strong><small>名称・法人番号で一致</small></td>
                 <td>{entries.length.toLocaleString("ja-JP")}行</td>
                 <td>{reviewAmountKnownCount.toLocaleString("ja-JP")}行<small>{reviewAmountUnknownCount ? `／金額欄なし ${reviewAmountUnknownCount.toLocaleString("ja-JP")}行` : ""}</small></td>
-                <td className="amount"><strong>{yen.format(reviewAmountKnownTotal)}</strong><small>企業検索用に同一事業・同一支出ブロックの重複行を整理。GビズINFOとは合算不可。</small></td>
+                <td className="amount"><strong>{yen.format(reviewAmountKnownTotal)}</strong><small>企業検索用に同一事業・同一支出ブロックの重複行を整理した掲載値の単純合計。総支出額とは扱わず、GビズINFOとも合算しません。</small></td>
               </tr></tbody>
             </table>
           </div>
