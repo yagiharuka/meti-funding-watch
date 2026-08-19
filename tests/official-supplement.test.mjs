@@ -59,16 +59,13 @@ test("既知のNEDO・中小機構公式補足が保持される", async () => {
   assert.equal(pwc.amountStage, "契約金額");
 });
 
-test("Pages公開物にも同じ公式補足索引とUIが含まれる", async () => {
-  const source = await readJson("data/official-supplement-index.json");
-  const published = await readJson("dist-pages/data/official-supplement-index.json");
-  assert.equal(published.schemaVersion, 1);
-  assert.equal(published.recordCount, source.recordCount);
-  assert.deepEqual(published.sources.map((item) => item.id), ["meti", "nedo", "smrj"]);
-
+test("Pages公開JSに3機関の公式補足UIとデータがバンドルされる", async () => {
   const assets = await readdir("dist-pages/assets");
   const javascript = await Promise.all(
     assets.filter((name) => name.endsWith(".js")).map((name) => readFile(`dist-pages/assets/${name}`, "utf8")),
   );
-  assert.ok(javascript.some((text) => text.includes("公式補足（経産省本省・NEDO・中小機構）")));
+  const bundle = javascript.join("\n");
+  assert.ok(bundle.includes("公式補足（経産省本省・NEDO・中小機構）"));
+  assert.ok(bundle.includes("京都フュージョニアリング株式会社"));
+  assert.ok(bundle.includes("PwCコンサルティング合同会社"));
 });
