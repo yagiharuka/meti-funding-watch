@@ -36,7 +36,9 @@ test("publishes only the two main series and keeps official refresh manual", asy
   assert.match(official, /workflow_dispatch:/);
   assert.doesNotMatch(official, /schedule:|push:/);
   assert.match(official, /npm run update:official/);
-  assert.doesNotMatch(official, /gh workflow run update-data\.yml/);
+  assert.match(official, /GITHUB_TOKENで作ったbot commitはpush workflowを起動しない/);
+  assert.match(official, /if: steps\.commit_data\.outputs\.changed == 'true'/);
+  assert.match(official, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
   assert.match(review, /group: administrative-review-update/);
   assert.match(review, /cron: "0 1 \* \* 2"/);
   assert.match(review, /node scripts\/update-review-data\.mjs --require-fresh/);

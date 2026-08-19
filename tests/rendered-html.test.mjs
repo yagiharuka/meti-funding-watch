@@ -16,7 +16,7 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   assert.equal(dataEntries.includes("official"), false);
   assert.ok(dataEntries.some((name) => name.startsWith("commitments-")));
   assert.ok(dataEntries.every((name) =>
-    name === "manifest.json" || name === "review" || name === "commitments-preview.json" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
+    name === "manifest.json" || name === "review" || name === "review-company-index.json" || name === "commitments-preview.json" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
 
   const ids = [];
   for (const [year, filename] of Object.entries(manifest.commitments)) {

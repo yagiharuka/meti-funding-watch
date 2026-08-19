@@ -36,8 +36,11 @@ test("publishes a bounded reconciliation log without the review freshness warnin
 });
 
 test("makes disclosed review routes understandable without legacy-cache wording", () => {
-  assert.match(reviewSearchSource, /NEDOから先を見る/);
-  assert.match(reviewSearchSource, /NEDOが直接の支出元として記載された支出先/);
+  assert.match(reviewSearchSource, /支出先企業を検索する欄と、資金経路上の支出元を絞る欄を分けています/);
+  assert.match(reviewSearchSource, /資金経路で絞る（例：NEDO・中小機構）/);
+  assert.match(reviewSearchSource, /\["NEDO", "IPA", "中小機構", "JOGMEC", "JETRO"\]/);
+  assert.match(reviewSearchSource, /\{name\}を経由/);
+  assert.match(reviewSearchSource, /NEDOや中小機構などが資金経路の途中にある案件/);
   assert.match(reviewSearchSource, /レビューシートCSVの経路情報/);
   assert.match(reviewSearchSource, /複数経路のため直接上流のみ表示/);
   assert.doesNotMatch(reviewSearchSource, /旧キャッシュから復元した経路|旧キャッシュから復元した一経路|旧公式CSVキャッシュから復元|旧キャッシュのためCSV行番号不明|公開経路上の位置/);

@@ -434,7 +434,9 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.doesNotMatch(recordsSection, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
   assert.doesNotMatch(recordsSection, /受取先|支出元・実施機関|契約額/);
   assert.doesNotMatch(recordsSection, /\broute\b/);
-  assert.doesNotMatch(recordsSection, /合計|交付金額|期間指定API/);
+  assert.match(recordsSection, /GビズINFO掲載値合計/);
+  assert.match(recordsSection, /総支出額ではありません/);
+  assert.doesNotMatch(recordsSection, /交付金額|期間指定API|総支出額合計/);
   assert.doesNotMatch(recordsSection, /未収録行|検索結果は網羅的では/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure/);
   assert.doesNotMatch(styleSource, /\.route\b|award_decision|\.finalized\b|\.paid\b/);
@@ -469,7 +471,8 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.match(adoptionApiSource, /maximumBytes = 1_000_000/);
   assert.doesNotMatch(adoptionSearchSource, /補助金採択者検索を開く/);
   assert.doesNotMatch(adoptionSearchSource, /法人番号|交付先|受取先|金額列/);
-  assert.match(viewTabsSource, /調達（委託を含む）・補助金/);
+  assert.match(viewTabsSource, /企業検索/);
+  assert.match(viewTabsSource, /GビズINFO＋行政事業レビューを同時表示/);
   assert.doesNotMatch(viewTabsSource, /補助金採択者情報（中小企業庁のみ）|href=.*adoptions\//);
   assert.doesNotMatch(viewTabsSource, /active === "official"|機関公表資料との比較/);
   assert.match(officialPageSource, /<ViewTabs active="official"/);
