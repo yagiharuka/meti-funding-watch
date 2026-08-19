@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-19",
+  "scopeNote": "NEDO公式の採択・交付決定情報のうち確認済みのものを補足表示する。NEDO全制度の網羅データベースではない。金額は行政事業レビューの年度支出額やGビズINFO掲載値と合算しない。",
+  "records": [
+    {"organization":"株式会社NABLA Mobility","corporateNumber":"3011101094811","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"航空の脱炭素化を実現する運航ネットワーク最適化システムの開発","phase":"STS","supportYears":"2024～2026年度","grantDecisionAmount":397000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company64.html"},
+    {"organization":"株式会社3DC","corporateNumber":"2010401165777","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"革新的炭素材料GMSを用いた機能性導電助剤の開発","phase":"STS","supportYears":"2024～2026年度","grantDecisionAmount":499000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company65.html"},
+    {"organization":"株式会社グリーンケミカル","corporateNumber":"7020001128492","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"非可食バイオマス由来樹脂の工業生産技術の実証事業","phase":"STS","supportYears":"2024～2025年度","grantDecisionAmount":280000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company66.html"},
+    {"organization":"京都フュージョニアリング株式会社","corporateNumber":"6130001065395","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"高出力・連続運転ミリ波発生装置の開発と深部地熱等への応用","phase":"STS","supportYears":"2024～2026年度","grantDecisionAmount":499000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company67.html"},
+    {"organization":"株式会社FullDepth","corporateNumber":"3050001037744","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"大型船舶GHG排出削減のための次世代船底管理技術の開発","phase":"PCA","supportYears":"2024～2026年度","grantDecisionAmount":292000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company71.html"},
+    {"organization":"Planet Savers株式会社","corporateNumber":"6011001155784","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"DACCU実用化のための高効率大気中CO2濃縮システム開発","phase":"STS","supportYears":"2024～2026年度","grantDecisionAmount":500000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company77.html"},
+    {"organization":"株式会社マテリアルゲート","corporateNumber":"9240001061711","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"低消費コンピュータに資する単分子誘電体メモリの実用化開発","phase":"STS","supportYears":"2024～2026年度","grantDecisionAmount":279000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company78.html"},
+    {"organization":"株式会社OOYOO","corporateNumber":"1130001066209","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"分離膜による小型・高効率な二酸化炭素回収システムの開発と実証","phase":"PCA","supportYears":"2024～2026年度","grantDecisionAmount":894000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company83.html"},
+    {"organization":"ウミトロン株式会社","corporateNumber":"2010601050333","program":"GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業","theme":"養殖産業における脱炭素促進プロダクト開発と拡大生産","phase":"PCA","supportYears":"2024～2026年度","grantDecisionAmount":381000000,"sourceUrl":"https://www.nedo.go.jp/activities/startups/company83a.html"}
+  ]
+}
