@@ -216,7 +216,7 @@ export default function CombinedCompanyResults({ query }: Props) {
           <p className="eyebrow">OFFICIAL SUPPLEMENT</p>
           <h2>公式補足（経産省本省・NEDO・中小機構）</h2>
         </div>
-        <p>2024年度以降の最近の採択・交付決定・契約結果を補足します。確認できた公表情報だけで、網羅データではありません。</p>
+        <p>2021年度以降を基本対象とする採択・交付決定・契約結果を補足します。機関ごとに実際の収録開始年度は異なり、確認できた公表情報だけを表示します。</p>
       </div>
       {officialMatches.length > 0 ? (
         <div className="records-table" role="region" aria-label="公式補足の企業検索結果" tabIndex={0}>
