@@ -141,6 +141,7 @@ export default function CombinedCompanyResults({ query }: Props) {
 
       {!loading && !error && index && (
         <>
+          <p className="filter-note">行政事業レビューの現在の同時検索対象は {index.reviewSheetYears.join("・")}年度シートです。旧年度は公表形式・取得経路が異なるため、現時点では同時検索に含めていません。</p>
           <div className="records-table" role="region" aria-label="行政事業レビュー企業検索サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
               <caption style={{ textAlign: "left", padding: "1rem", fontWeight: 700 }}>行政事業レビュー：同じ企業検索の結果</caption>
