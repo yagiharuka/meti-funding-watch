@@ -156,6 +156,12 @@ export default defineConfig({
           `${JSON.stringify(previewRows)}\n`,
         );
         await copyReviewData(dataDirectory);
+        const reviewCompanyIndex = await readFile(new URL("./data/review-company-index.json", import.meta.url), "utf8");
+        const parsedReviewCompanyIndex = JSON.parse(reviewCompanyIndex) as { schemaVersion?: number; recipients?: unknown[] };
+        if (parsedReviewCompanyIndex.schemaVersion !== 1 || !Array.isArray(parsedReviewCompanyIndex.recipients)) {
+          throw new Error("行政事業レビュー企業索引が不正です");
+        }
+        await writeFile(new URL("./dist-pages/data/review-company-index.json", import.meta.url), reviewCompanyIndex);
       },
     },
   ],

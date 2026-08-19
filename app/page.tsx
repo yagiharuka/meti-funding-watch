@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
+import CombinedCompanyResults from "@/app/CombinedCompanyResults";
 import {
   FUNDING_QUERY_MAX_LENGTH,
   sanitizeFundingSearchPage,
@@ -988,6 +989,8 @@ export default function Home() {
           </div>
         )}
 
+
+        <CombinedCompanyResults query={query} />
         <div className="result-bar">
           <span role="status" aria-live="polite">
             {searchError ? (

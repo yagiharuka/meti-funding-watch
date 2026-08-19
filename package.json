@@ -14,7 +14,7 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "update:data": "node scripts/update-data.mjs",
     "update:official": "node scripts/update-official-data.mjs",
-    "update:review": "node scripts/update-review-data.mjs",
+    "update:review": "node scripts/update-review-data.mjs && node scripts/build-review-company-index.mjs",
     "update:review:fixture": "node scripts/update-review-data.mjs --fixture-dir tests/fixtures/review --output-dir .tmp/review-fixture --now 2026-08-16T01:34:06.322Z",
     "migrate:review-v4": "node scripts/migrate-review-cache-v4.mjs",
     "discover:official": "node scripts/official-source-discovery.mjs",
