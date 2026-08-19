@@ -30,6 +30,16 @@ async function fetchText(url) {
   return response.text();
 }
 
+let rsFiscalYears = null;
+let rsFiscalYearsError = null;
+try {
+  const r = await fetch("https://rssystem.go.jp/api/projects/fiscal-years/", { headers: { accept: "application/json" } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  rsFiscalYears = await r.json();
+} catch (error) {
+  rsFiscalYearsError = error instanceof Error ? error.message : String(error);
+}
+
 const result = [];
 for (const year of years) {
   const all = new Set();
@@ -59,5 +69,5 @@ for (const year of years) {
   result.push({ year, roots, scannedHtmlPages: pages.length + roots.length, counts, files, errors });
 }
 await mkdir("data/audits", { recursive: true });
-await writeFile("data/audits/legacy-review-source-discovery.json", JSON.stringify({ generatedAt: new Date().toISOString(), result }, null, 2) + "\n");
-console.log(JSON.stringify(result.map(({year, roots, scannedHtmlPages, counts, files, errors}) => ({ year, roots, scannedHtmlPages, counts, sample: files.slice(0, 20), errors: errors.slice(0, 10) })), null, 2));
+await writeFile("data/audits/legacy-review-source-discovery.json", JSON.stringify({ generatedAt: new Date().toISOString(), rsFiscalYears, rsFiscalYearsError, result }, null, 2) + "\n");
+console.log(JSON.stringify({ rsFiscalYears, rsFiscalYearsError, result: result.map(({year, roots, scannedHtmlPages, counts, files, errors}) => ({ year, roots, scannedHtmlPages, counts, sample: files.slice(0, 20), errors: errors.slice(0, 10) })) }, null, 2));
