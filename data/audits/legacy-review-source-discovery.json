@@ -1,5 +1,7 @@
 {
-  "generatedAt": "2026-08-19T12:17:20.061Z",
+  "generatedAt": "2026-08-19T12:19:14.491Z",
+  "rsFiscalYears": null,
+  "rsFiscalYearsError": "Unexpected token '<', \"<!doctype \"... is not valid JSON",
   "result": [
     {
       "year": 2021,
