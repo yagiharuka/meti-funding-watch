@@ -20,8 +20,6 @@ jobs:
           node-version: 22
       - run: node scripts/apply-combined-company-search.mjs
       - run: node scripts/build-review-company-index.mjs
-      - run: npm ci
-      - run: npm run build:pages
       - name: Commit applied changes
         run: |
           git config user.name "github-actions[bot]"
@@ -31,3 +29,5 @@ jobs:
             git commit -m "企業検索でGビズとレビューを同時表示"
             git push
           fi
+      - run: npm ci
+      - run: npm run build:pages
