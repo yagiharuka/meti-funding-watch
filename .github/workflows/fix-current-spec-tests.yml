@@ -1,4 +1,4 @@
-# This second self-update intentionally triggers the already-registered repair workflow.
+# This workflow is temporary and deletes itself after a verified repair.
 name: Repair current-spec tests and publish Pages
 
 on:
@@ -16,10 +16,20 @@ permissions:
 
 concurrency:
   group: repair-current-spec-and-publish
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record the repair run on the existing publication alert
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 20 --repo "$GITHUB_REPOSITORY" --body "サイト再公開の修正処理を開始しました。\n\n- 実行: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\n- 対象: 2021年度以降の公式補足と企業統合検索\n- 処理: 全Pages検証 → main反映 → Pages公開 → ライブ照合"
+
   repair-and-publish:
+    needs: announce
     runs-on: ubuntu-latest
     timeout-minutes: 50
     environment:
