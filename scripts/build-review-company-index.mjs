@@ -18,12 +18,11 @@ for (const row of rows) {
   const key = corporateNumber || `name:${normalize(row.organization)}`;
   let group = groups.get(key);
   if (!group) {
-    group = { organization: row.organization, corporateNumber, aliases: new Set(), entries: new Map() };
+    group = { organization: row.organization, corporateNumber, aliases: new Set(), entries: [] };
     groups.set(key, group);
   }
   group.aliases.add(row.organization);
-  const entryKey = [row.reviewSheetYear, row.reviewProjectId, row.block, corporateNumber || normalize(row.organization)].join("|");
-  const candidate = {
+  group.entries.push({
     id: row.id,
     reviewSheetYear: row.reviewSheetYear,
     reviewProjectId: row.reviewProjectId,
@@ -37,16 +36,39 @@ for (const row of rows) {
     sourceUrl: row.sourceUrl,
     sourceRowNumber: row.sourceRowNumber,
     flowLevel: row.flowLevel,
-  };
-  const current = group.entries.get(entryKey);
-  if (!current || (current.amount == null && candidate.amount != null)) group.entries.set(entryKey, candidate);
+  });
+}
+
+function removeBlankPartnerRows(entries) {
+  const buckets = new Map();
+  for (const entry of entries) {
+    const bucketKey = [entry.reviewSheetYear, entry.reviewProjectId, entry.block].join("|");
+    const bucket = buckets.get(bucketKey) ?? [];
+    bucket.push(entry);
+    buckets.set(bucketKey, bucket);
+  }
+
+  const result = [];
+  for (const bucket of buckets.values()) {
+    const amountRows = bucket.filter((entry) => entry.amount !== null);
+    if (amountRows.length) {
+      // 同じレビュー年度・事業・支出ブロック・受取先について金額記載行がある場合のみ、
+      // その組合せの金額空欄行を企業検索用索引から省く。金額記載行同士は統合しない。
+      result.push(...amountRows);
+    } else {
+      // 金額記載行がない組合せは、原資料の空欄行を失わないよう全行を保持する。
+      result.push(...bucket);
+    }
+  }
+  return result;
 }
 
 const recipients = [...groups.values()].map((group) => {
-  const entries = [...group.entries.values()].sort((a, b) =>
+  const entries = removeBlankPartnerRows(group.entries).sort((a, b) =>
     b.reviewSheetYear - a.reviewSheetYear
     || (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY)
-    || a.program.localeCompare(b.program, "ja"));
+    || a.program.localeCompare(b.program, "ja")
+    || (a.sourceRowNumber ?? Number.MAX_SAFE_INTEGER) - (b.sourceRowNumber ?? Number.MAX_SAFE_INTEGER));
   const aliases = [...group.aliases].sort((a, b) => a.localeCompare(b, "ja"));
   const amountKnownTotal = entries.reduce((sum, row) => sum + (row.amount ?? 0), 0);
   const amountKnownCount = entries.filter((row) => row.amount != null).length;
@@ -69,7 +91,7 @@ const output = {
   reviewSheetYears: manifest.reviewSheetYears,
   recipientCount: recipients.length,
   semantics: {
-    amount: "行政事業レビュー公式CSV『支出先の合計支出額』。同一事業・支出先ブロック・受取先の重複行は、金額記載行を優先して企業検索用に1行へ整理する。",
+    amount: "行政事業レビュー公式CSV『支出先の合計支出額』。同一レビュー年度・事業・支出ブロック・受取先について金額記載行がある場合のみ、同じ組合せの金額空欄行を企業検索用索引から省く。金額記載行同士は統合しない。",
     aggregationWarning: "GビズINFO掲載値、NEDO交付決定額、上流・中間・下流の支出額を相互に合算しない。",
   },
   recipients,
