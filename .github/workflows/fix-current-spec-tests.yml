@@ -1,3 +1,4 @@
+# This second self-update intentionally triggers the already-registered repair workflow.
 name: Repair current-spec tests and publish Pages
 
 on:
