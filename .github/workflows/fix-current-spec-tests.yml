@@ -1,11 +1,10 @@
-# Existing workflow on main; this update intentionally triggers the one-time repair.
 name: Fix tests for the current combined-search specification
 
 on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/fix-current-spec-tests.yml"
+      - ".fix-current-spec-tests-trigger"
 
 permissions:
   contents: write
@@ -77,7 +76,7 @@ jobs:
               "公式補足は、経済産業省本省・NEDO・中小企業基盤整備機構について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
           )
           PY
-          git rm .github/workflows/fix-current-spec-tests.yml
+          git rm .github/workflows/fix-current-spec-tests.yml .fix-current-spec-tests-trigger
 
       - name: Install dependencies
         run: npm ci
@@ -97,7 +96,8 @@ jobs:
             tests/review-ui-semantics.test.mjs \
             data/official-supplement-seeds.json \
             data/official-supplement-index.json \
-            .github/workflows/fix-current-spec-tests.yml
+            .github/workflows/fix-current-spec-tests.yml \
+            .fix-current-spec-tests-trigger
           git commit -m "現行の企業統合検索仕様に検証を整合"
           for attempt in 1 2 3; do
             git pull --rebase origin main
