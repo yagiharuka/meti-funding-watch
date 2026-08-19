@@ -1,0 +1,57 @@
+name: Apply official supplement wiring
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-official-supplement-wiring.yml
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply permanent wiring
+        run: node scripts/apply-official-supplement-wiring.mjs
+      - run: npm ci
+      - name: Build and validate official supplement
+        run: |
+          npm run build:pages
+          node --test tests/official-supplement.test.mjs
+          if grep -R "nedo-supplements" app scripts tests data --exclude-dir=official --exclude=official-supplement-seeds.json --exclude=official-supplement-index.json; then
+            echo "::error::旧NEDO単独補足への参照が残っています"
+            exit 1
+          fi
+      - name: Commit verified wiring and generated index
+        id: commit_data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vite.pages.config.ts .github/workflows/update-data.yml .github/workflows/refresh-official-data.yml data/official-supplement-index.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "公式補足を経産省本省・NEDO・中小機構で公開"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          exit 1
+      - name: Publish verified main
+        if: steps.commit_data.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true
