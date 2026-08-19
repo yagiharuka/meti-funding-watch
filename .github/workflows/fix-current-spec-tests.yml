@@ -1,0 +1,115 @@
+name: Fix tests for the current combined-search specification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-current-spec-tests.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: fix-current-spec-tests
+  cancel-in-progress: false
+
+jobs:
+  fix-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Align stale assertions with the verified current specification
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, before: str, after: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(before)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement target, found {count}")
+              target.write_text(text.replace(before, after), encoding="utf-8")
+
+          replace_once(
+              "tests/funding-data.test.mjs",
+              "  assert.doesNotMatch(recordsSection, /合計|交付金額|期間指定API/);",
+              "  assert.match(recordsSection, /GビズINFO掲載値合計/);\n  assert.match(recordsSection, /総支出額ではありません/);\n  assert.doesNotMatch(recordsSection, /交付金額|期間指定API|総支出額合計/);",
+          )
+          replace_once(
+              "tests/funding-data.test.mjs",
+              "  assert.match(viewTabsSource, /調達（委託を含む）・補助金/);",
+              "  assert.match(viewTabsSource, /企業検索/);\n  assert.match(viewTabsSource, /GビズINFO＋行政事業レビューを同時表示/);",
+          )
+
+          replace_once(
+              "tests/governance.test.mjs",
+              "  assert.doesNotMatch(official, /gh workflow run update-data\\.yml/);",
+              "  assert.match(official, /GITHUB_TOKENで作ったbot commitはpush workflowを起動しない/);\n  assert.match(official, /if: steps\\.commit_data\\.outputs\\.changed == 'true'/);\n  assert.match(official, /gh workflow run update-data\\.yml --ref main -f publish_only=true/);",
+          )
+
+          replace_once(
+              "tests/rendered-html.test.mjs",
+              "    name === \"manifest.json\" || name === \"review\" || name === \"commitments-preview.json\" || /^commitments-(?:\\d{4}|unclassified)\\.json$/.test(name)));",
+              "    name === \"manifest.json\" || name === \"review\" || name === \"review-company-index.json\" || name === \"commitments-preview.json\" || /^commitments-(?:\\d{4}|unclassified)\\.json$/.test(name)));",
+          )
+
+          replace_once(
+              "tests/review-ui-semantics.test.mjs",
+              "  assert.match(reviewSearchSource, /NEDOから先を見る/);\n  assert.match(reviewSearchSource, /NEDOが直接の支出元として記載された支出先/);",
+              "  assert.match(reviewSearchSource, /支出先企業を検索する欄と、資金経路上の支出元を絞る欄を分けています/);\n  assert.match(reviewSearchSource, /資金経路で絞る（例：NEDO・中小機構）/);\n  assert.match(reviewSearchSource, /\\[\"NEDO\", \"IPA\", \"中小機構\", \"JOGMEC\", \"JETRO\"\\]/);\n  assert.match(reviewSearchSource, /\\{name\\}を経由/);\n  assert.match(reviewSearchSource, /NEDOや中小機構などが資金経路の途中にある案件/);",
+          )
+
+          replace_once(
+              "data/official-supplement-seeds.json",
+              "公式補足は、経済産業省本省・NEDO・中小企業基盤整備機構について、受取先と金額を確認できた公表情報だけを表示する。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
+              "公式補足は、経済産業省本省・NEDO・中小企業基盤整備機構について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
+          )
+          PY
+          git rm .github/workflows/fix-current-spec-tests.yml
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate and verify the complete Pages release
+        run: npm run test:pages
+
+      - name: Commit only verified source, test, and generated-index changes
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            tests/funding-data.test.mjs \
+            tests/governance.test.mjs \
+            tests/rendered-html.test.mjs \
+            tests/review-ui-semantics.test.mjs \
+            data/official-supplement-seeds.json \
+            data/official-supplement-index.json \
+            .github/workflows/fix-current-spec-tests.yml
+          git commit -m "現行の企業統合検索仕様に検証を整合"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin main; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1
+
+      - name: Publish the verified main branch
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true
