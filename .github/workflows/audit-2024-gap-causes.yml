@@ -1,0 +1,30 @@
+name: Audit 2024 recipient gap causes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/audit-2024-gap-causes.mjs
+      - .github/workflows/audit-2024-gap-causes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/audit-2024-gap-causes.mjs
+      - name: Commit audit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/audits/recipient-gap-causes-2024.json
+          if ! git diff --cached --quiet; then
+            git commit -m "2024年度の受取法人差分要因監査結果を記録"
+            git push
+          fi
