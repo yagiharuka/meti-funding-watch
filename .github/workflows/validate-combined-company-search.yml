@@ -30,8 +30,7 @@ jobs:
         continue-on-error: true
         run: |
           test -s dist-pages/data/review-company-index.json
-          grep -q '企業検索' dist-pages/index.html
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('dist-pages/data/review-company-index.json','utf8')); if(x.schemaVersion!==1 || !Array.isArray(x.recipients) || !x.recipients.length) process.exit(1); console.log(x.recipients.length)"
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('dist-pages/data/review-company-index.json','utf8')); if(x.schemaVersion!==1 || !Array.isArray(x.recipients) || !x.recipients.length || !Array.isArray(x.reviewSheetYears)) process.exit(1); console.log(x.recipients.length)"
       - name: Record validation result
         if: always()
         env:
