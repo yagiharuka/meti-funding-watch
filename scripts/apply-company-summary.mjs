@@ -203,4 +203,20 @@ replaceOnce(
 );
 
 fs.writeFileSync(path, source);
-console.log("Patched app/page.tsx with company search summary UI");
+
+const workerPath = "app/funding-search.worker.ts";
+let worker = fs.readFileSync(workerPath, "utf8");
+if (!worker.includes("organizationCount: number;")) {
+  worker = worker.replace(
+    "  amountUnknownCount: number;\n  organizations:",
+    "  amountUnknownCount: number;\n  organizationCount: number;\n  organizations:",
+  );
+}
+if (!worker.includes("organizationCount: organizations.size,")) {
+  worker = worker.replace(
+    "    amountUnknownCount: rows.length - amountKnownCount,\n    organizations:",
+    "    amountUnknownCount: rows.length - amountKnownCount,\n    organizationCount: organizations.size,\n    organizations:",
+  );
+}
+fs.writeFileSync(workerPath, worker);
+console.log("Patched app/page.tsx and funding-search.worker.ts with company search summary UI");
