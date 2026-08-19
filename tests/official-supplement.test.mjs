@@ -19,15 +19,16 @@ async function readJson(path) {
 test("公式補足は経産省本省・NEDO・中小機構の3機関だけを公開する", async () => {
   const index = await readJson("data/official-supplement-index.json");
   assert.equal(index.schemaVersion, 1);
-  assert.equal(index.minFiscalYear, 2024);
+  assert.equal(index.minFiscalYear, 2021);
   assert.deepEqual(index.sources.map((source) => source.id), ["meti", "nedo", "smrj"]);
   assert.equal(index.recordCount, index.records.length);
   assert.ok(index.records.length > 0);
+  assert.ok(index.records.some((row) => row.sourceId === "meti" && row.fiscalYear === 2021), "経産省本省の2021年度レコードが必要です");
 
   const allowed = new Set(["meti", "nedo", "smrj"]);
   for (const row of index.records) {
     assert.ok(allowed.has(row.sourceId), `unexpected source: ${row.sourceId}`);
-    assert.ok(Number.isInteger(row.fiscalYear) && row.fiscalYear >= 2024, `${row.id}: fiscal year`);
+    assert.ok(Number.isInteger(row.fiscalYear) && row.fiscalYear >= 2021, `${row.id}: fiscal year`);
     assert.ok(Number.isSafeInteger(row.amount), `${row.id}: amount`);
     assert.ok(row.organization, `${row.id}: organization`);
     assert.match(row.sourceUrl, /^https:\/\//, `${row.id}: source URL`);
@@ -66,6 +67,7 @@ test("Pages公開JSに3機関の公式補足UIとデータがバンドルされ�
   );
   const bundle = javascript.join("\n");
   assert.ok(bundle.includes("公式補足（経産省本省・NEDO・中小機構）"));
+  assert.ok(bundle.includes("2021年度以降を基本対象"));
   assert.ok(bundle.includes("京都フュージョニアリング株式会社"));
   assert.ok(bundle.includes("PwCコンサルティング合同会社"));
 });
