@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import officialSupplementData from "@/data/official-supplement-index.json";
 
 type ReviewEntry = {
   id: string;
@@ -71,10 +72,10 @@ type OfficialSupplementIndex = {
   sources: OfficialSupplementSource[];
   records: OfficialSupplementRecord[];
 };
-
 type Props = { query: string };
 
 const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
+const officialIndex = officialSupplementData as OfficialSupplementIndex;
 
 function normalize(value = "") {
   return String(value)
@@ -110,9 +111,6 @@ export default function CombinedCompanyResults({ query }: Props) {
   const [index, setIndex] = useState<ReviewCompanyIndex | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [officialIndex, setOfficialIndex] = useState<OfficialSupplementIndex | null>(null);
-  const [officialLoading, setOfficialLoading] = useState(false);
-  const [officialError, setOfficialError] = useState<string | null>(null);
   const normalizedQuery = normalize(query);
   const terms = useMemo(() => normalizedQuery.split(" ").filter(Boolean), [normalizedQuery]);
 
@@ -139,45 +137,21 @@ export default function CombinedCompanyResults({ query }: Props) {
     return () => { active = false; controller.abort(); };
   }, [normalizedQuery, index, loading]);
 
-  useEffect(() => {
-    if (!normalizedQuery || officialIndex || officialLoading) return;
-    let active = true;
-    const controller = new AbortController();
-    setOfficialLoading(true);
-    const indexUrl = new URL("data/official-supplement-index.json", getPublicBaseUrl());
-    fetch(indexUrl, { cache: "no-store", signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`公式補足索引を取得できません（HTTP ${response.status}）`);
-        return response.json() as Promise<OfficialSupplementIndex>;
-      })
-      .then((value) => {
-        if (value.schemaVersion !== 1 || !Array.isArray(value.records) || !Array.isArray(value.sources)) throw new Error("公式補足索引の形式が不正です");
-        if (active) { setOfficialIndex(value); setOfficialError(null); }
-      })
-      .catch((reason) => {
-        if (!active || (reason instanceof DOMException && reason.name === "AbortError")) return;
-        setOfficialError(reason instanceof Error ? reason.message : String(reason));
-      })
-      .finally(() => { if (active) setOfficialLoading(false); });
-    return () => { active = false; controller.abort(); };
-  }, [normalizedQuery, officialIndex, officialLoading]);
-
   const reviewMatches = useMemo(() => {
     if (!index || !terms.length) return [] as ReviewRecipient[];
     return index.recipients.filter((recipient) => terms.every((term) => recipient.searchText.includes(term)));
   }, [index, terms]);
-
   const matchedCorporateNumbers = useMemo(
     () => new Set(reviewMatches.map((row) => row.corporateNumber).filter(Boolean)),
     [reviewMatches],
   );
   const officialMatches = useMemo(() => {
-    if (!officialIndex || !terms.length) return [] as OfficialSupplementRecord[];
+    if (!terms.length) return [] as OfficialSupplementRecord[];
     return officialIndex.records.filter((row) => {
       if (row.corporateNumber && matchedCorporateNumbers.has(row.corporateNumber)) return true;
       return terms.every((term) => row.searchText.includes(term));
     });
-  }, [officialIndex, terms, matchedCorporateNumbers]);
+  }, [terms, matchedCorporateNumbers]);
 
   if (!normalizedQuery) return null;
 
@@ -216,7 +190,6 @@ export default function CombinedCompanyResults({ query }: Props) {
               </tr></tbody>
             </table>
           </div>
-
           {entries.length > 0 ? (
             <div className="records-table" role="region" aria-label="行政事業レビューの支出先明細" tabIndex={0} style={{ marginBottom: "1rem" }}>
               <table>
@@ -243,34 +216,28 @@ export default function CombinedCompanyResults({ query }: Props) {
           <p className="eyebrow">OFFICIAL SUPPLEMENT</p>
           <h2>公式補足（経産省本省・NEDO・中小機構）</h2>
         </div>
-        <p>最近の採択・交付決定・契約結果を補足します。確認できた公表情報だけで、網羅データではありません。</p>
+        <p>2024年度以降の最近の採択・交付決定・契約結果を補足します。確認できた公表情報だけで、網羅データではありません。</p>
       </div>
-      {officialLoading && <div className="result-bar"><strong>公式補足の企業索引を読込中</strong></div>}
-      {officialError && <div className="adoption-error" role="alert"><strong>公式補足を同時検索できません。</strong><p>{officialError}</p></div>}
-      {!officialLoading && !officialError && officialIndex && (
-        <>
-          {officialMatches.length > 0 ? (
-            <div className="records-table" role="region" aria-label="公式補足の企業検索結果" tabIndex={0}>
-              <table>
-                <thead><tr><th>公表機関</th><th>受取先</th><th>事業・テーマ</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead>
-                <tbody>{officialMatches.slice(0, 100).map((row) => (
-                  <tr key={row.id}>
-                    <td data-label="公表機関"><strong>{row.sourceName}</strong><small>{row.category === "grant_decision" ? "採択・交付決定" : "契約結果"}</small></td>
-                    <td data-label="受取先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
-                    <td data-label="事業・テーマ"><span className="program-name">{row.theme || row.program}</span>{row.theme && <small>{row.program}</small>}{row.phase && <small>{row.phase}{row.supportYears ? `／${row.supportYears}` : ""}</small>}</td>
-                    <td className="amount" data-label="公表金額"><strong>{yen.format(row.amount)}</strong><small>{row.amountStage}。GビズINFO・レビューと合算不可。</small></td>
-                    <td data-label="時点">{formatDate(row.date)}<small>{row.fiscalYear}年度</small></td>
-                    <td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceName}公式 ↗</a></td>
-                  </tr>
-                ))}</tbody>
-              </table>
-              {officialMatches.length > 100 && <p className="filter-note">同時表示は上位100行までです。</p>}
-            </div>
-          ) : <p className="filter-note">現在の公式補足では、この企業名・法人番号に一致する公表情報を確認できません。</p>}
-          <p className="filter-note">{officialIndex.scopeNote}</p>
-          {officialIndex.sources.map((source) => <p className="filter-note" key={source.id}><strong>{source.name}：</strong>{source.coverageNote}</p>)}
-        </>
-      )}
+      {officialMatches.length > 0 ? (
+        <div className="records-table" role="region" aria-label="公式補足の企業検索結果" tabIndex={0}>
+          <table>
+            <thead><tr><th>公表機関</th><th>受取先</th><th>事業・テーマ</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead>
+            <tbody>{officialMatches.slice(0, 100).map((row) => (
+              <tr key={row.id}>
+                <td data-label="公表機関"><strong>{row.sourceName}</strong><small>{row.category === "grant_decision" ? "採択・交付決定" : "契約結果"}</small></td>
+                <td data-label="受取先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
+                <td data-label="事業・テーマ"><span className="program-name">{row.theme || row.program}</span>{row.theme && <small>{row.program}</small>}{row.phase && <small>{row.phase}{row.supportYears ? `／${row.supportYears}` : ""}</small>}</td>
+                <td className="amount" data-label="公表金額"><strong>{yen.format(row.amount)}</strong><small>{row.amountStage}。GビズINFO・レビューと合算不可。</small></td>
+                <td data-label="時点">{formatDate(row.date)}<small>{row.fiscalYear}年度</small></td>
+                <td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceName}公式 ↗</a></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          {officialMatches.length > 100 && <p className="filter-note">同時表示は上位100行までです。</p>}
+        </div>
+      ) : <p className="filter-note">現在の公式補足では、この企業名・法人番号に一致する公表情報を確認できません。</p>}
+      <p className="filter-note">{officialIndex.scopeNote}</p>
+      {officialIndex.sources.map((source) => <p className="filter-note" key={source.id}><strong>{source.name}：</strong>{source.coverageNote}</p>)}
     </section>
   );
 }
