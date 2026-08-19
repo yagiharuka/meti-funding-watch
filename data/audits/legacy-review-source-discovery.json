@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-08-19T12:17:20.061Z",
+  "result": [
+    {
+      "year": 2021,
+      "roots": [],
+      "scannedHtmlPages": 0,
+      "counts": {},
+      "files": [],
+      "errors": [
+        {
+          "url": "https://www.meti.go.jp/information_2/publicoffer/review2021/html/index.html",
+          "error": "HTTP 403"
+        },
+        {
+          "url": "https://www.meti.go.jp/information_2/publicoffer/review2021/html/publication_reviewsheet.html",
+          "error": "HTTP 403"
+        }
+      ]
+    },
+    {
+      "year": 2022,
+      "roots": [],
+      "scannedHtmlPages": 0,
+      "counts": {},
+      "files": [],
+      "errors": [
+        {
+          "url": "https://www.meti.go.jp/information_2/publicoffer/review2022/html/index.html",
+          "error": "HTTP 403"
+        },
+        {
+          "url": "https://www.meti.go.jp/information_2/publicoffer/review2022/html/publication_reviewsheet.html",
+          "error": "HTTP 403"
+        }
+      ]
+    },
+    {
+      "year": 2023,
+      "roots": [],
+      "scannedHtmlPages": 0,
+      "counts": {},
+      "files": [],
+      "errors": [
+        {
+          "url": "https://www.meti.go.jp/information_2/publicoffer/review2023/html/index.html",
+          "error": "HTTP 403"
+        },
+        {
+          "url": "https://www.meti.go.jp/information_2/publicoffer/review2023/html/publication_reviewsheet.html",
+          "error": "HTTP 403"
+        }
+      ]
+    }
+  ]
+}
