@@ -12,7 +12,7 @@ export default function ViewTabs({ active }: ViewTabsProps) {
   return (
     <nav className="view-tabs" aria-label="表示する情報">
       <a className={active === "gbiz" ? "active" : undefined} href={href("gbiz")} aria-current={active === "gbiz" ? "page" : undefined}>
-        <strong>企業検索</strong><span>GビズINFO＋行政事業レビューを同時表示</span>
+        <strong>企業検索</strong><span>GビズINFO＋行政事業レビューを同時表示／公式補足：経産省本省・NEDO・中小機構</span>
       </a>
       <a className={active === "review" ? "active" : undefined} href={href("review")} aria-current={active === "review" ? "page" : undefined}>
         <strong>行政事業レビュー詳細</strong><span>事業・予算執行・支出経路を詳しく見る</span>
