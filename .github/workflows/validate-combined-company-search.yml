@@ -18,17 +18,49 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build:pages
-      - name: Validate generated files
+      - id: install
+        continue-on-error: true
+        run: npm ci
+      - id: build
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run build:pages
+      - id: files
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           test -s dist-pages/data/review-company-index.json
           grep -q '企業検索' dist-pages/index.html
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('dist-pages/data/review-company-index.json','utf8')); if(x.schemaVersion!==1 || !Array.isArray(x.recipients) || !x.recipients.length) process.exit(1); fs.mkdirSync('data/audits',{recursive:true}); fs.writeFileSync('data/audits/combined-search-build-validation.json', JSON.stringify({validatedAt:new Date().toISOString(), recipientCount:x.recipients.length, reviewSheetYears:x.reviewSheetYears, status:'passed'}, null, 2)+'\n')"
-      - name: Commit validation receipt
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('dist-pages/data/review-company-index.json','utf8')); if(x.schemaVersion!==1 || !Array.isArray(x.recipients) || !x.recipients.length) process.exit(1); console.log(x.recipients.length)"
+      - name: Record validation result
+        if: always()
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          FILES_OUTCOME: ${{ steps.files.outcome }}
         run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          fs.mkdirSync('data/audits', {recursive:true});
+          let recipientCount = null, reviewSheetYears = null;
+          try {
+            const x=JSON.parse(fs.readFileSync('data/review-company-index.json','utf8'));
+            recipientCount=x.recipients?.length ?? null;
+            reviewSheetYears=x.reviewSheetYears ?? null;
+          } catch {}
+          const passed = process.env.INSTALL_OUTCOME === 'success' && process.env.BUILD_OUTCOME === 'success' && process.env.FILES_OUTCOME === 'success';
+          fs.writeFileSync('data/audits/combined-search-build-validation.json', JSON.stringify({
+            validatedAt:new Date().toISOString(),
+            status: passed ? 'passed' : 'failed',
+            installOutcome:process.env.INSTALL_OUTCOME,
+            buildOutcome:process.env.BUILD_OUTCOME,
+            filesOutcome:process.env.FILES_OUTCOME,
+            recipientCount,
+            reviewSheetYears
+          }, null, 2)+'\n');
+          NODE
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/audits/combined-search-build-validation.json
-          git commit -m "企業同時検索の公開ビルドを検証" || exit 0
+          git commit -m "企業同時検索の公開ビルド結果を記録" || exit 0
           git push
