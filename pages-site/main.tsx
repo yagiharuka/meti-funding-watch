@@ -5,6 +5,8 @@ import Home from "@/app/page";
 import SiteNotice from "@/app/SiteNotice";
 import "@/app/globals.css";
 import "@/app/mobile-search-summary.css";
+import "./search-disclosures.css";
+import "./search-disclosures";
 
 const root = document.getElementById("root");
 
