@@ -8,10 +8,9 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
-  integrate:
+  diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
@@ -25,26 +24,31 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Wire verified legacy evidence into production updater
-        run: node scripts/oneoff-integrate-meti-legacy.mjs
-      - name: Verify legacy definitions and Heisei parsing
-        run: node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs
-      - name: Refresh official data with continuity protection
-        run: npm run update:official
-      - name: Verify official data and Pages build
+      - name: Run integration stages with persistent diagnostics
         run: |
-          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs
-          npm run test:pages
-      - name: Commit only verified integration and official data
+          set +e
+          : > meti-legacy-integration.log
+          run_stage() {
+            name="$1"
+            shift
+            echo "===== $name =====" | tee -a meti-legacy-integration.log
+            "$@" >> meti-legacy-integration.log 2>&1
+            code=$?
+            echo "EXIT $name=$code" | tee -a meti-legacy-integration.log
+            return $code
+          }
+          run_stage patch node scripts/oneoff-integrate-meti-legacy.mjs || exit 0
+          run_stage definitions node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs || exit 0
+          run_stage update npm run update:official || exit 0
+          run_stage official-tests node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs || exit 0
+          run_stage pages npm run test:pages || exit 0
+      - name: Commit diagnostics
+        if: always()
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add scripts/update-official-data.mjs scripts/official-meti-legacy-history.mjs tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs package.json data/official data/official-supplement-index.json data/official-meti-legacy-evidence.json
-          git diff --cached --check
-          git commit -m "Backfill verified METI headquarters data to FY2017"
+          test -f meti-legacy-integration.log || echo "diagnostic log missing" > meti-legacy-integration.log
+          git add meti-legacy-integration.log
+          git commit -m "chore(audit): record METI legacy integration diagnostics" || exit 0
           git pull --rebase origin main
           git push
-      - name: Publish verified Pages release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run update-data.yml --ref main -f publish_only=true
