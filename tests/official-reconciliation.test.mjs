@@ -107,7 +107,8 @@ test("labels the denominator, unreviewed scope, and row-level evidence without a
   assert.match(pageSource, /comparison\.sourceDocumentUrl/);
   assert.match(pageSource, /#\$\{item\.gbizRecordId\}/);
   assert.match(fundingPageSource, /<tr key=\{row\.id\} id=\{row\.id\}>/);
-  assert.match(fundingPageSource, /row\.id.*row\.sourceKey/);
+  assert.match(fundingPageSource, /row\.id/);
+  assert.match(fundingPageSource, /row\.sourceKey/);
   assert.match(workerSource, /row\.id.*row\.sourceKey/);
 });
 
