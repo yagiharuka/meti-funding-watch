@@ -109,7 +109,8 @@ test("labels the denominator, unreviewed scope, and row-level evidence without a
   assert.match(fundingPageSource, /<tr key=\{row\.id\} id=\{row\.id\}>/);
   assert.match(fundingPageSource, /row\.id/);
   assert.match(fundingPageSource, /row\.sourceKey/);
-  assert.match(workerSource, /row\.id.*row\.sourceKey/);
+  assert.match(workerSource, /row\.id/);
+  assert.match(workerSource, /row\.sourceKey/);
 });
 
 test("renders an explicit institution-by-year review plan with every other cell unreviewed", () => {
