@@ -1,31 +1,65 @@
+import { createHash } from "node:crypto";
+import { parseOfficialWorkbook } from "./update-official-data.mjs";
+import { METI_CANDIDATE_DOCUMENTS, ANRE_CANDIDATE_DOCUMENTS } from "./official-meti-anre-history.mjs";
+import { JPO_HISTORICAL_DOCUMENTS } from "./official-jpo-history.mjs";
+
+const CAPTURE = "20260602/20260601000000";
 const headers = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
   accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/html;q=0.9,*/*;q=0.1",
 };
 
 const candidates = [];
-const add = (agency, year, kind, url) => candidates.push({ agency, year, kind, url });
+const add = (agency, year, kind, originalUrl, template = null) => candidates.push({ agency, year, kind, originalUrl, template });
+const warp = (url) => `https://warp.ndl.go.jp/${CAPTURE}/${url}`;
 
-const metiSeries = ["buppin_bid", "itaku_bid", "kouji_bid", "buppin_zuikei", "itaku_zuikei", "kouji_zuikei"];
+const metiSeries = [
+  ["competitive-goods", "buppin_bid"],
+  ["competitive-commission", "itaku_bid"],
+  ["competitive-public-works", "kouji_bid"],
+  ["discretionary-goods", "buppin_zuikei"],
+  ["discretionary-commission", "itaku_zuikei"],
+  ["discretionary-public-works", "kouji_zuikei"],
+];
 for (const year of [2017, 2018, 2019, 2020]) {
   const era = year === 2017 ? "H29" : year === 2018 ? "H30" : year === 2019 ? "R1" : "R2";
-  for (const series of metiSeries) add("meti", year, `contract:${series}`, `https://www.meti.go.jp/information_2/downloadfiles/${series}_${era}.xlsx`);
+  for (const [id, slug] of metiSeries) {
+    const template = METI_CANDIDATE_DOCUMENTS.find((row) => row.id.endsWith(`-${id}`));
+    add("meti", year, id, `https://www.meti.go.jp/information_2/downloadfiles/${slug}_${era}.xlsx`, template);
+  }
 }
 for (const year of [2017, 2018, 2019, 2020, 2021]) {
   const y = String(year).slice(-2);
   const n = String(year + 1).slice(-2);
-  add("meti", year, "grant:h1", `https://www.meti.go.jp/information_2/downloadfiles/subs${y}04_${y}09.xlsx`);
-  add("meti", year, "grant:h2", `https://www.meti.go.jp/information_2/downloadfiles/subs${y}10_${n}03.xlsx`);
+  for (const half of ["h1", "h2"]) {
+    const first = half === "h1";
+    const suffix = first ? `${y}04_${y}09` : `${y}10_${n}03`;
+    const template = METI_CANDIDATE_DOCUMENTS.find((row) => row.id.includes(`grant-decisions-${half}`));
+    add("meti", year, `grant-${half}`, `https://www.meti.go.jp/information_2/downloadfiles/subs${suffix}.xlsx`, template);
+  }
 }
 
+const jpoClasses = [
+  ["competitive", "kyosonyusatu"],
+  ["discretionary", "zuikeyaku"],
+];
+const jpoSubjects = [
+  ["goods", "ukeoi"],
+  ["commission", "itaku"],
+  ["public-works", "kokyokoji"],
+];
 for (const year of [2017, 2018, 2019]) {
-  for (const cls of ["kyosonyusatu", "zuikeyaku"]) {
-    for (const slug of ["ukeoi", "itaku", "kokyokoji"]) {
-      add("jpo", year, `${cls}:${slug}`, `https://www.jpo.go.jp/news/chotatsu/rakusatu/${cls}/document/${year}/${year}_${slug}.xlsx`);
+  for (const [contractClass, directory] of jpoClasses) {
+    for (const [subject, slug] of jpoSubjects) {
+      const template = JPO_HISTORICAL_DOCUMENTS.find((row) => row.id.includes(`-${contractClass}-${subject}`));
+      add("jpo", year, `${contractClass}-${subject}`, `https://www.jpo.go.jp/news/chotatsu/rakusatu/${directory}/document/${year}/${year}_${slug}.xlsx`, template);
     }
   }
-  add("jpo", year, "grant:h1", `https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/${year}/${year}_04_09.xlsx`);
-  add("jpo", year, "grant:h2", `https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/${year}/${year}_10_03.xlsx`);
+  for (const half of ["h1", "h2"]) {
+    const suffix = half === "h1" ? "04_09" : "10_03";
+    const template = JPO_HISTORICAL_DOCUMENTS.find((row) => row.id.includes(`grant-decisions-${half}`));
+    add("jpo", year, `grant-${half}`, `https://www.jpo.go.jp/news/chotatsu/rakusatu/hojokin/document/${year}/${year}_${suffix}.xlsx`, template);
+  }
 }
 
 const smeaSeries = [
@@ -37,43 +71,130 @@ const smeaSeries = [
 for (const year of [2017, 2018, 2019]) {
   for (const [kind, filename] of smeaSeries) add("smea", year, kind, `https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/${filename(year)}`);
   const era = year === 2017 ? "h29" : year === 2018 ? "h30" : "r1";
-  add("smea", year, "grant:era-full", `https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_hojo_${era}fy04_3.html`);
-  add("smea", year, "grant:era-h1", `https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_hojo_${era}fy04_9.html`);
+  add("smea", year, "grant", `https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_hojo_${era}fy04_3.html`);
 }
 
 for (const year of [2017, 2018, 2019, 2020, 2021, 2022]) {
   for (const half of ["4-9", "10-3", "4_9", "10_3", "04_09", "10_03"]) {
-    add("anre", year, `grant:${half}`, `https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/${year}/${year}_${half}.xlsx`);
+    const h = half.startsWith("4") || half.startsWith("04") ? "h1" : "h2";
+    const template = ANRE_CANDIDATE_DOCUMENTS.find((row) => row.id.includes(`grant-decisions-${h}`));
+    add("anre", year, `grant-${half}`, `https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/${year}/${year}_${half}.xlsx`, template);
   }
   for (const dir of ["ippankyousou_chouhi", "ippankyousou_itaku", "zuiikeiyaku_chouhi", "zuiikeiyaku_itaku"]) {
-    add("anre", year, `index:${dir}`, `https://www.enecho.meti.go.jp/appli/conclusion/${dir}/${year}/`);
+    add("anre", year, `index-${dir}`, `https://www.enecho.meti.go.jp/appli/conclusion/${dir}/${year}/`);
   }
 }
 
-async function probe(candidate) {
+function sha256(buffer) {
+  return createHash("sha256").update(buffer).digest("hex");
+}
+
+function plausibleOfficialHtml(buffer, agency) {
+  if (buffer.length < 5000) return false;
+  const text = buffer.toString("utf8");
+  if (!/<html|<!doctype/i.test(text)) return false;
+  if (agency === "smea") return /契約|補助金|交付決定/.test(text) && /<table/i.test(text);
+  if (agency === "anre") return /契約|補助金|交付決定|一般競争|随意契約/.test(text);
+  return false;
+}
+
+async function fetchWarp(originalUrl) {
+  const url = warp(originalUrl);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const timer = setTimeout(() => controller.abort(), 20000);
   try {
-    const response = await fetch(candidate.url, { headers, redirect: "follow", signal: controller.signal });
+    const response = await fetch(url, { headers, redirect: "follow", signal: controller.signal });
     const buffer = Buffer.from(await response.arrayBuffer());
-    const magic = buffer.subarray(0, 4).toString("hex");
-    const text = buffer.subarray(0, Math.min(buffer.length, 400)).toString("utf8").replace(/\s+/g, " ");
-    const xlsx = magic === "504b0304";
-    const html = /<!doctype html|<html/i.test(text);
-    return { ...candidate, status: response.status, ok: response.ok, bytes: buffer.length, xlsx, html, finalUrl: response.url, contentType: response.headers.get("content-type") };
+    return { response, buffer, url };
   } catch (error) {
-    return { ...candidate, status: null, ok: false, bytes: 0, xlsx: false, html: false, error: error instanceof Error ? error.message : String(error) };
+    return { response: null, buffer: Buffer.alloc(0), url, error: error instanceof Error ? error.message : String(error) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-const results = [];
-for (let i = 0; i < candidates.length; i += 8) {
-  results.push(...await Promise.all(candidates.slice(i, i + 8).map(probe)));
+async function strictParse(candidate, buffer) {
+  if (!candidate.template) return { parsed: false, reason: "no-template" };
+  const document = {
+    ...candidate.template,
+    id: `probe-${candidate.agency}-${candidate.year}-${candidate.kind}`,
+    fiscalYear: candidate.year,
+    url: candidate.originalUrl,
+    originalUrl: undefined,
+    sourcePageUrl: candidate.originalUrl,
+    expectedSheetCount: undefined,
+    expectedNonRecordRows: undefined,
+    archiveProvider: undefined,
+    archiveExpectedBytes: undefined,
+    archiveExpectedSha256: undefined,
+    archiveExpectedRecordCount: undefined,
+    evidenceExpectedMagic: undefined,
+    evidenceExpectedBytes: undefined,
+    evidenceExpectedSha256: undefined,
+    evidenceExpectedRecordCount: undefined,
+  };
+  try {
+    const rows = await parseOfficialWorkbook(buffer, document);
+    return { parsed: true, records: rows.length };
+  } catch (error) {
+    return { parsed: false, reason: error instanceof Error ? error.message : String(error) };
+  }
 }
 
-const usable = results.filter((row) => row.ok && (row.xlsx || row.html));
-console.log(`CENTRAL_HISTORY_PROBE_SUMMARY=${JSON.stringify({ total: results.length, usable: usable.length, byAgency: Object.fromEntries([...new Set(results.map((r) => r.agency))].map((agency) => [agency, { total: results.filter((r) => r.agency === agency).length, usable: usable.filter((r) => r.agency === agency).length }])) })}`);
-for (const row of usable) console.log(`CENTRAL_HISTORY_USABLE=${JSON.stringify(row)}`);
-for (const row of results.filter((r) => !r.ok || (!r.xlsx && !r.html))) console.log(`CENTRAL_HISTORY_REJECTED=${JSON.stringify(row)}`);
+const results = [];
+for (let i = 0; i < candidates.length; i += 6) {
+  const batch = candidates.slice(i, i + 6);
+  results.push(...await Promise.all(batch.map(async (candidate) => {
+    const fetched = await fetchWarp(candidate.originalUrl);
+    const status = fetched.response?.status ?? null;
+    const xlsx = fetched.buffer.subarray(0, 4).toString("hex") === "504b0304";
+    const html = plausibleOfficialHtml(fetched.buffer, candidate.agency);
+    const parsed = xlsx ? await strictParse(candidate, fetched.buffer) : { parsed: false, reason: html ? "html-source" : "not-source" };
+    return {
+      agency: candidate.agency,
+      year: candidate.year,
+      kind: candidate.kind,
+      originalUrl: candidate.originalUrl,
+      warpUrl: fetched.url,
+      status,
+      bytes: fetched.buffer.length,
+      sha256: fetched.buffer.length ? sha256(fetched.buffer) : null,
+      xlsx,
+      html,
+      ...parsed,
+      error: fetched.error ?? null,
+    };
+  })));
+}
+
+// Discover archived ANRE monthly workbooks from valid archived year-index pages.
+const discovered = [];
+for (const row of results.filter((item) => item.agency === "anre" && item.kind.startsWith("index-") && item.html)) {
+  const fetched = await fetchWarp(row.originalUrl);
+  const html = fetched.buffer.toString("utf8");
+  const hrefs = [...html.matchAll(/href=["']([^"']+\.xlsx(?:\?[^"']*)?)["']/gi)].map((match) => match[1]);
+  for (const href of hrefs) {
+    const originalUrl = new URL(href, row.originalUrl).href;
+    if (!originalUrl.startsWith("https://www.enecho.meti.go.jp/")) continue;
+    const file = await fetchWarp(originalUrl);
+    const xlsx = file.buffer.subarray(0, 4).toString("hex") === "504b0304";
+    if (!xlsx) continue;
+    discovered.push({
+      agency: "anre",
+      year: row.year,
+      kind: row.kind.replace("index-", "contract-"),
+      originalUrl,
+      warpUrl: file.url,
+      status: file.response?.status ?? null,
+      bytes: file.buffer.length,
+      sha256: sha256(file.buffer),
+      xlsx: true,
+    });
+  }
+}
+
+const actual = results.filter((row) => (row.xlsx && row.parsed) || row.html);
+console.log(`CENTRAL_WARP_SUMMARY=${JSON.stringify({ candidates: results.length, actual: actual.length, strictXlsx: results.filter((r) => r.xlsx && r.parsed).length, html: results.filter((r) => r.html).length, anreDiscoveredXlsx: discovered.length })}`);
+for (const row of actual) console.log(`CENTRAL_WARP_ACTUAL=${JSON.stringify(row)}`);
+for (const row of discovered) console.log(`CENTRAL_WARP_DISCOVERED=${JSON.stringify(row)}`);
+for (const row of results.filter((r) => r.xlsx && !r.parsed)) console.log(`CENTRAL_WARP_PARSE_REJECTED=${JSON.stringify(row)}`);
