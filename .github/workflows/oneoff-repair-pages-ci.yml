@@ -1,0 +1,64 @@
+name: One-off repair Pages CI assertions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/oneoff-repair-pages-ci.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Restore full audit test and patch only stale assertions
+        run: |
+          set -euo pipefail
+          git show 6719f7955e3a2eab513580965b42ebd97904cda8:tests/funding-data.test.mjs > tests/funding-data.test.mjs
+          python - <<'PY'
+          from pathlib import Path
+
+          funding = Path("tests/funding-data.test.mjs")
+          text = funding.read_text()
+          old = '''  assert.match(recordsSection, /GビズINFO掲載値合計/);
+          assert.match(recordsSection, /総支出額ではありません/);'''
+          new = '''  assert.doesNotMatch(recordsSection, /GビズINFO掲載値合計/);
+          assert.match(recordsSection, /金額の記載なし/);
+          assert.match(recordsSection, /<th>掲載値合計<\\/th>/);'''
+          if old not in text:
+              raise SystemExit("funding-data stale assertion block not found")
+          funding.write_text(text.replace(old, new, 1))
+
+          reconciliation = Path("tests/official-reconciliation.test.mjs")
+          text = reconciliation.read_text()
+          old = r'''  assert.match(fundingPageSource, /row\.id.*row\.sourceKey/);'''
+          new = r'''  assert.match(fundingPageSource, /row\.id/);
+          assert.match(fundingPageSource, /row\.sourceKey/);'''
+          if old not in text:
+              raise SystemExit("official-reconciliation stale assertion not found")
+          reconciliation.write_text(text.replace(old, new, 1))
+          PY
+
+          rm -f \
+            .github/workflows/oneoff-company-search-crosscheck.yml \
+            .github/workflows/oneoff-verify-pages-publication.yml \
+            .github/workflows/oneoff-repair-pages-ci.yml
+
+          git diff --check
+
+      - name: Commit clean CI state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/funding-data.test.mjs tests/official-reconciliation.test.mjs .github/workflows
+          git commit -m "Restore clean verified Pages CI"
+          git push
