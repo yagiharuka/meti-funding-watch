@@ -42,7 +42,7 @@ const oldLoop = `  let columns = null;
   let anchorCount = 0;
   for (const page of pages) {
     columns = smrjColumns(page, columns);
-    if (!columns?.date || !columns.organization || !columns.amount || !columns.ordinal) throw new Error(\`${source.url}: SMRJ列見出しを確定できません p${page.pageNumber}\`);
+    if (!columns?.date || !columns.organization || !columns.amount || !columns.ordinal) throw new Error(\`\${source.url}: SMRJ列見出しを確定できません p\${page.pageNumber}\`);
     const programRange = columns.ordinal;
     const ordinalLimit = Math.min(programRange[0] + 0.035, programRange[1]);
     const anchors = page.items.filter((item) => /^\\d{1,3}$/.test(item.t) && item.x < ordinalLimit && item.y < 0.92 && item.y > 0.03)
@@ -60,7 +60,7 @@ const newLoop = `  let schema = null;
     schema = smrjColumns(page, schema);
     const columns = schema?.ranges;
     if (!columns?.date || !columns.organization || !columns.amount || !columns.program || !Number.isFinite(schema?.programCenter)) {
-      throw new Error(\`${source.url}: SMRJ列見出しを確定できません p${page.pageNumber}\`);
+      throw new Error(\`\${source.url}: SMRJ列見出しを確定できません p\${page.pageNumber}\`);
     }
     const programRange = columns.program;
     const ordinalMin = Math.max(0, schema.programCenter - 0.14);
