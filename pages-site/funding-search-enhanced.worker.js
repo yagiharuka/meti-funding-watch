@@ -75,6 +75,28 @@ async function loadChunk(message, filename) {
         throw new Error(`${filename}のSHA-256が一致しません`);
     return parseRows(bytes, filename);
 }
+function normalizeCompanyName(value) {
+    return value
+        .normalize("NFKC")
+        .replace(/\(株\)|㈱/g, "株式会社")
+        .replace(/\(有\)|㈲/g, "有限会社")
+        .toLocaleLowerCase("ja-JP")
+        .replace(/[\s　]+/g, "")
+        .trim();
+}
+function resolveCompanyNumbers(rows, query) {
+    const normalized = normalizeCompanyName(query);
+    if (!normalized)
+        return null;
+    if (/^\d{13}$/.test(normalized))
+        return new Set([normalized]);
+    const matched = new Set();
+    for (const row of rows) {
+        if (normalizeCompanyName(row.organization).includes(normalized))
+            matched.add(row.corporateNumber);
+    }
+    return matched;
+}
 function search(message) {
     try {
         if (!activeRelease)
@@ -95,8 +117,9 @@ function search(message) {
             throw new Error("年度が不正です");
         if (!Number.isSafeInteger(page) || page < 1 || page > 10_000)
             throw new Error("ページが不正です");
+        const matchedCorporateNumbers = resolveCompanyNumbers(records, query);
         const matching = records.filter((row) => {
-            if (!matchesCompany(row, query))
+            if (matchedCorporateNumbers && !matchedCorporateNumbers.has(row.corporateNumber))
                 return false;
             if (agency !== "all" && row.sourceAgency !== agency)
                 return false;
@@ -140,21 +163,6 @@ function search(message) {
             message: error instanceof Error ? error.message : String(error),
         });
     }
-}
-function normalizeCompanyName(value) {
-    return value
-        .normalize("NFKC")
-        .toLocaleLowerCase("ja-JP")
-        .replace(/[\s　]+/g, "")
-        .trim();
-}
-function matchesCompany(row, query) {
-    if (!query)
-        return true;
-    const normalized = normalizeCompanyName(query);
-    if (/^\d{13}$/.test(normalized))
-        return row.corporateNumber === normalized;
-    return normalizeCompanyName(row.organization).includes(normalized);
 }
 function summarizeOrganizations(rows) {
     const groups = new Map();
