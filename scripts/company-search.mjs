@@ -34,29 +34,38 @@ export function normalizeCompanyIdentity(value = "") {
   return normalized;
 }
 
+function entityNames(entity) {
+  const names = [entity.organization];
+  if (Array.isArray(entity.aliases)) names.push(...entity.aliases);
+  return names.filter(Boolean);
+}
+
+export function filterCompanyEntities(entities, query) {
+  const normalized = normalizeCompanySearchTerm(query);
+  if (!normalized) return [...entities];
+  if (/^\d{13}$/.test(normalized)) {
+    return entities.filter((entity) => entity.corporateNumber === normalized);
+  }
+
+  const identity = normalizeCompanyIdentity(query);
+  if (!identity) return [];
+
+  const exact = entities.filter((entity) =>
+    entityNames(entity).some((name) => normalizeCompanyIdentity(name) === identity));
+  if (exact.length) return exact;
+
+  return entities.filter((entity) =>
+    entityNames(entity).some((name) => normalizeCompanyIdentity(name).includes(identity)));
+}
+
 export function resolveCompanyNumbers(rows, query) {
   const normalized = normalizeCompanySearchTerm(query);
   if (!normalized) return null;
-  if (/^\d{13}$/.test(normalized)) return new Set([normalized]);
-
-  const identity = normalizeCompanyIdentity(query);
-  if (!identity) return new Set();
-
-  const exact = new Set();
-  for (const row of rows) {
-    if (normalizeCompanyIdentity(row.organization) === identity) {
-      exact.add(row.corporateNumber);
-    }
-  }
-  if (exact.size) return exact;
-
-  const partial = new Set();
-  for (const row of rows) {
-    if (normalizeCompanyIdentity(row.organization).includes(identity)) {
-      partial.add(row.corporateNumber);
-    }
-  }
-  return partial;
+  return new Set(
+    filterCompanyEntities(rows, query)
+      .map((row) => row.corporateNumber)
+      .filter(Boolean),
+  );
 }
 
 export function filterCompanyRecords(rows, {
