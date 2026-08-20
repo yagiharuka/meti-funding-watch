@@ -12,20 +12,22 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
-      - name: Probe candidate historical sources
-        run: node scripts/oneoff-probe-central-history.mjs | tee central-history-probe.log
+          cache: npm
+      - run: npm ci
+      - name: Probe WARP historical sources with strict parser
+        run: node scripts/oneoff-probe-central-history.mjs | tee central-history-warp-probe.log
       - name: Commit probe result for inspection
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add central-history-probe.log
-          git commit -m "chore(audit): record central history probe"
+          git add central-history-warp-probe.log
+          git commit -m "chore(audit): record central WARP probe"
           git pull --rebase origin main
           git push
 
