@@ -2,54 +2,139 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-const worker = await readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8");
-const enhancedWorker = await readFile(new URL("../pages-site/funding-search-enhanced.worker.js", import.meta.url), "utf8");
-const companyUi = await readFile(new URL("../pages-site/company-search-ui.ts", import.meta.url), "utf8");
-const combined = await readFile(new URL("../app/CombinedCompanyResults.tsx", import.meta.url), "utf8");
+import {
+  filterCompanyRecords,
+  groupCompanyRecords,
+  normalizeCompanySearchTerm,
+  resolveCompanyNumbers,
+  summarizeCompanyRows,
+} from "../scripts/company-search.mjs";
 
-const legacyInternalFieldMatcher = /`\$\{row\.organization\} \$\{row\.corporateNumber\} \$\{row\.id\} \$\{row\.sourceKey\}`/;
+function row({
+  id,
+  organization,
+  corporateNumber,
+  stage = "contracted",
+  amount = 100,
+  sourceAgency = "経済産業省",
+  fiscalYear = 2026,
+  program = "テスト事業",
+}) {
+  return {
+    id,
+    organization,
+    corporateNumber,
+    stage,
+    amount,
+    sourceAgency,
+    fiscalYear,
+    program,
+  };
+}
 
-test("company matching never searches internal row ids or source keys", () => {
-  assert.doesNotMatch(page, legacyInternalFieldMatcher);
-  assert.doesNotMatch(worker, legacyInternalFieldMatcher);
-  assert.doesNotMatch(enhancedWorker, legacyInternalFieldMatcher);
+const fixture = [
+  row({ id: "nec-1", organization: "日本電気株式会社", corporateNumber: "7010401022916", amount: 300 }),
+  row({ id: "nec-2", organization: "日本電気株式会社", corporateNumber: "7010401022916", stage: "subsidy_published", amount: 200 }),
+  row({ id: "nec-3", organization: "日本電気株式会社", corporateNumber: "7010401022916", amount: null, fiscalYear: null }),
+  row({ id: "glass-1", organization: "日本電気硝子株式会社", corporateNumber: "5160001001877", amount: 700 }),
+  row({ id: "assoc-1", organization: "一般社団法人日本電気協会", corporateNumber: "8010005004319", amount: 900 }),
+  row({ id: "old-1", organization: "旧テスト株式会社", corporateNumber: "1111111111111", amount: 10, fiscalYear: 2025 }),
+  row({ id: "new-1", organization: "新テスト株式会社", corporateNumber: "1111111111111", amount: 20, fiscalYear: 2026 }),
+  row({ id: "other-1", organization: "株式会社別会社", corporateNumber: "2222222222222", amount: 30 }),
+];
+
+test("name search resolves matching corporations first and never merges their money", () => {
+  const results = filterCompanyRecords(fixture, { query: "日本電気" });
+  const groups = groupCompanyRecords(results);
+
+  assert.deepEqual([...groups.keys()].sort(), [
+    "5160001001877",
+    "7010401022916",
+    "8010005004319",
+  ]);
+  assert.equal(groups.get("7010401022916").length, 3);
+  assert.equal(groups.get("5160001001877").length, 1);
+  assert.equal(groups.get("8010005004319").length, 1);
+
+  const nec = summarizeCompanyRows(groups.get("7010401022916"));
+  const glass = summarizeCompanyRows(groups.get("5160001001877"));
+  const association = summarizeCompanyRows(groups.get("8010005004319"));
+
+  assert.equal(nec.records, 3);
+  assert.equal(glass.records, 1);
+  assert.equal(association.records, 1);
+  assert.equal(nec.byStage.find((item) => item.stage === "contracted").amount, 300);
+  assert.equal(glass.byStage[0].amount, 700);
+  assert.equal(association.byStage[0].amount, 900);
+  assert.notEqual(nec.byStage.find((item) => item.stage === "contracted").amount, 1_900);
 });
 
-test("all Gbiz search paths resolve a name to corporate numbers and use exact 13-digit matches", () => {
+test("13-digit corporate number search is exact", () => {
+  const results = filterCompanyRecords(fixture, { query: "7010401022916" });
+  assert.equal(results.length, 3);
+  assert.ok(results.every((item) => item.corporateNumber === "7010401022916"));
+  assert.equal(filterCompanyRecords(fixture, { query: "701040102291" }).length, 0);
+});
+
+test("name normalization handles Japanese corporate designators and width differences", () => {
+  assert.equal(normalizeCompanySearchTerm("㈱ 日本 電気"), "株式会社日本電気");
+  assert.equal(normalizeCompanySearchTerm("(有) テスト"), "有限会社テスト");
+  assert.deepEqual(
+    [...resolveCompanyNumbers(fixture, "㈱日本電気")],
+    ["7010401022916"],
+  );
+});
+
+test("once a corporate number is identified, old/new names for that number stay together", () => {
+  const oldNameResults = filterCompanyRecords(fixture, { query: "旧テスト" });
+  assert.deepEqual(oldNameResults.map((item) => item.id).sort(), ["new-1", "old-1"]);
+  assert.ok(oldNameResults.every((item) => item.corporateNumber === "1111111111111"));
+});
+
+test("agency, category, and year filters are applied after corporate identification", () => {
+  const filtered = filterCompanyRecords(fixture, {
+    query: "日本電気",
+    stage: "subsidy_published",
+    year: "2026",
+    agency: "経済産業省",
+  });
+  assert.deepEqual(filtered.map((item) => item.id), ["nec-2"]);
+});
+
+test("known plus unknown amount rows always equals the corporation record count", () => {
+  const necRows = filterCompanyRecords(fixture, { query: "7010401022916" });
+  const summary = summarizeCompanyRows(necRows);
+  assert.equal(summary.amountKnownCount + summary.amountUnknownCount, summary.records);
+  assert.equal(summary.amountKnownCount, 2);
+  assert.equal(summary.amountUnknownCount, 1);
+  assert.equal(summary.byStage.find((item) => item.stage === "contracted").amount, 300);
+  assert.equal(summary.byStage.find((item) => item.stage === "subsidy_published").amount, 200);
+});
+
+test("a zero Gbiz match is a finite empty result, not a special failure", () => {
+  const results = filterCompanyRecords(fixture, { query: "Gビズに存在しない法人" });
+  assert.deepEqual(results, []);
+});
+
+test("all three runtime search paths import the same shared matcher", async () => {
+  const [page, worker, enhancedWorker] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8"),
+    readFile(new URL("../pages-site/funding-search-enhanced.worker.js", import.meta.url), "utf8"),
+  ]);
   for (const source of [page, worker, enhancedWorker]) {
-    assert.match(source, /resolveCompanyNumbers/);
-    assert.match(source, /\^\\d\{13\}\$/);
-    assert.match(source, /new Set\(\[normalized\]\)/);
-    assert.match(source, /matched\.add\(row\.corporateNumber\)/);
-    assert.match(source, /matchedCorporateNumbers\.has\(row\.corporateNumber\)/);
+    assert.match(source, /filterCompanyRecords/);
+    assert.doesNotMatch(source, /row\.id} \$\{row\.sourceKey/);
   }
 });
 
-test("company-name normalization handles common Japanese corporate designators", () => {
-  for (const source of [page, worker, enhancedWorker]) {
-    assert.match(source, /㈱/);
-    assert.match(source, /株式会社/);
-    assert.match(source, /㈲/);
-    assert.match(source, /有限会社/);
-  }
-});
-
-test("source tabs remain available when Gbiz has zero matching rows", () => {
-  assert.match(companyUi, /if \(!q \|\| !result\) return clear\(\)/);
-  assert.doesNotMatch(companyUi, /!result\?\.totalRecords/);
-  assert.match(companyUi, /GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。/);
-  assert.match(companyUi, />GビズINFO<\/button>/);
-  assert.match(companyUi, />行政事業レビュー<\/button>/);
-  assert.match(companyUi, />公式資料<\/button>/);
-  assert.doesNotMatch(companyUi, />詳細<\/button>/);
-});
-
-test("mixed-stage and multi-corporation totals are not displayed", () => {
-  assert.doesNotMatch(page, /GビズINFO掲載値合計/);
-  assert.match(page, /<th>情報種別<\/th><th>掲載行<\/th><th>掲載値合計<\/th>/);
-  assert.match(page, /<th>直近5年度<\/th><th>掲載行<\/th><th>金額記載あり<\/th>/);
-  assert.match(companyUi, /意味が異なるため、金額は合計していません/);
-  assert.match(combined, /reviewMatches\.length === 1/);
-  assert.match(combined, /複数法人が一致したため、法人をまたぐ金額は合算しません/);
+test("Pages build contains the stable company-search mount and no mixed Gbiz total label", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const assets = (await readdir(new URL("../dist-pages/assets/", import.meta.url)))
+    .filter((name) => name.endsWith(".js"));
+  const javascript = (await Promise.all(assets.map((name) =>
+    readFile(new URL(`../dist-pages/assets/${name}`, import.meta.url), "utf8")))).join("\n");
+  assert.match(javascript, /company-search-mount/);
+  assert.match(javascript, /GビズINFOでは一致する法人を確認できませんでした/);
+  assert.doesNotMatch(javascript, /GビズINFO掲載値合計/);
 });
