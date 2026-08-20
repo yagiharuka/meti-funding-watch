@@ -1,0 +1,26 @@
+SOURCE smrj-2017-discretionary status=200 bytes=1321060 magic=%PDF-
+node:internal/child_process:285
+      const err = new ErrnoException(exitCode, syscall);
+                  ^
+
+Error: spawn pdftotext ENOENT
+    at ChildProcess._handle.onexit (node:internal/child_process:285:19)
+    at onErrorNT (node:internal/child_process:483:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'spawn pdftotext',
+  path: 'pdftotext',
+  spawnargs: [
+    '-layout',
+    '-nopgbrk',
+    '/tmp/meti-funding-pdf-probe-NiCji1/smrj-2017-discretionary.pdf',
+    '/tmp/meti-funding-pdf-probe-NiCji1/smrj-2017-discretionary.txt'
+  ],
+  cmd: 'pdftotext -layout -nopgbrk /tmp/meti-funding-pdf-probe-NiCji1/smrj-2017-discretionary.pdf /tmp/meti-funding-pdf-probe-NiCji1/smrj-2017-discretionary.txt',
+  stdout: '',
+  stderr: ''
+}
+
+Node.js v22.23.2
+INSTITUTION_PDF_PROBE_EXIT=1
