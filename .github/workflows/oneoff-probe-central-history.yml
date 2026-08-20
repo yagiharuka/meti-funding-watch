@@ -8,14 +8,11 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
-  integrate:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -25,57 +22,26 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run integration with persistent stage diagnostics
-        id: integration
+      - name: Verify historical parser behavior
+        run: node --test tests/official-heisei-date.test.mjs
+      - name: Build verified historical company rows
+        run: node scripts/oneoff-build-meti-legacy-records.mjs
+      - name: Validate generated static corpus
         run: |
-          set +e
-          : > meti-legacy-integration.log
-          final=0
-          run_stage() {
-            name="$1"
-            shift
-            echo "===== $name =====" | tee -a meti-legacy-integration.log
-            "$@" >> meti-legacy-integration.log 2>&1
-            code=$?
-            echo "EXIT $name=$code" | tee -a meti-legacy-integration.log
-            if [ "$code" -ne 0 ]; then final="$code"; return "$code"; fi
-            return 0
-          }
-          run_stage wire node scripts/oneoff-integrate-meti-legacy.mjs || true
-          if [ "$final" -eq 0 ]; then run_stage definitions node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs || true; fi
-          if [ "$final" -eq 0 ]; then run_stage update npm run update:official || true; fi
-          if [ "$final" -eq 0 ]; then run_stage official-tests node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs || true; fi
-          if [ "$final" -eq 0 ]; then run_stage pages npm run test:pages || true; fi
-          echo "FINAL_EXIT=$final" | tee -a meti-legacy-integration.log
-          echo "exit_code=$final" >> "$GITHUB_OUTPUT"
-          cat meti-legacy-integration.log
-          exit 0
-      - name: Commit verified legacy backfill or diagnostics
-        id: commit_data
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const data = JSON.parse(await readFile('data/official-meti-legacy-records.json', 'utf8'));
+          if (data.schemaVersion !== 1 || data.recordCount !== 3598 || data.records.length !== 3598) throw new Error('METI legacy record count mismatch');
+          if (!data.records.some((r) => r.fiscalYear === 2017 && r.category === 'contract_result')) throw new Error('FY2017 contracts missing');
+          if (!data.records.some((r) => r.fiscalYear === 2017 && r.category === 'grant_decision')) throw new Error('FY2017 grants missing');
+          if (data.records.some((r) => r.executorId !== 'meti')) throw new Error('non-METI row in legacy corpus');
+          NODE
+      - name: Commit verified static legacy corpus
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          if [ "${{ steps.integration.outputs.exit_code }}" != "0" ]; then
-            git reset --hard HEAD
-            git add meti-legacy-integration.log
-            git commit -m "chore(audit): record METI legacy integration failure"
-            git pull --rebase origin main
-            git push
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git add scripts/update-official-data.mjs tests/official-meti-legacy.test.mjs package.json data/official data/official-supplement-index.json
+          git add data/official-meti-legacy-records.json
           git diff --cached --check
-          if git diff --cached --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git commit -m "Backfill verified METI headquarters history to FY2017"
+          git commit -m "Add verified METI headquarters company history to FY2017"
           git pull --rebase origin main
           git push
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-      - name: Publish verified Pages build
-        if: steps.commit_data.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run update-data.yml --ref main -f publish_only=true
