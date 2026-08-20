@@ -1,0 +1,216 @@
+/* Mobile-only repair for the GビズINFO company-search summary.
+   The generic .records-table mobile rules turn every summary row into a card and
+   hide the table headers. Summary cells do not carry data-label attributes, so
+   the result becomes a stack of unlabeled numbers. Keep the first aggregate as
+   a compact metric card and render the remaining breakdowns as real tables. */
+
+@media (max-width: 640px) {
+  .records-table[aria-label="企業検索結果サマリー"] {
+    display: block;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table {
+    margin: 0 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(32, 59, 50, .045);
+  }
+
+  /* Overall search result: 2 x 2 metrics + full-width amount. */
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type,
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tbody,
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tr {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type {
+    overflow: hidden;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type caption {
+    display: block;
+    width: 100%;
+    padding: 13px 14px 10px !important;
+    border-bottom: 1px solid #edf0ed;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: left !important;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type thead {
+    display: none;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tbody {
+    gap: 0;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tr {
+    grid-template-columns: 1fr 1fr;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 0;
+    border-right: 1px solid #edf0ed;
+    border-bottom: 1px solid #edf0ed;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(even) {
+    border-right: 0;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(4) {
+    grid-column: 1 / -1;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: #667870;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(1)::before { content: "対象法人"; }
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(2)::before { content: "掲載行"; }
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(3)::before { content: "金額記載あり"; }
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(4)::before { content: "GビズINFO掲載値合計"; }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td strong {
+    display: block;
+    font-size: 15px;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(4) strong {
+    font-family: Georgia, serif;
+    font-size: 18px;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td small {
+    display: block;
+    margin-top: 4px;
+    color: #667870;
+    font-size: 9px;
+    line-height: 1.45;
+  }
+
+  /* Breakdown tables: preserve table headers on phones instead of making
+     each row an unlabeled card. */
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) {
+    display: table;
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) thead {
+    position: static;
+    display: table-header-group;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) tbody {
+    display: table-row-group;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) tr {
+    display: table-row;
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) th,
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) td {
+    display: table-cell;
+    width: auto;
+    min-width: 0;
+    padding: 9px 8px;
+    border: 0;
+    border-bottom: 1px solid #edf0ed;
+    vertical-align: top;
+    font-size: 9px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) th {
+    background: #f7f9f6;
+    color: #596c65;
+    font-size: 8px;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) td::before {
+    content: none;
+    display: none;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) td:nth-child(2),
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) th:nth-child(2) {
+    width: 20%;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) td:nth-child(3),
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) th:nth-child(3) {
+    width: 38%;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:nth-of-type(4) td:first-child,
+  .records-table[aria-label="企業検索結果サマリー"] table:nth-of-type(4) th:first-child {
+    width: 42%;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) .amount,
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) .amount small {
+    text-align: right;
+    white-space: normal;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] table:not(:first-of-type) small {
+    display: block;
+    margin-top: 3px;
+    color: #73827c;
+    font-size: 8px;
+    line-height: 1.35;
+  }
+
+  .records-table[aria-label="企業検索結果サマリー"] .stage-badge {
+    display: inline-flex;
+    max-width: 100%;
+    white-space: normal;
+  }
+}
