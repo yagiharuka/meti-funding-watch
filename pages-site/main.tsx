@@ -7,10 +7,12 @@ import "@/app/globals.css";
 import "./funding-search-bridge";
 import "./company-search-experience.css";
 import "./company-search-alternatives.css";
+import "./company-evidence-ui.css";
 import "./company-search-ui";
 import "./company-search-alternatives";
+import "./company-evidence-ui";
 
-// GitHub Pages production shell; company alternatives are loaded before React mounts.
+// GitHub Pages production shell; search enhancements are installed before React mounts.
 const root = document.getElementById("root");
 
 if (!root) {
