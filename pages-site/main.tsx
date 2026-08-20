@@ -6,7 +6,7 @@ import SiteNotice from "@/app/SiteNotice";
 import "@/app/globals.css";
 import "./funding-search-bridge";
 import "./company-search-experience.css";
-import "./company-search-experience";
+import "./company-search-ui";
 
 const root = document.getElementById("root");
 
