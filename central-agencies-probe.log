@@ -12,13 +12,5 @@
 [nedo 2018 競争性のない随意契約（第2四半期）] 4/4
 [nedo 2018 競争性のない随意契約（第3四半期）] 3/3
 [nedo 2018 競争性のない随意契約（第4四半期）] 4/4
-file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:281
-  throw new Error("中央機関旧資料のID/sourceKeyが重複しています");
-        ^
-
-Error: 中央機関旧資料のID/sourceKeyが重複しています
-    at file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:281:9
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-
-Node.js v22.23.2
-CENTRAL_AGENCY_BUILD_EXIT=1
+central agency history: 599 records (577 SMRJ / 22 NEDO)
+CENTRAL_AGENCY_BUILD_EXIT=0

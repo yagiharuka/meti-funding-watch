@@ -186,7 +186,7 @@ function parseSmrjPages(source, pages) {
       }));
       if (!program) { skipped.missingProgram += 1; continue; }
       const ordinal = Number(anchor.t);
-      const sourceKey = `${source.url}#p${page.pageNumber}-row${ordinal}`;
+      const sourceKey = `${source.url}#p${page.pageNumber}-y${anchor.y.toFixed(6)}-row${ordinal}`;
       records.push({
         id: `central-history-${sha256(sourceKey).slice(0, 24)}`,
         sourceId: source.sourceId, sourceName: source.sourceName, organization, corporateNumber: numbers[0],
