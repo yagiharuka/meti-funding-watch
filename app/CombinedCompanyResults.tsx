@@ -186,7 +186,13 @@ export default function CombinedCompanyResults({ query }: Props) {
                 <td><strong>{reviewMatches.length.toLocaleString("ja-JP")}法人</strong><small>名称・法人番号で一致</small></td>
                 <td>{entries.length.toLocaleString("ja-JP")}行</td>
                 <td>{reviewAmountKnownCount.toLocaleString("ja-JP")}行<small>{reviewAmountUnknownCount ? `／金額欄なし ${reviewAmountUnknownCount.toLocaleString("ja-JP")}行` : ""}</small></td>
-                <td className="amount"><strong>{yen.format(reviewAmountKnownTotal)}</strong><small>企業検索用に重複行を整理した掲載値の単純合計。総支出額とは扱わず、GビズINFOとも合算しません。</small></td>
+                <td className="amount">
+                  {reviewMatches.length === 1 ? (
+                    <><strong>{yen.format(reviewAmountKnownTotal)}</strong><small>当該法人の金額記載行の単純合計。総支出額とは扱わず、GビズINFOとも合算しません。</small></>
+                  ) : (
+                    <><strong>—</strong><small>複数法人が一致したため、法人をまたぐ金額は合算しません。</small></>
+                  )}
+                </td>
               </tr></tbody>
             </table>
           </div>
