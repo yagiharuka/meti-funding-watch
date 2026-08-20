@@ -1,44 +1,79 @@
 import { createHash } from "node:crypto";
+import { parseOfficialWorkbook } from "./update-official-data.mjs";
+import { METI_CANDIDATE_DOCUMENTS } from "./official-meti-anre-history.mjs";
 
 const CAPTURE = "20260602/20260601000000";
 const headers = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
-  accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/html;q=0.9,*/*;q=0.1",
+  accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*;q=0.1",
 };
-const candidates = [
-  ["meti", 2017, "contract", "https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_H29.xlsx"],
-  ["meti", 2017, "grant", "https://www.meti.go.jp/information_2/downloadfiles/subs1704_1709.xlsx"],
-  ["meti", 2019, "contract", "https://www.meti.go.jp/information_2/downloadfiles/buppin_bid_R1.xlsx"],
-  ["meti", 2019, "grant", "https://www.meti.go.jp/information_2/downloadfiles/subs1904_1909.xlsx"],
-  ["jpo", 2017, "contract", "https://www.jpo.go.jp/news/chotatsu/rakusatu/kyosonyusatu/document/2017/2017_ukeoi.xlsx"],
-  ["jpo", 2019, "contract", "https://www.jpo.go.jp/news/chotatsu/rakusatu/kyosonyusatu/document/2019/2019_ukeoi.xlsx"],
-  ["smea", 2017, "grant", "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_hojo_h29fy04_3.html"],
-  ["smea", 2019, "grant", "https://www.chusho.meti.go.jp/koukai/nyusatsu/zuikei/zuikei_hojo_r1fy04_3.html"],
-  ["anre", 2017, "grant", "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2017/2017_4-9.xlsx"],
-  ["anre", 2019, "grant", "https://www.enecho.meti.go.jp/appli/conclusion/hojokinkoufu/2019/2019_4-9.xlsx"],
+const contractSeries = [
+  ["competitive-goods", "buppin_bid"],
+  ["competitive-commission", "itaku_bid"],
+  ["competitive-public-works", "kouji_bid"],
+  ["discretionary-goods", "buppin_zuikei"],
+  ["discretionary-commission", "itaku_zuikei"],
+  ["discretionary-public-works", "kouji_zuikei"],
 ];
-
-function sha256(buffer) { return createHash("sha256").update(buffer).digest("hex"); }
+const candidates = [];
+for (const year of [2017, 2018, 2019, 2020]) {
+  const era = year === 2017 ? "H29" : year === 2018 ? "H30" : year === 2019 ? "R1" : "R2";
+  for (const [seriesId, slug] of contractSeries) {
+    const template = METI_CANDIDATE_DOCUMENTS.find((row) => row.id.endsWith(`-${seriesId}`));
+    candidates.push({ year, type: "contract", seriesId, originalUrl: `https://www.meti.go.jp/information_2/downloadfiles/${slug}_${era}.xlsx`, template });
+  }
+}
+for (const year of [2017, 2018, 2019, 2020, 2021]) {
+  const y = String(year).slice(-2);
+  const next = String(year + 1).slice(-2);
+  for (const half of ["h1", "h2"]) {
+    const suffix = half === "h1" ? `${y}04_${y}09` : `${y}10_${next}03`;
+    const template = METI_CANDIDATE_DOCUMENTS.find((row) => row.id.includes(`grant-decisions-${half}`));
+    candidates.push({ year, type: "grant", seriesId: `grant-decisions-${half}`, originalUrl: `https://www.meti.go.jp/information_2/downloadfiles/subs${suffix}.xlsx`, template });
+  }
+}
 function warp(url) { return `https://warp.ndl.go.jp/${CAPTURE}/${url}`; }
+function sha256(buffer) { return createHash("sha256").update(buffer).digest("hex"); }
 
-async function probe([agency, year, kind, originalUrl]) {
-  const url = warp(originalUrl);
+async function probe(candidate) {
+  const warpUrl = warp(candidate.originalUrl);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const timer = setTimeout(() => controller.abort(), 20000);
   try {
-    const response = await fetch(url, { headers, redirect: "follow", signal: controller.signal });
+    const response = await fetch(warpUrl, { headers, redirect: "follow", signal: controller.signal });
     const buffer = Buffer.from(await response.arrayBuffer());
-    const text = buffer.subarray(0, Math.min(buffer.length, 2000)).toString("utf8");
-    const xlsx = buffer.subarray(0, 4).toString("hex") === "504b0304";
-    const officialHtml = buffer.length > 5000 && /<html|<!doctype/i.test(text) && /契約|補助金|交付決定/.test(buffer.toString("utf8"));
-    return { agency, year, kind, originalUrl, warpUrl: url, status: response.status, finalUrl: response.url, bytes: buffer.length, sha256: sha256(buffer), xlsx, officialHtml };
+    if (!response.ok || buffer.subarray(0, 4).toString("hex") !== "504b0304") {
+      return { ...candidate, template: undefined, warpUrl, status: response.status, bytes: buffer.length, sha256: sha256(buffer), parsed: false, reason: "not-xlsx" };
+    }
+    const document = {
+      ...candidate.template,
+      id: `probe-meti-${candidate.year}-${candidate.seriesId}`,
+      fiscalYear: candidate.year,
+      url: candidate.originalUrl,
+      sourcePageUrl: candidate.originalUrl,
+      expectedSheetCount: undefined,
+      expectedNonRecordRows: undefined,
+      evidenceReceipt: undefined,
+      archiveProvider: undefined,
+      archiveExpectedBytes: undefined,
+      archiveExpectedSha256: undefined,
+      archiveExpectedRecordCount: undefined,
+      verifiedFallback: undefined,
+    };
+    try {
+      const rows = await parseOfficialWorkbook(buffer, document);
+      return { year: candidate.year, type: candidate.type, seriesId: candidate.seriesId, originalUrl: candidate.originalUrl, warpUrl, status: response.status, bytes: buffer.length, sha256: sha256(buffer), parsed: true, records: rows.length };
+    } catch (error) {
+      return { year: candidate.year, type: candidate.type, seriesId: candidate.seriesId, originalUrl: candidate.originalUrl, warpUrl, status: response.status, bytes: buffer.length, sha256: sha256(buffer), parsed: false, reason: error instanceof Error ? error.message : String(error) };
+    }
   } catch (error) {
-    return { agency, year, kind, originalUrl, warpUrl: url, status: null, bytes: 0, xlsx: false, officialHtml: false, error: error instanceof Error ? error.message : String(error) };
+    return { year: candidate.year, type: candidate.type, seriesId: candidate.seriesId, originalUrl: candidate.originalUrl, warpUrl, status: null, bytes: 0, parsed: false, reason: error instanceof Error ? error.message : String(error) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-const results = await Promise.all(candidates.map(probe));
-console.log(`CENTRAL_WARP_QUICK_SUMMARY=${JSON.stringify({ total: results.length, actual: results.filter((r) => r.xlsx || r.officialHtml).length })}`);
-for (const row of results) console.log(`CENTRAL_WARP_QUICK=${JSON.stringify(row)}`);
+const results = [];
+for (let i = 0; i < candidates.length; i += 6) results.push(...await Promise.all(candidates.slice(i, i + 6).map(probe)));
+console.log(`METI_HISTORY_STRICT_SUMMARY=${JSON.stringify({ total: results.length, parsed: results.filter((r) => r.parsed).length, rejected: results.filter((r) => !r.parsed).length, rows: results.filter((r) => r.parsed).reduce((sum, r) => sum + r.records, 0) })}`);
+for (const row of results) console.log(`${row.parsed ? "METI_HISTORY_VERIFIED" : "METI_HISTORY_REJECTED"}=${JSON.stringify(row)}`);
