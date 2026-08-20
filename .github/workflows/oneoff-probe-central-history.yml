@@ -10,9 +10,9 @@ permissions:
   contents: write
 
 jobs:
-  harden:
+  build-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -22,16 +22,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Add Heisei date support and regression test
-        run: node scripts/oneoff-patch-heisei-date.mjs
-      - name: Verify historical date parsing
-        run: node --test tests/official-heisei-date.test.mjs
-      - name: Commit verified parser extension
+      - name: Build pinned METI legacy evidence
+        run: node scripts/oneoff-build-meti-legacy-evidence.mjs
+      - name: Commit verified evidence
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add scripts/update-official-data.mjs tests/official-heisei-date.test.mjs
+          git add data/official-meti-legacy-evidence.json meti-legacy-rejected.json
           git diff --cached --check
-          git commit -m "Support Heisei dates in official history"
+          git commit -m "Add verified METI history back to FY2017"
           git pull --rebase origin main
           git push
