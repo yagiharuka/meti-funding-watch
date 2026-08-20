@@ -1,0 +1,67 @@
+name: One-off verify Pages publication
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/oneoff-verify-pages-publication.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PAGES_URL: https://yagiharuka.github.io/meti-funding-watch
+      EXPECTED_COMMIT: bde799f23617bb581646d1b7592b34e5c71e0e2d
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+
+      - name: Wait for expected verified release to be live
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl -fsS --retry 2 --retry-delay 1 "$PAGES_URL/release.json?verify=${GITHUB_RUN_ID}-${attempt}" -o /tmp/release.json; then
+              live_commit=$(node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync("/tmp/release.json","utf8")); process.stdout.write(v.commitSha || "")')
+              echo "attempt=$attempt live_commit=$live_commit"
+              if [[ "$live_commit" == "$EXPECTED_COMMIT" ]]; then
+                curl -fsS --retry 2 --retry-delay 1 "$PAGES_URL/?verify=${GITHUB_RUN_ID}-${attempt}" -o /tmp/index.html
+                test -s /tmp/index.html
+                mkdir -p audit
+                node --input-type=module <<'NODE'
+                import { readFile, writeFile } from "node:fs/promises";
+                const release = JSON.parse(await readFile("/tmp/release.json", "utf8"));
+                const evidence = {
+                  schemaVersion: 1,
+                  checkedAt: new Date().toISOString(),
+                  pagesUrl: process.env.PAGES_URL,
+                  expectedCommit: process.env.EXPECTED_COMMIT,
+                  liveCommit: release.commitSha,
+                  liveGeneratedAt: release.generatedAt,
+                  liveRecordCount: release.recordCount,
+                  homepageFetched: true,
+                };
+                await writeFile("audit/pages-publication-2026-08-20.json", `${JSON.stringify(evidence, null, 2)}\n`);
+                NODE
+                exit 0
+              fi
+            fi
+            sleep 10
+          done
+          echo "Expected Pages release did not become live in time" >&2
+          exit 1
+
+      - name: Commit live publication evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/pages-publication-2026-08-20.json
+          git diff --cached --check
+          git commit -m "Record verified Pages publication evidence"
+          git push
