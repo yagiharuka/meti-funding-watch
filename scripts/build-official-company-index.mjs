@@ -1,12 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
-const MIN_FISCAL_YEAR = 2021;
-const EXCLUDED_EXECUTORS = new Set(["okinawa"]);
-const SOURCE_ORDER = [
-  "meti",
-  "anre",
-  "smea",
-  "jpo",
+const MIN_FISCAL_YEAR = 2017;
+const EXCLUDED_EXECUTORS = new Set([
   "hokkaido",
   "tohoku",
   "kanto",
@@ -15,6 +10,13 @@ const SOURCE_ORDER = [
   "chugoku",
   "shikoku",
   "kyushu",
+  "okinawa",
+]);
+const SOURCE_ORDER = [
+  "meti",
+  "anre",
+  "smea",
+  "jpo",
   "nedo",
   "smrj",
 ];
@@ -61,7 +63,8 @@ function validHttps(value) {
 const executorMetadata = officialManifest.coverage?.executors ?? {};
 const governmentRecords = officialRows
   .filter((row) =>
-    !EXCLUDED_EXECUTORS.has(row.executorId)
+    SOURCE_ORDER.includes(row.executorId)
+    && !EXCLUDED_EXECUTORS.has(row.executorId)
     && Number(row.fiscalYear) >= MIN_FISCAL_YEAR
     && validAmount(row.amount)
     && row.organization
@@ -134,7 +137,7 @@ for (const row of records) {
 
 const sourceNotes = new Map();
 for (const [id, metadata] of Object.entries(executorMetadata)) {
-  if (EXCLUDED_EXECUTORS.has(id)) continue;
+  if (!SOURCE_ORDER.includes(id) || EXCLUDED_EXECUTORS.has(id)) continue;
   const count = records.filter((row) => row.sourceId === id).length;
   if (!count) continue;
   const fiscalYears = Array.isArray(metadata.fiscalYears)
@@ -142,12 +145,13 @@ for (const [id, metadata] of Object.entries(executorMetadata)) {
     : [];
   const contractStatus = metadata.contractResults?.status ?? "契約結果の収録状況不明";
   const grantStatus = metadata.grantDecisions?.status ?? "交付決定の収録状況不明";
+  const actualYears = fiscalYears.length ? fiscalYears.join("・") : "確認済み年度";
   sourceNotes.set(id, {
     id,
     name: metadata.name,
     fiscalYears,
     recordCount: count,
-    coverageNote: `${metadata.name}の検証済み公式公表資料から、${MIN_FISCAL_YEAR}年度以降で受取先と金額を確認できた行だけを企業検索に使用。契約結果: ${contractStatus}／交付決定: ${grantStatus}`,
+    coverageNote: `対象方針は2017年度以降。現在この索引で確認済みなのは${actualYears}年度の公表資料です。契約結果: ${contractStatus}／交付決定: ${grantStatus}`,
   });
 }
 for (const source of seeds.sources) {
@@ -173,7 +177,7 @@ const output = {
   recordCount: records.length,
   sourceCount: sources.length,
   excludedExecutors: [...EXCLUDED_EXECUTORS],
-  scopeNote: "企業検索用の公式資料索引。経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、各地方経済産業局（沖縄は対象外）の既存検証済み公表資料と、NEDO・中小企業基盤整備機構の確認済み補足情報を使用する。各機関の全年度・全制度・全契約を網羅するものではなく、ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
+  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁の既存検証済み公表資料と、NEDO・中小企業基盤整備機構の確認済み補足情報を使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。現時点では機関ごとに実際の収録開始年度が異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
   sources,
   records,
 };
