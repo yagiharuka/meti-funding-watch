@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  filterCompanyEntities,
   filterCompanyRecords,
   groupCompanyRecords,
   normalizeCompanyIdentity,
@@ -118,6 +119,25 @@ test("once a corporate number is identified, old/new names for that number stay 
   const oldNameResults = filterCompanyRecords(fixture, { query: "旧テスト" });
   assert.deepEqual(oldNameResults.map((item) => item.id).sort(), ["new-1", "old-1"]);
   assert.ok(oldNameResults.every((item) => item.corporateNumber === "1111111111111"));
+});
+
+test("review aliases use the same exact-first identity rule without a new alias dictionary", () => {
+  const recipients = [
+    {
+      organization: "新テスト株式会社",
+      corporateNumber: "1111111111111",
+      aliases: ["旧テスト株式会社", "新テスト株式会社"],
+    },
+    {
+      organization: "新テスト研究株式会社",
+      corporateNumber: "3333333333333",
+      aliases: ["新テスト研究株式会社"],
+    },
+  ];
+  const exact = filterCompanyEntities(recipients, "旧テスト");
+  assert.deepEqual(exact.map((item) => item.corporateNumber), ["1111111111111"]);
+  const partial = filterCompanyEntities(recipients, "テスト");
+  assert.deepEqual(partial.map((item) => item.corporateNumber).sort(), ["1111111111111", "3333333333333"]);
 });
 
 test("agency, category, and year filters are applied after corporate identification", () => {
