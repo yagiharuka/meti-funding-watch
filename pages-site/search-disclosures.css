@@ -1,0 +1,155 @@
+/* Search result disclosures for the GitHub Pages build.
+   Keep secondary breakdowns and the full GビズINFO detail list collapsed until
+   the user asks for them. Expanded tables retain visible column headings. */
+
+.search-disclosure-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 1440px;
+  margin: 0 auto 16px;
+}
+
+.search-disclosure-button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #bdcbc1;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--green-dark);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.search-disclosure-button:hover {
+  border-color: var(--green);
+}
+
+.search-disclosure-button[aria-expanded="true"] {
+  border-color: var(--green);
+  background: #edf7f1;
+}
+
+#records.search-folds-ready .records-table[aria-label="企業検索結果サマリー"] > table.search-fold-year,
+#records.search-folds-ready .records-table[aria-label="企業検索結果サマリー"] > table.search-fold-programs {
+  display: none;
+}
+
+#records.search-folds-ready.show-search-year .records-table[aria-label="企業検索結果サマリー"] > table.search-fold-year,
+#records.search-folds-ready.show-search-programs .records-table[aria-label="企業検索結果サマリー"] > table.search-fold-programs {
+  display: table;
+}
+
+#records.search-folds-ready > .result-bar,
+#records.search-folds-ready > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"],
+#records.search-folds-ready > .pagination {
+  display: none;
+}
+
+#records.search-folds-ready.show-search-details > .result-bar {
+  display: flex;
+}
+
+#records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] {
+  display: block;
+}
+
+#records.search-folds-ready.show-search-details > .pagination {
+  display: flex;
+}
+
+@media (max-width: 640px) {
+  .search-disclosure-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-bottom: 14px;
+  }
+
+  .search-disclosure-button {
+    width: 100%;
+    border-radius: 12px;
+    text-align: left;
+  }
+
+  /* The two summary breakdown tables stay real tables on phones, so their
+     thead remains visible when expanded. */
+  #records.search-folds-ready.show-search-year .records-table[aria-label="企業検索結果サマリー"] > table.search-fold-year,
+  #records.search-folds-ready.show-search-programs .records-table[aria-label="企業検索結果サマリー"] > table.search-fold-programs {
+    display: table;
+  }
+
+  /* Full detail is intentionally horizontally scrollable on phones rather
+     than converted to unlabeled cards. This preserves the visible thead. */
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(32, 59, 50, .05);
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] table {
+    display: table;
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] thead {
+    position: static;
+    display: table-header-group;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] tbody {
+    display: table-row-group;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] tr {
+    display: table-row;
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] th,
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] td {
+    display: table-cell;
+    width: auto;
+    min-width: 0;
+    padding: 10px 11px;
+    border-bottom: 1px solid #edf0ed;
+    vertical-align: top;
+    font-size: 10px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] th {
+    background: #f7f9f6;
+    color: #596c65;
+    font-size: 9px;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] td::before {
+    content: none;
+    display: none;
+  }
+
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] .amount,
+  #records.search-folds-ready.show-search-details > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"] .amount small {
+    text-align: left;
+    white-space: normal;
+  }
+}
