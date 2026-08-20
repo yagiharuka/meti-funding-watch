@@ -21,7 +21,13 @@ jobs:
         with:
           node-version: 22
       - name: Probe PDF layouts
-        run: node scripts/oneoff-probe-institution-pdfs.mjs > institution-pdf-layout.log 2>&1
+        run: |
+          set +e
+          node scripts/oneoff-probe-institution-pdfs.mjs > institution-pdf-layout.log 2>&1
+          code=$?
+          echo "INSTITUTION_PDF_PROBE_EXIT=$code" >> institution-pdf-layout.log
+          cat institution-pdf-layout.log
+          exit 0
       - name: Commit diagnostics
         run: |
           git config user.name github-actions[bot]
