@@ -1223,6 +1223,8 @@ function parseDate(value) {
   if (match) return validDate(Number(match[1]), Number(match[2]), Number(match[3]));
   match = text.match(/^令和(\d{1,2})年(\d{1,2})月(\d{1,2})日$/);
   if (match) return validDate(2018 + Number(match[1]), Number(match[2]), Number(match[3]));
+  match = text.match(/^平成(\d{1,2})年(\d{1,2})月(\d{1,2})日$/);
+  if (match) return validDate(1988 + Number(match[1]), Number(match[2]), Number(match[3]));
   match = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (match) return validDate(Number(match[1]), Number(match[2]), Number(match[3]));
   return null;
