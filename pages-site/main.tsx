@@ -8,6 +8,7 @@ import "./funding-search-bridge";
 import "./company-search-experience.css";
 import "./company-search-ui";
 
+// This entrypoint is the GitHub Pages production shell.
 const root = document.getElementById("root");
 
 if (!root) {
