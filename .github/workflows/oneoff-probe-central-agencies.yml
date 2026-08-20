@@ -1,4 +1,4 @@
-name: One-off probe central agency history
+name: One-off build central agency history
 
 on:
   push:
@@ -10,9 +10,9 @@ permissions:
   contents: write
 
 jobs:
-  probe:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -22,13 +22,22 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Probe PDFs
-        run: node scripts/oneoff-probe-smrj-nedo-history.mjs > central-agencies-probe.log 2>&1
-      - name: Commit diagnostics
+      - name: Extract historical official rows
+        run: |
+          set +e
+          node scripts/oneoff-build-smrj-nedo-history.mjs > central-agencies-probe.log 2>&1
+          code=$?
+          echo "CENTRAL_AGENCY_BUILD_EXIT=$code" >> central-agencies-probe.log
+          cat central-agencies-probe.log
+          exit 0
+      - name: Commit extraction result or diagnostics
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add central-agencies-probe.log
-          git commit -m "chore(audit): record central agency PDF probe"
+          if test -f data/official-central-history.json; then
+            git add data/official-central-history.json
+          fi
+          git commit -m "chore(audit): build central agency history"
           git pull --rebase origin main
           git push
