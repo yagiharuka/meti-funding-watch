@@ -21,7 +21,13 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Probe WARP historical sources with strict parser
-        run: node scripts/oneoff-probe-central-history.mjs | tee central-history-warp-probe.log
+        run: |
+          set +e
+          node scripts/oneoff-probe-central-history.mjs > central-history-warp-probe.log 2>&1
+          code=$?
+          echo "CENTRAL_WARP_PROBE_EXIT=$code" >> central-history-warp-probe.log
+          cat central-history-warp-probe.log
+          exit 0
       - name: Commit probe result for inspection
         run: |
           git config user.name github-actions[bot]
