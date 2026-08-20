@@ -92,10 +92,12 @@ function render() {
   if (!records || !anchor) { frame = requestAnimationFrame(render); return; }
   const { q, result } = pending;
   const orgs = result.organizationSummaries ?? [];
-  if (!orgs.length) return clear();
   let ui = document.getElementById("company-search-experience");
   if (!ui) { ui = document.createElement("section"); ui.id = "company-search-experience"; anchor.before(ui); }
-  ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div><div class="company-search-organization-list">${orgs.map(card).join("")}</div></div>`;
+  const gbizBody = orgs.length
+    ? `<div class="company-search-organization-list">${orgs.map(card).join("")}</div>`
+    : '<p class="filter-note">GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。</p>';
+  ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div>${gbizBody}</div>`;
   records.classList.add("enhanced-company-search-active");
   series = "gbiz";
   pending = null;
@@ -117,7 +119,7 @@ function clear() {
 window.addEventListener("meti-funding-search-result", ((e: SearchEvent) => {
   const result = e.detail?.message?.result;
   const q = e.detail?.parameters ? (new URLSearchParams(e.detail.parameters).get("q") ?? "").trim() : "";
-  if (!q || !result?.totalRecords) return clear();
+  if (!q || !result) return clear();
   pending = { q, result };
   schedule();
 }) as EventListener);
