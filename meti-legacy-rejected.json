@@ -1,0 +1,33 @@
+[
+  {
+    "id": "meti-2017-competitive-public-works",
+    "reason": "not-xlsx:404",
+    "bytes": 2888
+  },
+  {
+    "id": "meti-2017-discretionary-goods",
+    "reason": "meti-2017-discretionary-goods/３月随契（物品等) /33行目: 必須値programが空です"
+  },
+  {
+    "id": "meti-2017-discretionary-commission",
+    "reason": "meti-2017-discretionary-commission/7月随契（委託費）/137行目: 必須値programが空です"
+  },
+  {
+    "id": "meti-2017-discretionary-public-works",
+    "reason": "not-xlsx:404",
+    "bytes": 2897
+  },
+  {
+    "id": "meti-2018-competitive-goods",
+    "reason": "meti-2018-competitive-goods/５月競争（物品等）/4行目: 日付を解釈できません: 2018年05年16日"
+  },
+  {
+    "id": "meti-2019-grant-decisions-h1",
+    "reason": "meti-2019-grant-decisions-h1/４月～９月/109行目: 日付を解釈できません: 令和元年05月09日"
+  },
+  {
+    "id": "meti-2019-grant-decisions-h2",
+    "reason": "not-xlsx:404",
+    "bytes": 2888
+  }
+]
