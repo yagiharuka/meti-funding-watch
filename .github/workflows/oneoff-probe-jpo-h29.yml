@@ -1,0 +1,39 @@
+name: One-off probe JPO FY2017
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probe-jpo-h29-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Probe JPO H29 result PDFs
+        run: |
+          set +e
+          node scripts/oneoff-probe-jpo-h29.mjs > jpo-h29-probe.log 2>&1
+          echo "JPO_H29_EXIT=$?" >> jpo-h29-probe.log
+          cat jpo-h29-probe.log
+          exit 0
+      - name: Commit diagnostics
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add jpo-h29-probe.log
+          git commit -m "chore(audit): record JPO FY2017 probe"
+          git pull --rebase origin main
+          git push
