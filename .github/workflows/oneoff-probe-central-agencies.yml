@@ -22,8 +22,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Apply verified SMRJ geometry fix
-        run: node scripts/oneoff-patch-smrj-parser.mjs
+      - name: Make PDF row evidence keys unique
+        run: node scripts/oneoff-fix-central-history-key.mjs
       - name: Extract historical official rows
         run: |
           set +e
@@ -40,6 +40,6 @@ jobs:
           if test -f data/official-central-history.json; then
             git add data/official-central-history.json
           fi
-          git commit -m "chore(audit): build central agency history v2"
+          git commit -m "chore(audit): build central agency history v3"
           git pull --rebase origin main
           git push
