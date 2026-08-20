@@ -7,7 +7,7 @@ on:
       - ".github/workflows/oneoff-probe-central-history.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -18,6 +18,15 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
-      - run: node scripts/oneoff-probe-central-history.mjs
+      - name: Probe candidate historical sources
+        run: node scripts/oneoff-probe-central-history.mjs | tee central-history-probe.log
+      - name: Commit probe result for inspection
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add central-history-probe.log
+          git commit -m "chore(audit): record central history probe"
+          git pull --rebase origin main
+          git push
 
-# Triggered after workflow exists on main.
+# Result is temporary and will be removed after inspection.
