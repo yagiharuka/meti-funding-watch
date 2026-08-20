@@ -1,0 +1,421 @@
+/* GitHub Pages company-search experience.
+   The original aggregate summary is retained only as React state plumbing and is
+   never displayed. Monetary values are shown per corporate number and per type. */
+
+#records > .records-table[aria-label="企業検索結果サマリー"] {
+  display: none !important;
+}
+
+#company-search-experience {
+  max-width: 1440px;
+  margin: 18px auto 20px;
+}
+
+.company-search-series-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 16px;
+  border: 1px solid #d9e1dc;
+  border-radius: 14px;
+  background: #f5f7f5;
+}
+
+.company-search-series-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #51635d;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.company-search-series-tabs button[aria-selected="true"] {
+  background: #fff;
+  color: var(--green-dark);
+  box-shadow: 0 2px 10px rgba(28, 58, 48, .08);
+}
+
+.company-search-query-heading {
+  margin-bottom: 12px;
+}
+
+.company-search-query-heading h3 {
+  margin: 3px 0 4px;
+  color: var(--ink);
+  font-size: clamp(20px, 3vw, 30px);
+  line-height: 1.25;
+}
+
+.company-search-query-heading p:not(.eyebrow) {
+  margin: 0;
+  color: #52635d;
+  font-size: 12px;
+}
+
+.company-search-query-heading p strong {
+  color: var(--green-dark);
+  font-size: 15px;
+}
+
+.company-search-warning {
+  margin-top: 8px !important;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff5df;
+  color: #71571a !important;
+}
+
+.company-search-organization-list {
+  display: grid;
+  gap: 12px;
+}
+
+.company-search-organization-card {
+  border: 1px solid #d9e1dc;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 9px 24px rgba(28, 58, 48, .055);
+  overflow: hidden;
+}
+
+.company-search-organization-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #edf0ed;
+}
+
+.company-search-organization-header h4 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.company-search-organization-header p {
+  margin: 0;
+  color: #687872;
+  font-size: 10px;
+}
+
+.company-search-organization-header p strong {
+  color: #3c4d47;
+  letter-spacing: .04em;
+}
+
+.company-search-record-count {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #edf7f1;
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.company-search-funding-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: #edf0ed;
+}
+
+.company-search-funding-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "kind count"
+    "amount amount"
+    "note note";
+  gap: 3px 10px;
+  min-width: 0;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.company-search-funding-kind {
+  grid-area: kind;
+  color: #4f625a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.company-search-count {
+  grid-area: count;
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.company-search-amount {
+  grid-area: amount;
+  margin-top: 3px;
+  color: var(--green-dark);
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.company-search-amount.empty {
+  color: #91a099;
+}
+
+.company-search-funding-line small {
+  grid-area: note;
+  color: #76857f;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.company-search-unknown-line {
+  background: #fafbfa;
+}
+
+.company-search-no-total {
+  margin: 0;
+  padding: 10px 16px 0;
+  color: #687872;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.company-search-disclosure-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 12px 16px 14px;
+}
+
+.company-search-disclosure-button,
+.company-search-corp-only {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #bdcbc1;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.company-search-disclosure-button[aria-expanded="true"] {
+  border-color: var(--green);
+  background: #edf7f1;
+}
+
+.company-search-fold[hidden] {
+  display: none !important;
+}
+
+.company-search-fold {
+  padding: 0 16px 16px;
+}
+
+.company-search-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e4e9e5;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.company-search-breakdown-table {
+  display: table !important;
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.company-search-detail-table {
+  min-width: 980px;
+}
+
+.company-search-breakdown-table thead {
+  display: table-header-group !important;
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  clip: auto !important;
+  overflow: visible !important;
+}
+
+.company-search-breakdown-table tbody {
+  display: table-row-group !important;
+}
+
+.company-search-breakdown-table tr {
+  display: table-row !important;
+  width: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.company-search-breakdown-table th,
+.company-search-breakdown-table td {
+  display: table-cell !important;
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 10px 11px !important;
+  border-bottom: 1px solid #edf0ed;
+  vertical-align: top;
+  font-size: 10px !important;
+  line-height: 1.5;
+  text-align: left !important;
+  overflow-wrap: anywhere;
+}
+
+.company-search-breakdown-table th {
+  background: #f7f9f6;
+  color: #596c65;
+  font-size: 9px !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.company-search-breakdown-table td::before {
+  display: none !important;
+  content: none !important;
+}
+
+.company-search-breakdown-table td small {
+  display: block;
+  margin-top: 2px;
+  color: #7b8984;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.company-search-fold-note {
+  margin: 8px 0 0;
+  color: #677771;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.company-search-corp-only {
+  min-height: 30px;
+  margin-left: 6px;
+}
+
+#records.enhanced-company-search-active > .result-bar,
+#records.enhanced-company-search-active > .records-table[aria-label="GビズINFO調達（委託を含む）・補助金掲載情報一覧"],
+#records.enhanced-company-search-active > .pagination,
+#records.enhanced-company-search-active > .search-disclosure-controls {
+  display: none !important;
+}
+
+#records.enhanced-company-search-active[data-company-series="gbiz"] > section[aria-labelledby="combined-company-review-title"] {
+  display: none !important;
+}
+
+#records.enhanced-company-search-active[data-company-series="review"] .company-search-gbiz-panel,
+#records.enhanced-company-search-active[data-company-series="official"] .company-search-gbiz-panel {
+  display: none !important;
+}
+
+#records.enhanced-company-search-active[data-company-series="review"] > section[aria-labelledby="combined-company-review-title"],
+#records.enhanced-company-search-active[data-company-series="official"] > section[aria-labelledby="combined-company-review-title"] {
+  display: block !important;
+  margin-top: 0 !important;
+}
+
+#records[data-company-series="review"] section[aria-labelledby="combined-company-review-title"] .combined-series-official-node,
+#records[data-company-series="official"] section[aria-labelledby="combined-company-review-title"] .combined-series-review-node {
+  display: none !important;
+}
+
+.review-multi-corp-summary th:nth-child(4),
+.review-multi-corp-summary td:nth-child(4) {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  #company-search-experience {
+    margin-top: 14px;
+  }
+
+  .company-search-series-tabs {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .company-search-series-tabs button {
+    min-height: 42px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+
+  .company-search-query-heading h3 {
+    font-size: 21px;
+  }
+
+  .company-search-organization-header {
+    display: block;
+    padding: 14px;
+  }
+
+  .company-search-record-count {
+    display: inline-block;
+    margin-top: 8px;
+  }
+
+  .company-search-funding-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .company-search-funding-line {
+    grid-template-columns: minmax(0, 1fr) auto minmax(95px, auto);
+    grid-template-areas:
+      "kind count amount"
+      "note note note";
+    align-items: baseline;
+    padding: 12px 14px;
+  }
+
+  .company-search-amount {
+    margin-top: 0;
+    font-size: 18px;
+    text-align: right;
+  }
+
+  .company-search-no-total {
+    padding: 10px 14px 0;
+  }
+
+  .company-search-disclosure-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 10px 14px 14px;
+  }
+
+  .company-search-disclosure-button {
+    width: 100%;
+    min-height: 42px;
+    text-align: left;
+  }
+
+  .company-search-fold {
+    padding: 0 14px 14px;
+  }
+
+  .company-search-breakdown-table {
+    min-width: 680px;
+  }
+
+  .company-search-detail-table {
+    min-width: 920px;
+  }
+}
