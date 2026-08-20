@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   filterCompanyRecords,
   groupCompanyRecords,
+  normalizeCompanyIdentity,
   normalizeCompanySearchTerm,
   resolveCompanyNumbers,
   summarizeCompanyRows,
@@ -43,8 +44,14 @@ const fixture = [
   row({ id: "other-1", organization: "株式会社別会社", corporateNumber: "2222222222222", amount: 30 }),
 ];
 
-test("name search resolves matching corporations first and never merges their money", () => {
+test("an exact normalized company identity wins over broader partial-name matches", () => {
   const results = filterCompanyRecords(fixture, { query: "日本電気" });
+  assert.equal(results.length, 3);
+  assert.ok(results.every((item) => item.corporateNumber === "7010401022916"));
+});
+
+test("an ambiguous partial name keeps each matched corporation separate", () => {
+  const results = filterCompanyRecords(fixture, { query: "日本電" });
   const groups = groupCompanyRecords(results);
 
   assert.deepEqual([...groups.keys()].sort(), [
@@ -78,7 +85,9 @@ test("13-digit corporate number search is exact", () => {
 
 test("name normalization handles Japanese corporate designators and width differences", () => {
   assert.equal(normalizeCompanySearchTerm("㈱ 日本 電気"), "株式会社日本電気");
-  assert.equal(normalizeCompanySearchTerm("(有) テスト"), "有限会社テスト");
+  assert.equal(normalizeCompanyIdentity("㈱ 日本 電気"), "日本電気");
+  assert.equal(normalizeCompanyIdentity("日本電気株式会社"), "日本電気");
+  assert.equal(normalizeCompanyIdentity("(有) テスト"), "テスト");
   assert.deepEqual(
     [...resolveCompanyNumbers(fixture, "㈱日本電気")],
     ["7010401022916"],
