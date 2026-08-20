@@ -42,8 +42,10 @@ test("exact company identities resolve to the expected corporate number in all p
   const cases = [
     ["日本電気", "7010401022916"],
     ["富士通", "1020001071491"],
+    ["富士", "8040002102378"],
     ["三菱総合研究所", "6010001030403"],
     ["NTTデータ", "6010601062093"],
+    ["NTT", "7010001065142"],
     ["デロイトトーマツ", "3010001076738"],
     ["みずほ銀行", "6010001008845"],
   ];
@@ -65,10 +67,9 @@ test("exact company identities resolve to the expected corporate number in all p
 test("ambiguous company terms remain separate corporate-number groups on real data", () => {
   const cases = [
     ["日本電", 2],
-    ["富士", 2],
     ["三菱", 3],
-    ["NTT", 2],
     ["デロイト", 2],
+    ["みずほ", 2],
   ];
 
   for (const [query, minimumGroups] of cases) {
@@ -89,8 +90,10 @@ test("real-data corporate-number searches are exact", () => {
   for (const corporateNumber of [
     "7010401022916",
     "1020001071491",
+    "8040002102378",
     "6010001030403",
     "6010601062093",
+    "7010001065142",
     "3010001076738",
     "6010001008845",
   ]) {
