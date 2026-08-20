@@ -1,4 +1,4 @@
-name: One-off probe central official history
+name: One-off central history hardening
 
 on:
   push:
@@ -10,31 +10,28 @@ permissions:
   contents: write
 
 jobs:
-  probe:
+  harden:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Probe WARP historical sources with strict parser
-        run: |
-          set +e
-          node scripts/oneoff-probe-central-history.mjs > central-history-warp-probe.log 2>&1
-          code=$?
-          echo "CENTRAL_WARP_PROBE_EXIT=$code" >> central-history-warp-probe.log
-          cat central-history-warp-probe.log
-          exit 0
-      - name: Commit probe result for inspection
+      - name: Add Heisei date support and regression test
+        run: node scripts/oneoff-patch-heisei-date.mjs
+      - name: Verify historical date parsing
+        run: node --test tests/official-heisei-date.test.mjs
+      - name: Commit verified parser extension
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add central-history-warp-probe.log
-          git commit -m "chore(audit): record central WARP probe"
+          git add scripts/update-official-data.mjs tests/official-heisei-date.test.mjs
+          git diff --cached --check
+          git commit -m "Support Heisei dates in official history"
           git pull --rebase origin main
           git push
-
-# Result is temporary and will be removed after inspection.
