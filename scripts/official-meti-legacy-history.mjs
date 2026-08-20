@@ -32,6 +32,7 @@ export const METI_LEGACY_OFFICIAL_DOCUMENTS = Object.freeze(evidence.records.map
   url: receipt.url,
   originalUrl: receipt.originalUrl,
   format: "xlsx",
+  expectedSheetCount: receipt.expectedSheetCount,
   discoveryStatus: "archived_official_file",
   coverageClaim: receipt.category === "contract_result"
     ? "本省の保存済み公式年度XLSXに掲載された直接契約行"
@@ -70,7 +71,7 @@ function validateEvidence(value) {
   const ids = new Set();
   let recordCount = 0;
   for (const receipt of value.records) {
-    const keys = ["amountStage", "category", "expectedBytes", "expectedRecordCount", "expectedSha256", "fiscalYear", "id", "kind", "originalUrl", "publicWorks", "sourcePageUrl", "url"];
+    const keys = ["amountStage", "category", "expectedBytes", "expectedRecordCount", "expectedSha256", "expectedSheetCount", "fiscalYear", "id", "kind", "originalUrl", "publicWorks", "sourcePageUrl", "url"];
     if (!receipt || typeof receipt !== "object" || JSON.stringify(Object.keys(receipt).sort()) !== JSON.stringify(keys)) throw new Error("本省旧資料receiptのキーが不正です");
     if (typeof receipt.id !== "string" || ids.has(receipt.id) || !/^meti-20(?:17|18|19|20|21)-/.test(receipt.id)) throw new Error(`${receipt.id}: 本省旧資料IDが不正または重複しています`);
     ids.add(receipt.id);
@@ -80,12 +81,14 @@ function validateEvidence(value) {
     if (typeof receipt.originalUrl !== "string" || !/^https:\/\/www\.meti\.go\.jp\/information_2\/downloadfiles\/[A-Za-z0-9_]+\.xlsx$/.test(receipt.originalUrl)) throw new Error(`${receipt.id}: 原本URLが不正です`);
     if (receipt.url !== `https://warp.ndl.go.jp/${value.capture}/${receipt.originalUrl}`) throw new Error(`${receipt.id}: WARP URLが不正です`);
     if (typeof receipt.sourcePageUrl !== "string" || !receipt.sourcePageUrl.startsWith("https://www.meti.go.jp/")) throw new Error(`${receipt.id}: 出典ページURLが不正です`);
-    if (!Number.isSafeInteger(receipt.expectedBytes) || receipt.expectedBytes < 1_000 || receipt.expectedBytes > 2_000_000
+    if (!Number.isSafeInteger(receipt.expectedSheetCount) || receipt.expectedSheetCount < 1 || receipt.expectedSheetCount > 24
+      || !Number.isSafeInteger(receipt.expectedBytes) || receipt.expectedBytes < 1_000 || receipt.expectedBytes > 2_000_000
       || typeof receipt.expectedSha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.expectedSha256)
       || !Number.isSafeInteger(receipt.expectedRecordCount) || receipt.expectedRecordCount < 1
-      || typeof receipt.publicWorks !== "boolean") throw new Error(`${receipt.id}: bytes/SHA/行数が不正です`);
+      || typeof receipt.publicWorks !== "boolean") throw new Error(`${receipt.id}: sheets/bytes/SHA/行数が不正です`);
     recordCount += receipt.expectedRecordCount;
   }
   if (recordCount !== value.recordCount) throw new Error(`本省旧資料evidenceの総行数が不正です: ${recordCount}/${value.recordCount}`);
-  if (!value.records.some((row) => row.fiscalYear === 2017)) throw new Error("本省旧資料evidenceに2017年度がありません");
+  if (!value.records.some((row) => row.fiscalYear === 2017 && row.category === "contract_result")) throw new Error("本省旧資料evidenceに2017年度契約がありません");
+  if (!value.records.some((row) => row.fiscalYear === 2017 && row.category === "grant_decision")) throw new Error("本省旧資料evidenceに2017年度補助金がありません");
 }
