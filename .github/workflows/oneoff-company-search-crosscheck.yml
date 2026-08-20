@@ -1,0 +1,99 @@
+name: One-off company search cross-check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/oneoff-company-search-crosscheck.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+
+      - name: Generate real-data company search audit
+        run: |
+          mkdir -p audit
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          import {
+            filterCompanyRecords,
+            groupCompanyRecords,
+            summarizeCompanyRows,
+          } from "./scripts/company-search.mjs";
+
+          const manifest = JSON.parse(await readFile("data/pages/manifest.json", "utf8"));
+          const chunks = await Promise.all(Object.values(manifest.commitments).map(async (filename) =>
+            JSON.parse(await readFile(`data/pages/${filename}`, "utf8"))));
+          const rows = chunks.flat();
+
+          function groupsFor(query) {
+            const matched = filterCompanyRecords(rows, { query });
+            return [...groupCompanyRecords(matched)].map(([corporateNumber, companyRows]) => {
+              const summary = summarizeCompanyRows(companyRows);
+              return {
+                corporateNumber,
+                names: [...new Set(companyRows.map((row) => row.organization))].sort((a, b) => a.localeCompare(b, "ja")),
+                records: summary.records,
+                amountKnownCount: summary.amountKnownCount,
+                amountUnknownCount: summary.amountUnknownCount,
+                byStage: summary.byStage,
+              };
+            }).sort((a, b) => b.records - a.records || a.corporateNumber.localeCompare(b.corporateNumber));
+          }
+
+          const exactExpected = {
+            "日本電気": "7010401022916",
+            "富士通": "1020001071491",
+            "三菱総合研究所": "6010001030403",
+            "NTTデータ": "6010601062093",
+            "デロイトトーマツ": "3010001076738",
+            "みずほ銀行": "6010001008845"
+          };
+          const ambiguousQueries = ["日本電", "富士", "三菱", "NTT", "デロイト", "みずほ"];
+          const queries = [...Object.keys(exactExpected), ...ambiguousQueries];
+          const results = Object.fromEntries(queries.map((query) => [query, groupsFor(query)]));
+
+          for (const [query, expected] of Object.entries(exactExpected)) {
+            const groups = results[query];
+            if (groups.length !== 1 || groups[0].corporateNumber !== expected) {
+              throw new Error(`${query}: expected only ${expected}, got ${groups.map((g) => g.corporateNumber).join(",")}`);
+            }
+          }
+          for (const [query, groups] of Object.entries(results)) {
+            for (const group of groups) {
+              if (group.amountKnownCount + group.amountUnknownCount !== group.records) {
+                throw new Error(`${query}/${group.corporateNumber}: amount counts do not reconcile`);
+              }
+            }
+          }
+
+          const audit = {
+            schemaVersion: 1,
+            generatedAt: new Date().toISOString(),
+            sourceCommit: process.env.GITHUB_SHA,
+            dataGeneratedAt: manifest.generatedAt,
+            totalPublishedRows: rows.length,
+            exactExpected,
+            results,
+          };
+          await writeFile("audit/company-search-crosscheck-2026-08-20.json", `${JSON.stringify(audit, null, 2)}\n`);
+          NODE
+
+      - name: Commit audit evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/company-search-crosscheck-2026-08-20.json
+          git diff --cached --check
+          git commit -m "Record company search cross-check evidence"
+          git push
