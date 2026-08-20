@@ -25,21 +25,45 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Wire verified METI legacy sources into official updater
-        run: node scripts/oneoff-integrate-meti-legacy.mjs
-      - name: Verify pinned legacy definitions
-        run: node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs
-      - name: Rebuild official data from verified sources
-        run: npm run update:official
-      - name: Verify official corpus and Pages build
+      - name: Run integration with persistent stage diagnostics
+        id: integration
         run: |
-          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs
-          npm run test:pages
-      - name: Commit verified legacy backfill
+          set +e
+          : > meti-legacy-integration.log
+          final=0
+          run_stage() {
+            name="$1"
+            shift
+            echo "===== $name =====" | tee -a meti-legacy-integration.log
+            "$@" >> meti-legacy-integration.log 2>&1
+            code=$?
+            echo "EXIT $name=$code" | tee -a meti-legacy-integration.log
+            if [ "$code" -ne 0 ]; then final="$code"; return "$code"; fi
+            return 0
+          }
+          run_stage wire node scripts/oneoff-integrate-meti-legacy.mjs || true
+          if [ "$final" -eq 0 ]; then run_stage definitions node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs || true; fi
+          if [ "$final" -eq 0 ]; then run_stage update npm run update:official || true; fi
+          if [ "$final" -eq 0 ]; then run_stage official-tests node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs || true; fi
+          if [ "$final" -eq 0 ]; then run_stage pages npm run test:pages || true; fi
+          echo "FINAL_EXIT=$final" | tee -a meti-legacy-integration.log
+          echo "exit_code=$final" >> "$GITHUB_OUTPUT"
+          cat meti-legacy-integration.log
+          exit 0
+      - name: Commit verified legacy backfill or diagnostics
         id: commit_data
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          if [ "${{ steps.integration.outputs.exit_code }}" != "0" ]; then
+            git reset --hard HEAD
+            git add meti-legacy-integration.log
+            git commit -m "chore(audit): record METI legacy integration failure"
+            git pull --rebase origin main
+            git push
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git add scripts/update-official-data.mjs tests/official-meti-legacy.test.mjs package.json data/official data/official-supplement-index.json
           git diff --cached --check
           if git diff --cached --quiet; then
