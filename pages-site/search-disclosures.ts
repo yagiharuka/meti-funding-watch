@@ -9,6 +9,10 @@ function setAttributeIfChanged(element: Element, name: string, value: string) {
   if (element.getAttribute(name) !== value) element.setAttribute(name, value);
 }
 
+function setTextIfChanged(element: HTMLElement, value: string) {
+  if (element.textContent !== value) element.textContent = value;
+}
+
 function scheduleEnhancement() {
   if (scheduled) return;
   scheduled = true;
@@ -38,7 +42,7 @@ function makeButton(
   button.dataset.openLabel = openLabel;
   setAttributeIfChanged(button, "aria-controls", controlId);
   setAttributeIfChanged(button, "aria-expanded", "false");
-  button.textContent = closedLabel;
+  setTextIfChanged(button, closedLabel);
   button.addEventListener("click", () => {
     section.classList.toggle(modeClass);
     syncButtons(section);
@@ -52,9 +56,10 @@ function syncButtons(section: HTMLElement) {
     if (!modeClass) continue;
     const open = section.classList.contains(modeClass);
     setAttributeIfChanged(button, "aria-expanded", open ? "true" : "false");
-    button.textContent = open
-      ? (button.dataset.openLabel ?? "閉じる")
-      : (button.dataset.closedLabel ?? "見る");
+    setTextIfChanged(
+      button,
+      open ? (button.dataset.openLabel ?? "閉じる") : (button.dataset.closedLabel ?? "見る"),
+    );
   }
 }
 
