@@ -19,3 +19,5 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/oneoff-probe-central-history.mjs
+
+# Triggered after workflow exists on main.
