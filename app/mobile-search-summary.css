@@ -22,7 +22,7 @@
     box-shadow: 0 8px 20px rgba(32, 59, 50, .045);
   }
 
-  /* Overall search result: 2 x 2 metrics + full-width amount. */
+  /* Overall search result: 3 compact metrics + full-width amount. */
   .records-table[aria-label="企業検索結果サマリー"] table:first-of-type,
   .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tbody,
   .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tr {
@@ -55,7 +55,7 @@
   }
 
   .records-table[aria-label="企業検索結果サマリー"] table:first-of-type tr {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -66,7 +66,7 @@
     display: block;
     width: auto;
     min-width: 0;
-    padding: 12px 14px;
+    padding: 12px 10px;
     border: 0;
     border-right: 1px solid #edf0ed;
     border-bottom: 1px solid #edf0ed;
@@ -75,13 +75,15 @@
     overflow-wrap: anywhere;
   }
 
-  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(even) {
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(3),
+  .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(4) {
     border-right: 0;
   }
 
   .records-table[aria-label="企業検索結果サマリー"] table:first-of-type td:nth-child(4) {
     grid-column: 1 / -1;
-    border-right: 0;
+    padding-right: 14px;
+    padding-left: 14px;
     border-bottom: 0;
   }
 
