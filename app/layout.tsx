@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./mobile-search-summary.css";
 
 import SiteNotice from "@/app/SiteNotice";
 
