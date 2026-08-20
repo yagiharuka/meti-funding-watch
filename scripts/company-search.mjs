@@ -16,6 +16,8 @@ const CORPORATE_DESIGNATORS = [
   "国立研究開発法人",
 ];
 
+export const INTERNAL_PARTIAL_SEARCH_PREFIX = "\u0001contains:";
+
 export function normalizeCompanySearchTerm(value = "") {
   return String(value)
     .normalize("NFKC")
@@ -40,26 +42,39 @@ function entityNames(entity) {
   return names.filter(Boolean);
 }
 
+function parseCompanyQuery(query) {
+  const raw = String(query ?? "");
+  const forcePartial = raw.startsWith(INTERNAL_PARTIAL_SEARCH_PREFIX);
+  return {
+    forcePartial,
+    query: forcePartial ? raw.slice(INTERNAL_PARTIAL_SEARCH_PREFIX.length) : raw,
+  };
+}
+
 export function filterCompanyEntities(entities, query) {
-  const normalized = normalizeCompanySearchTerm(query);
+  const parsed = parseCompanyQuery(query);
+  const normalized = normalizeCompanySearchTerm(parsed.query);
   if (!normalized) return [...entities];
   if (/^\d{13}$/.test(normalized)) {
     return entities.filter((entity) => entity.corporateNumber === normalized);
   }
 
-  const identity = normalizeCompanyIdentity(query);
+  const identity = normalizeCompanyIdentity(parsed.query);
   if (!identity) return [];
 
-  const exact = entities.filter((entity) =>
-    entityNames(entity).some((name) => normalizeCompanyIdentity(name) === identity));
-  if (exact.length) return exact;
+  if (!parsed.forcePartial) {
+    const exact = entities.filter((entity) =>
+      entityNames(entity).some((name) => normalizeCompanyIdentity(name) === identity));
+    if (exact.length) return exact;
+  }
 
   return entities.filter((entity) =>
     entityNames(entity).some((name) => normalizeCompanyIdentity(name).includes(identity)));
 }
 
 export function resolveCompanyNumbers(rows, query) {
-  const normalized = normalizeCompanySearchTerm(query);
+  const parsed = parseCompanyQuery(query);
+  const normalized = normalizeCompanySearchTerm(parsed.query);
   if (!normalized) return null;
   return new Set(
     filterCompanyEntities(rows, query)
