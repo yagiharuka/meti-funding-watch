@@ -1,3 +1,5 @@
+import { filterCompanyRecords } from "../scripts/company-search.mjs";
+
 type Stage = "contracted" | "subsidy_published";
 
 type FundingRecord = {
@@ -129,27 +131,6 @@ async function loadChunk(message: InitializeMessage, filename: string) {
   return parseRows(bytes, filename);
 }
 
-function normalizeCompanySearchTerm(value: string) {
-  return value
-    .normalize("NFKC")
-    .replace(/\(株\)|㈱/g, "株式会社")
-    .replace(/\(有\)|㈲/g, "有限会社")
-    .toLocaleLowerCase("ja-JP")
-    .replace(/[\s　]+/g, "")
-    .trim();
-}
-
-function resolveCompanyNumbers(rows: FundingRecord[], query: string) {
-  const normalized = normalizeCompanySearchTerm(query);
-  if (!normalized) return null;
-  if (/^\d{13}$/.test(normalized)) return new Set([normalized]);
-  const matched = new Set<string>();
-  for (const row of rows) {
-    if (normalizeCompanySearchTerm(row.organization).includes(normalized)) matched.add(row.corporateNumber);
-  }
-  return matched;
-}
-
 function search(message: SearchMessage) {
   try {
     if (!activeRelease) throw new Error("検索データの検証が完了していません");
@@ -165,15 +146,7 @@ function search(message: SearchMessage) {
     if (year !== "all" && year !== "unclassified" && !/^\d{4}$/.test(year)) throw new Error("年度が不正です");
     if (!Number.isSafeInteger(page) || page < 1 || page > 10_000) throw new Error("ページが不正です");
 
-    const matchedCorporateNumbers = resolveCompanyNumbers(records, query);
-    const matching = records.filter((row) => {
-      if (matchedCorporateNumbers && !matchedCorporateNumbers.has(row.corporateNumber)) return false;
-      if (agency !== "all" && row.sourceAgency !== agency) return false;
-      if (stage !== "all" && row.stage !== stage) return false;
-      if (year === "unclassified" && row.fiscalYear !== null) return false;
-      if (/^\d{4}$/.test(year) && String(row.fiscalYear) !== year) return false;
-      return true;
-    });
+    const matching = filterCompanyRecords(records, { query, agency, stage, year }) as FundingRecord[];
     const totalRecords = matching.length;
     const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
     const effectivePage = Math.min(page, totalPages);
