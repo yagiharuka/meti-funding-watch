@@ -8,11 +8,12 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
-  diagnose:
+  integrate:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
     env:
       OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
     steps:
@@ -24,31 +25,33 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run integration stages with persistent diagnostics
+      - name: Wire verified METI legacy sources into official updater
+        run: node scripts/oneoff-integrate-meti-legacy.mjs
+      - name: Verify pinned legacy definitions
+        run: node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs
+      - name: Rebuild official data from verified sources
+        run: npm run update:official
+      - name: Verify official corpus and Pages build
         run: |
-          set +e
-          : > meti-legacy-integration.log
-          run_stage() {
-            name="$1"
-            shift
-            echo "===== $name =====" | tee -a meti-legacy-integration.log
-            "$@" >> meti-legacy-integration.log 2>&1
-            code=$?
-            echo "EXIT $name=$code" | tee -a meti-legacy-integration.log
-            return $code
-          }
-          run_stage patch node scripts/oneoff-integrate-meti-legacy.mjs || exit 0
-          run_stage definitions node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs || exit 0
-          run_stage update npm run update:official || exit 0
-          run_stage official-tests node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs || exit 0
-          run_stage pages npm run test:pages || exit 0
-      - name: Commit diagnostics
-        if: always()
+          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs
+          npm run test:pages
+      - name: Commit verified legacy backfill
+        id: commit_data
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          test -f meti-legacy-integration.log || echo "diagnostic log missing" > meti-legacy-integration.log
-          git add meti-legacy-integration.log
-          git commit -m "chore(audit): record METI legacy integration diagnostics" || exit 0
+          git add scripts/update-official-data.mjs tests/official-meti-legacy.test.mjs package.json data/official data/official-supplement-index.json
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Backfill verified METI headquarters history to FY2017"
           git pull --rebase origin main
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Publish verified Pages build
+        if: steps.commit_data.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true
