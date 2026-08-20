@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import officialSupplementData from "@/data/official-supplement-index.json";
+import { filterCompanyEntities } from "@/scripts/company-search.mjs";
 
 type ReviewEntry = {
   id: string;
@@ -112,7 +113,6 @@ export default function CombinedCompanyResults({ query }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const normalizedQuery = normalize(query);
-  const terms = useMemo(() => normalizedQuery.split(" ").filter(Boolean), [normalizedQuery]);
 
   useEffect(() => {
     if (!normalizedQuery || index || loading) return;
@@ -138,20 +138,21 @@ export default function CombinedCompanyResults({ query }: Props) {
   }, [normalizedQuery, index, loading]);
 
   const reviewMatches = useMemo(() => {
-    if (!index || !terms.length) return [] as ReviewRecipient[];
-    return index.recipients.filter((recipient) => terms.every((term) => recipient.searchText.includes(term)));
-  }, [index, terms]);
+    if (!index || !normalizedQuery) return [] as ReviewRecipient[];
+    return filterCompanyEntities(index.recipients, normalizedQuery) as ReviewRecipient[];
+  }, [index, normalizedQuery]);
   const matchedCorporateNumbers = useMemo(
     () => new Set(reviewMatches.map((row) => row.corporateNumber).filter(Boolean)),
     [reviewMatches],
   );
   const officialMatches = useMemo(() => {
-    if (!terms.length) return [] as OfficialSupplementRecord[];
-    return officialIndex.records.filter((row) => {
-      if (row.corporateNumber && matchedCorporateNumbers.has(row.corporateNumber)) return true;
-      return terms.every((term) => row.searchText.includes(term));
-    });
-  }, [terms, matchedCorporateNumbers]);
+    if (!normalizedQuery) return [] as OfficialSupplementRecord[];
+    const directMatches = filterCompanyEntities(officialIndex.records, normalizedQuery) as OfficialSupplementRecord[];
+    const directIds = new Set(directMatches.map((row) => row.id));
+    return officialIndex.records.filter((row) =>
+      directIds.has(row.id)
+      || Boolean(row.corporateNumber && matchedCorporateNumbers.has(row.corporateNumber)));
+  }, [normalizedQuery, matchedCorporateNumbers]);
 
   if (!normalizedQuery) return null;
 
@@ -170,7 +171,7 @@ export default function CombinedCompanyResults({ query }: Props) {
         </div>
         <p>GビズINFO、行政事業レビュー、公式補足は金額の意味や時点が違うため、相互に合算しません。</p>
       </div>
-      <p className="filter-note">企業名・法人番号の検索語だけを共通利用します。上部の公表組織・情報種別・年度フィルターはGビズINFO側だけに適用されます。</p>
+      <p className="filter-note">企業名・法人番号の検索語だけを共通利用します。完全一致する法人名があればそれを優先し、完全一致がない場合だけ名称の部分一致を使います。上部の公表組織・情報種別・年度フィルターはGビズINFO側だけに適用されます。</p>
 
       {loading && <div className="result-bar"><strong>行政事業レビューの企業索引を読込中</strong></div>}
       {error && <div className="adoption-error" role="alert"><strong>行政事業レビューを同時検索できません。</strong><p>{error}</p></div>}
