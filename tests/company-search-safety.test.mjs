@@ -10,6 +10,7 @@ import {
   resolveCompanyNumbers,
   summarizeCompanyRows,
 } from "../scripts/company-search.mjs";
+import { toGbizBulkRecords } from "../scripts/gbiz-csv.mjs";
 
 function row({
   id,
@@ -43,6 +44,25 @@ const fixture = [
   row({ id: "new-1", organization: "新テスト株式会社", corporateNumber: "1111111111111", amount: 20, fiscalYear: 2026 }),
   row({ id: "other-1", organization: "株式会社別会社", corporateNumber: "2222222222222", amount: 30 }),
 ];
+
+test("Gbiz category comes from the source CSV kind, never from program-name wording", () => {
+  const procurementCsv = [
+    "法人番号,商号または名称,キー情報,受注日,件名,落札価格,組織名",
+    "7010401022916,日本電気株式会社,p-1,2026-04-01,補助金交付申請等に関する業務,100,経済産業省",
+  ].join("\n");
+  const subsidyCsv = [
+    "法人番号,商号または名称,キー情報,証明日,名称,金額,発行元",
+    "7010401022916,日本電気株式会社,s-1,2026-04-01,委託契約に関する支援,200,経済産業省",
+  ].join("\n");
+
+  const procurement = toGbizBulkRecords(procurementCsv, "procurement").records;
+  const subsidy = toGbizBulkRecords(subsidyCsv, "subsidy").records;
+
+  assert.equal(procurement[0].program, "補助金交付申請等に関する業務");
+  assert.equal(procurement[0].stage, "contracted");
+  assert.equal(subsidy[0].program, "委託契約に関する支援");
+  assert.equal(subsidy[0].stage, "subsidy_published");
+});
 
 test("an exact normalized company identity wins over broader partial-name matches", () => {
   const results = filterCompanyRecords(fixture, { query: "日本電気" });
