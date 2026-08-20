@@ -1,0 +1,43 @@
+name: One-off company search hardening
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/oneoff-company-search-hardening.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply hardening patch
+        run: python3 scripts/oneoff-company-search-hardening.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Pages build and regression tests
+        run: npm run test:pages
+
+      - name: Commit verified hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/page.tsx app/funding-search.worker.ts app/CombinedCompanyResults.tsx pages-site/funding-search-enhanced.worker.js pages-site/company-search-ui.ts tests/company-search-safety.test.mjs package.json
+          git diff --cached --check
+          git commit -m "Harden company search across fallback paths"
+          git push
