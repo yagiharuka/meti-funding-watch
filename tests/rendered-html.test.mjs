@@ -13,10 +13,23 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   assert.ok(dataEntries.includes("manifest.json"));
   assert.ok(dataEntries.includes("commitments-preview.json"));
   assert.ok(dataEntries.includes("review"));
+  assert.ok(dataEntries.includes("official-company-index.json"));
   assert.equal(dataEntries.includes("official"), false);
   assert.ok(dataEntries.some((name) => name.startsWith("commitments-")));
   assert.ok(dataEntries.every((name) =>
-    name === "manifest.json" || name === "review" || name === "review-company-index.json" || name === "commitments-preview.json" || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
+    name === "manifest.json"
+    || name === "review"
+    || name === "review-company-index.json"
+    || name === "official-company-index.json"
+    || name === "commitments-preview.json"
+    || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
+
+  const officialCompanyIndex = JSON.parse(
+    await readFile(new URL("official-company-index.json", dataDirectory), "utf8"),
+  );
+  assert.equal(officialCompanyIndex.schemaVersion, 1);
+  assert.equal(officialCompanyIndex.recordCount, officialCompanyIndex.records.length);
+  assert.match(officialCompanyIndex.scopeNote, /見つからないことは支出がないことを意味しない/);
 
   const ids = [];
   for (const [year, filename] of Object.entries(manifest.commitments)) {
