@@ -10,7 +10,7 @@ import "./company-search-alternatives.css";
 import "./company-search-ui";
 import "./company-search-alternatives";
 
-// This entrypoint is the GitHub Pages production shell.
+// GitHub Pages production shell; company alternatives are loaded before React mounts.
 const root = document.getElementById("root");
 
 if (!root) {
