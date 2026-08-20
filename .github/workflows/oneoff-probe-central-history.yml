@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/oneoff-probe-central-history.yml"
+      - "probe-central-history-trigger.txt"
 
 permissions:
   contents: write
