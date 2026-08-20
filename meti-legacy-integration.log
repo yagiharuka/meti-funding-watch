@@ -1,0 +1,44 @@
+===== wire =====
+METI legacy history wired into production official updater
+EXIT wire=0
+===== definitions =====
+TAP version 13
+# Subtest: parses Heisei dates in historical METI grant workbooks
+ok 1 - parses Heisei dates in historical METI grant workbooks
+  ---
+  duration_ms: 70.944407
+  type: 'test'
+  ...
+# Subtest: pins verified METI headquarters history back to FY2017
+ok 2 - pins verified METI headquarters history back to FY2017
+  ---
+  duration_ms: 2.429457
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1227.642173
+EXIT definitions=0
+===== update =====
+
+> meti-funding-watch@0.1.0 update:official
+> node scripts/update-official-data.mjs && node scripts/build-official-supplement-index.mjs && node scripts/build-official-company-index.mjs
+
+file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/update-official-data.mjs:433
+    if (!definitions.has(id)) throw new Error(`前回公開済み資料の定義がなくなりました: ${id}`);
+                                    ^
+
+Error: 前回公開済み資料の定義がなくなりました: okinawa-2019-grant-decisions-h2
+    at fetchOfficialDocuments (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/update-official-data.mjs:433:37)
+    at updateOfficialData (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/update-official-data.mjs:274:45)
+    at async file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/update-official-data.mjs:1459:18
+
+Node.js v22.23.2
+EXIT update=1
+FINAL_EXIT=1
