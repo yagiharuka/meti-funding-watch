@@ -122,8 +122,8 @@ function boundariesFromCenters(centers) {
 function inColumn(item, range) { const c = item.x + item.w / 2; return range && c >= range[0] && c < range[1]; }
 
 function smrjColumns(page, previous = null) {
-  const c = {
-    ordinal: headerCenter(page.items, /物品役務等の名称及び数量/),
+  const centers = {
+    program: headerCenter(page.items, /物品役務等の名称及び数量/),
     officer: headerCenter(page.items, /契約担当官/),
     date: headerCenter(page.items, /契約を締結した日/),
     organization: headerCenter(page.items, /契約の相手方の商号又は名称及び住所/),
@@ -133,27 +133,38 @@ function smrjColumns(page, previous = null) {
     rate: headerCenter(page.items, /落札率/),
     notes: headerCenter(page.items, /備考/),
   };
-  const present = Object.values(c).filter(Number.isFinite).length;
-  return present >= 6 ? boundariesFromCenters(c) : previous;
+  if (!["program", "date", "organization", "amount"].every((key) => Number.isFinite(centers[key]))) return previous;
+  return { ranges: boundariesFromCenters(centers), programCenter: centers.program };
 }
 
 function parseSmrjPages(source, pages) {
   const records = [];
   const skipped = { multiParty: 0, missingCorporateNumber: 0, missingAmount: 0, missingDate: 0, missingName: 0, missingProgram: 0 };
-  let columns = null;
+  let schema = null;
   let anchorCount = 0;
   for (const page of pages) {
-    columns = smrjColumns(page, columns);
-    if (!columns?.date || !columns.organization || !columns.amount || !columns.ordinal) throw new Error(`${source.url}: SMRJ列見出しを確定できません p${page.pageNumber}`);
-    const programRange = columns.ordinal;
-    const ordinalLimit = Math.min(programRange[0] + 0.035, programRange[1]);
-    const anchors = page.items.filter((item) => /^\d{1,3}$/.test(item.t) && item.x < ordinalLimit && item.y < 0.92 && item.y > 0.03)
-      .sort((a, b) => b.y - a.y || a.x - b.x);
+    schema = smrjColumns(page, schema);
+    const columns = schema?.ranges;
+    if (!columns?.date || !columns.organization || !columns.amount || !columns.program || !Number.isFinite(schema?.programCenter)) {
+      throw new Error(`${source.url}: SMRJ列見出しを確定できません p${page.pageNumber}`);
+    }
+    const programRange = columns.program;
+    const ordinalMin = Math.max(0, schema.programCenter - 0.14);
+    const ordinalMax = Math.max(ordinalMin + 0.015, schema.programCenter - 0.04);
+    const anchors = page.items.filter((item) => {
+      const center = item.x + item.w / 2;
+      return /^\d{1,3}$/.test(item.t)
+        && center >= ordinalMin && center < ordinalMax
+        && item.y < 0.90 && item.y > 0.025;
+    }).sort((a, b) => b.y - a.y || a.x - b.x);
     anchorCount += anchors.length;
     for (let i = 0; i < anchors.length; i += 1) {
       const anchor = anchors[i];
-      const nextY = i + 1 < anchors.length ? anchors[i + 1].y : 0.025;
-      const rowItems = page.items.filter((item) => item.y <= anchor.y + 0.012 && item.y > nextY + 0.002);
+      const previousY = i > 0 ? anchors[i - 1].y : Math.min(0.89, anchor.y + 0.08);
+      const nextY = i + 1 < anchors.length ? anchors[i + 1].y : Math.max(0.02, anchor.y - 0.08);
+      const upperY = (previousY + anchor.y) / 2;
+      const lowerY = (anchor.y + nextY) / 2;
+      const rowItems = page.items.filter((item) => item.y <= upperY && item.y > lowerY);
       const dateText = textFrom(rowItems.filter((item) => inColumn(item, columns.date)));
       const date = parseSmrjDate((dateText.match(/\d{1,2}\.\d{1,2}\.\d{1,2}/) ?? [""])[0], source.fiscalYear);
       if (!date) { skipped.missingDate += 1; continue; }
@@ -168,7 +179,11 @@ function parseSmrjPages(source, pages) {
       const amountText = textFrom(rowItems.filter((item) => inColumn(item, columns.amount)));
       const amount = parseMoney(amountText);
       if (amount === null) { skipped.missingAmount += 1; continue; }
-      const program = textFrom(rowItems.filter((item) => inColumn(item, programRange) && item.x >= ordinalLimit));
+      const program = textFrom(rowItems.filter((item) => {
+        if (!inColumn(item, programRange)) return false;
+        const center = item.x + item.w / 2;
+        return !(center >= ordinalMin && center < ordinalMax && /^\d{1,3}$/.test(item.t));
+      }));
       if (!program) { skipped.missingProgram += 1; continue; }
       const ordinal = Number(anchor.t);
       const sourceKey = `${source.url}#p${page.pageNumber}-row${ordinal}`;

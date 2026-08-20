@@ -1,14 +1,23 @@
-[smrj 2017 随意契約] 0/0
-[smrj 2017 競争入札契約] 0/0
-[smrj 2018 随意契約] 0/0
-[smrj 2018 競争入札契約] 0/0
-file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:147
-    if (!columns?.date || !columns.organization || !columns.amount || !columns.ordinal) throw new Error(`${source.url}: SMRJ列見出しを確定できません p${page.pageNumber}`);
-                                                                                              ^
+[smrj 2017 随意契約] 68/95
+[smrj 2017 競争入札契約] 122/167
+[smrj 2018 随意契約] 42/65
+[smrj 2018 競争入札契約] 165/243
+[smrj 2019 随意契約] 74/220
+[smrj 2019 競争入札契約] 106/168
+[nedo 2017 競争性のない随意契約（第1四半期）] 2/2
+[nedo 2017 競争性のない随意契約（第2四半期）] 3/3
+[nedo 2017 競争性のない随意契約（第3四半期）] 4/4
+[nedo 2017 競争性のない随意契約（第4四半期）] 2/4
+[nedo 2018 競争性のない随意契約（第1四半期）] 0/0
+[nedo 2018 競争性のない随意契約（第2四半期）] 4/4
+[nedo 2018 競争性のない随意契約（第3四半期）] 3/3
+[nedo 2018 競争性のない随意契約（第4四半期）] 4/4
+file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:281
+  throw new Error("中央機関旧資料のID/sourceKeyが重複しています");
+        ^
 
-Error: https://www.smrj.go.jp/procurement/bid/contract/fbrion000000dvwx-att/zuiikeiyakuhonbu2019all.pdf: SMRJ列見出しを確定できません p16
-    at parseSmrjPages (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:147:95)
-    at file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:247:45
+Error: 中央機関旧資料のID/sourceKeyが重複しています
+    at file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/oneoff-build-smrj-nedo-history.mjs:281:9
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 
 Node.js v22.23.2
