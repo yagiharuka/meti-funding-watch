@@ -62,3 +62,5 @@ jobs:
           git add tests/funding-data.test.mjs tests/official-reconciliation.test.mjs .github/workflows
           git commit -m "Restore clean verified Pages CI"
           git push
+
+# Trigger after the workflow exists on the default branch.
