@@ -1,3 +1,21 @@
+const CORPORATE_DESIGNATORS = [
+  "株式会社",
+  "有限会社",
+  "合同会社",
+  "合資会社",
+  "合名会社",
+  "一般社団法人",
+  "一般財団法人",
+  "公益社団法人",
+  "公益財団法人",
+  "特定非営利活動法人",
+  "社会福祉法人",
+  "学校法人",
+  "医療法人",
+  "独立行政法人",
+  "国立研究開発法人",
+];
+
 export function normalizeCompanySearchTerm(value = "") {
   return String(value)
     .normalize("NFKC")
@@ -8,18 +26,37 @@ export function normalizeCompanySearchTerm(value = "") {
     .trim();
 }
 
+export function normalizeCompanyIdentity(value = "") {
+  let normalized = normalizeCompanySearchTerm(value);
+  for (const designator of CORPORATE_DESIGNATORS) {
+    normalized = normalized.replaceAll(designator.toLocaleLowerCase("ja-JP"), "");
+  }
+  return normalized;
+}
+
 export function resolveCompanyNumbers(rows, query) {
   const normalized = normalizeCompanySearchTerm(query);
   if (!normalized) return null;
   if (/^\d{13}$/.test(normalized)) return new Set([normalized]);
 
-  const matched = new Set();
+  const identity = normalizeCompanyIdentity(query);
+  if (!identity) return new Set();
+
+  const exact = new Set();
   for (const row of rows) {
-    if (normalizeCompanySearchTerm(row.organization).includes(normalized)) {
-      matched.add(row.corporateNumber);
+    if (normalizeCompanyIdentity(row.organization) === identity) {
+      exact.add(row.corporateNumber);
     }
   }
-  return matched;
+  if (exact.size) return exact;
+
+  const partial = new Set();
+  for (const row of rows) {
+    if (normalizeCompanyIdentity(row.organization).includes(identity)) {
+      partial.add(row.corporateNumber);
+    }
+  }
+  return partial;
 }
 
 export function filterCompanyRecords(rows, {
