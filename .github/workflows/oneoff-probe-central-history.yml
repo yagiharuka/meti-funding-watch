@@ -8,11 +8,14 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
-  build-evidence:
+  integrate:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
+    env:
+      OFFICIAL_BOOTSTRAP_EVIDENCE_DIRECTORY: evidence/official-bootstrap
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -22,14 +25,26 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build pinned METI legacy evidence
-        run: node scripts/oneoff-build-meti-legacy-evidence.mjs
-      - name: Commit verified evidence
+      - name: Wire verified legacy evidence into production updater
+        run: node scripts/oneoff-integrate-meti-legacy.mjs
+      - name: Verify legacy definitions and Heisei parsing
+        run: node --test tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs
+      - name: Refresh official data with continuity protection
+        run: npm run update:official
+      - name: Verify official data and Pages build
+        run: |
+          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/official-meti-legacy.test.mjs tests/official-heisei-date.test.mjs
+          npm run test:pages
+      - name: Commit only verified integration and official data
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/official-meti-legacy-evidence.json meti-legacy-rejected.json
+          git add scripts/update-official-data.mjs scripts/official-meti-legacy-history.mjs tests/official-heisei-date.test.mjs tests/official-meti-legacy.test.mjs package.json data/official data/official-supplement-index.json data/official-meti-legacy-evidence.json
           git diff --cached --check
-          git commit -m "Add verified METI history back to FY2017"
+          git commit -m "Backfill verified METI headquarters data to FY2017"
           git pull --rebase origin main
           git push
+      - name: Publish verified Pages release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update-data.yml --ref main -f publish_only=true
