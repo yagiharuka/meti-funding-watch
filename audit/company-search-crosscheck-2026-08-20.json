@@ -1,0 +1,1294 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-20T10:54:11.441Z",
+  "sourceCommit": "c70468aa6eeda00ed96f816d3751685f6e873043",
+  "dataGeneratedAt": "2026-08-17T21:27:32.720Z",
+  "totalPublishedRows": 69514,
+  "exactExpected": {
+    "日本電気": "7010401022916",
+    "富士通": "1020001071491",
+    "三菱総合研究所": "6010001030403",
+    "NTTデータ": "6010601062093",
+    "デロイトトーマツ": "3010001076738",
+    "みずほ銀行": "6010001008845"
+  },
+  "results": {
+    "日本電気": [
+      {
+        "corporateNumber": "7010401022916",
+        "names": [
+          "日本電気株式会社"
+        ],
+        "records": 78,
+        "amountKnownCount": 76,
+        "amountUnknownCount": 2,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 71,
+            "amount": 33497417237,
+            "amountKnownCount": 69
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 7,
+            "amount": 22164258308,
+            "amountKnownCount": 7
+          }
+        ]
+      }
+    ],
+    "富士通": [
+      {
+        "corporateNumber": "1020001071491",
+        "names": [
+          "富士通株式会社"
+        ],
+        "records": 40,
+        "amountKnownCount": 40,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 40,
+            "amount": 21000223452,
+            "amountKnownCount": 40
+          }
+        ]
+      }
+    ],
+    "三菱総合研究所": [
+      {
+        "corporateNumber": "6010001030403",
+        "names": [
+          "株式会社三菱総合研究所"
+        ],
+        "records": 521,
+        "amountKnownCount": 520,
+        "amountUnknownCount": 1,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 503,
+            "amount": 16521898874,
+            "amountKnownCount": 502
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 18,
+            "amount": 630698183,
+            "amountKnownCount": 18
+          }
+        ]
+      }
+    ],
+    "NTTデータ": [
+      {
+        "corporateNumber": "6010601062093",
+        "names": [
+          "株式会社ＮＴＴデータ"
+        ],
+        "records": 30,
+        "amountKnownCount": 30,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 30,
+            "amount": 14001641277,
+            "amountKnownCount": 30
+          }
+        ]
+      }
+    ],
+    "デロイトトーマツ": [
+      {
+        "corporateNumber": "3010001076738",
+        "names": [
+          "合同会社デロイトトーマツ"
+        ],
+        "records": 108,
+        "amountKnownCount": 108,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 87,
+            "amount": 54586292669,
+            "amountKnownCount": 87
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 21,
+            "amount": 128345610789,
+            "amountKnownCount": 21
+          }
+        ]
+      }
+    ],
+    "みずほ銀行": [
+      {
+        "corporateNumber": "6010001008845",
+        "names": [
+          "株式会社みずほ銀行"
+        ],
+        "records": 20,
+        "amountKnownCount": 20,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 18,
+            "amount": 483300955,
+            "amountKnownCount": 18
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 2,
+            "amount": 30849178,
+            "amountKnownCount": 2
+          }
+        ]
+      }
+    ],
+    "日本電": [
+      {
+        "corporateNumber": "7010401022916",
+        "names": [
+          "日本電気株式会社"
+        ],
+        "records": 78,
+        "amountKnownCount": 76,
+        "amountUnknownCount": 2,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 71,
+            "amount": 33497417237,
+            "amountKnownCount": 69
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 7,
+            "amount": 22164258308,
+            "amountKnownCount": 7
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010005004319",
+        "names": [
+          "一般社団法人日本電気協会"
+        ],
+        "records": 27,
+        "amountKnownCount": 27,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 26,
+            "amount": 629718515,
+            "amountKnownCount": 26
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 27739858,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010801008976",
+        "names": [
+          "日本電算機用品株式会社"
+        ],
+        "records": 4,
+        "amountKnownCount": 4,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 4,
+            "amount": 401000,
+            "amountKnownCount": 4
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010005016727",
+        "names": [
+          "一般社団法人日本電機工業会"
+        ],
+        "records": 3,
+        "amountKnownCount": 3,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 3,
+            "amount": 59536960,
+            "amountKnownCount": 3
+          }
+        ]
+      },
+      {
+        "corporateNumber": "9012801002438",
+        "names": [
+          "日本電子株式会社"
+        ],
+        "records": 2,
+        "amountKnownCount": 2,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 2,
+            "amount": 547940200,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "1011001017865",
+        "names": [
+          "日本電波工業株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 52245600,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "1011305000063",
+        "names": [
+          "一般社団法人日本電子回路工業会"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 6000000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "1011701019021",
+        "names": [
+          "株式会社日本電工開発"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 25799998,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "2010601038584",
+        "names": [
+          "日本電子計算株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 15078000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "2030001009952",
+        "names": [
+          "日本電鍍工業株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 4393937,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3120001104264",
+        "names": [
+          "日本電鍍工業株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 33333333,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3370001001081",
+        "names": [
+          "東日本電子計測株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 462000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3430001071795",
+        "names": [
+          "東日本電装サービス株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 26401986,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "4180001079649",
+        "names": [
+          "日本電子技術株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 3022000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "7010401022973",
+        "names": [
+          "日本電算企画株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 31807820,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "7021001014897",
+        "names": [
+          "日本電子工業株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 100000000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8012801001259",
+        "names": [
+          "日本電磁測器株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 72249999,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "9010501010505",
+        "names": [
+          "日本電計株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 2816640,
+            "amountKnownCount": 1
+          }
+        ]
+      }
+    ],
+    "富士": [
+      {
+        "corporateNumber": "8040002102378",
+        "names": [
+          "株式会社富士"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 40000000,
+            "amountKnownCount": 1
+          }
+        ]
+      }
+    ],
+    "三菱": [
+      {
+        "corporateNumber": "6010001030403",
+        "names": [
+          "株式会社三菱総合研究所"
+        ],
+        "records": 521,
+        "amountKnownCount": 520,
+        "amountUnknownCount": 1,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 503,
+            "amount": 16521898874,
+            "amountKnownCount": 502
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 18,
+            "amount": 630698183,
+            "amountKnownCount": 18
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3010401011971",
+        "names": [
+          "三菱ＵＦＪリサーチ＆コンサルティング株式会社"
+        ],
+        "records": 395,
+        "amountKnownCount": 395,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 383,
+            "amount": 8502525605,
+            "amountKnownCount": 383
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 12,
+            "amount": 136221223,
+            "amountKnownCount": 12
+          }
+        ]
+      },
+      {
+        "corporateNumber": "5010001022137",
+        "names": [
+          "株式会社三菱ケミカルリサーチ"
+        ],
+        "records": 55,
+        "amountKnownCount": 53,
+        "amountUnknownCount": 2,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 55,
+            "amount": 1166500600,
+            "amountKnownCount": 53
+          }
+        ]
+      },
+      {
+        "corporateNumber": "4010001008772",
+        "names": [
+          "三菱電機株式会社"
+        ],
+        "records": 38,
+        "amountKnownCount": 36,
+        "amountUnknownCount": 2,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 32,
+            "amount": 4877255760,
+            "amountKnownCount": 30
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 6,
+            "amount": 765699607,
+            "amountKnownCount": 6
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010401050387",
+        "names": [
+          "三菱重工業株式会社"
+        ],
+        "records": 38,
+        "amountKnownCount": 38,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 11,
+            "amount": 7028788620,
+            "amountKnownCount": 11
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 27,
+            "amount": 2114433621,
+            "amountKnownCount": 27
+          }
+        ]
+      },
+      {
+        "corporateNumber": "5010001008771",
+        "names": [
+          "三菱商事株式会社"
+        ],
+        "records": 13,
+        "amountKnownCount": 13,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 3,
+            "amount": 103387900,
+            "amountKnownCount": 3
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 10,
+            "amount": 119110664,
+            "amountKnownCount": 10
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6020001101277",
+        "names": [
+          "三菱パワー株式会社"
+        ],
+        "records": 13,
+        "amountKnownCount": 12,
+        "amountUnknownCount": 1,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 9,
+            "amount": 1516574340,
+            "amountKnownCount": 8
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 4,
+            "amount": 58620092,
+            "amountKnownCount": 4
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6010001146760",
+        "names": [
+          "三菱ケミカル株式会社"
+        ],
+        "records": 9,
+        "amountKnownCount": 9,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 9,
+            "amount": 3191048500,
+            "amountKnownCount": 9
+          }
+        ]
+      },
+      {
+        "corporateNumber": "9010401028746",
+        "names": [
+          "三菱電機ソフトウエア株式会社"
+        ],
+        "records": 7,
+        "amountKnownCount": 7,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 7,
+            "amount": 399940000,
+            "amountKnownCount": 7
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6010001023786",
+        "names": [
+          "三菱マテリアル株式会社"
+        ],
+        "records": 6,
+        "amountKnownCount": 5,
+        "amountUnknownCount": 1,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 4,
+            "amount": 449179700,
+            "amountKnownCount": 3
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 2,
+            "amount": 39907500,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010001034947",
+        "names": [
+          "三菱倉庫株式会社"
+        ],
+        "records": 6,
+        "amountKnownCount": 6,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 6,
+            "amount": 57546327,
+            "amountKnownCount": 6
+          }
+        ]
+      },
+      {
+        "corporateNumber": "4010001129098",
+        "names": [
+          "三菱ＵＦＪモルガン・スタンレー証券株式会社"
+        ],
+        "records": 4,
+        "amountKnownCount": 4,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 4,
+            "amount": 123365754,
+            "amountKnownCount": 4
+          }
+        ]
+      },
+      {
+        "corporateNumber": "5010001023531",
+        "names": [
+          "三菱マテリアルテクノ株式会社"
+        ],
+        "records": 4,
+        "amountKnownCount": 3,
+        "amountUnknownCount": 1,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 4,
+            "amount": 106797140,
+            "amountKnownCount": 3
+          }
+        ]
+      },
+      {
+        "corporateNumber": "2010401028728",
+        "names": [
+          "三菱オートリース株式会社"
+        ],
+        "records": 3,
+        "amountKnownCount": 3,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 3,
+            "amount": 15825660,
+            "amountKnownCount": 3
+          }
+        ]
+      },
+      {
+        "corporateNumber": "7180001114849",
+        "names": [
+          "三菱重工航空エンジン株式会社"
+        ],
+        "records": 3,
+        "amountKnownCount": 2,
+        "amountUnknownCount": 1,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 2,
+            "amount": 22998800,
+            "amountKnownCount": 1
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 1065317343,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3010401028735",
+        "names": [
+          "三菱ケミカル物流株式会社"
+        ],
+        "records": 2,
+        "amountKnownCount": 2,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 2,
+            "amount": 19015000,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6020001083540",
+        "names": [
+          "三菱重工環境・化学エンジニアリング株式会社"
+        ],
+        "records": 2,
+        "amountKnownCount": 2,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 2,
+            "amount": 58840560,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "9010001008768",
+        "names": [
+          "三菱瓦斯化学株式会社"
+        ],
+        "records": 2,
+        "amountKnownCount": 2,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 2,
+            "amount": 40280900,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "2010401028736",
+        "names": [
+          "三菱ケミカルエンジニアリング株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 14999040,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "4080001003528",
+        "names": [
+          "東海三菱自動車販売株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 80000000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "5010001008846",
+        "names": [
+          "株式会社三菱ＵＦＪ銀行"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 89500000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "5010001030412",
+        "names": [
+          "三菱電機ビルソリューションズ株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 11668800,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6010001033620",
+        "names": [
+          "三菱ガス化学ネクスト株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 19360000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6010701009457",
+        "names": [
+          "三菱鉛筆株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 43463520,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "7020001122958",
+        "names": [
+          "三菱造船株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "subsidy_published",
+            "records": 1,
+            "amount": 98645520,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010001008769",
+        "names": [
+          "三菱製紙株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 39913500,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010401085474",
+        "names": [
+          "三菱エンジニアリングプラスチックス株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 14895100,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "8010601032482",
+        "names": [
+          "三菱プレシジョン株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 189292766,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "9010401023623",
+        "names": [
+          "三菱ＨＣキャピタルオートリース株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 10670400,
+            "amountKnownCount": 1
+          }
+        ]
+      }
+    ],
+    "NTT": [
+      {
+        "corporateNumber": "7010001065142",
+        "names": [
+          "ＮＴＴ株式会社"
+        ],
+        "records": 6,
+        "amountKnownCount": 6,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 6,
+            "amount": 8009315820,
+            "amountKnownCount": 6
+          }
+        ]
+      }
+    ],
+    "デロイト": [
+      {
+        "corporateNumber": "7010001088960",
+        "names": [
+          "デロイトトーマツコンサルティング合同会社"
+        ],
+        "records": 181,
+        "amountKnownCount": 181,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 178,
+            "amount": 6640500585,
+            "amountKnownCount": 178
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 3,
+            "amount": 378472029,
+            "amountKnownCount": 3
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3010001076738",
+        "names": [
+          "合同会社デロイトトーマツ"
+        ],
+        "records": 108,
+        "amountKnownCount": 108,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 87,
+            "amount": 54586292669,
+            "amountKnownCount": 87
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 21,
+            "amount": 128345610789,
+            "amountKnownCount": 21
+          }
+        ]
+      },
+      {
+        "corporateNumber": "7011105003921",
+        "names": [
+          "デロイトトーマツ弁理士法人"
+        ],
+        "records": 20,
+        "amountKnownCount": 20,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 18,
+            "amount": 60700488,
+            "amountKnownCount": 18
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 2,
+            "amount": 10363244,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3010001085516",
+        "names": [
+          "デロイトトーマツベンチャーサポート株式会社"
+        ],
+        "records": 14,
+        "amountKnownCount": 14,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 14,
+            "amount": 393631670,
+            "amountKnownCount": 14
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6010005005979",
+        "names": [
+          "デロイトトーマツ税理士法人"
+        ],
+        "records": 12,
+        "amountKnownCount": 12,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 12,
+            "amount": 308521450,
+            "amountKnownCount": 12
+          }
+        ]
+      },
+      {
+        "corporateNumber": "4010003029619",
+        "names": [
+          "デロイトトーマツサイバー合同会社"
+        ],
+        "records": 5,
+        "amountKnownCount": 5,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 5,
+            "amount": 120700000,
+            "amountKnownCount": 5
+          }
+        ]
+      },
+      {
+        "corporateNumber": "2010001081417",
+        "names": [
+          "デロイトトーマツリスクアドバイザリー合同会社"
+        ],
+        "records": 3,
+        "amountKnownCount": 3,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 3,
+            "amount": 96654300,
+            "amountKnownCount": 3
+          }
+        ]
+      },
+      {
+        "corporateNumber": "3010401108537",
+        "names": [
+          "デロイトトーマツ人材機構株式会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 2500000,
+            "amountKnownCount": 1
+          }
+        ]
+      },
+      {
+        "corporateNumber": "4010003040212",
+        "names": [
+          "デロイトトーマツスペースアンドセキュリティ合同会社"
+        ],
+        "records": 1,
+        "amountKnownCount": 1,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 1,
+            "amount": 16250600,
+            "amountKnownCount": 1
+          }
+        ]
+      }
+    ],
+    "みずほ": [
+      {
+        "corporateNumber": "9010001027685",
+        "names": [
+          "みずほリサーチ＆テクノロジーズ株式会社"
+        ],
+        "records": 351,
+        "amountKnownCount": 349,
+        "amountUnknownCount": 2,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 343,
+            "amount": 6939363592,
+            "amountKnownCount": 341
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 8,
+            "amount": 253334579,
+            "amountKnownCount": 8
+          }
+        ]
+      },
+      {
+        "corporateNumber": "6010001008845",
+        "names": [
+          "株式会社みずほ銀行"
+        ],
+        "records": 20,
+        "amountKnownCount": 20,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 18,
+            "amount": 483300955,
+            "amountKnownCount": 18
+          },
+          {
+            "stage": "subsidy_published",
+            "records": 2,
+            "amount": 30849178,
+            "amountKnownCount": 2
+          }
+        ]
+      },
+      {
+        "corporateNumber": "5010001021403",
+        "names": [
+          "みずほ総合研究所株式会社"
+        ],
+        "records": 6,
+        "amountKnownCount": 6,
+        "amountUnknownCount": 0,
+        "byStage": [
+          {
+            "stage": "contracted",
+            "records": 6,
+            "amount": 181451280,
+            "amountKnownCount": 6
+          }
+        ]
+      }
+    ]
+  }
+}
