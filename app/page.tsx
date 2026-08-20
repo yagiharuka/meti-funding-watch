@@ -375,6 +375,27 @@ async function loadVerifiedFundingRecords(
   return sortFundingRecords(records);
 }
 
+function normalizeCompanySearchTerm(value: string) {
+  return value
+    .normalize("NFKC")
+    .replace(/\(株\)|㈱/g, "株式会社")
+    .replace(/\(有\)|㈲/g, "有限会社")
+    .toLocaleLowerCase("ja-JP")
+    .replace(/[\s　]+/g, "")
+    .trim();
+}
+
+function resolveCompanyNumbers(rows: FundingRecord[], query: string) {
+  const normalized = normalizeCompanySearchTerm(query);
+  if (!normalized) return null;
+  if (/^\d{13}$/.test(normalized)) return new Set([normalized]);
+  const matched = new Set<string>();
+  for (const row of rows) {
+    if (normalizeCompanySearchTerm(row.organization).includes(normalized)) matched.add(row.corporateNumber);
+  }
+  return matched;
+}
+
 function initialSearchParam(name: string, fallback: string) {
   if (typeof window === "undefined") return fallback;
   return new URLSearchParams(window.location.search).get(name) ?? fallback;
@@ -709,9 +730,9 @@ export default function Home() {
       return;
     }
     if (searchBackend !== "main" || !fallbackRecordsRef.current) return;
-    const needle = deferredQuery.trim().toLocaleLowerCase("ja-JP");
+    const matchedCorporateNumbers = resolveCompanyNumbers(fallbackRecordsRef.current, deferredQuery);
     const matching = fallbackRecordsRef.current.filter((row) => {
-      if (needle && !`${row.organization} ${row.corporateNumber} ${row.id} ${row.sourceKey}`.toLocaleLowerCase("ja-JP").includes(needle)) return false;
+      if (matchedCorporateNumbers && !matchedCorporateNumbers.has(row.corporateNumber)) return false;
       if (requestedAgency !== "all" && row.sourceAgency !== requestedAgency) return false;
       if (stage !== "all" && row.stage !== stage) return false;
       if (year === "unclassified" && row.fiscalYear !== null) return false;
@@ -971,20 +992,20 @@ export default function Home() {
           <div className="records-table" role="region" aria-label="企業検索結果サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
               <caption style={{ textAlign: "left", padding: "1rem", fontWeight: 700 }}>検索結果サマリー（現在の検索条件）</caption>
-              <thead><tr><th>対象法人</th><th>掲載行</th><th>金額記載あり</th><th>GビズINFO掲載値合計</th></tr></thead>
-              <tbody><tr><td><strong>{searchSummary.organizationCount.toLocaleString("ja-JP")}法人</strong><small>法人番号単位</small></td><td>{searchTotal.toLocaleString("ja-JP")}行</td><td>{searchSummary.amountKnownCount.toLocaleString("ja-JP")}行<small>{searchSummary.amountUnknownCount ? `／金額不明 ${searchSummary.amountUnknownCount.toLocaleString("ja-JP")}行` : ""}</small></td><td className="amount"><strong>{yen.format(searchSummary.amountKnownTotal)}</strong><small>金額記載のある掲載行のみ。総支出額ではありません。</small></td></tr></tbody>
+              <thead><tr><th>対象法人</th><th>掲載行</th><th>金額記載あり</th><th>金額の記載なし</th></tr></thead>
+              <tbody><tr><td><strong>{searchSummary.organizationCount.toLocaleString("ja-JP")}法人</strong><small>法人番号単位</small></td><td>{searchTotal.toLocaleString("ja-JP")}行</td><td>{searchSummary.amountKnownCount.toLocaleString("ja-JP")}行</td><td>{searchSummary.amountUnknownCount.toLocaleString("ja-JP")}行</td></tr></tbody>
             </table>
             <table>
               <thead><tr><th>情報種別</th><th>掲載行</th><th>掲載値合計</th></tr></thead>
               <tbody>{searchSummary.byStage.map((item) => <tr key={item.stage}><td><span className={`stage-badge ${item.stage}`}>{stageLabels[item.stage]}</span></td><td>{item.records.toLocaleString("ja-JP")}行</td><td className="amount">{yen.format(item.amount)}<small>金額記載 {item.amountKnownCount.toLocaleString("ja-JP")}行</small></td></tr>)}</tbody>
             </table>
             <table>
-              <thead><tr><th>直近5年度</th><th>掲載行</th><th>掲載値合計</th></tr></thead>
-              <tbody>{searchSummary.byYear.map((item) => <tr key={item.fiscalYear ?? "unclassified"}><td>{item.fiscalYear === null ? "年度不明" : `${item.fiscalYear}年度`}</td><td>{item.records.toLocaleString("ja-JP")}行</td><td className="amount">{yen.format(item.amount)}<small>金額記載 {item.amountKnownCount.toLocaleString("ja-JP")}行</small></td></tr>)}</tbody>
+              <thead><tr><th>直近5年度</th><th>掲載行</th><th>金額記載あり</th></tr></thead>
+              <tbody>{searchSummary.byYear.map((item) => <tr key={item.fiscalYear ?? "unclassified"}><td>{item.fiscalYear === null ? "年度不明" : `${item.fiscalYear}年度`}</td><td>{item.records.toLocaleString("ja-JP")}行</td><td>{item.amountKnownCount.toLocaleString("ja-JP")}行</td></tr>)}</tbody>
             </table>
             <table>
-              <thead><tr><th>掲載値上位の活動名称・件名</th><th>掲載行</th><th>掲載値合計</th></tr></thead>
-              <tbody>{searchSummary.topPrograms.map((item) => <tr key={item.program}><td><span className="program-name">{item.program}</span></td><td>{item.records.toLocaleString("ja-JP")}行</td><td className="amount">{yen.format(item.amount)}<small>金額記載 {item.amountKnownCount.toLocaleString("ja-JP")}行</small></td></tr>)}</tbody>
+              <thead><tr><th>掲載行の多い活動名称・件名</th><th>掲載行</th><th>金額記載あり</th></tr></thead>
+              <tbody>{searchSummary.topPrograms.map((item) => <tr key={item.program}><td><span className="program-name">{item.program}</span></td><td>{item.records.toLocaleString("ja-JP")}行</td><td>{item.amountKnownCount.toLocaleString("ja-JP")}行</td></tr>)}</tbody>
             </table>
           </div>
         )}
