@@ -6,12 +6,12 @@ const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY",
 const short = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 });
 let series: Series = "gbiz";
 let pending: { q: string; result: any } | null = null;
-let frame = 0;
+let scheduledFrame = 0;
 
 const esc = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 const amount = (n: number) => n >= 1e8 ? `${short.format(n / 1e8)}億円` : n >= 1e4 ? `${short.format(n / 1e4)}万円` : yen.format(n);
 const label = (s: Stage) => s === "contracted" ? "調達・委託" : "補助金";
-const note = (s: Stage) => s === "contracted" ? "受注額" : "交付決定額";
+const note = (s: Stage) => s === "contracted" ? "受注額" : "GビズINFO補助金掲載額";
 const stage = (o: any, s: Stage) => o.byStage.find((x: any) => x.stage === s) ?? { records: 0, amount: 0, amountKnownCount: 0 };
 const date = (v: string | null) => v || "日付の記載なし";
 
@@ -20,7 +20,7 @@ function moneyCell(x: any, s: Stage) {
 }
 
 function yearTable(o: any) {
-  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>年度</th><th>調達・委託（件数／受注額）</th><th>補助金（件数／交付決定額）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y: any) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountKnownCount ? esc(amount(y.subsidy_published.amount)) : "—"}／交付決定額</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>年度</th><th>調達・委託（件数／受注額）</th><th>補助金（件数／GビズINFO掲載額）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y: any) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountKnownCount ? esc(amount(y.subsidy_published.amount)) : "—"}／GビズINFO補助金掲載額</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function programTable(o: any) {
@@ -40,7 +40,7 @@ function fundingLine(o: any, s: Stage) {
 
 function card(o: any, i: number) {
   const id = `${o.corporateNumber}-${i}`;
-  return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><p class="company-search-no-total">※ 調達・委託は受注額、補助金は交付決定額で意味が異なるため、金額は合計していません。</p><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">金額の大きい事業を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
+  return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><p class="company-search-no-total">※ 調達・委託の受注額と補助金情報の掲載額は意味が異なるため、金額は合計していません。</p><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">金額の大きい事業を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
 }
 
 function tabs() {
@@ -85,15 +85,25 @@ function syncSeries() {
 }
 
 function render() {
-  frame = 0;
+  scheduledFrame = 0;
   if (!pending) return;
   const records = document.querySelector<HTMLElement>("#records");
-  const anchor = records?.querySelector<HTMLElement>(':scope > .records-table[aria-label="企業検索結果サマリー"]');
-  if (!records || !anchor) { frame = requestAnimationFrame(render); return; }
+  const mount = document.getElementById("company-search-mount");
+  if (!records || !mount) {
+    console.error("Company search mount point was not found.");
+    pending = null;
+    return;
+  }
   const { q, result } = pending;
   const orgs = result.organizationSummaries ?? [];
   let ui = document.getElementById("company-search-experience");
-  if (!ui) { ui = document.createElement("section"); ui.id = "company-search-experience"; anchor.before(ui); }
+  if (!ui) {
+    ui = document.createElement("section");
+    ui.id = "company-search-experience";
+    mount.append(ui);
+  } else if (ui.parentElement !== mount) {
+    mount.append(ui);
+  }
   const gbizBody = orgs.length
     ? `<div class="company-search-organization-list">${orgs.map(card).join("")}</div>`
     : '<p class="filter-note">GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。</p>';
@@ -104,11 +114,15 @@ function render() {
   syncSeries();
 }
 
-function schedule() { if (!frame) frame = requestAnimationFrame(render); }
+function scheduleRender() {
+  if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
+  scheduledFrame = requestAnimationFrame(render);
+}
+
 function clear() {
   pending = null;
-  if (frame) cancelAnimationFrame(frame);
-  frame = 0;
+  if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
+  scheduledFrame = 0;
   document.getElementById("company-search-experience")?.remove();
   const r = document.querySelector<HTMLElement>("#records");
   r?.classList.remove("enhanced-company-search-active");
@@ -121,7 +135,7 @@ window.addEventListener("meti-funding-search-result", ((e: SearchEvent) => {
   const q = e.detail?.parameters ? (new URLSearchParams(e.detail.parameters).get("q") ?? "").trim() : "";
   if (!q || !result) return clear();
   pending = { q, result };
-  schedule();
+  scheduleRender();
 }) as EventListener);
 
 document.addEventListener("click", (e) => {
