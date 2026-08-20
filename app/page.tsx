@@ -4,6 +4,7 @@ import { useDeferredValue, useEffect, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
 import CombinedCompanyResults from "@/app/CombinedCompanyResults";
+import { filterCompanyRecords } from "@/scripts/company-search.mjs";
 import {
   FUNDING_QUERY_MAX_LENGTH,
   sanitizeFundingSearchPage,
@@ -375,27 +376,6 @@ async function loadVerifiedFundingRecords(
   return sortFundingRecords(records);
 }
 
-function normalizeCompanySearchTerm(value: string) {
-  return value
-    .normalize("NFKC")
-    .replace(/\(株\)|㈱/g, "株式会社")
-    .replace(/\(有\)|㈲/g, "有限会社")
-    .toLocaleLowerCase("ja-JP")
-    .replace(/[\s　]+/g, "")
-    .trim();
-}
-
-function resolveCompanyNumbers(rows: FundingRecord[], query: string) {
-  const normalized = normalizeCompanySearchTerm(query);
-  if (!normalized) return null;
-  if (/^\d{13}$/.test(normalized)) return new Set([normalized]);
-  const matched = new Set<string>();
-  for (const row of rows) {
-    if (normalizeCompanySearchTerm(row.organization).includes(normalized)) matched.add(row.corporateNumber);
-  }
-  return matched;
-}
-
 function initialSearchParam(name: string, fallback: string) {
   if (typeof window === "undefined") return fallback;
   return new URLSearchParams(window.location.search).get(name) ?? fallback;
@@ -730,15 +710,12 @@ export default function Home() {
       return;
     }
     if (searchBackend !== "main" || !fallbackRecordsRef.current) return;
-    const matchedCorporateNumbers = resolveCompanyNumbers(fallbackRecordsRef.current, deferredQuery);
-    const matching = fallbackRecordsRef.current.filter((row) => {
-      if (matchedCorporateNumbers && !matchedCorporateNumbers.has(row.corporateNumber)) return false;
-      if (requestedAgency !== "all" && row.sourceAgency !== requestedAgency) return false;
-      if (stage !== "all" && row.stage !== stage) return false;
-      if (year === "unclassified" && row.fiscalYear !== null) return false;
-      if (/^\d{4}$/.test(year) && String(row.fiscalYear) !== year) return false;
-      return true;
-    });
+    const matching = filterCompanyRecords(fallbackRecordsRef.current, {
+      query: deferredQuery,
+      agency: requestedAgency,
+      stage,
+      year,
+    }) as FundingRecord[];
     const totalRecords = matching.length;
     const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
     const effectivePage = Math.min(page + 1, totalPages);
@@ -942,7 +919,6 @@ export default function Home() {
           <p>法人等の名称と法人番号だけを全文検索します。条件を組み合わせて掲載行を確認できます。</p>
         </div>
 
-
         <div className="series-label" aria-label="表示中のデータ系列">
           <strong>法人等別の調達（委託を含む）・補助金掲載情報</strong>
           <span>GビズINFO</span>
@@ -988,6 +964,8 @@ export default function Home() {
           </p>
         )}
 
+        <div id="company-search-mount" />
+
         {query.trim() && searchSummary && !detailLoading && searchTotal > 0 && (
           <div className="records-table" role="region" aria-label="企業検索結果サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
@@ -1009,7 +987,6 @@ export default function Home() {
             </table>
           </div>
         )}
-
 
         <CombinedCompanyResults query={query} />
         <div className="result-bar">
