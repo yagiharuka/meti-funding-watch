@@ -6,7 +6,9 @@ import SiteNotice from "@/app/SiteNotice";
 import "@/app/globals.css";
 import "./funding-search-bridge";
 import "./company-search-experience.css";
+import "./company-search-alternatives.css";
 import "./company-search-ui";
+import "./company-search-alternatives";
 
 // This entrypoint is the GitHub Pages production shell.
 const root = document.getElementById("root");
