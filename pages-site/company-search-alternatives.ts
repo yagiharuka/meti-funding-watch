@@ -34,6 +34,7 @@ type OriginalSearch = {
 type AlternativeSearch = {
   query: string;
   primaryCorporateNumbers: Set<string>;
+  primaryOrganizations: OrganizationSummary[];
   generation: number;
 };
 
@@ -47,11 +48,12 @@ const BaseWorker = window.Worker;
 let generation = 0;
 
 function removeAlternativeDisclosure() {
-  document.querySelector(".company-search-alternatives")?.remove();
+  document.querySelector(".company-search-alternatives-context")?.remove();
 }
 
 function createAlternativeDisclosure(
   query: string,
+  primaryOrganizations: OrganizationSummary[],
   organizations: OrganizationSummary[],
   totalAlternativeCount: number,
   truncated: boolean,
@@ -67,16 +69,28 @@ function createAlternativeDisclosure(
     }
 
     removeAlternativeDisclosure();
-    if (!organizations.length || totalAlternativeCount < 1) return;
+    if (!primaryOrganizations.length || !organizations.length || totalAlternativeCount < 1) return;
+
+    const context = document.createElement("div");
+    context.className = "company-search-alternatives-context";
+
+    const exact = document.createElement("p");
+    exact.className = "company-search-exact-match";
+    if (primaryOrganizations.length === 1) {
+      exact.textContent = `完全一致：${primaryOrganizations[0].name}`;
+    } else {
+      exact.textContent = `完全一致：${primaryOrganizations.length.toLocaleString("ja-JP")}法人`;
+    }
+    context.append(exact);
 
     const details = document.createElement("details");
     details.className = "company-search-alternatives";
 
     const summary = document.createElement("summary");
     const summaryLabel = document.createElement("span");
-    summaryLabel.textContent = "名称を含む他の法人も見る";
+    summaryLabel.textContent = `ほかに「${query}」を含む法人があります`;
     const summaryCount = document.createElement("strong");
-    summaryCount.textContent = `${totalAlternativeCount.toLocaleString("ja-JP")}法人`;
+    summaryCount.textContent = `→ ${totalAlternativeCount.toLocaleString("ja-JP")}法人を見る`;
     summary.append(summaryLabel, summaryCount);
     details.append(summary);
 
@@ -84,7 +98,7 @@ function createAlternativeDisclosure(
     body.className = "company-search-alternatives-body";
 
     const note = document.createElement("p");
-    note.textContent = `「${query}」を名称に含む別法人です。完全一致の法人とは金額を合算しません。法人を選ぶと、その法人番号だけで再検索します。`;
+    note.textContent = `以下は「${query}」を名称に含む別法人です。完全一致の法人とは金額を合算しません。法人を選ぶと、その法人番号だけで再検索します。`;
     body.append(note);
 
     const list = document.createElement("div");
@@ -114,7 +128,8 @@ function createAlternativeDisclosure(
     }
 
     details.append(body);
-    heading.insertAdjacentElement("afterend", details);
+    context.append(details);
+    heading.insertAdjacentElement("afterend", context);
   };
 
   requestAnimationFrame(() => install(0));
@@ -176,6 +191,7 @@ class CompanyAlternativeWorker extends BaseWorker {
       const truncated = totalAlternativeCount > alternatives.length;
       createAlternativeDisclosure(
         context.query,
+        context.primaryOrganizations,
         alternatives,
         totalAlternativeCount,
         truncated,
@@ -211,6 +227,7 @@ class CompanyAlternativeWorker extends BaseWorker {
     this.alternativeSearches.set(internalRequestId, {
       query,
       primaryCorporateNumbers,
+      primaryOrganizations: organizations,
       generation: original.generation,
     });
 

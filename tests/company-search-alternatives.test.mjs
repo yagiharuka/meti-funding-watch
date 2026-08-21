@@ -43,13 +43,18 @@ test("internal contains search still respects agency, type, and year filters", (
   );
 });
 
-test("Pages UI exposes a disclosure and re-searches a selected alternative by corporate number", async () => {
-  const [source, entrypoint] = await Promise.all([
+test("Pages UI shows the exact match and keeps alternative corporations visibly discoverable", async () => {
+  const [source, styles, entrypoint] = await Promise.all([
     readFile(new URL("../pages-site/company-search-alternatives.ts", import.meta.url), "utf8"),
+    readFile(new URL("../pages-site/company-search-alternatives.css", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/main.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(source, /名称を含む他の法人も見る/);
+  assert.match(source, /完全一致：\$\{primaryOrganizations\[0\]\.name\}/);
+  assert.match(source, /ほかに「\$\{query\}」を含む法人があります/);
+  assert.match(source, /→ \$\{totalAlternativeCount\.toLocaleString\("ja-JP"\)\}法人を見る/);
+  assert.match(source, /primaryOrganizations: organizations/);
   assert.match(source, /button\.dataset\.corp = organization\.corporateNumber/);
   assert.match(source, /INTERNAL_PARTIAL_SEARCH_PREFIX/);
+  assert.match(styles, /\.company-search-exact-match/);
   assert.match(entrypoint, /company-search-alternatives/);
 });
