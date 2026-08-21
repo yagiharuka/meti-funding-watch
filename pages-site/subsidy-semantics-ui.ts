@@ -78,7 +78,8 @@ function patchReactSummary() {
     if (labels[0] === "掲載行の多い活動名称・件名") setText(headers[0], "活動名称・件名（参考）");
   }
 
-  ensureSemanticsNote(region);
+  const mount = document.getElementById("company-search-mount");
+  if (mount) ensureSemanticsNote(mount);
 }
 
 function patchCompanyExperience() {
@@ -135,7 +136,9 @@ function patchCompanyExperience() {
 }
 
 function renderYearWarning() {
-  const existing = document.querySelector<HTMLElement>(".subsidy-year-warning");
+  const mount = document.getElementById("company-search-mount");
+  if (!mount) return;
+  const existing = mount.querySelector<HTMLElement>(":scope > .subsidy-year-warning");
   if (!latestParameters) {
     existing?.remove();
     return;
@@ -150,11 +153,11 @@ function renderYearWarning() {
     return;
   }
 
-  const mount = document.getElementById("company-search-mount");
-  if (!mount) return;
-
   let text = "年度指定について：認定日が空欄の補助金掲載行は年度で振り分けられず検索対象外になります。年度別件数は資金額・採択件数の推移を示しません。";
-  if (Number.isSafeInteger(subsidyRows) && Number.isSafeInteger(undatedSubsidyRows) && subsidyRows && undatedSubsidyRows) {
+  if (
+    typeof subsidyRows === "number" && Number.isSafeInteger(subsidyRows) && subsidyRows > 0
+    && typeof undatedSubsidyRows === "number" && Number.isSafeInteger(undatedSubsidyRows) && undatedSubsidyRows > 0
+  ) {
     const ratio = (100 * undatedSubsidyRows / subsidyRows).toFixed(1);
     text = `年度指定について：補助金${subsidyRows.toLocaleString("ja-JP")}行のうち${undatedSubsidyRows.toLocaleString("ja-JP")}行（${ratio}%）はGビズINFOの認定日が空欄のため、年度を指定すると年度で振り分けられず検索対象外になります。年度別件数は資金額・採択件数の推移を示しません。`;
   }
@@ -166,7 +169,7 @@ function renderYearWarning() {
   const warning = document.createElement("p");
   warning.className = "filter-note subsidy-year-warning";
   warning.textContent = text;
-  mount.insertAdjacentElement("beforebegin", warning);
+  mount.prepend(warning);
 }
 
 window.addEventListener("meti-funding-search-result", ((event: SearchEvent) => {
