@@ -1,0 +1,28 @@
+.subsidy-semantics-note,
+.subsidy-year-warning {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #e0e5e2;
+  border-radius: 10px;
+  background: #fafbf9;
+  color: #58665f;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.subsidy-year-warning {
+  margin-top: 0;
+}
+
+.company-search-funding-line .company-search-amount.empty {
+  white-space: normal;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .subsidy-semantics-note,
+  .subsidy-year-warning {
+    padding: 9px 10px;
+    font-size: 9px;
+  }
+}
