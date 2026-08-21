@@ -1,5 +1,17 @@
-.company-search-alternatives {
+.company-search-alternatives-context {
   margin: 0 0 12px;
+}
+
+.company-search-exact-match {
+  margin: 0 0 7px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.company-search-alternatives {
+  margin: 0;
   border: 1px solid #d9e1dc;
   border-radius: 14px;
   background: #fff;
@@ -26,7 +38,7 @@
 
 .company-search-alternatives > summary::after {
   content: "▾";
-  margin-left: auto;
+  margin-left: 4px;
   color: #667870;
   transition: transform .15s ease;
 }
@@ -107,10 +119,19 @@
 }
 
 @media (max-width: 640px) {
+  .company-search-exact-match {
+    font-size: 10px;
+  }
+
   .company-search-alternatives > summary {
     min-height: 46px;
     padding: 0 12px;
     font-size: 10px;
+  }
+
+  .company-search-alternatives > summary strong {
+    white-space: normal;
+    text-align: right;
   }
 
   .company-search-alternatives-body {
