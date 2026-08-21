@@ -70,6 +70,10 @@ test("emit subsidy semantics audit metrics", () => {
     }))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)) || Number(a.amount) - Number(b.amount));
 
+  const claudeSameCorpAmountStage = grouped(
+    rows.filter((row) => row.amount !== null),
+    (row) => [row.corporateNumber, row.amount, row.stage].join("\u001f"),
+  );
   const weakSameCorpAmount = grouped(
     subsidies.filter((row) => row.amount !== null),
     (row) => [row.corporateNumber, row.publisherCanonical, row.amount].join("\u001f"),
@@ -83,11 +87,14 @@ test("emit subsidy semantics audit metrics", () => {
     (row) => [row.corporateNumber, row.publisherCanonical, normalizeProgram(row.program)].join("\u001f"),
   );
 
+  const claudeExcessRows = claudeSameCorpAmountStage.reduce((sum, items) => sum + items.length - 1, 0);
+  const claudeExcessAmount = claudeSameCorpAmountStage.reduce((sum, items) => sum + (items.length - 1) * Number(items[0].amount ?? 0), 0);
   const weakExcessRows = weakSameCorpAmount.reduce((sum, items) => sum + items.length - 1, 0);
   const weakExcessAmount = weakSameCorpAmount.reduce((sum, items) => sum + (items.length - 1) * Number(items[0].amount ?? 0), 0);
   const exactProgramAmountExcessRows = exactProgramAmount.reduce((sum, items) => sum + items.length - 1, 0);
   const exactProgramAmountExcessAmount = exactProgramAmount.reduce((sum, items) => sum + (items.length - 1) * Number(items[0].amount ?? 0), 0);
 
+  const allKnownAmount = rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const totalKnownAmount = subsidies.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const topRows = subsidies
     .filter((row) => row.amount !== null)
@@ -106,12 +113,19 @@ test("emit subsidy semantics audit metrics", () => {
 
   const audit = {
     totalRows: rows.length,
+    allKnownAmount,
     subsidyRows: subsidies.length,
     subsidyKnownAmount: totalKnownAmount,
     missingDateRows: subsidies.filter((row) => row.fiscalYear === null).length,
     missingDateByPublisher,
     yearCounts,
     cashless,
+    claudeSameCorpAmountStage: {
+      groups: claudeSameCorpAmountStage.length,
+      excessRows: claudeExcessRows,
+      excessAmount: claudeExcessAmount,
+      excessAmountShareOfAllRows: allKnownAmount ? claudeExcessAmount / allKnownAmount : null,
+    },
     weakSameCorpAmount: {
       groups: weakSameCorpAmount.length,
       excessRows: weakExcessRows,
