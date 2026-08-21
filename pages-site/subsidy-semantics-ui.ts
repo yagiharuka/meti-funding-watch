@@ -77,9 +77,6 @@ function patchReactSummary() {
     if (labels[0] === "直近5年度") setText(headers[0], "認定日・受注日の直近5年度");
     if (labels[0] === "掲載行の多い活動名称・件名") setText(headers[0], "活動名称・件名（参考）");
   }
-
-  const mount = document.getElementById("company-search-mount");
-  if (mount) ensureSemanticsNote(mount);
 }
 
 function patchCompanyExperience() {
@@ -111,6 +108,7 @@ function patchCompanyExperience() {
   }
 
   for (const table of ui.querySelectorAll<HTMLTableElement>(".company-search-breakdown-table")) {
+    if (table.classList.contains("company-search-detail-table")) continue;
     const headers = [...table.querySelectorAll("thead th")];
     const labels = headers.map((header) => header.textContent?.trim() ?? "");
 
