@@ -8,9 +8,11 @@ import "./funding-search-bridge";
 import "./company-search-experience.css";
 import "./company-search-alternatives.css";
 import "./company-evidence-ui.css";
+import "./subsidy-semantics-ui.css";
 import "./company-search-ui";
 import "./company-search-alternatives";
 import "./company-evidence-ui";
+import "./subsidy-semantics-ui";
 
 // GitHub Pages production shell; search enhancements are installed before React mounts.
 const root = document.getElementById("root");
