@@ -31,12 +31,22 @@ function scheduleApply() {
 
 function replaceCell(cell: Element | undefined, strongText: string, smallText: string) {
   if (!cell) return;
+  if (
+    cell.getAttribute("data-subsidy-semantics") === "patched"
+    && cell.querySelector("strong")?.textContent === strongText
+    && cell.querySelector("small")?.textContent === smallText
+  ) return;
   cell.innerHTML = "";
   const strong = document.createElement("strong");
   strong.textContent = strongText;
   const small = document.createElement("small");
   small.textContent = smallText;
   cell.append(strong, small);
+  cell.setAttribute("data-subsidy-semantics", "patched");
+}
+
+function setText(element: Element | undefined | null, value: string) {
+  if (element && element.textContent !== value) element.textContent = value;
 }
 
 function ensureSemanticsNote(container: Element, after: Element | null = null) {
@@ -57,20 +67,15 @@ function patchReactSummary() {
     const labels = headers.map((header) => header.textContent?.trim() ?? "");
 
     if (labels[0] === "情報種別") {
-      if (headers[2]) headers[2].textContent = "掲載値";
+      setText(headers[2], "掲載値");
       for (const row of table.querySelectorAll("tbody tr")) {
         if (!row.querySelector(".stage-badge.subsidy_published")) continue;
         replaceCell([...row.children][2], "合計しません", "個別の掲載額は明細で確認");
       }
     }
 
-    if (labels[0] === "直近5年度") {
-      if (headers[0]) headers[0].textContent = "認定日・受注日の直近5年度";
-    }
-
-    if (labels[0] === "掲載行の多い活動名称・件名") {
-      if (headers[0]) headers[0].textContent = "活動名称・件名（参考）";
-    }
+    if (labels[0] === "直近5年度") setText(headers[0], "認定日・受注日の直近5年度");
+    if (labels[0] === "掲載行の多い活動名称・件名") setText(headers[0], "活動名称・件名（参考）");
   }
 
   ensureSemanticsNote(region);
@@ -87,21 +92,21 @@ function patchCompanyExperience() {
   for (const line of ui.querySelectorAll<HTMLElement>(".company-search-funding-line")) {
     if (line.querySelector(".company-search-funding-kind")?.textContent?.trim() !== "補助金") continue;
     const amount = line.querySelector<HTMLElement>(".company-search-amount");
-    if (amount) {
+    if (amount && amount.getAttribute("data-subsidy-semantics") !== "patched") {
       amount.textContent = "合計しません";
       amount.removeAttribute("title");
       amount.classList.add("empty");
+      amount.setAttribute("data-subsidy-semantics", "patched");
     }
-    const small = line.querySelector("small");
-    if (small) small.textContent = "個別の掲載額は明細で確認";
+    setText(line.querySelector("small"), "個別の掲載額は明細で確認");
   }
 
   for (const note of ui.querySelectorAll<HTMLElement>(".company-search-no-total")) {
-    note.textContent = "※ 調達・委託は受注額を合計しています。補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません。";
+    setText(note, "※ 調達・委託は受注額を合計しています。補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません。");
   }
 
   for (const button of ui.querySelectorAll<HTMLButtonElement>("button[data-fold]")) {
-    if (button.textContent?.includes("金額の大きい事業")) button.textContent = "事業別を見る";
+    if (button.textContent?.includes("金額の大きい事業")) setText(button, "事業別を見る");
   }
 
   for (const table of ui.querySelectorAll<HTMLTableElement>(".company-search-breakdown-table")) {
@@ -109,8 +114,8 @@ function patchCompanyExperience() {
     const labels = headers.map((header) => header.textContent?.trim() ?? "");
 
     if (labels[0] === "年度") {
-      if (headers[0]) headers[0].textContent = "認定日・受注日の年度";
-      if (headers[2]) headers[2].textContent = "補助金（掲載件数）";
+      setText(headers[0], "認定日・受注日の年度");
+      setText(headers[2], "補助金（掲載件数）");
       for (const row of table.querySelectorAll("tbody tr")) {
         const cells = [...row.children];
         const subsidyCell = cells[2];
@@ -130,25 +135,37 @@ function patchCompanyExperience() {
 }
 
 function renderYearWarning() {
-  document.querySelector(".subsidy-year-warning")?.remove();
-  if (!latestParameters) return;
+  const existing = document.querySelector<HTMLElement>(".subsidy-year-warning");
+  if (!latestParameters) {
+    existing?.remove();
+    return;
+  }
 
   const parameters = new URLSearchParams(latestParameters);
   const year = parameters.get("year") ?? "all";
   const stage = parameters.get("stage") ?? "all";
-  if (!/^\d{4}$/.test(year) || stage === "contracted") return;
+  const shouldShow = /^\d{4}$/.test(year) && stage !== "contracted";
+  if (!shouldShow) {
+    existing?.remove();
+    return;
+  }
 
   const mount = document.getElementById("company-search-mount");
   if (!mount) return;
 
-  const warning = document.createElement("p");
-  warning.className = "filter-note subsidy-year-warning";
+  let text = "年度指定について：認定日が空欄の補助金掲載行は年度で振り分けられず検索対象外になります。年度別件数は資金額・採択件数の推移を示しません。";
   if (Number.isSafeInteger(subsidyRows) && Number.isSafeInteger(undatedSubsidyRows) && subsidyRows && undatedSubsidyRows) {
     const ratio = (100 * undatedSubsidyRows / subsidyRows).toFixed(1);
-    warning.textContent = `年度指定について：補助金${subsidyRows.toLocaleString("ja-JP")}行のうち${undatedSubsidyRows.toLocaleString("ja-JP")}行（${ratio}%）はGビズINFOの認定日が空欄のため、年度を指定すると年度で振り分けられず検索対象外になります。年度別件数は資金額・採択件数の推移を示しません。`;
-  } else {
-    warning.textContent = "年度指定について：認定日が空欄の補助金掲載行は年度で振り分けられず検索対象外になります。年度別件数は資金額・採択件数の推移を示しません。";
+    text = `年度指定について：補助金${subsidyRows.toLocaleString("ja-JP")}行のうち${undatedSubsidyRows.toLocaleString("ja-JP")}行（${ratio}%）はGビズINFOの認定日が空欄のため、年度を指定すると年度で振り分けられず検索対象外になります。年度別件数は資金額・採択件数の推移を示しません。`;
   }
+
+  if (existing) {
+    setText(existing, text);
+    return;
+  }
+  const warning = document.createElement("p");
+  warning.className = "filter-note subsidy-year-warning";
+  warning.textContent = text;
   mount.insertAdjacentElement("beforebegin", warning);
 }
 
