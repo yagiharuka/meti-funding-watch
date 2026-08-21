@@ -37,8 +37,13 @@ type AlternativeSearch = {
   generation: number;
 };
 
+type EnhancedWorkerBridge = Worker & {
+  readonly enhanced?: boolean;
+  readonly native?: Worker;
+};
+
 const INTERNAL_REQUEST_PREFIX = "__company-name-alternatives__:";
-const BaseWorker = window.Worker as any;
+const BaseWorker = window.Worker;
 let generation = 0;
 
 function removeAlternativeDisclosure() {
@@ -121,14 +126,16 @@ class CompanyAlternativeWorker extends BaseWorker {
 
   constructor(scriptURL: string | URL, options?: WorkerOptions) {
     super(scriptURL, options);
-    if (!(this as any).enhanced) return;
+    const bridge = this as unknown as EnhancedWorkerBridge;
+    if (!bridge.enhanced) return;
     this.addEventListener("message", (event: MessageEvent<WorkerResult>) => {
       this.handleResult(event.data);
     });
   }
 
   postMessage(message: unknown, transferOrOptions?: Transferable[] | StructuredSerializeOptions) {
-    if ((this as any).enhanced && message && typeof message === "object") {
+    const bridge = this as unknown as EnhancedWorkerBridge;
+    if (bridge.enhanced && message && typeof message === "object") {
       const candidate = message as SearchMessage;
       if (
         candidate.type === "search"
@@ -207,7 +214,9 @@ class CompanyAlternativeWorker extends BaseWorker {
       generation: original.generation,
     });
 
-    (this as any).native.postMessage({
+    const native = (this as unknown as EnhancedWorkerBridge).native;
+    if (!native) return;
+    native.postMessage({
       type: "search",
       requestId: internalRequestId,
       parameters: alternativeParameters.toString(),
