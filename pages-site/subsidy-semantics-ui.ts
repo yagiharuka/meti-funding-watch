@@ -49,13 +49,12 @@ function setText(element: Element | undefined | null, value: string) {
   if (element && element.textContent !== value) element.textContent = value;
 }
 
-function ensureSemanticsNote(container: Element, after: Element | null = null) {
+function ensureSemanticsNote(container: Element) {
   if (container.querySelector(":scope > .subsidy-semantics-note")) return;
   const note = document.createElement("p");
   note.className = "filter-note subsidy-semantics-note";
   note.textContent = SUBSIDY_NOTE;
-  if (after) after.insertAdjacentElement("afterend", note);
-  else container.prepend(note);
+  container.prepend(note);
 }
 
 function patchReactSummary() {
@@ -77,15 +76,14 @@ function patchReactSummary() {
     if (labels[0] === "直近5年度") setText(headers[0], "認定日・受注日の直近5年度");
     if (labels[0] === "掲載行の多い活動名称・件名") setText(headers[0], "活動名称・件名（参考）");
   }
+
+  const mount = document.getElementById("company-search-mount");
+  if (mount) ensureSemanticsNote(mount);
 }
 
 function patchCompanyExperience() {
   const ui = document.getElementById("company-search-experience");
   if (!ui) return;
-
-  const heading = ui.querySelector(".company-search-query-heading");
-  const panel = ui.querySelector(".company-search-gbiz-panel");
-  if (panel) ensureSemanticsNote(panel, heading);
 
   for (const line of ui.querySelectorAll<HTMLElement>(".company-search-funding-line")) {
     if (line.querySelector(".company-search-funding-kind")?.textContent?.trim() !== "補助金") continue;
