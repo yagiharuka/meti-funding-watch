@@ -110,15 +110,14 @@ function getPublicBaseUrl() {
 
 export default function CombinedCompanyResults({ query }: Props) {
   const [index, setIndex] = useState<ReviewCompanyIndex | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const normalizedQuery = normalize(query);
+  const loading = Boolean(normalizedQuery && !index && !error);
 
   useEffect(() => {
-    if (!normalizedQuery || index || loading) return;
+    if (!normalizedQuery || index || error) return;
     let active = true;
     const controller = new AbortController();
-    setLoading(true);
     const indexUrl = new URL("data/review-company-index.json", getPublicBaseUrl());
     fetch(indexUrl, { cache: "no-store", signal: controller.signal })
       .then((response) => {
@@ -132,10 +131,9 @@ export default function CombinedCompanyResults({ query }: Props) {
       .catch((reason) => {
         if (!active || (reason instanceof DOMException && reason.name === "AbortError")) return;
         setError(reason instanceof Error ? reason.message : String(reason));
-      })
-      .finally(() => { if (active) setLoading(false); });
+      });
     return () => { active = false; controller.abort(); };
-  }, [normalizedQuery, index, loading]);
+  }, [normalizedQuery, index, error]);
 
   const reviewMatches = useMemo(() => {
     if (!index || !normalizedQuery) return [] as ReviewRecipient[];

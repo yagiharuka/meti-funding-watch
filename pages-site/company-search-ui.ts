@@ -1,44 +1,97 @@
 type Stage = "contracted" | "subsidy_published";
 type Series = "gbiz" | "review" | "official";
-type SearchEvent = CustomEvent<{ message: { result?: any }; parameters: string | null }>;
+
+type AmountSummary = {
+  records: number;
+  amount: number;
+  amountKnownCount: number;
+};
+
+type StageSummary = AmountSummary & {
+  stage: Stage;
+};
+
+type YearSummary = {
+  fiscalYear: number | null;
+  contracted: AmountSummary;
+  subsidy_published: AmountSummary;
+  amountUnknownCount: number;
+};
+
+type ProgramSummary = AmountSummary & {
+  stage: Stage;
+  program: string;
+};
+
+type DetailRow = {
+  stage: Stage;
+  sourceAgency: string;
+  program: string;
+  date: string | null;
+  amount: number | null;
+  sourceUrl?: string | null;
+  sourceSystem?: string;
+};
+
+type OrganizationSummary = {
+  name: string;
+  corporateNumber: string;
+  records: number;
+  amountUnknownCount: number;
+  byStage: StageSummary[];
+  byYear: YearSummary[];
+  topPrograms: ProgramSummary[];
+  detailRows: DetailRow[];
+  detailTruncated: boolean;
+};
+
+type CompanySearchResult = {
+  organizationSummaries?: OrganizationSummary[];
+  organizationSummariesTruncated?: boolean;
+};
+
+type SearchEvent = CustomEvent<{
+  message: { result?: CompanySearchResult };
+  parameters: string | null;
+}>;
 
 const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
 const short = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 });
 let series: Series = "gbiz";
-let pending: { q: string; result: any } | null = null;
+let pending: { q: string; result: CompanySearchResult } | null = null;
 let scheduledFrame = 0;
 
 const esc = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 const amount = (n: number) => n >= 1e8 ? `${short.format(n / 1e8)}億円` : n >= 1e4 ? `${short.format(n / 1e4)}万円` : yen.format(n);
 const label = (s: Stage) => s === "contracted" ? "調達・委託" : "補助金";
 const note = (s: Stage) => s === "contracted" ? "受注額" : "GビズINFO補助金掲載額";
-const stage = (o: any, s: Stage) => o.byStage.find((x: any) => x.stage === s) ?? { records: 0, amount: 0, amountKnownCount: 0 };
+const stage = (o: OrganizationSummary, s: Stage): AmountSummary => o.byStage.find((x) => x.stage === s) ?? { records: 0, amount: 0, amountKnownCount: 0 };
 const date = (v: string | null) => v || "日付の記載なし";
 
-function moneyCell(x: any, s: Stage) {
+function moneyCell(x: AmountSummary, s: Stage) {
   return x.amountKnownCount ? `<strong title="${esc(yen.format(x.amount))}">${esc(amount(x.amount))}</strong><small>※${note(s)}</small>` : `<strong>—</strong><small>※${note(s)}</small>`;
 }
 
-function yearTable(o: any) {
-  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>年度</th><th>調達・委託（件数／受注額）</th><th>補助金（件数／GビズINFO掲載額）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y: any) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountKnownCount ? esc(amount(y.subsidy_published.amount)) : "—"}／GビズINFO補助金掲載額</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
+function yearTable(o: OrganizationSummary) {
+  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>年度</th><th>調達・委託（件数／受注額）</th><th>補助金（件数／GビズINFO掲載額）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountKnownCount ? esc(amount(y.subsidy_published.amount)) : "—"}／GビズINFO補助金掲載額</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
 }
 
-function programTable(o: any) {
-  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>区分</th><th>活動名称・件名</th><th>掲載行</th><th>公表金額</th><th>金額記載あり</th></tr></thead><tbody>${o.topPrograms.map((p: any) => `<tr><td><span class="stage-badge ${p.stage}">${label(p.stage)}</span></td><td><span class="program-name">${esc(p.program)}</span></td><td>${p.records}件</td><td>${moneyCell(p, p.stage)}</td><td>${p.amountKnownCount}件</td></tr>`).join("")}</tbody></table></div>`;
+function programTable(o: OrganizationSummary) {
+  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>区分</th><th>活動名称・件名</th><th>掲載行</th><th>公表金額</th><th>金額記載あり</th></tr></thead><tbody>${o.topPrograms.map((p) => `<tr><td><span class="stage-badge ${p.stage}">${label(p.stage)}</span></td><td><span class="program-name">${esc(p.program)}</span></td><td>${p.records}件</td><td>${moneyCell(p, p.stage)}</td><td>${p.amountKnownCount}件</td></tr>`).join("")}</tbody></table></div>`;
 }
 
-function detailTable(o: any) {
-  const rows = o.detailRows.map((r: any) => `<tr><td><span class="stage-badge ${r.stage}">${label(r.stage)}</span></td><td>${esc(r.sourceAgency)}</td><td><span class="program-name">${esc(r.program)}</span></td><td>${esc(date(r.date))}</td><td><strong>${r.amount !== null ? esc(yen.format(r.amount)) : "金額の記載なし"}</strong><small>※${note(r.stage)}</small></td><td>${r.sourceUrl ? `<a class="source-link" href="${esc(r.sourceUrl)}" target="_blank" rel="noreferrer">GビズINFO ↗</a>` : esc(r.sourceSystem)}</td></tr>`).join("");
+function detailTable(o: OrganizationSummary) {
+  const rows = o.detailRows.map((r) => `<tr><td><span class="stage-badge ${r.stage}">${label(r.stage)}</span></td><td>${esc(r.sourceAgency)}</td><td><span class="program-name">${esc(r.program)}</span></td><td>${esc(date(r.date))}</td><td><strong>${r.amount !== null ? esc(yen.format(r.amount)) : "金額の記載なし"}</strong><small>※${note(r.stage)}</small></td><td>${r.sourceUrl ? `<a class="source-link" href="${esc(r.sourceUrl)}" target="_blank" rel="noreferrer">GビズINFO ↗</a>` : esc(r.sourceSystem)}</td></tr>`).join("");
   const more = o.detailTruncated ? `<p class="company-search-fold-note">先頭100件を表示しています。<button type="button" class="company-search-corp-only" data-corp="${esc(o.corporateNumber)}">法人番号で全明細を検索</button></p>` : "";
   return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table company-search-detail-table"><thead><tr><th>区分</th><th>公表組織</th><th>活動名称・件名</th><th>日付</th><th>公表金額</th><th>出典</th></tr></thead><tbody>${rows}</tbody></table></div>${more}`;
 }
 
-function fundingLine(o: any, s: Stage) {
+function fundingLine(o: OrganizationSummary, s: Stage) {
   const x = stage(o, s);
   return `<div class="company-search-funding-line"><span class="company-search-funding-kind">${label(s)}</span><strong class="company-search-count">${x.records}件</strong><strong class="company-search-amount${x.amountKnownCount ? "" : " empty"}" title="${x.amountKnownCount ? esc(yen.format(x.amount)) : ""}">${x.amountKnownCount ? esc(amount(x.amount)) : "—"}</strong><small>※${note(s)}${x.records > x.amountKnownCount ? `／金額記載 ${x.amountKnownCount}件` : ""}</small></div>`;
 }
 
-function card(o: any, i: number) {
+function card(o: OrganizationSummary, i: number) {
   const id = `${o.corporateNumber}-${i}`;
   return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><p class="company-search-no-total">※ 調達・委託の受注額と補助金情報の掲載額は意味が異なるため、金額は合計していません。</p><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">金額の大きい事業を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
 }
