@@ -204,13 +204,15 @@ test("all three runtime search paths import the same shared matcher", async () =
   }
 });
 
-test("Pages build contains the stable company-search mount and no mixed Gbiz total label", async () => {
+test("Pages build contains the stable company-search mount and current zero-result guardrail", async () => {
   const { readdir } = await import("node:fs/promises");
   const assets = (await readdir(new URL("../dist-pages/assets/", import.meta.url)))
     .filter((name) => name.endsWith(".js"));
   const javascript = (await Promise.all(assets.map((name) =>
     readFile(new URL(`../dist-pages/assets/${name}`, import.meta.url), "utf8")))).join("\n");
   assert.match(javascript, /company-search-mount/);
-  assert.match(javascript, /GビズINFOでは一致する法人を確認できませんでした/);
+  assert.match(javascript, /検索0件は、この法人が経産省関係の資金を受けていないことを意味しません/);
+  assert.doesNotMatch(javascript, /GビズINFOでは一致する法人を確認できませんでした/);
+  assert.match(javascript, /このデータの読み方/);
   assert.doesNotMatch(javascript, /GビズINFO掲載値合計/);
 });

@@ -57,7 +57,6 @@ type SearchEvent = CustomEvent<{
 
 const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
 const short = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 });
-const subsidySemanticsNote = "GビズINFOの補助金は、同一補助金の交付決定・確定等が別行で掲載される場合があるため、掲載額を行をまたいで合計していません。また、執行団体・事務局等への交付原資を含む場合があり、掲載法人自身の収益・最終受益額を示すものではありません。";
 let series: Series = "gbiz";
 let pending: { q: string; result: CompanySearchResult } | null = null;
 let scheduledFrame = 0;
@@ -100,7 +99,7 @@ function fundingLine(o: OrganizationSummary, s: Stage) {
 
 function card(o: OrganizationSummary, i: number) {
   const id = `${o.corporateNumber}-${i}`;
-  return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><p class="company-search-no-total">※ 調達・委託は受注額を合計しています。補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません。</p><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">事業別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
+  return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">事業別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
 }
 
 function tabs() {
@@ -113,6 +112,10 @@ function markCombined() {
   if (!records || !combined) return;
   let official = false;
   for (const child of Array.from(combined.children)) {
+    if (child.classList.contains("data-reading-guide")) {
+      child.classList.remove("combined-series-official-node", "combined-series-review-node");
+      continue;
+    }
     if (child.querySelector<HTMLElement>(".eyebrow")?.textContent?.trim() === "OFFICIAL SUPPLEMENT") official = true;
     child.classList.toggle("combined-series-official-node", official);
     child.classList.toggle("combined-series-review-node", !official);
@@ -166,8 +169,8 @@ function render() {
   }
   const gbizBody = orgs.length
     ? `<div class="company-search-organization-list">${orgs.map(card).join("")}</div>`
-    : '<p class="filter-note">GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。</p>';
-  ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div><p class="filter-note subsidy-semantics-note">${esc(subsidySemanticsNote)}</p>${gbizBody}</div>`;
+    : '<p class="company-search-zero-warning">検索0件は、この法人が経産省関係の資金を受けていないことを意味しません。</p>';
+  ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p><a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div>${gbizBody}</div>`;
   records.classList.add("enhanced-company-search-active");
   series = "gbiz";
   pending = null;

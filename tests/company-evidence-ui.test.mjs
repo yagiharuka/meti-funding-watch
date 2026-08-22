@@ -68,23 +68,33 @@ test("company evidence UI requires corporation selection for ambiguous names", a
   assert.match(entry, /company-evidence-ui/);
 });
 
-test("company evidence UI shows only disclosed review routes and does not aggregate route money", async () => {
-  const source = await text("pages-site/company-evidence-ui.ts");
+test("company evidence UI keeps route aggregation blocked and folds the explanatory prose", async () => {
+  const [source, guide] = await Promise.all([
+    text("pages-site/company-evidence-ui.ts"),
+    text("app/DataReadingGuide.tsx"),
+  ]);
   assert.match(source, /DISCLOSED FUNDING ROUTES/);
-  assert.match(source, /支出経路に明示された経路だけを表示/);
-  assert.match(source, /経路ごとの金額は合算しません/);
+  assert.match(source, /href="#data-reading-guide">↓ 読み方/);
   assert.match(source, /entry\.route/);
   assert.doesNotMatch(source, /routeAmount|amountByRoute|routeTotal/);
+  assert.doesNotMatch(source, /支出経路に明示された経路だけを表示し、経路ごとの金額は合算しません/);
+  assert.match(guide, /行政事業レビューに明示された経路だけを表示します/);
 });
 
-test("expanded official UI is keyed by corporate number and keeps negative inference explicit", async () => {
-  const source = await text("pages-site/company-evidence-ui.ts");
+test("expanded official UI keeps local allocation and negative-inference warnings while folding cross-series explanation", async () => {
+  const [source, guide] = await Promise.all([
+    text("pages-site/company-evidence-ui.ts"),
+    text("app/DataReadingGuide.tsx"),
+  ]);
   assert.match(source, /row\.corporateNumber === company\.corporateNumber/);
   assert.match(source, /entityHasExactCompanyIdentity\(row, company\.name\)/);
   assert.match(source, /共同受注・連名の各当事者を含む/);
   assert.match(source, /共同受注・連名の行は公表行全体の金額で、各社への配分額ではありません/);
   assert.match(source, /row\.organizations\.map\(escapeHtml\)/);
   assert.match(source, /公的資金の受領や契約がないことを意味しません/);
-  assert.match(source, /GビズINFOや行政事業レビューと合算しません/);
+  assert.match(source, /href="#data-reading-guide">↓ 読み方/);
+  assert.doesNotMatch(source, /金額は交付決定額・契約額など公表時点が異なるため、GビズINFOや行政事業レビューと合算しません/);
+  assert.match(guide, /交付決定額・契約額・レビュー掲載の支出先額/);
+  assert.match(guide, /相互に合算しません/);
   assert.match(source, /現在の収録機関を見る/);
 });

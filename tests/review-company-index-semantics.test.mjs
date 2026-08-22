@@ -35,16 +35,25 @@ test("NDF keeps both review rows but never promotes 47bn plus 47bn to a recipien
   assert.equal("amountKnownTotal" in recipient, false);
 });
 
-test("combined company UI can show review row amounts but cannot render a review aggregate", async () => {
-  const source = await text("../app/CombinedCompanyResults.tsx");
-  assert.match(source, /行政事業レビュー内でも掲載行をまたぐ金額合計は表示しません/);
+test("combined company UI shows row amounts but keeps aggregate explanations in the folded guide", async () => {
+  const [source, guide] = await Promise.all([
+    text("../app/CombinedCompanyResults.tsx"),
+    text("../app/DataReadingGuide.tsx"),
+  ]);
   assert.match(source, /<strong>合計しません<\/strong><small>個別の掲載額は下の明細で確認<\/small>/);
   assert.match(source, /displayReviewAmount\(entry\)/);
+  assert.match(source, /href="#data-reading-guide"/);
   assert.doesNotMatch(source, /reviewAmountKnownTotal|amountKnownTotal|金額記載行の単純合計/);
+  assert.doesNotMatch(source, /GビズINFO、行政事業レビュー、公式補足は金額の意味や時点が違うため/);
+  assert.doesNotMatch(source, /\{index\.semantics\.aggregationWarning\}/);
+  assert.match(source, /<\/section>\s*<DataReadingGuide \/>/, "reading guide must be a sibling after the combined section so injected evidence stays above it");
+  assert.match(guide, /別レビューシート年度に再掲/);
+  assert.match(guide, /掲載行・レビュー年度をまたぐ金額合計は表示しません/);
 
   const officialBlock = source.slice(source.indexOf("OFFICIAL SUPPLEMENT"));
   assert.match(officialBlock, /yen\.format\(row\.amount\)/);
   assert.doesNotMatch(officialBlock, /reduce\([^\n]*amount|officialAmountTotal|amountKnownTotal/);
+  assert.doesNotMatch(officialBlock, /GビズINFO・レビューと合算不可/);
 });
 
 test("Pages build checks committed metadata before regenerating the review company index", async () => {

@@ -31,6 +31,10 @@ class FakeClassList {
     this.#values.add(value);
     return true;
   }
+
+  contains(value) {
+    return this.#values.has(value);
+  }
 }
 
 class FakeElement {
@@ -166,16 +170,18 @@ function visibleLabels(html) {
     .filter(Boolean);
 }
 
-test("zero Gbiz rows still mount the company-search tabs and expose the other series", async () => {
+test("zero Gbiz rows show the harm-critical negative-inference warning and keep other series reachable", async () => {
   const ui = await renderCompanySearch({ organizationSummaries: [] }, "レビューだけにある法人");
   assert.ok(ui, "company search experience must mount even when Gbiz has zero rows");
   assert.match(ui.innerHTML, />GビズINFO<\/button>/);
   assert.match(ui.innerHTML, />行政事業レビュー<\/button>/);
   assert.match(ui.innerHTML, />公式資料<\/button>/);
-  assert.match(ui.innerHTML, /GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。/);
+  assert.match(ui.innerHTML, /class="company-search-zero-warning"/);
+  assert.match(ui.innerHTML, /検索0件は、この法人が経産省関係の資金を受けていないことを意味しません/);
+  assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
 });
 
-test("real company renderer never emits a subsidy aggregate but keeps individual subsidy detail", async () => {
+test("real company renderer never emits a subsidy aggregate or zero-result warning, but keeps individual detail", async () => {
   const ui = await renderCompanySearch({
     organizationSummaries: [{
       name: "テスト株式会社",
@@ -205,8 +211,10 @@ test("real company renderer never emits a subsidy aggregate but keeps individual
   }, "テスト株式会社");
 
   assert.ok(ui);
-  assert.match(ui.innerHTML, /補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません/);
-  assert.match(ui.innerHTML, /掲載法人自身の収益・最終受益額を示すものではありません/);
+  assert.doesNotMatch(ui.innerHTML, /company-search-zero-warning|資金を受けていないことを意味しません/);
+  assert.doesNotMatch(ui.innerHTML, /掲載法人自身の収益・最終受益額を示すものではありません/);
+  assert.doesNotMatch(ui.innerHTML, /company-search-no-total/);
+  assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
   assert.match(ui.innerHTML, /<strong class="company-search-amount empty">合計しません<\/strong>/);
   assert.match(ui.innerHTML, /<th>認定日・受注日の年度<\/th>/);
   assert.match(ui.innerHTML, /<th>補助金（掲載件数）<\/th>/);

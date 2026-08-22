@@ -14,8 +14,6 @@ const gbiz = summary.sources?.find((source) => source.id === "gbiz");
 const subsidyRows = gbiz?.csvEligibleSubsidyCount ?? null;
 const undatedSubsidyRows = summary.coverage?.gbiz?.unclassifiedDateCount ?? null;
 
-const SUBSIDY_NOTE = "GビズINFOの補助金は、同一補助金の交付決定・確定等が別行で掲載される場合があるため、掲載額を行をまたいで合計していません。また、執行団体・事務局等への交付原資を含む場合があり、掲載法人自身の収益・最終受益額を示すものではありません。";
-
 let latestParameters = "";
 let scheduledFrame = 0;
 
@@ -32,7 +30,6 @@ function scheduleApply() {
   scheduledFrame = requestAnimationFrame(() => {
     scheduledFrame = 0;
     runGuarded("summary", patchReactSummary);
-    runGuarded("note", renderSemanticsNote);
     runGuarded("year-warning", renderYearWarning);
   });
 }
@@ -85,22 +82,6 @@ function patchReactSummary() {
 
   if (!foundStageTable) throw new Error("Stage summary table contract was not found");
   region.classList.add("subsidy-semantics-ready");
-}
-
-function renderSemanticsNote() {
-  const mount = document.getElementById("company-search-mount");
-  if (!mount) return;
-  const existing = mount.querySelector<HTMLElement>(":scope > .subsidy-semantics-note");
-  const nativeNote = mount.querySelector<HTMLElement>("#company-search-experience .subsidy-semantics-note");
-  if (nativeNote) {
-    existing?.remove();
-    return;
-  }
-  if (existing) return;
-  const note = document.createElement("p");
-  note.className = "filter-note subsidy-semantics-note";
-  note.textContent = SUBSIDY_NOTE;
-  mount.prepend(note);
 }
 
 function renderYearWarning() {
