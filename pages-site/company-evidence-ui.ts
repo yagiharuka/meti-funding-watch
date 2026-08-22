@@ -246,7 +246,7 @@ function renderRoutes(
 
   const heading = document.createElement("div");
   heading.className = "company-evidence-heading";
-  heading.innerHTML = `<p class="eyebrow">DISCLOSED FUNDING ROUTES</p><h3>${escapeHtml(company.name)}への資金経路</h3><p>法人番号 ${escapeHtml(company.corporateNumber)} で行政事業レビューを照合。レビューシートの支出経路に明示された経路だけを表示し、経路ごとの金額は合算しません。</p>`;
+  heading.innerHTML = `<p class="eyebrow">DISCLOSED FUNDING ROUTES</p><h3>${escapeHtml(company.name)}への資金経路</h3><p>法人番号 ${escapeHtml(company.corporateNumber)} で行政事業レビューを照合。 <a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a></p>`;
   section.append(heading);
 
   if (!groups.length) {
@@ -300,7 +300,7 @@ function renderOfficial(
 
   const heading = document.createElement("div");
   heading.className = "company-evidence-heading";
-  heading.innerHTML = `<p class="eyebrow">OFFICIAL MATERIALS / VERIFIED SCOPE</p><h3>公式資料（確認できた範囲）</h3><p>${escapeHtml(company.name)}を法人番号 ${escapeHtml(company.corporateNumber)} で照合。公表資料に法人番号がない行だけ、受取先名（共同受注・連名の各当事者を含む）の完全一致で補います。</p>`;
+  heading.innerHTML = `<p class="eyebrow">OFFICIAL MATERIALS / VERIFIED SCOPE</p><h3>公式資料（確認できた範囲）</h3><p>${escapeHtml(company.name)}を法人番号 ${escapeHtml(company.corporateNumber)} で照合。公表資料に法人番号がない行だけ、受取先名（共同受注・連名の各当事者を含む）の完全一致で補います。 <a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a></p>`;
   section.append(heading);
 
   const scope = document.createElement("p");
@@ -331,7 +331,7 @@ function renderOfficial(
   } else {
     const intro = document.createElement("p");
     intro.className = "company-official-result-note";
-    intro.textContent = `${matches.length.toLocaleString("ja-JP")}行を確認。金額は交付決定額・契約額など公表時点が異なるため、GビズINFOや行政事業レビューと合算しません。共同受注・連名の行は公表行全体の金額で、各社への配分額ではありません。`;
+    intro.innerHTML = `${matches.length.toLocaleString("ja-JP")}行を確認。共同受注・連名の行は公表行全体の金額で、各社への配分額ではありません。 <a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a>`;
     section.append(intro);
 
     const scroll = document.createElement("div");
