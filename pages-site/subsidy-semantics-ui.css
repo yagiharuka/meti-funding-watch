@@ -6,6 +6,10 @@
   visibility: visible;
 }
 
+#company-search-mount:has(#company-search-experience .subsidy-semantics-note) > .subsidy-semantics-note {
+  display: none;
+}
+
 .subsidy-semantics-note,
 .subsidy-year-warning {
   margin: 10px 0 12px;
