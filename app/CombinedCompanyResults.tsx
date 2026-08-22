@@ -25,7 +25,6 @@ type ReviewRecipient = {
   aliases: string[];
   searchText: string;
   entryCount: number;
-  amountKnownTotal: number;
   amountKnownCount: number;
   amountUnknownCount: number;
   entries: ReviewEntry[];
@@ -156,7 +155,6 @@ export default function CombinedCompanyResults({ query }: Props) {
 
   const entries = reviewMatches.flatMap((recipient) => recipient.entries.map((entry) => ({ recipient, entry })))
     .sort((a, b) => b.entry.reviewSheetYear - a.entry.reviewSheetYear || (b.entry.amount ?? -1) - (a.entry.amount ?? -1));
-  const reviewAmountKnownTotal = reviewMatches.reduce((sum, row) => sum + row.amountKnownTotal, 0);
   const reviewAmountKnownCount = reviewMatches.reduce((sum, row) => sum + row.amountKnownCount, 0);
   const reviewAmountUnknownCount = reviewMatches.reduce((sum, row) => sum + row.amountUnknownCount, 0);
 
@@ -167,7 +165,7 @@ export default function CombinedCompanyResults({ query }: Props) {
           <p className="eyebrow">SAME COMPANY / DIFFERENT SERIES</p>
           <h2 id="combined-company-review-title">同じ企業を行政事業レビュー・公式補足でも確認</h2>
         </div>
-        <p>GビズINFO、行政事業レビュー、公式補足は金額の意味や時点が違うため、相互に合算しません。</p>
+        <p>GビズINFO、行政事業レビュー、公式補足は金額の意味や時点が違うため、相互に合算しません。行政事業レビュー内でも掲載行をまたぐ金額合計は表示しません。</p>
       </div>
       <p className="filter-note">企業名・法人番号の検索語だけを共通利用します。完全一致する法人名があればそれを優先し、完全一致がない場合だけ名称の部分一致を使います。上部の公表組織・情報種別・年度フィルターはGビズINFO側だけに適用されます。</p>
 
@@ -177,21 +175,16 @@ export default function CombinedCompanyResults({ query }: Props) {
       {!loading && !error && index && (
         <>
           <p className="filter-note">行政事業レビューの現在の同時検索対象は {index.reviewSheetYears.join("・")}年度シートです。旧年度は公表形式・取得経路が異なるため、現時点では同時検索に含めていません。</p>
+          <p className="filter-note">{index.semantics.aggregationWarning}</p>
           <div className="records-table" role="region" aria-label="行政事業レビュー企業検索サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
               <caption style={{ textAlign: "left", padding: "1rem", fontWeight: 700 }}>行政事業レビュー：同じ企業検索の結果</caption>
-              <thead><tr><th>対象法人</th><th>支出先明細</th><th>金額記載あり</th><th>金額記載行の単純合計</th></tr></thead>
+              <thead><tr><th>対象法人</th><th>支出先明細</th><th>金額記載あり</th><th>掲載値</th></tr></thead>
               <tbody><tr>
                 <td><strong>{reviewMatches.length.toLocaleString("ja-JP")}法人</strong><small>名称・法人番号で一致</small></td>
                 <td>{entries.length.toLocaleString("ja-JP")}行</td>
                 <td>{reviewAmountKnownCount.toLocaleString("ja-JP")}行<small>{reviewAmountUnknownCount ? `／金額欄なし ${reviewAmountUnknownCount.toLocaleString("ja-JP")}行` : ""}</small></td>
-                <td className="amount">
-                  {reviewMatches.length === 1 ? (
-                    <><strong>{yen.format(reviewAmountKnownTotal)}</strong><small>当該法人の金額記載行の単純合計。総支出額とは扱わず、GビズINFOとも合算しません。</small></>
-                  ) : (
-                    <><strong>—</strong><small>複数法人が一致したため、法人をまたぐ金額は合算しません。</small></>
-                  )}
-                </td>
+                <td className="amount"><strong>合計しません</strong><small>個別の掲載額は下の明細で確認</small></td>
               </tr></tbody>
             </table>
           </div>
