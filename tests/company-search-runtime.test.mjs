@@ -175,7 +175,7 @@ test("zero Gbiz rows still mount the company-search tabs and expose the other se
   assert.match(ui.innerHTML, /GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。/);
 });
 
-test("rendered company-search labels never present a cross-series total", async () => {
+test("real company renderer never emits a subsidy aggregate but keeps individual subsidy detail", async () => {
   const ui = await renderCompanySearch({
     organizationSummaries: [{
       name: "テスト株式会社",
@@ -184,17 +184,17 @@ test("rendered company-search labels never present a cross-series total", async 
       amountUnknownCount: 0,
       byStage: [
         { stage: "contracted", records: 1, amount: 100, amountKnownCount: 1 },
-        { stage: "subsidy_published", records: 1, amount: 200, amountKnownCount: 1 },
+        { stage: "subsidy_published", records: 1, amount: 987654321, amountKnownCount: 1 },
       ],
       byYear: [{
         fiscalYear: 2026,
         contracted: { records: 1, amount: 100, amountKnownCount: 1 },
-        subsidy_published: { records: 1, amount: 200, amountKnownCount: 1 },
+        subsidy_published: { records: 1, amount: 987654321, amountKnownCount: 1 },
         amountUnknownCount: 0,
       }],
       topPrograms: [
         { stage: "contracted", program: "委託テスト", records: 1, amount: 100, amountKnownCount: 1 },
-        { stage: "subsidy_published", program: "補助テスト", records: 1, amount: 200, amountKnownCount: 1 },
+        { stage: "subsidy_published", program: "補助テスト", records: 1, amount: 987654321, amountKnownCount: 1 },
       ],
       detailRows: [
         { stage: "contracted", sourceAgency: "経済産業省", program: "委託テスト", date: "2026-04-01", amount: 100, sourceUrl: null, sourceSystem: "GビズINFO" },
@@ -205,9 +205,19 @@ test("rendered company-search labels never present a cross-series total", async 
   }, "テスト株式会社");
 
   assert.ok(ui);
-  assert.match(ui.innerHTML, /意味が異なるため、金額は合計していません/);
+  assert.match(ui.innerHTML, /補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません/);
+  assert.match(ui.innerHTML, /掲載法人自身の収益・最終受益額を示すものではありません/);
+  assert.match(ui.innerHTML, /<strong class="company-search-amount empty">合計しません<\/strong>/);
+  assert.match(ui.innerHTML, /<th>認定日・受注日の年度<\/th>/);
+  assert.match(ui.innerHTML, /<th>補助金（掲載件数）<\/th>/);
+  assert.match(ui.innerHTML, /認定日基準／金額は合計しません/);
+  assert.match(ui.innerHTML, />事業別を見る<\/button>/);
+  assert.doesNotMatch(ui.innerHTML, /金額の大きい事業を見る/);
+  assert.doesNotMatch(ui.innerHTML, /987,654,321|9\.9億円|98765\.4万円/);
+  assert.match(ui.innerHTML, /<strong>[^<]*200[^<]*<\/strong><small>※GビズINFO補助金掲載額<\/small>/);
+
   const labels = visibleLabels(ui.innerHTML);
   for (const label of labels) {
-    assert.doesNotMatch(label, /合計|総額|計$/, `misleading total label: ${label}`);
+    assert.doesNotMatch(label, /総額|計$/, `misleading total label: ${label}`);
   }
 });
