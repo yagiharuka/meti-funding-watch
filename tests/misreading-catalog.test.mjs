@@ -62,22 +62,17 @@ test("catalog keeps unresolved risks visibly unresolved", async () => {
   }
 });
 
-test("M-001 warning is conditional and explanatory disclaimers move to one reading guide", async () => {
-  const [policy, main] = await Promise.all([
-    text("../pages-site/company-search-reading-guide.ts"),
-    text("../pages-site/main.tsx"),
-  ]);
+test("M-001 warning is conditional and explanatory disclaimers live in one reading guide", async () => {
+  const ui = await text("../pages-site/company-search-ui.ts");
 
-  assert.match(main, /import "\.\/company-search-reading-guide"/);
-  assert.match(policy, /const isZeroResult = \(result\.organizationSummaries\?\.length \?\? 0\) === 0/);
-  assert.match(policy, /if \(isZeroResult && heading\)/);
-  assert.match(policy, /これは、この事業者が資金を受けていないことを意味するものではありません。/);
+  assert.match(ui, /const zeroResultWarning = "これは、この事業者が資金を受けていないことを意味するものではありません。"/);
+  assert.match(ui, /const gbizBody = orgs\.length[\s\S]*company-search-zero-warning/);
+  assert.doesNotMatch(ui, /subsidySemanticsNote/);
 
-  assert.match(policy, /\.subsidy-semantics-note/);
-  assert.match(policy, /company-search-no-total/);
-  assert.match(policy, /↓ 読み方/);
-  assert.match(policy, /<details id="company-search-reading-guide"/);
-  assert.match(policy, /<summary>このデータの読み方<\/summary>/);
-  assert.match(policy, /掲載法人自身の収益や最終受益額を示すとは限りません/);
-  assert.match(policy, /GビズINFOや行政事業レビューの金額と合算しません/);
+  assert.match(ui, /company-search-no-total[\s\S]*↓ 読み方/);
+  assert.match(ui, /function readingGuide\(\)/);
+  assert.match(ui, /<details id="company-search-reading-guide"/);
+  assert.match(ui, /<summary>このデータの読み方<\/summary>/);
+  assert.match(ui, /掲載法人自身の収益や最終受益額を示すとは限りません/);
+  assert.match(ui, /GビズINFOや行政事業レビューの金額と合算しません/);
 });
