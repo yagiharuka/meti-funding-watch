@@ -29,16 +29,16 @@
 
 | ID | 誤読 | 被害 | 起きる画面 | 現在の対策 | 所在 | テスト | 状態 |
 |---|---|---|---|---|---|---|---|
-| M-001 | 0件＝その法人は経産省関係の資金を受けていない | 高 | GビズINFO企業検索タブ | — | — | — | OPEN |
+| M-001 | 0件＝その法人は経産省関係の資金を受けていない | 高 | GビズINFO企業検索タブ | 0件のときだけ「資金を受けていないことを意味しない」と表示。1件以上では表示しない | `pages-site/company-search-reading-guide.ts` | `tests/misreading-catalog.test.mjs` | MITIGATED |
 | M-002 | 0件＝行政事業レビュー／公式資料にも該当資金が存在しない | 高 | レビュー・公式資料 | 収録範囲外や未掲載を否定推論に使えない旨を表示 | `app/review/ReviewSearch.tsx`, `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts` | `tests/review-ui-semantics.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
-| M-003 | GビズINFOの補助金掲載額は行をまたいで足せる | 高 | 企業カード、年度別、事業別、検索サマリー | 補助金は合計を表示せず、個別明細だけ表示 | `pages-site/company-search-ui.ts`, `pages-site/subsidy-semantics-ui.ts` | `tests/subsidy-semantics-ui.test.mjs`, `tests/company-search-runtime.test.mjs` | MITIGATED |
+| M-003 | GビズINFOの補助金掲載額は行をまたいで足せる | 高 | 企業カード、年度別、事業別、検索サマリー | 補助金は合計を表示せず、個別明細だけ表示。詳しい説明は末尾の「このデータの読み方」へ集約 | `pages-site/company-search-ui.ts`, `pages-site/subsidy-semantics-ui.ts`, `pages-site/company-search-reading-guide.ts` | `tests/subsidy-semantics-ui.test.mjs`, `tests/company-search-runtime.test.mjs`, `tests/misreading-catalog.test.mjs` | MITIGATED |
 | M-004 | 行政事業レビューの別シート年度再掲を別支出として足せる | 高 | 同じ企業の行政事業レビュー表示 | レビュー掲載行をまたぐ金額合計を表示しない | `app/CombinedCompanyResults.tsx`, `scripts/build-review-company-index.mjs` | `tests/review-company-index-semantics.test.mjs` | MITIGATED |
 | M-005 | 年度別件数＝実際の補助金額・採択件数の推移 | 高 | GビズINFO年度フィルタ・年度別表示 | 年度指定時に認定日空欄の除外件数を警告し、補助金額は年度別合計しない | `pages-site/subsidy-semantics-ui.ts`, `pages-site/company-search-ui.ts` | `tests/subsidy-semantics-ui.test.mjs` | MITIGATED |
 | M-006 | 共同受注・連名行の公表金額＝各社それぞれの受領額 | 高 | 公式資料明細 | 共同当事者を展開し、公表行全体の金額で各社配分額ではない旨を表示 | `pages-site/company-evidence-ui.ts`, `scripts/company-search.mjs` | `tests/company-evidence-ui.test.mjs`, `tests/company-search-numberless.test.mjs` | MITIGATED |
 | M-007 | 正規化された「完全一致」1件＝自分が探していた法人で確定 | 中 | GビズINFO企業検索 | 完全一致を主結果にしつつ、同じ検索語を含む別法人候補を別表示し合算しない | `pages-site/company-search-alternatives.ts` | `tests/company-search-alternatives.test.mjs` | MITIGATED |
 | M-008 | 旧商号を入力すれば現在の同一法人を必ず検索できる | 高 | 全企業検索 | — | — | — | OPEN |
-| M-009 | GビズINFOの掲載法人＝資金の最終受益者・その法人自身の収益 | 高 | GビズINFO企業カード | 執行団体・事務局等への交付原資を含み得る旨を表示 | `pages-site/company-search-ui.ts`, `pages-site/subsidy-semantics-ui.ts` | `tests/subsidy-semantics-ui.test.mjs` | MITIGATED |
-| M-010 | GビズINFO・行政事業レビュー・公式資料の金額は同じ定義で相互に足せる | 高 | 複数系列を同時表示する画面 | 系列間合算を禁止し、各系列を別表示 | `app/CombinedCompanyResults.tsx`, `app/review/ReviewSearch.tsx` | `tests/review-ui-semantics.test.mjs`, `tests/review-company-index-semantics.test.mjs` | MITIGATED |
+| M-009 | GビズINFOの掲載法人＝資金の最終受益者・その法人自身の収益 | 高 | GビズINFO企業カード | 執行団体・事務局等への交付原資を含み得る旨を末尾の「このデータの読み方」に表示 | `pages-site/company-search-reading-guide.ts`, `pages-site/subsidy-semantics-ui.ts` | `tests/subsidy-semantics-ui.test.mjs`, `tests/misreading-catalog.test.mjs` | MITIGATED |
+| M-010 | GビズINFO・行政事業レビュー・公式資料の金額は同じ定義で相互に足せる | 高 | 複数系列を同時表示する画面 | 系列間合算を禁止し、各系列を別表示。定義差は末尾の「このデータの読み方」に集約 | `app/CombinedCompanyResults.tsx`, `app/review/ReviewSearch.tsx`, `pages-site/company-search-reading-guide.ts` | `tests/review-ui-semantics.test.mjs`, `tests/review-company-index-semantics.test.mjs`, `tests/misreading-catalog.test.mjs` | MITIGATED |
 | M-011 | 法人番号がない同名行は同一法人なのでまとめてよい | 高 | 公式資料など法人番号なしデータ | 同名でも行単位に分け、確認済み法人件数と番号なし行数を分離 | `scripts/company-search.mjs` | `tests/company-search-numberless.test.mjs` | MITIGATED |
 | M-012 | GビズINFO検索に法人番号なし行も混在し得る | 中 | GビズINFO公開検索 | GビズINFO公開スキーマは13桁法人番号を必須のまま維持。番号なし対応はevidence layerに限定 | `app/funding-search.worker.ts`, `app/page.tsx`, `pages-site/funding-search-enhanced.worker.js` | `tests/company-search-numberless.test.mjs` | MITIGATED |
 | M-013 | 公式資料で同額が複数年度にあれば重複なので1件に消してよい | 中 | 公式資料 | 自動dedupeせず行単位の証拠として保持し、法人合計を表示しない | `app/CombinedCompanyResults.tsx`, `data/official/` | `tests/review-company-index-semantics.test.mjs` の公式資料非集計契約 | MITIGATED |
@@ -46,12 +46,11 @@
 
 ## OPEN項目
 
-`OPEN` は修正漏れではなく、次の監査・修正対象を明示するための状態です。現在の優先順位は被害の大きさから次の順です。
+`OPEN` は修正漏れではなく、次の監査・修正対象を明示するための状態です。現在の優先順位は被害の大きさから次のとおりです。
 
-1. **M-001** GビズINFO企業検索の0件を「受給なし」と誤読する問題。
-2. **M-008** 旧商号検索を必ず保証できるように見える問題。
+1. **M-008** 旧商号検索を必ず保証できるように見える問題。
 
-M-001は結果0件の瞬間だけ短い否定推論防止文を出すのが適切です。M-008は、旧商号履歴の根拠データをどこまで保持できるかを確認するまで「対応済み」としません。
+M-008は、旧商号履歴の根拠データをどこまで保持できるかを確認するまで「対応済み」としません。
 
 ## 注記配置の原則
 
