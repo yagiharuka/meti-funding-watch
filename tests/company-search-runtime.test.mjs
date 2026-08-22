@@ -166,16 +166,18 @@ function visibleLabels(html) {
     .filter(Boolean);
 }
 
-test("zero Gbiz rows still mount the company-search tabs and expose the other series", async () => {
+test("zero Gbiz rows show the one loss-preventing warning and still expose the other series", async () => {
   const ui = await renderCompanySearch({ organizationSummaries: [] }, "レビューだけにある法人");
   assert.ok(ui, "company search experience must mount even when Gbiz has zero rows");
   assert.match(ui.innerHTML, />GビズINFO<\/button>/);
   assert.match(ui.innerHTML, />行政事業レビュー<\/button>/);
   assert.match(ui.innerHTML, />公式資料<\/button>/);
-  assert.match(ui.innerHTML, /GビズINFOでは一致する法人を確認できませんでした。行政事業レビュー・公式資料のタブも確認できます。/);
+  assert.match(ui.innerHTML, /これは、この事業者が資金を受けていないことを意味するものではありません。/);
+  assert.doesNotMatch(ui.innerHTML, /GビズINFOでは一致する法人を確認できませんでした。/);
+  assert.match(ui.innerHTML, /<summary>このデータの読み方<\/summary>/);
 });
 
-test("real company renderer never emits a subsidy aggregate but keeps individual subsidy detail", async () => {
+test("real company renderer keeps local non-additivity labels but moves explanations below the results", async () => {
   const ui = await renderCompanySearch({
     organizationSummaries: [{
       name: "テスト株式会社",
@@ -205,16 +207,26 @@ test("real company renderer never emits a subsidy aggregate but keeps individual
   }, "テスト株式会社");
 
   assert.ok(ui);
-  assert.match(ui.innerHTML, /補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません/);
-  assert.match(ui.innerHTML, /掲載法人自身の収益・最終受益額を示すものではありません/);
+  assert.doesNotMatch(ui.innerHTML, /これは、この事業者が資金を受けていないことを意味するものではありません。/);
   assert.match(ui.innerHTML, /<strong class="company-search-amount empty">合計しません<\/strong>/);
   assert.match(ui.innerHTML, /<th>認定日・受注日の年度<\/th>/);
   assert.match(ui.innerHTML, /<th>補助金（掲載件数）<\/th>/);
   assert.match(ui.innerHTML, /認定日基準／金額は合計しません/);
   assert.match(ui.innerHTML, />事業別を見る<\/button>/);
+  assert.match(ui.innerHTML, />↓ 読み方<\/a>/);
   assert.doesNotMatch(ui.innerHTML, /金額の大きい事業を見る/);
   assert.doesNotMatch(ui.innerHTML, /987,654,321|9\.9億円|98765\.4万円/);
   assert.match(ui.innerHTML, /<strong>[^<]*200[^<]*<\/strong><small>※GビズINFO補助金掲載額<\/small>/);
+
+  const guideStart = ui.innerHTML.indexOf('<details id="company-search-reading-guide"');
+  assert.ok(guideStart >= 0, "reading guide must exist below the result cards");
+  const beforeGuide = ui.innerHTML.slice(0, guideStart);
+  const guide = ui.innerHTML.slice(guideStart);
+  assert.doesNotMatch(beforeGuide, /同一補助金の交付決定・確定等が別行で掲載される場合/);
+  assert.doesNotMatch(beforeGuide, /掲載法人自身の収益や最終受益額/);
+  assert.match(guide, /GビズINFOの補助金は、同一補助金の交付決定・確定等が別行で掲載される場合/);
+  assert.match(guide, /掲載法人自身の収益や最終受益額を示すとは限りません/);
+  assert.match(guide, /GビズINFOや行政事業レビューの金額と合算しません/);
 
   const labels = visibleLabels(ui.innerHTML);
   for (const label of labels) {
