@@ -70,7 +70,6 @@ const recipients = [...groups.values()].map((group) => {
     || a.program.localeCompare(b.program, "ja")
     || (a.sourceRowNumber ?? Number.MAX_SAFE_INTEGER) - (b.sourceRowNumber ?? Number.MAX_SAFE_INTEGER));
   const aliases = [...group.aliases].sort((a, b) => a.localeCompare(b, "ja"));
-  const amountKnownTotal = entries.reduce((sum, row) => sum + (row.amount ?? 0), 0);
   const amountKnownCount = entries.filter((row) => row.amount != null).length;
   return {
     organization: group.organization,
@@ -78,12 +77,11 @@ const recipients = [...groups.values()].map((group) => {
     aliases,
     searchText: normalize(`${aliases.join(" ")} ${group.corporateNumber}`),
     entryCount: entries.length,
-    amountKnownTotal,
     amountKnownCount,
     amountUnknownCount: entries.length - amountKnownCount,
     entries,
   };
-}).sort((a, b) => b.amountKnownTotal - a.amountKnownTotal || b.entryCount - a.entryCount || a.organization.localeCompare(b.organization, "ja"));
+}).sort((a, b) => b.entryCount - a.entryCount || a.organization.localeCompare(b.organization, "ja"));
 
 const output = {
   schemaVersion: 1,
@@ -91,8 +89,8 @@ const output = {
   reviewSheetYears: manifest.reviewSheetYears,
   recipientCount: recipients.length,
   semantics: {
-    amount: "行政事業レビュー公式CSV『支出先の合計支出額』。同一レビュー年度・事業・支出ブロック・受取先について金額記載行がある場合のみ、同じ組合せの金額空欄行を企業検索用索引から省く。金額記載行同士は統合しない。",
-    aggregationWarning: "GビズINFO掲載値、NEDO交付決定額、上流・中間・下流の支出額を相互に合算しない。",
+    amount: "行政事業レビュー公式CSV『支出先の合計支出額』を明細行ごとに表示する。同一レビュー年度・事業・支出ブロック・受取先について金額記載行がある場合のみ、同じ組合せの金額空欄行を企業検索用索引から省く。金額記載行同士は統合しない。",
+    aggregationWarning: "行政事業レビューは同一事業・支出先の情報が別レビューシート年度に再掲される場合があり、公開データだけでは同一支出の再掲か別年度の実支出かを一意に判別できないため、支出先の掲載額を行・年度をまたいで合計しない。GビズINFO・公式資料とも合算しない。",
   },
   recipients,
 };
