@@ -39,7 +39,7 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   assert.doesNotMatch(guard, /patchCompanyExperience/);
   assert.match(guard, /row\.children\.length !== 3/);
   assert.match(guard, /subsidy-semantics-ready/);
-  assert.match(css, /:has\(\.stage-badge\.subsidy_published\) td:nth-child\(3\)/);
+  assert.match(css, /tbody tr:has\(\.stage-badge\.subsidy_published\) \{/);
   assert.match(css, /\.subsidy-semantics-ready/);
 });
 
