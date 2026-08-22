@@ -10,7 +10,7 @@
     "install:ci": "bash scripts/install-ci.sh",
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vite",
     "build": "bash scripts/build-verified.sh",
-    "build:pages": "node scripts/build-official-supplement-index.mjs && node scripts/build-official-company-index.mjs && vite build --config vite.pages.config.ts && node scripts/write-pages-release.mjs && node scripts/write-pages-status.mjs",
+    "build:pages": "node scripts/build-review-company-index.mjs && node scripts/build-official-supplement-index.mjs && node scripts/build-official-company-index.mjs && vite build --config vite.pages.config.ts && node scripts/write-pages-release.mjs && node scripts/write-pages-status.mjs",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "update:data": "node scripts/update-data.mjs",
     "update:official": "node scripts/update-official-data.mjs && node scripts/build-official-supplement-index.mjs && node scripts/build-official-company-index.mjs",
@@ -19,7 +19,7 @@
     "migrate:review-v4": "node scripts/migrate-review-cache-v4.mjs",
     "discover:official": "node scripts/official-source-discovery.mjs",
     "test": "npm run build && npm run test:pages && node --test tests/sites-rendered-html.test.mjs",
-    "test:pages": "npm run build:pages && node --test --test-concurrency=1 tests/company-search-safety.test.mjs tests/company-search-runtime.test.mjs tests/company-search-realdata.test.mjs tests/company-search-alternatives.test.mjs tests/subsidy-semantics-ui.test.mjs tests/company-evidence-ui.test.mjs tests/funding-data.test.mjs tests/gbiz-refresh.test.mjs tests/governance.test.mjs tests/mirasapo-search.test.mjs tests/official-chubu-sources.test.mjs tests/official-fetch-retry.test.mjs tests/official-golden-records.test.mjs tests/official-pdf.test.mjs tests/official-reconciliation.test.mjs tests/official-source-discovery.test.mjs tests/official-sources.test.mjs tests/official-supplement.test.mjs tests/rendered-html.test.mjs tests/review-backup.test.mjs tests/review-data-model.test.mjs tests/review-data.test.mjs tests/review-offline-pipeline.test.mjs tests/review-ui-semantics.test.mjs tests/three-fixes.test.mjs tests/ui-accuracy.test.mjs tests/update-status.test.mjs",
+    "test:pages": "npm run build:pages && node --test --test-concurrency=1 tests/company-search-safety.test.mjs tests/company-search-runtime.test.mjs tests/company-search-realdata.test.mjs tests/company-search-alternatives.test.mjs tests/subsidy-semantics-ui.test.mjs tests/company-evidence-ui.test.mjs tests/funding-data.test.mjs tests/gbiz-refresh.test.mjs tests/governance.test.mjs tests/mirasapo-search.test.mjs tests/official-chubu-sources.test.mjs tests/official-fetch-retry.test.mjs tests/official-golden-records.test.mjs tests/official-pdf.test.mjs tests/official-reconciliation.test.mjs tests/official-source-discovery.test.mjs tests/official-sources.test.mjs tests/official-supplement.test.mjs tests/rendered-html.test.mjs tests/review-backup.test.mjs tests/review-company-index-semantics.test.mjs tests/review-data-model.test.mjs tests/review-data.test.mjs tests/review-offline-pipeline.test.mjs tests/review-ui-semantics.test.mjs tests/three-fixes.test.mjs tests/ui-accuracy.test.mjs tests/update-status.test.mjs",
     "validate:artifact": "bash scripts/validate-artifact.sh",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern dist-pages --ignore-pattern .next"
   },
