@@ -38,8 +38,15 @@ export function normalizeCompanyIdentity(value = "") {
 
 function entityNames(entity) {
   const names = [entity.organization];
+  if (Array.isArray(entity.organizations)) names.push(...entity.organizations);
   if (Array.isArray(entity.aliases)) names.push(...entity.aliases);
-  return names.filter(Boolean);
+  return [...new Set(names.map((name) => String(name ?? "").trim()).filter(Boolean))];
+}
+
+export function entityHasExactCompanyIdentity(entity, query) {
+  const identity = normalizeCompanyIdentity(query);
+  if (!identity) return false;
+  return entityNames(entity).some((name) => normalizeCompanyIdentity(name) === identity);
 }
 
 function parseCompanyQuery(query) {
@@ -63,8 +70,7 @@ export function filterCompanyEntities(entities, query) {
   if (!identity) return [];
 
   if (!parsed.forcePartial) {
-    const exact = entities.filter((entity) =>
-      entityNames(entity).some((name) => normalizeCompanyIdentity(name) === identity));
+    const exact = entities.filter((entity) => entityHasExactCompanyIdentity(entity, parsed.query));
     if (exact.length) return exact;
   }
 

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { filterCompanyEntities } from "../scripts/company-search.mjs";
+
 async function text(path) {
   return readFile(path, "utf8");
 }
@@ -40,6 +42,17 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.ok(nedo, "known NEDO company record must remain searchable");
   const smrj = index.records.find((row) => row.sourceId === "smrj" && row.corporateNumber === "1010401023102");
   assert.ok(smrj, "known SMRJ company record must remain searchable");
+
+  const jointRows = index.records.filter((row) => Array.isArray(row.organizations) && row.organizations.length > 1);
+  assert.ok(jointRows.length > 0, "joint-recipient rows from the official corpus must survive index generation");
+  const sample = jointRows[0];
+  for (const participant of sample.organizations) {
+    assert.deepEqual(
+      filterCompanyEntities([sample], participant).map((row) => row.id),
+      [sample.id],
+      `${participant}: joint official row must be reachable by the participant name`,
+    );
+  }
 });
 
 test("company evidence UI requires corporation selection for ambiguous names", async () => {
@@ -67,7 +80,10 @@ test("company evidence UI shows only disclosed review routes and does not aggreg
 test("expanded official UI is keyed by corporate number and keeps negative inference explicit", async () => {
   const source = await text("pages-site/company-evidence-ui.ts");
   assert.match(source, /row\.corporateNumber === company\.corporateNumber/);
-  assert.match(source, /公表資料に法人番号がない行だけ、法人名の完全一致で補います/);
+  assert.match(source, /entityHasExactCompanyIdentity\(row, company\.name\)/);
+  assert.match(source, /共同受注・連名の各当事者を含む/);
+  assert.match(source, /共同受注・連名の行は公表行全体の金額で、各社への配分額ではありません/);
+  assert.match(source, /row\.organizations\.map\(escapeHtml\)/);
   assert.match(source, /公的資金の受領や契約がないことを意味しません/);
   assert.match(source, /GビズINFOや行政事業レビューと合算しません/);
   assert.match(source, /現在の収録機関を見る/);

@@ -87,6 +87,10 @@ function fiscalYearsFor(sourceId, rows) {
     .filter((year) => Number.isSafeInteger(year))
     .sort((a, b) => a - b);
 }
+function normalizeOrganizations(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((name) => String(name ?? "").trim()).filter(Boolean))];
+}
 
 function normalizeOfficialRow(row, idPrefix, fallbackSourceId = null, fallbackSourceName = null) {
   const sourceId = row.sourceId ?? row.executorId ?? fallbackSourceId;
@@ -102,11 +106,13 @@ function normalizeOfficialRow(row, idPrefix, fallbackSourceId = null, fallbackSo
     || !validHttps(sourceUrl)
   ) return null;
   const corporateNumber = validCorporateNumber(row.corporateNumber) ? row.corporateNumber : "";
+  const organizations = normalizeOrganizations(row.organizations);
   return {
     id: `${idPrefix}${row.id}`,
     sourceId,
     sourceName,
     organization: row.organization,
+    organizations,
     corporateNumber,
     fiscalYear: row.fiscalYear,
     date: row.date ?? null,
@@ -120,7 +126,7 @@ function normalizeOfficialRow(row, idPrefix, fallbackSourceId = null, fallbackSo
     sourceUrl,
     sourcePageUrl,
     sourceKey: row.sourceKey ?? row.id,
-    searchText: normalizeSearch([row.organization, corporateNumber].filter(Boolean).join(" ")),
+    searchText: normalizeSearch([row.organization, ...organizations, corporateNumber].filter(Boolean).join(" ")),
   };
 }
 
