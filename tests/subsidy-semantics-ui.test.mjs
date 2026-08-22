@@ -39,8 +39,10 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   assert.doesNotMatch(guard, /patchCompanyExperience/);
   assert.match(guard, /row\.children\.length !== 3/);
   assert.match(guard, /subsidy-semantics-ready/);
-  assert.match(css, /tbody tr:has\(\.stage-badge\.subsidy_published\) \{/);
-  assert.match(css, /\.subsidy-semantics-ready/);
+  assert.match(guard, /#company-search-experience \.subsidy-semantics-note/);
+  assert.match(css, /\[aria-label="企業検索結果サマリー"\] tbody tr \{\s*visibility: hidden;/s);
+  assert.match(css, /\.subsidy-semantics-ready tbody tr \{\s*visibility: visible;/s);
+  assert.doesNotMatch(css, /:has\(/);
 });
 
 test("a broken React-summary contract cannot suppress the note or year warning", async () => {
@@ -60,6 +62,7 @@ test("a broken React-summary contract cannot suppress the note or year warning",
 
   const mount = {
     querySelector(selector) {
+      if (selector === "#company-search-experience .subsidy-semantics-note") return null;
       if (selector.includes("subsidy-semantics-note")) {
         return children.find((child) => child.className.includes("subsidy-semantics-note")) ?? null;
       }
