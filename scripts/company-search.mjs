@@ -95,9 +95,24 @@ export function filterCompanyRecords(rows, {
   stage = "all",
   year = "all",
 } = {}) {
-  const matchedCorporateNumbers = resolveCompanyNumbers(rows, query);
+  const parsed = parseCompanyQuery(query);
+  const normalizedQuery = normalizeCompanySearchTerm(parsed.query);
+  const matchedEntities = normalizedQuery ? filterCompanyEntities(rows, query) : null;
+  const matchedCorporateNumbers = matchedEntities
+    ? new Set(matchedEntities.map((row) => row.corporateNumber).filter(Boolean))
+    : null;
+  const matchedNumberlessRows = matchedEntities
+    ? new Set(matchedEntities.filter((row) => !row.corporateNumber))
+    : null;
+
   return rows.filter((row) => {
-    if (matchedCorporateNumbers && !matchedCorporateNumbers.has(row.corporateNumber)) return false;
+    if (matchedEntities) {
+      if (row.corporateNumber) {
+        if (!matchedCorporateNumbers.has(row.corporateNumber)) return false;
+      } else if (!matchedNumberlessRows.has(row)) {
+        return false;
+      }
+    }
     if (agency !== "all" && row.sourceAgency !== agency) return false;
     if (stage !== "all" && row.stage !== stage) return false;
     if (year === "unclassified" && row.fiscalYear !== null) return false;
