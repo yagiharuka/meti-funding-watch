@@ -33,7 +33,8 @@ test("misreading catalog is the explicit audit entrypoint", async () => {
   ]) assert.match(catalog, new RegExp(dimension));
 
   assert.match(template, /実装より先に `docs\/MISREADING_CATALOG\.md` を確認した/);
-  assert.match(template, /カタログの網羅性を批判してください/);
+  assert.match(template, /docs\/MISREADING_CATALOG\.md/);
+  assert.match(template, /網羅性を批判してください/);
 });
 
 test("catalog keeps unresolved risks visibly unresolved", async () => {
