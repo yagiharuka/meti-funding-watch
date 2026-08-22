@@ -1,4 +1,4 @@
-import { normalizeCompanyIdentity } from "../scripts/company-search.mjs";
+import { entityHasExactCompanyIdentity, normalizeCompanyIdentity } from "../scripts/company-search.mjs";
 
 type OrganizationSummary = {
   name: string;
@@ -50,6 +50,7 @@ type OfficialRecord = {
   sourceId: string;
   sourceName: string;
   organization: string;
+  organizations?: string[];
   corporateNumber: string;
   fiscalYear: number;
   date: string | null;
@@ -273,10 +274,9 @@ function renderRoutes(
 }
 
 function officialMatches(index: OfficialCompanyIndex, company: OrganizationSummary) {
-  const identity = normalizeCompanyIdentity(company.name);
   return index.records.filter((row) =>
     row.corporateNumber === company.corporateNumber
-    || (!row.corporateNumber && normalizeCompanyIdentity(row.organization) === identity));
+    || (!row.corporateNumber && entityHasExactCompanyIdentity(row, company.name)));
 }
 
 function renderOfficial(
@@ -300,7 +300,7 @@ function renderOfficial(
 
   const heading = document.createElement("div");
   heading.className = "company-evidence-heading";
-  heading.innerHTML = `<p class="eyebrow">OFFICIAL MATERIALS / VERIFIED SCOPE</p><h3>公式資料（確認できた範囲）</h3><p>${escapeHtml(company.name)}を法人番号 ${escapeHtml(company.corporateNumber)} で照合。公表資料に法人番号がない行だけ、法人名の完全一致で補います。</p>`;
+  heading.innerHTML = `<p class="eyebrow">OFFICIAL MATERIALS / VERIFIED SCOPE</p><h3>公式資料（確認できた範囲）</h3><p>${escapeHtml(company.name)}を法人番号 ${escapeHtml(company.corporateNumber)} で照合。公表資料に法人番号がない行だけ、受取先名（共同受注・連名の各当事者を含む）の完全一致で補います。</p>`;
   section.append(heading);
 
   const scope = document.createElement("p");
@@ -331,14 +331,14 @@ function renderOfficial(
   } else {
     const intro = document.createElement("p");
     intro.className = "company-official-result-note";
-    intro.textContent = `${matches.length.toLocaleString("ja-JP")}行を確認。金額は交付決定額・契約額など公表時点が異なるため、GビズINFOや行政事業レビューと合算しません。`;
+    intro.textContent = `${matches.length.toLocaleString("ja-JP")}行を確認。金額は交付決定額・契約額など公表時点が異なるため、GビズINFOや行政事業レビューと合算しません。共同受注・連名の行は公表行全体の金額で、各社への配分額ではありません。`;
     section.append(intro);
 
     const scroll = document.createElement("div");
     scroll.className = "company-search-table-scroll";
     const table = document.createElement("table");
     table.className = "company-search-breakdown-table company-expanded-official-table";
-    table.innerHTML = `<thead><tr><th>公表機関</th><th>区分</th><th>事業・件名</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead><tbody>${matches.slice(0, 100).map((row) => `<tr><td><strong>${escapeHtml(row.sourceName)}</strong></td><td>${row.category === "grant_decision" ? "交付決定" : "契約結果"}</td><td><span class="program-name">${escapeHtml(row.theme || row.program || "事業・件名の記載なし")}</span>${row.theme && row.program ? `<small>${escapeHtml(row.program)}</small>` : ""}</td><td><strong>${escapeHtml(yen.format(row.amount))}</strong><small>${escapeHtml(row.amountStage)}</small></td><td>${escapeHtml(formatDate(row.date))}<small>${row.fiscalYear}年度</small></td><td><a class="source-link" href="${escapeHtml(row.sourceUrl)}" target="_blank" rel="noreferrer">公式資料 ↗</a></td></tr>`).join("")}</tbody>`;
+    table.innerHTML = `<thead><tr><th>公表機関</th><th>区分</th><th>受取先</th><th>事業・件名</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead><tbody>${matches.slice(0, 100).map((row) => `<tr><td><strong>${escapeHtml(row.sourceName)}</strong></td><td>${row.category === "grant_decision" ? "交付決定" : "契約結果"}</td><td><strong>${escapeHtml(row.organization)}</strong>${Array.isArray(row.organizations) && row.organizations.length > 1 ? `<small>共同受注・連名：${row.organizations.map(escapeHtml).join(" ／ ")}</small>` : ""}</td><td><span class="program-name">${escapeHtml(row.theme || row.program || "事業・件名の記載なし")}</span>${row.theme && row.program ? `<small>${escapeHtml(row.program)}</small>` : ""}</td><td><strong>${escapeHtml(yen.format(row.amount))}</strong><small>${escapeHtml(row.amountStage)}</small></td><td>${escapeHtml(formatDate(row.date))}<small>${row.fiscalYear}年度</small></td><td><a class="source-link" href="${escapeHtml(row.sourceUrl)}" target="_blank" rel="noreferrer">公式資料 ↗</a></td></tr>`).join("")}</tbody>`;
     scroll.append(table);
     section.append(scroll);
     if (matches.length > 100) {
