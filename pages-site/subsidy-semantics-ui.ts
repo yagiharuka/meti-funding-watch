@@ -19,18 +19,26 @@ const SUBSIDY_NOTE = "GビズINFOの補助金は、同一補助金の交付決�
 let latestParameters = "";
 let scheduledFrame = 0;
 
+function runGuarded(label: string, operation: () => void) {
+  try {
+    operation();
+  } catch (error) {
+    console.error(`[subsidy-semantics] ${label} failed`, error);
+  }
+}
+
 function scheduleApply() {
   if (scheduledFrame) return;
   scheduledFrame = requestAnimationFrame(() => {
     scheduledFrame = 0;
-    patchReactSummary();
-    patchCompanyExperience();
-    renderYearWarning();
+    runGuarded("summary", patchReactSummary);
+    runGuarded("note", renderSemanticsNote);
+    runGuarded("year-warning", renderYearWarning);
   });
 }
 
 function replaceCell(cell: Element | undefined, strongText: string, smallText: string) {
-  if (!cell) return;
+  if (!cell) throw new Error("Expected subsidy summary cell is missing");
   if (
     cell.getAttribute("data-subsidy-semantics") === "patched"
     && cell.querySelector("strong")?.textContent === strongText
@@ -49,26 +57,24 @@ function setText(element: Element | undefined | null, value: string) {
   if (element && element.textContent !== value) element.textContent = value;
 }
 
-function ensureSemanticsNote(container: Element) {
-  if (container.querySelector(":scope > .subsidy-semantics-note")) return;
-  const note = document.createElement("p");
-  note.className = "filter-note subsidy-semantics-note";
-  note.textContent = SUBSIDY_NOTE;
-  container.prepend(note);
-}
-
 function patchReactSummary() {
   const region = document.querySelector<HTMLElement>('[aria-label="企業検索結果サマリー"]');
   if (!region) return;
 
+  let foundStageTable = false;
   for (const table of region.querySelectorAll("table")) {
     const headers = [...table.querySelectorAll("thead th")];
     const labels = headers.map((header) => header.textContent?.trim() ?? "");
 
     if (labels[0] === "情報種別") {
+      foundStageTable = true;
+      if (labels[2] !== "掲載値合計" && labels[2] !== "掲載値") {
+        throw new Error(`Unexpected stage summary amount header: ${labels[2] ?? "missing"}`);
+      }
       setText(headers[2], "掲載値");
       for (const row of table.querySelectorAll("tbody tr")) {
         if (!row.querySelector(".stage-badge.subsidy_published")) continue;
+        if (row.children.length !== 3) throw new Error(`Unexpected stage summary column count: ${row.children.length}`);
         replaceCell([...row.children][2], "合計しません", "個別の掲載額は明細で確認");
       }
     }
@@ -77,58 +83,17 @@ function patchReactSummary() {
     if (labels[0] === "掲載行の多い活動名称・件名") setText(headers[0], "活動名称・件名（参考）");
   }
 
-  const mount = document.getElementById("company-search-mount");
-  if (mount) ensureSemanticsNote(mount);
+  if (!foundStageTable) throw new Error("Stage summary table contract was not found");
+  region.classList.add("subsidy-semantics-ready");
 }
 
-function patchCompanyExperience() {
-  const ui = document.getElementById("company-search-experience");
-  if (!ui) return;
-
-  for (const line of ui.querySelectorAll<HTMLElement>(".company-search-funding-line")) {
-    if (line.querySelector(".company-search-funding-kind")?.textContent?.trim() !== "補助金") continue;
-    const amount = line.querySelector<HTMLElement>(".company-search-amount");
-    if (amount && amount.getAttribute("data-subsidy-semantics") !== "patched") {
-      amount.textContent = "合計しません";
-      amount.removeAttribute("title");
-      amount.classList.add("empty");
-      amount.setAttribute("data-subsidy-semantics", "patched");
-    }
-    setText(line.querySelector("small"), "個別の掲載額は明細で確認");
-  }
-
-  for (const note of ui.querySelectorAll<HTMLElement>(".company-search-no-total")) {
-    setText(note, "※ 調達・委託は受注額を合計しています。補助金は交付決定・確定等の別行掲載があるため、掲載額を行をまたいで合計していません。");
-  }
-
-  for (const button of ui.querySelectorAll<HTMLButtonElement>("button[data-fold]")) {
-    if (button.textContent?.includes("金額の大きい事業")) setText(button, "事業別を見る");
-  }
-
-  for (const table of ui.querySelectorAll<HTMLTableElement>(".company-search-breakdown-table")) {
-    if (table.classList.contains("company-search-detail-table")) continue;
-    const headers = [...table.querySelectorAll("thead th")];
-    const labels = headers.map((header) => header.textContent?.trim() ?? "");
-
-    if (labels[0] === "年度") {
-      setText(headers[0], "認定日・受注日の年度");
-      setText(headers[2], "補助金（掲載件数）");
-      for (const row of table.querySelectorAll("tbody tr")) {
-        const cells = [...row.children];
-        const subsidyCell = cells[2];
-        const count = subsidyCell?.querySelector("strong")?.textContent?.trim() ?? "0件";
-        replaceCell(subsidyCell, count, "認定日基準／金額は合計しません");
-      }
-      continue;
-    }
-
-    if (labels[0] === "区分" && labels.includes("公表金額")) {
-      for (const row of table.querySelectorAll("tbody tr")) {
-        if (!row.querySelector(".stage-badge.subsidy_published")) continue;
-        replaceCell([...row.children][3], "合計しません", "個別の掲載額は明細で確認");
-      }
-    }
-  }
+function renderSemanticsNote() {
+  const mount = document.getElementById("company-search-mount");
+  if (!mount || mount.querySelector(":scope > .subsidy-semantics-note")) return;
+  const note = document.createElement("p");
+  note.className = "filter-note subsidy-semantics-note";
+  note.textContent = SUBSIDY_NOTE;
+  mount.prepend(note);
 }
 
 function renderYearWarning() {
