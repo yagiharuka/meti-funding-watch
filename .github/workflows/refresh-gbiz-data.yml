@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 21 * * 1"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/refresh-gbiz-data.yml"
+      - "scripts/repair-source-metadata-once.mjs"
 
 permissions:
   contents: write
@@ -14,7 +20,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  repair_metadata:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Repair committed source metadata
+        run: node scripts/repair-source-metadata-once.mjs
+      - name: Commit the repaired raw metadata
+        run: |
+          if git diff --quiet -- scripts/update-data.mjs data/funding-data.json data/funding-summary.json; then
+            echo "Source metadata already consistent."
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/update-data.mjs data/funding-data.json data/funding-summary.json
+          git commit -m "fix(data): align Gbiz cadence metadata"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then
+              exit 0
+            fi
+            echo "Push raced with another change; retrying ($attempt/3)."
+          done
+          echo "::error::Could not commit repaired source metadata after three rebases."
+          exit 1
+
   refresh:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
