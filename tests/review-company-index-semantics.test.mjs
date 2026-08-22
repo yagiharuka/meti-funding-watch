@@ -49,5 +49,8 @@ test("combined company UI can show review row amounts but cannot render a review
 
 test("Pages build always regenerates the review company index from the committed review cache", async () => {
   const packageJson = await json("../package.json");
-  assert.match(packageJson.scripts["build:pages"], /^node scripts\/build-review-company-index\.mjs &&/);
+  assert.match(
+    packageJson.scripts["build:pages"],
+    /^node scripts\/sync-source-metadata\.mjs && node scripts\/build-review-company-index\.mjs &&/,
+  );
 });

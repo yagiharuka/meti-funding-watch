@@ -8,6 +8,8 @@
       "apiBaseUrl": "https://api.info.gbiz.go.jp/hojin/v2/hojin",
       "downloadUrl": "https://info.gbiz.go.jp/hojin/DownloadTop",
       "apiTokenEnv": "GBIZINFO_API_TOKEN",
+      "method": "GビズINFO全件CSVを週次再取得",
+      "frequency": "週次確認",
       "enabled": true
     }
   ]
