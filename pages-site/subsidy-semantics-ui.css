@@ -1,3 +1,15 @@
+[aria-label="企業検索結果サマリー"] tbody tr:has(.stage-badge.subsidy_published) {
+  visibility: hidden;
+}
+
+[aria-label="企業検索結果サマリー"].subsidy-semantics-ready tbody tr:has(.stage-badge.subsidy_published) {
+  visibility: visible;
+}
+
+#company-search-mount:has(#company-search-experience .subsidy-semantics-note) > .subsidy-semantics-note {
+  display: none;
+}
+
 .subsidy-semantics-note,
 .subsidy-year-warning {
   margin: 10px 0 12px;
