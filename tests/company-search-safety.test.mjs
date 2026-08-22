@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  entityHasExactCompanyIdentity,
   filterCompanyEntities,
   filterCompanyRecords,
   groupCompanyRecords,
@@ -113,6 +114,32 @@ test("name normalization handles Japanese corporate designators and width differ
     [...resolveCompanyNumbers(fixture, "㈱日本電気")],
     ["7010401022916"],
   );
+});
+
+test("joint official recipients match every named participant", () => {
+  const solo = {
+    id: "hitachi-solo",
+    organization: "株式会社日立製作所",
+    organizations: ["株式会社日立製作所"],
+    corporateNumber: "7010001008844",
+  };
+  const joint = {
+    id: "hitachi-jecc-joint",
+    organization: "株式会社日立製作所 株式会社ＪＥＣＣ",
+    organizations: ["株式会社日立製作所", "株式会社ＪＥＣＣ"],
+    corporateNumber: "",
+  };
+
+  assert.deepEqual(
+    filterCompanyEntities([solo, joint], "日立製作所").map((item) => item.id).sort(),
+    ["hitachi-jecc-joint", "hitachi-solo"],
+  );
+  assert.deepEqual(
+    filterCompanyEntities([solo, joint], "ＪＥＣＣ").map((item) => item.id),
+    ["hitachi-jecc-joint"],
+  );
+  assert.equal(entityHasExactCompanyIdentity(joint, "日立製作所"), true);
+  assert.equal(entityHasExactCompanyIdentity(joint, "JECC"), true);
 });
 
 test("once a corporate number is identified, old/new names for that number stay together", () => {
