@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { filterCompanyRecords } from "../scripts/company-search.mjs";
+import { filterCompanyRecords, groupCompanyRecords } from "../scripts/company-search.mjs";
 
 function row({ id, organization, organizations, corporateNumber, sourceAgency = "経済産業省" }) {
   return {
@@ -65,4 +65,12 @@ test("corporate-numberless matching does not turn unrelated blank corporate numb
     ["unrelated-numberless"],
   );
   assert.deepEqual(filterCompanyRecords(rows, { query: "存在しない法人" }), []);
+
+  const numberless = rows.filter((item) => !item.corporateNumber);
+  const groups = groupCompanyRecords(numberless);
+  assert.equal(groups.size, 2);
+  assert.deepEqual(
+    [...groups.values()].flat().map((item) => item.id).sort(),
+    ["hitachi-jecc-joint", "unrelated-numberless"],
+  );
 });
