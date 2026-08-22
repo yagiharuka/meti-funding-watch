@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import DataReadingGuide from "@/app/DataReadingGuide";
 import officialSupplementData from "@/data/official-supplement-index.json";
 import { filterCompanyEntities } from "@/scripts/company-search.mjs";
 
@@ -165,7 +166,7 @@ export default function CombinedCompanyResults({ query }: Props) {
           <p className="eyebrow">SAME COMPANY / DIFFERENT SERIES</p>
           <h2 id="combined-company-review-title">同じ企業を行政事業レビュー・公式補足でも確認</h2>
         </div>
-        <p>GビズINFO、行政事業レビュー、公式補足は金額の意味や時点が違うため、相互に合算しません。行政事業レビュー内でも掲載行をまたぐ金額合計は表示しません。</p>
+        <p><a className="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a></p>
       </div>
       <p className="filter-note">企業名・法人番号の検索語だけを共通利用します。完全一致する法人名があればそれを優先し、完全一致がない場合だけ名称の部分一致を使います。上部の公表組織・情報種別・年度フィルターはGビズINFO側だけに適用されます。</p>
 
@@ -175,7 +176,6 @@ export default function CombinedCompanyResults({ query }: Props) {
       {!loading && !error && index && (
         <>
           <p className="filter-note">行政事業レビューの現在の同時検索対象は {index.reviewSheetYears.join("・")}年度シートです。旧年度は公表形式・取得経路が異なるため、現時点では同時検索に含めていません。</p>
-          <p className="filter-note">{index.semantics.aggregationWarning}</p>
           <div className="records-table" role="region" aria-label="行政事業レビュー企業検索サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
               <caption style={{ textAlign: "left", padding: "1rem", fontWeight: 700 }}>行政事業レビュー：同じ企業検索の結果</caption>
@@ -205,7 +205,7 @@ export default function CombinedCompanyResults({ query }: Props) {
               </table>
               {entries.length > 100 && <p className="filter-note">同時表示は上位100行までです。全明細は「行政事業レビュー詳細」で確認できます。</p>}
             </div>
-          ) : <p className="filter-note">現在収録している行政事業レビューでは、この企業名・法人番号に一致する支出先を確認できません。</p>}
+          ) : <p className="filter-note">現在収録している行政事業レビューでは、この企業名・法人番号に一致する支出先を確認できません。これは資金を受けていないことを意味しません。</p>}
         </>
       )}
 
@@ -225,7 +225,7 @@ export default function CombinedCompanyResults({ query }: Props) {
                 <td data-label="公表機関"><strong>{row.sourceName}</strong><small>{row.category === "grant_decision" ? "採択・交付決定" : "契約結果"}</small></td>
                 <td data-label="受取先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
                 <td data-label="事業・テーマ"><span className="program-name">{row.theme || row.program}</span>{row.theme && <small>{row.program}</small>}{row.phase && <small>{row.phase}{row.supportYears ? `／${row.supportYears}` : ""}</small>}</td>
-                <td className="amount" data-label="公表金額"><strong>{yen.format(row.amount)}</strong><small>{row.amountStage}。GビズINFO・レビューと合算不可。</small></td>
+                <td className="amount" data-label="公表金額"><strong>{yen.format(row.amount)}</strong><small>{row.amountStage}</small></td>
                 <td data-label="時点">{formatDate(row.date)}<small>{row.fiscalYear}年度</small></td>
                 <td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">{row.sourceName}公式 ↗</a></td>
               </tr>
@@ -233,9 +233,10 @@ export default function CombinedCompanyResults({ query }: Props) {
           </table>
           {officialMatches.length > 100 && <p className="filter-note">同時表示は上位100行までです。</p>}
         </div>
-      ) : <p className="filter-note">現在の公式補足では、この企業名・法人番号に一致する公表情報を確認できません。</p>}
+      ) : <p className="filter-note">現在の公式補足では、この企業名・法人番号に一致する公表情報を確認できません。これは公的資金の受領や契約がないことを意味しません。</p>}
       <p className="filter-note">{officialIndex.scopeNote}</p>
       {officialIndex.sources.map((source) => <p className="filter-note" key={source.id}><strong>{source.name}：</strong>{source.coverageNote}</p>)}
+      <DataReadingGuide />
     </section>
   );
 }
