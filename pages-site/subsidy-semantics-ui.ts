@@ -89,7 +89,14 @@ function patchReactSummary() {
 
 function renderSemanticsNote() {
   const mount = document.getElementById("company-search-mount");
-  if (!mount || mount.querySelector(":scope > .subsidy-semantics-note")) return;
+  if (!mount) return;
+  const existing = mount.querySelector<HTMLElement>(":scope > .subsidy-semantics-note");
+  const nativeNote = mount.querySelector<HTMLElement>("#company-search-experience .subsidy-semantics-note");
+  if (nativeNote) {
+    existing?.remove();
+    return;
+  }
+  if (existing) return;
   const note = document.createElement("p");
   note.className = "filter-note subsidy-semantics-note";
   note.textContent = SUBSIDY_NOTE;
