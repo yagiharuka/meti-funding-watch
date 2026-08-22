@@ -9,9 +9,10 @@ async function read(path) {
 }
 
 test("subsidy guardrail contracts are anchored to the real render sources", async () => {
-  const [app, company, guard, css] = await Promise.all([
+  const [app, company, guide, guard, css] = await Promise.all([
     read("../app/page.tsx"),
     read("../pages-site/company-search-ui.ts"),
+    read("../app/DataReadingGuide.tsx"),
     read("../pages-site/subsidy-semantics-ui.ts"),
     read("../pages-site/subsidy-semantics-ui.css"),
   ]);
@@ -23,29 +24,39 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   assert.match(app, /<th>直近5年度<\/th>/);
   assert.match(app, /掲載行の多い活動名称・件名/);
 
-  // Company cards no longer rely on the compatibility guard at all.
+  // Company cards natively suppress subsidy aggregates, but no longer carry the long explanation.
   assert.match(company, /if \(s === "subsidy_published"\)/);
   assert.match(company, /合計しません/);
   assert.match(company, /個別の掲載額は明細で確認/);
   assert.match(company, /認定日・受注日の年度/);
   assert.match(company, /補助金（掲載件数）/);
   assert.match(company, /事業別を見る/);
+  assert.match(company, /href="#data-reading-guide">↓ 読み方/);
+  assert.doesNotMatch(company, /subsidySemanticsNote|subsidy-semantics-note/);
   assert.doesNotMatch(company, /金額の大きい事業を見る/);
 
-  // The remaining React compatibility layer fails closed and isolates failures by section.
+  // Explanatory semantics live in the one folded guide below the cross-series results.
+  assert.match(guide, /id="data-reading-guide"/);
+  assert.match(guide, /このデータの読み方/);
+  assert.match(guide, /同一補助金の交付決定・確定等が別行/);
+  assert.match(guide, /掲載法人自身の収益・最終受益額を示すものではありません/);
+  assert.match(guide, /別レビューシート年度に再掲/);
+  assert.match(guide, /相互に合算しません/);
+  assert.match(guide, /経路が表示されないことは、実際に資金経路が存在しないことを意味しません/);
+
+  // The remaining React compatibility layer fails closed and isolates the conditional year warning.
   assert.match(guard, /runGuarded\("summary", patchReactSummary\)/);
-  assert.match(guard, /runGuarded\("note", renderSemanticsNote\)/);
   assert.match(guard, /runGuarded\("year-warning", renderYearWarning\)/);
+  assert.doesNotMatch(guard, /renderSemanticsNote|SUBSIDY_NOTE|runGuarded\("note"/);
   assert.doesNotMatch(guard, /patchCompanyExperience/);
   assert.match(guard, /row\.children\.length !== 3/);
   assert.match(guard, /subsidy-semantics-ready/);
-  assert.match(guard, /#company-search-experience \.subsidy-semantics-note/);
   assert.match(css, /\[aria-label="企業検索結果サマリー"\] tbody tr \{\s*visibility: hidden;/s);
   assert.match(css, /\.subsidy-semantics-ready tbody tr \{\s*visibility: visible;/s);
-  assert.doesNotMatch(css, /:has\(/);
+  assert.doesNotMatch(css, /subsidy-semantics-note|:has\(/);
 });
 
-test("a broken React-summary contract cannot suppress the note or year warning", async () => {
+test("a broken React-summary contract cannot suppress the conditional year warning", async () => {
   let source = await read("../pages-site/subsidy-semantics-ui.ts");
   source = source.replace(
     'import fundingSummary from "@/data/funding-summary.json";',
@@ -62,10 +73,6 @@ test("a broken React-summary contract cannot suppress the note or year warning",
 
   const mount = {
     querySelector(selector) {
-      if (selector === "#company-search-experience .subsidy-semantics-note") return null;
-      if (selector.includes("subsidy-semantics-note")) {
-        return children.find((child) => child.className.includes("subsidy-semantics-note")) ?? null;
-      }
       if (selector.includes("subsidy-year-warning")) {
         return children.find((child) => child.className.includes("subsidy-year-warning")) ?? null;
       }
@@ -126,7 +133,6 @@ test("a broken React-summary contract cannot suppress the note or year warning",
   vm.runInNewContext(javascript, context, { filename: "subsidy-semantics-ui.js" });
   while (frames.length) frames.shift()();
 
-  assert.ok(children.some((child) => child.className.includes("subsidy-semantics-note")));
   assert.ok(errors.length >= 1, "broken summary contract should be surfaced to console.error");
 
   const listener = listeners.get("meti-funding-search-result");
