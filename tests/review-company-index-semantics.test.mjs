@@ -46,6 +46,7 @@ test("combined company UI shows row amounts but keeps aggregate explanations in 
   assert.doesNotMatch(source, /reviewAmountKnownTotal|amountKnownTotal|金額記載行の単純合計/);
   assert.doesNotMatch(source, /GビズINFO、行政事業レビュー、公式補足は金額の意味や時点が違うため/);
   assert.doesNotMatch(source, /\{index\.semantics\.aggregationWarning\}/);
+  assert.match(source, /<\/section>\s*<DataReadingGuide \/>/, "reading guide must be a sibling after the combined section so injected evidence stays above it");
   assert.match(guide, /別レビューシート年度に再掲/);
   assert.match(guide, /掲載行・レビュー年度をまたぐ金額合計は表示しません/);
 
