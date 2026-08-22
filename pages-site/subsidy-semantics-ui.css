@@ -1,8 +1,8 @@
-[aria-label="企業検索結果サマリー"] tbody tr:has(.stage-badge.subsidy_published) td:nth-child(3) {
+[aria-label="企業検索結果サマリー"] tbody tr:has(.stage-badge.subsidy_published) {
   visibility: hidden;
 }
 
-[aria-label="企業検索結果サマリー"].subsidy-semantics-ready tbody tr:has(.stage-badge.subsidy_published) td:nth-child(3) {
+[aria-label="企業検索結果サマリー"].subsidy-semantics-ready tbody tr:has(.stage-badge.subsidy_published) {
   visibility: visible;
 }
 
