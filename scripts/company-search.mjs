@@ -124,12 +124,28 @@ export function filterCompanyRecords(rows, {
 export function groupCompanyRecords(rows) {
   const groups = new Map();
   for (const row of rows) {
+    // Corporate-numberless rows are intentionally split per source row. A shared name is
+    // not enough evidence that two rows identify the same legal entity.
     const groupKey = row.corporateNumber || `numberless:${row.id ?? normalizeCompanySearchTerm(row.organization)}`;
     const current = groups.get(groupKey);
     if (current) current.push(row);
     else groups.set(groupKey, [row]);
   }
   return groups;
+}
+
+export function summarizeCompanyIdentityCoverage(rows) {
+  const verifiedCorporateNumbers = new Set();
+  let numberlessRecordCount = 0;
+  for (const row of rows) {
+    const corporateNumber = String(row.corporateNumber ?? "");
+    if (/^\d{13}$/.test(corporateNumber)) verifiedCorporateNumbers.add(corporateNumber);
+    else numberlessRecordCount += 1;
+  }
+  return {
+    verifiedCorporationCount: verifiedCorporateNumbers.size,
+    numberlessRecordCount,
+  };
 }
 
 export function summarizeCompanyRows(rows) {

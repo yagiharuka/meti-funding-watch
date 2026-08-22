@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+const checkOnly = process.argv.includes("--check");
 const registryPath = new URL("../data/source-registry.json", import.meta.url);
 const dataPaths = [
   { url: new URL("../data/funding-data.json", import.meta.url), pretty: false },
@@ -24,10 +25,12 @@ for (const { url, pretty } of dataPaths) {
       if (typeof value !== "string" || !value.trim()) {
         throw new Error(`source-registry.json: ${source.id}.${field} が未定義です`);
       }
-      if (source[field] !== value) {
-        source[field] = value;
-        changed = true;
+      if (source[field] === value) continue;
+      if (checkOnly) {
+        throw new Error(`${url.pathname}: ${source.id}.${field} が source-registry.json と一致しません`);
       }
+      source[field] = value;
+      changed = true;
     }
   }
 
@@ -38,3 +41,5 @@ for (const { url, pretty } of dataPaths) {
   await writeFile(url, serialized);
   console.log(`Synced source metadata: ${url.pathname}`);
 }
+
+if (checkOnly) console.log("Source metadata check passed.");

@@ -47,10 +47,10 @@ test("combined company UI can show review row amounts but cannot render a review
   assert.doesNotMatch(officialBlock, /reduce\([^\n]*amount|officialAmountTotal|amountKnownTotal/);
 });
 
-test("Pages build always regenerates the review company index from the committed review cache", async () => {
+test("Pages build checks committed metadata before regenerating the review company index", async () => {
   const packageJson = await json("../package.json");
   assert.match(
     packageJson.scripts["build:pages"],
-    /^node scripts\/sync-source-metadata\.mjs && node scripts\/build-review-company-index\.mjs &&/,
+    /^node scripts\/sync-source-metadata\.mjs --check && node scripts\/build-review-company-index\.mjs &&/,
   );
 });
