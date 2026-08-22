@@ -124,9 +124,10 @@ export function filterCompanyRecords(rows, {
 export function groupCompanyRecords(rows) {
   const groups = new Map();
   for (const row of rows) {
-    const current = groups.get(row.corporateNumber);
+    const groupKey = row.corporateNumber || `numberless:${row.id ?? normalizeCompanySearchTerm(row.organization)}`;
+    const current = groups.get(groupKey);
     if (current) current.push(row);
-    else groups.set(row.corporateNumber, [row]);
+    else groups.set(groupKey, [row]);
   }
   return groups;
 }
