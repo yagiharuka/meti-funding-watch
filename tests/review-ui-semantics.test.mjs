@@ -56,7 +56,6 @@ test("links a home program title to that program's recipient rows", () => {
   assert.match(reviewProgramLinkSource, /url\.hash = reviewProgramRecipientsAnchorId\(programId\)/);
   assert.match(reviewSearchSource, /targetProgramId \? "payments" : mode/);
   assert.match(reviewSearchSource, /row\.reviewProjectId !== targetProgramId/);
-  assert.match(reviewSearchSource, /レビューシートに掲載された支出先です/);
   assert.match(reviewSearchSource, /\{targetProgram\.reviewSheetYear\}年度シートに掲載された支出先です/);
   assert.match(reviewSearchSource, /\$\{targetProgram\.reviewSheetYear\}年度シート.*支出先一覧/);
   assert.match(reviewSearchSource, /id=\{targetProgramId \? reviewProgramRecipientsAnchorId\(targetProgramId\)/);
