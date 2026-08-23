@@ -59,7 +59,7 @@ type OfficialRecord = {
   theme: string;
   phase: string;
   supportYears: string;
-  category: "grant_decision" | "contract_result";
+  category: "grant_decision" | "contract_result" | "bid_result";
   amountStage: string;
   amount: number;
   sourceUrl: string;
@@ -135,6 +135,12 @@ function formatDate(value: string | null) {
   if (!value) return "日付記載なし";
   const [year, month, day] = value.split("-");
   return `${year}年${Number(month)}月${Number(day)}日`;
+}
+
+function officialCategoryLabel(category: OfficialRecord["category"]) {
+  if (category === "grant_decision") return "交付決定";
+  if (category === "bid_result") return "入札結果";
+  return "契約結果";
 }
 
 function removeEvidence() {
@@ -338,7 +344,7 @@ function renderOfficial(
     scroll.className = "company-search-table-scroll";
     const table = document.createElement("table");
     table.className = "company-search-breakdown-table company-expanded-official-table";
-    table.innerHTML = `<thead><tr><th>公表機関</th><th>区分</th><th>受取先</th><th>事業・件名</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead><tbody>${matches.slice(0, 100).map((row) => `<tr><td><strong>${escapeHtml(row.sourceName)}</strong></td><td>${row.category === "grant_decision" ? "交付決定" : "契約結果"}</td><td><strong>${escapeHtml(row.organization)}</strong>${Array.isArray(row.organizations) && row.organizations.length > 1 ? `<small>共同受注・連名：${row.organizations.map(escapeHtml).join(" ／ ")}</small>` : ""}</td><td><span class="program-name">${escapeHtml(row.theme || row.program || "事業・件名の記載なし")}</span>${row.theme && row.program ? `<small>${escapeHtml(row.program)}</small>` : ""}</td><td><strong>${escapeHtml(yen.format(row.amount))}</strong><small>${escapeHtml(row.amountStage)}</small></td><td>${escapeHtml(formatDate(row.date))}<small>${row.fiscalYear}年度</small></td><td><a class="source-link" href="${escapeHtml(row.sourceUrl)}" target="_blank" rel="noreferrer">公式資料 ↗</a></td></tr>`).join("")}</tbody>`;
+    table.innerHTML = `<thead><tr><th>公表機関</th><th>区分</th><th>受取先</th><th>事業・件名</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead><tbody>${matches.slice(0, 100).map((row) => `<tr><td><strong>${escapeHtml(row.sourceName)}</strong></td><td>${escapeHtml(officialCategoryLabel(row.category))}</td><td><strong>${escapeHtml(row.organization)}</strong>${Array.isArray(row.organizations) && row.organizations.length > 1 ? `<small>共同受注・連名：${row.organizations.map(escapeHtml).join(" ／ ")}</small>` : ""}</td><td><span class="program-name">${escapeHtml(row.theme || row.program || "事業・件名の記載なし")}</span>${row.theme && row.program ? `<small>${escapeHtml(row.program)}</small>` : ""}</td><td><strong>${escapeHtml(yen.format(row.amount))}</strong><small>${escapeHtml(row.amountStage)}</small></td><td>${escapeHtml(formatDate(row.date))}<small>${row.fiscalYear}年度</small></td><td><a class="source-link" href="${escapeHtml(row.sourceUrl)}" target="_blank" rel="noreferrer">公式資料 ↗</a></td></tr>`).join("")}</tbody>`;
     scroll.append(table);
     section.append(scroll);
     if (matches.length > 100) {
