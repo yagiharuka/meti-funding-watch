@@ -57,6 +57,64 @@ const preview = {
   rows: previewRows.length,
 };
 
+const companySearchIndexFilename = "gbiz-company-search-index.json";
+const companySearchIndexUrl = new URL(companySearchIndexFilename, dataDirectory);
+const companySearchIndexText = await readFile(companySearchIndexUrl, "utf8");
+const companySearchIndex = JSON.parse(companySearchIndexText);
+if (
+  companySearchIndex.schemaVersion !== 1
+  || companySearchIndex.generatedAt !== manifest.generatedAt
+  || !Number.isSafeInteger(companySearchIndex.entityCount)
+  || companySearchIndex.entityCount < 1
+  || companySearchIndex.recordCount !== ids.length
+  || companySearchIndex.bucketCount !== 32
+  || !Array.isArray(companySearchIndex.agencies)
+  || !Array.isArray(companySearchIndex.entities)
+  || companySearchIndex.entities.length !== companySearchIndex.entityCount
+) throw new Error("公開releaseの企業検索索引が不正です");
+const companySearchFiles = {};
+const companySearchIds = [];
+const companyNumbersByBucket = new Map();
+for (const entity of companySearchIndex.entities) {
+  if (!/^\d{13}$/.test(entity.corporateNumber ?? "") || !/^[0-9a-f]{2}$/.test(entity.bucket ?? "")
+    || !Number.isSafeInteger(entity.records) || entity.records < 1) {
+    throw new Error("公開releaseの企業検索法人情報が不正です");
+  }
+  const numbers = companyNumbersByBucket.get(entity.bucket) ?? new Set();
+  numbers.add(entity.corporateNumber);
+  companyNumbersByBucket.set(entity.bucket, numbers);
+}
+for (let bucketIndex = 0; bucketIndex < companySearchIndex.bucketCount; bucketIndex += 1) {
+  const bucket = bucketIndex.toString(16).padStart(2, "0");
+  const filename = `gbiz-company-records-${bucket}.json`;
+  const fileUrl = new URL(filename, dataDirectory);
+  const text = await readFile(fileUrl, "utf8");
+  const rows = JSON.parse(text);
+  if (!Array.isArray(rows)) throw new Error(`${filename}が配列ではありません`);
+  if (rows.some((row) => row.corporateNumber && !companyNumbersByBucket.get(bucket)?.has(row.corporateNumber))) {
+    throw new Error(`${filename}に索引と一致しない法人番号があります`);
+  }
+  companySearchIds.push(...rows.map((row) => row.id));
+  companySearchFiles[filename] = { sha256: sha256(text), bytes: (await stat(fileUrl)).size, rows: rows.length };
+}
+if (companySearchIds.length !== ids.length
+  || new Set(companySearchIds).size !== companySearchIds.length
+  || companySearchIds.some((id) => !idSet.has(id))) {
+  throw new Error("公開releaseの企業検索明細が元明細と一致しません");
+}
+const companySearch = {
+  schemaVersion: 1,
+  index: {
+    filename: companySearchIndexFilename,
+    sha256: sha256(companySearchIndexText),
+    bytes: (await stat(companySearchIndexUrl)).size,
+    entities: companySearchIndex.entityCount,
+    records: companySearchIndex.recordCount,
+    bucketCount: companySearchIndex.bucketCount,
+  },
+  files: companySearchFiles,
+};
+
 const reviewDirectory = new URL("review/", dataDirectory);
 const reviewManifestText = await readFile(new URL("manifest.json", reviewDirectory), "utf8");
 const reviewManifest = JSON.parse(reviewManifestText);
@@ -117,6 +175,7 @@ const release = {
     },
   },
   files,
+  companySearch,
   review: {
     generatedAt: reviewManifest.generatedAt,
     reviewSheetYears: reviewManifest.reviewSheetYears,

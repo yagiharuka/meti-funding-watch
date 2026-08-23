@@ -97,6 +97,11 @@ type DataRelease = {
   preview: { filename: string; sha256: string; bytes: number; rows: number };
   appShell: Record<string, { sha256: string; bytes: number }>;
   files: Record<string, { sha256: string; bytes: number; rows: number }>;
+  companySearch: {
+    schemaVersion: 1;
+    index: { filename: string; sha256: string; bytes: number; entities: number; records: number; bucketCount: number };
+    files: Record<string, { sha256: string; bytes: number; rows: number }>;
+  };
   sourceSnapshots: {
     gbiz: {
       csvRetrievedAt: string;
@@ -251,6 +256,14 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     || !Number.isSafeInteger(release.preview?.rows) || (release.preview?.rows ?? -1) < 1 || (release.preview?.rows ?? 101) > pageSize
     || !release.appShell || typeof release.appShell !== "object"
     || !release.files || typeof release.files !== "object"
+    || release.companySearch?.schemaVersion !== 1
+    || release.companySearch.index?.filename !== "gbiz-company-search-index.json"
+    || !isSha256(release.companySearch.index?.sha256)
+    || !Number.isSafeInteger(release.companySearch.index?.bytes) || release.companySearch.index.bytes < 1
+    || !Number.isSafeInteger(release.companySearch.index?.entities) || release.companySearch.index.entities < 1
+    || release.companySearch.index?.records !== release.recordCount
+    || release.companySearch.index?.bucketCount !== 32
+    || !release.companySearch.files || typeof release.companySearch.files !== "object"
     || !release.sourceSnapshots || typeof release.sourceSnapshots !== "object"
   ) {
     throw new Error("公開releaseの形式が不正です");
@@ -273,6 +286,14 @@ function validateRelease(value: unknown): asserts value is DataRelease {
       || !Number.isSafeInteger(metadata.rows) || metadata.rows < 0
     ) {
       throw new Error("公開releaseのファイル情報が不正です");
+    }
+  }
+  const companyFiles = Object.entries(release.companySearch.files);
+  if (companyFiles.length !== release.companySearch.index.bucketCount) throw new Error("公開releaseの企業検索ファイル数が不正です");
+  for (const [filename, metadata] of companyFiles) {
+    if (!/^gbiz-company-records-[0-9a-f]{2}\.json$/.test(filename) || !isSha256(metadata.sha256)
+      || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 1 || !Number.isSafeInteger(metadata.rows) || metadata.rows < 0) {
+      throw new Error("公開releaseの企業検索ファイル情報が不正です");
     }
   }
   const gbiz = release.sourceSnapshots.gbiz;
@@ -449,6 +470,7 @@ export default function Home() {
   const [agencies, setAgencies] = useState<string[]>([]);
   const workerRef = useRef<Worker | null>(null);
   const fallbackRecordsRef = useRef<FundingRecord[] | null>(null);
+  const previewRecordsRef = useRef<FundingRecord[]>([]);
   const [searchBackend, setSearchBackend] = useState<"worker" | "main" | null>(null);
   const requestIdRef = useRef(0);
   const [query, setQuery] = useState(() => sanitizeFundingSearchQuery(initialSearchParam("q", "")));
@@ -537,6 +559,7 @@ export default function Home() {
         setManifest(candidate);
         setRelease(candidateRelease);
         setDataset((current) => ({ ...current, generatedAt: candidate.generatedAt, records: previewRows }));
+        previewRecordsRef.current = previewRows;
         setSearchTotal(candidateRelease.recordCount);
         setSearchTotalPages(Math.max(1, Math.ceil(candidateRelease.recordCount / pageSize)));
         setSearchSummary(null);
@@ -692,6 +715,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!searchReady || !release || query !== deferredQuery) return;
+    if (!deferredQuery.trim() && agency === "all" && stage === "all" && year === defaultYear && page === 0) {
+      setDataset((current) => ({ ...current, generatedAt: release.generatedAt, records: previewRecordsRef.current }));
+      setSearchTotal(release.recordCount);
+      setSearchTotalPages(Math.max(1, Math.ceil(release.recordCount / pageSize)));
+      setSearchSummary(null);
+      setSearchError(null);
+      setDetailLoading(false);
+      return;
+    }
     const requestId = ++requestIdRef.current;
     const requestedAgency = agency === "all" || agencies.includes(agency) ? agency : "all";
     const parameters = new URLSearchParams({

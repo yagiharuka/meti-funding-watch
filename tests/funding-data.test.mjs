@@ -384,13 +384,15 @@ test("derives the year selector from declared coverage", () => {
   assert.doesNotMatch(pageSource, /distinctYears\(commitments\.map/);
 });
 
-test("starts with all periods and verifies all static chunks before searching", () => {
+test("starts with all periods and verifies the company index before loading matching chunks", () => {
   assert.match(pageSource, /const defaultYear = ["']all["'];/);
   assert.doesNotMatch(pageSource, /const initialYear\b/);
   assert.match(pageSource, /new Worker\(new URL\("\.\/funding-search\.worker\.ts"/);
   assert.match(fundingWorkerSource, /await sha256\(bytes\) !== metadata\.sha256/);
   assert.match(fundingWorkerSource, /rows\.length !== metadata\.rows/);
-  assert.match(fundingWorkerSource, /nextRecords\.length !== message\.release\.recordCount/);
+  assert.match(fundingWorkerSource, /gbiz-company-search-index\.json/);
+  assert.match(fundingWorkerSource, /buckets\.map\(loadCompanyBucket\)/);
+  assert.match(fundingWorkerSource, /rows\.length !== message\.release\.recordCount/);
   assert.match(fundingWorkerSource, /await sha256\(idSetBytes\.buffer\) !== message\.release\.idSetSha256/);
 });
 

@@ -16,8 +16,6 @@ type SearchEventDetail = {
 };
 
 const NativeWorker = window.Worker;
-const enhancedWorkerUrl = new URL("./funding-search-enhanced.worker.js", import.meta.url);
-
 class FundingSearchWorkerBridge extends EventTarget implements Worker {
   readonly native: Worker;
   readonly enhanced: boolean;
@@ -31,7 +29,7 @@ class FundingSearchWorkerBridge extends EventTarget implements Worker {
     super();
     const requested = String(scriptURL);
     this.enhanced = requested.includes("funding-search.worker");
-    this.native = new NativeWorker(this.enhanced ? enhancedWorkerUrl : scriptURL, options);
+    this.native = new NativeWorker(scriptURL, options);
 
     this.native.addEventListener("message", (event) => {
       const data = event.data as WorkerEnvelope;

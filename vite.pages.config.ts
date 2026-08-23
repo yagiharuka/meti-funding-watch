@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 import { REVIEW_SCHEMA_VERSION, migrateLegacyPayment } from "./scripts/review-data-model.mjs";
+import { buildGbizCompanySearchArtifacts } from "./scripts/build-company-search-artifacts.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const pagesOutDir = fileURLToPath(new URL("./dist-pages", import.meta.url));
@@ -155,6 +156,11 @@ export default defineConfig({
           new URL(`./dist-pages/data/${publicManifest.preview}`, import.meta.url),
           `${JSON.stringify(previewRows)}\n`,
         );
+        await buildGbizCompanySearchArtifacts({
+          rows: allPublicRows,
+          generatedAt: publicManifest.generatedAt,
+          outputDirectory: new URL("./dist-pages/data/", import.meta.url),
+        });
         await copyReviewData(dataDirectory);
         const reviewCompanyIndex = await readFile(new URL("./data/review-company-index.json", import.meta.url), "utf8");
         const parsedReviewCompanyIndex = JSON.parse(reviewCompanyIndex) as { schemaVersion?: number; recipients?: unknown[] };
@@ -162,6 +168,12 @@ export default defineConfig({
           throw new Error("行政事業レビュー企業索引が不正です");
         }
         await writeFile(new URL("./dist-pages/data/review-company-index.json", import.meta.url), reviewCompanyIndex);
+        const officialSupplementIndex = await readFile(new URL("./data/official-supplement-index.json", import.meta.url), "utf8");
+        const parsedOfficialSupplementIndex = JSON.parse(officialSupplementIndex) as { schemaVersion?: number; records?: unknown[] };
+        if (parsedOfficialSupplementIndex.schemaVersion !== 1 || !Array.isArray(parsedOfficialSupplementIndex.records)) {
+          throw new Error("公式補足企業索引が不正です");
+        }
+        await writeFile(new URL("./dist-pages/data/official-supplement-index.json", import.meta.url), officialSupplementIndex);
       },
     },
   ],

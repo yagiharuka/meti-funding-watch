@@ -1,4 +1,5 @@
 import { entityHasExactCompanyIdentity, normalizeCompanyIdentity } from "../scripts/company-search.mjs";
+import { fetchStaticJson } from "./shared-json";
 
 type OrganizationSummary = {
   name: string;
@@ -82,6 +83,7 @@ const yen = new Intl.NumberFormat("ja-JP", {
 let generation = 0;
 let reviewPromise: Promise<ReviewIndex> | null = null;
 let officialPromise: Promise<OfficialCompanyIndex> | null = null;
+let selectedCompany: OrganizationSummary | null = null;
 
 function publicBaseUrl() {
   if (window.location.hostname.endsWith(".chatgpt.site")) {
@@ -90,11 +92,9 @@ function publicBaseUrl() {
   return new URL("./", window.location.href);
 }
 
-async function fetchJson<T>(filename: string): Promise<T> {
+function fetchJson<T>(filename: string): Promise<T> {
   const url = new URL(filename, publicBaseUrl());
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`${filename}: HTTP ${response.status}`);
-  return response.json() as Promise<T>;
+  return fetchStaticJson<T>(url);
 }
 
 function getReviewIndex() {
@@ -352,9 +352,9 @@ function renderOfficial(
   (route ?? combined).insertAdjacentElement("afterend", section);
 }
 
-async function renderCrossSeries(company: OrganizationSummary, expectedGeneration: number) {
+async function renderRequestedSeries(series: "review" | "official", company: OrganizationSummary, expectedGeneration: number) {
   try {
-    const [review, official] = await Promise.all([getReviewIndex(), getOfficialIndex()]);
+    const index = series === "review" ? await getReviewIndex() : await getOfficialIndex();
     if (expectedGeneration !== generation) return;
     const install = (attempt: number) => {
       if (expectedGeneration !== generation) return;
@@ -363,19 +363,26 @@ async function renderCrossSeries(company: OrganizationSummary, expectedGeneratio
         if (attempt < 12) window.setTimeout(() => install(attempt + 1), 50);
         return;
       }
-      renderRoutes(company, review, expectedGeneration);
-      renderOfficial(company, official, expectedGeneration);
+      if (series === "review") renderRoutes(company, index as ReviewIndex, expectedGeneration);
+      else renderOfficial(company, index as OfficialCompanyIndex, expectedGeneration);
     };
     install(0);
   } catch (error) {
     if (expectedGeneration !== generation) return;
-    console.error("Cross-series company evidence could not be loaded", error);
+    console.error(`${series} company evidence could not be loaded`, error);
   }
 }
+
+window.addEventListener("meti-company-series-change", ((event: CustomEvent<{ series?: string }>) => {
+  const series = event.detail?.series;
+  if (!selectedCompany || (series !== "review" && series !== "official")) return;
+  renderRequestedSeries(series, selectedCompany, generation);
+}) as EventListener);
 
 window.addEventListener("meti-funding-search-result", ((event: SearchEvent) => {
   generation += 1;
   const expectedGeneration = generation;
+  selectedCompany = null;
   removeEvidence();
 
   const result = event.detail?.message?.result;
@@ -404,12 +411,13 @@ window.addEventListener("meti-funding-search-result", ((event: SearchEvent) => {
   }
 
   const company = exact ?? organizations[0];
-  renderCrossSeries(company, expectedGeneration);
+  selectedCompany = company;
 }) as EventListener);
 
 document.addEventListener("input", (event) => {
   if (event.target instanceof Element && event.target.closest("#records .filters")) {
     generation += 1;
+    selectedCompany = null;
     removeEvidence();
   }
 });
