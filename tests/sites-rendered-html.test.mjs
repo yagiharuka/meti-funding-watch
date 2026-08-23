@@ -51,7 +51,8 @@ test("renders two main series and the reconciliation log", async () => {
     homeResponse.text(), officialResponse.text(), reviewResponse.text(),
   ]);
   assert.doesNotMatch(home, /2つの主系列を選ぶ|資料の案内/);
-  assert.match(home, /class="view-tabs"/);
+  assert.match(home, /class="search-page-nav"/);
+  assert.match(home, /検索方法/);
   assert.match(official, /機関公表資料との照合の記録/);
   assert.match(official, /照合\s*(?:<!-- -->)?50(?:<!-- -->)?\s*件/);
   const visibleOfficial = official.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");

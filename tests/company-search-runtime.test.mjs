@@ -175,7 +175,8 @@ test("zero Gbiz rows show the harm-critical negative-inference warning and keep 
   assert.ok(ui, "company search experience must mount even when Gbiz has zero rows");
   assert.match(ui.innerHTML, />GビズINFO<\/button>/);
   assert.match(ui.innerHTML, />行政事業レビュー<\/button>/);
-  assert.match(ui.innerHTML, />公式資料<\/button>/);
+  assert.match(ui.innerHTML, /主系列2つ＋照合記録/);
+  assert.match(ui.innerHTML, />照合記録<\/button>/);
   assert.match(ui.innerHTML, /class="company-search-zero-warning"/);
   assert.match(ui.innerHTML, /検索0件は、この法人が経産省関係の資金を受けていないことを意味しません/);
   assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);

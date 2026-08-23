@@ -116,7 +116,7 @@ function alternativeDisclosure(result: CompanySearchResult, query: string) {
 }
 
 function tabs() {
-  return `<div class="company-search-series-tabs" role="tablist" aria-label="検索結果の出典系列"><button type="button" role="tab" data-series="gbiz">GビズINFO</button><button type="button" role="tab" data-series="review">行政事業レビュー</button><button type="button" role="tab" data-series="official">公式資料</button></div>`;
+  return `<div class="company-search-series-heading"><strong>検索結果の表示</strong><span>主系列2つ＋照合記録</span></div><div class="company-search-series-tabs" role="tablist" aria-label="検索結果の表示"><button type="button" role="tab" data-series="gbiz">GビズINFO</button><button type="button" role="tab" data-series="review">行政事業レビュー</button><button type="button" role="tab" data-series="official">照合記録</button></div>`;
 }
 
 function announceSeries() {

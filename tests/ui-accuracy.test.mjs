@@ -51,6 +51,13 @@ test("describes two main series and a bounded reconciliation log", () => {
   assert.match(officialPageSource, /<h1 id="official-title">機関公表資料との照合の記録（非公式）<\/h1>/);
 });
 
+test("distinguishes page navigation from result-series tabs", () => {
+  assert.match(tabsSource, /className="search-page-nav"/);
+  assert.match(tabsSource, /aria-label="検索ページ"/);
+  assert.match(tabsSource, /検索方法/);
+  assert.doesNotMatch(tabsSource, /className="view-tabs"|role="tablist"/);
+});
+
 test("uses non-authoritative freshness wording", () => {
   assert.match(pageSource, /掲載データ読込済み/);
   assert.doesNotMatch(pageSource, /明細準備完了/);
