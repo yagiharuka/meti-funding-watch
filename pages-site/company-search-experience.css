@@ -317,6 +317,10 @@
   display: none !important;
 }
 
+#records.enhanced-company-search-active > .company-search-alternatives-fallback {
+  display: none !important;
+}
+
 #records.enhanced-company-search-active[data-company-series="gbiz"] > section[aria-labelledby="combined-company-review-title"] {
   display: none !important;
 }

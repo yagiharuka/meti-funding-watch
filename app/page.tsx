@@ -129,6 +129,9 @@ type FundingSearchResult = {
   pageSize: number;
   records: FundingRecord[];
   summary: FundingSearchSummary;
+  organizationSummaries?: Array<{ name: string; corporateNumber: string; records: number }>;
+  alternativeOrganizations?: Array<{ name: string; corporateNumber: string; records: number }>;
+  alternativeOrganizationCount?: number;
   releaseCommit: string;
   generatedAt: string;
 };
@@ -466,6 +469,8 @@ export default function Home() {
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchTotalPages, setSearchTotalPages] = useState(1);
   const [searchSummary, setSearchSummary] = useState<FundingSearchSummary | null>(null);
+  const [searchAlternatives, setSearchAlternatives] = useState<Array<{ name: string; corporateNumber: string; records: number }>>([]);
+  const [searchAlternativeCount, setSearchAlternativeCount] = useState(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [agencies, setAgencies] = useState<string[]>([]);
   const workerRef = useRef<Worker | null>(null);
@@ -570,6 +575,8 @@ export default function Home() {
         setSearchTotal(candidateRelease.recordCount);
         setSearchTotalPages(Math.max(1, Math.ceil(candidateRelease.recordCount / pageSize)));
         setSearchSummary(null);
+        setSearchAlternatives([]);
+        setSearchAlternativeCount(0);
         setDataMode("github");
         setDetailLoading(false);
       })
@@ -637,6 +644,8 @@ export default function Home() {
           setSearchTotal(0);
           setSearchTotalPages(1);
           setSearchSummary(null);
+          setSearchAlternatives([]);
+          setSearchAlternativeCount(0);
           setDataMode("unavailable");
           setDetailLoading(false);
         });
@@ -663,6 +672,8 @@ export default function Home() {
           setSearchTotal(0);
           setSearchTotalPages(1);
           setSearchSummary(null);
+          setSearchAlternatives([]);
+          setSearchAlternativeCount(0);
           setSearchError("検索条件を処理できませんでした。条件を変えてもう一度お試しください。");
           setDataMode("github");
           setDetailLoading(false);
@@ -685,9 +696,14 @@ export default function Home() {
         || !candidate.summary
         || !Number.isSafeInteger(candidate.summary.organizationCount) || candidate.summary.organizationCount < 0
         || !Number.isFinite(candidate.summary.amountKnownTotal)
+        || !Array.isArray(candidate.alternativeOrganizations)
+        || candidate.alternativeOrganizations.some((item) => typeof item?.name !== "string" || !/^\d{13}$/.test(item?.corporateNumber) || !Number.isSafeInteger(item?.records) || item.records < 1)
+        || !Number.isSafeInteger(candidate.alternativeOrganizationCount) || candidate.alternativeOrganizationCount < candidate.alternativeOrganizations.length
       ) {
         setDataset((current) => ({ ...current, records: [] }));
         setSearchSummary(null);
+        setSearchAlternatives([]);
+        setSearchAlternativeCount(0);
         setDataMode("unavailable");
         setDetailLoading(false);
         return;
@@ -700,6 +716,8 @@ export default function Home() {
       setSearchTotal(candidate.totalRecords);
       setSearchTotalPages(candidate.totalPages);
       setSearchSummary(candidate.summary);
+      setSearchAlternatives(candidate.alternativeOrganizations);
+      setSearchAlternativeCount(candidate.alternativeOrganizationCount);
       setSearchError(null);
       setDataMode("github");
       setDetailLoading(false);
@@ -727,6 +745,8 @@ export default function Home() {
       setSearchTotal(release.recordCount);
       setSearchTotalPages(Math.max(1, Math.ceil(release.recordCount / pageSize)));
       setSearchSummary(null);
+      setSearchAlternatives([]);
+      setSearchAlternativeCount(0);
       setSearchError(null);
       setDetailLoading(false);
       return;
@@ -768,6 +788,8 @@ export default function Home() {
     setSearchTotal(totalRecords);
     setSearchTotalPages(totalPages);
     setSearchSummary(summarizeFundingRecords(matching));
+    setSearchAlternatives([]);
+    setSearchAlternativeCount(0);
     setSearchError(null);
     setDataMode("github");
     setDetailLoading(false);
@@ -861,6 +883,8 @@ export default function Home() {
     requestIdRef.current += 1;
     setDataset((current) => ({ ...current, records: [] }));
     setSearchSummary(null);
+    setSearchAlternatives([]);
+    setSearchAlternativeCount(0);
     setSearchError(null);
     setDetailLoading(true);
     setDataMode("loading");
@@ -893,6 +917,8 @@ export default function Home() {
     setSearchTotal(0);
     setSearchTotalPages(1);
     setSearchSummary(null);
+    setSearchAlternatives([]);
+    setSearchAlternativeCount(0);
     setDetailLoading(true);
     setDataMode("loading");
     setLoadAttempt((value) => value + 1);
@@ -1016,6 +1042,36 @@ export default function Home() {
         )}
 
         <div id="company-search-mount" />
+
+        {searchAlternatives.length > 0 && !detailLoading && (
+          <div className="company-search-alternatives-context company-search-alternatives-fallback">
+            <details className="company-search-alternatives" open>
+              <summary>
+                <span>名称に「{debouncedQuery.trim()}」を含む別法人</span>
+                <strong>→ {searchAlternativeCount.toLocaleString("ja-JP")}法人</strong>
+              </summary>
+              <div className="company-search-alternatives-body">
+                <p>完全一致とは別法人です。金額は合算せず、法人を選ぶと法人番号だけで検索します。</p>
+                <div className="company-search-alternatives-list">
+                  {searchAlternatives.map((organization) => (
+                    <button
+                      className="company-search-alternative-item"
+                      key={organization.corporateNumber}
+                      type="button"
+                      onClick={() => changeQuery(organization.corporateNumber)}
+                    >
+                      <span className="company-search-alternative-name">{organization.name}</span>
+                      <small>法人番号 {organization.corporateNumber} ／ 掲載 {organization.records.toLocaleString("ja-JP")}件</small>
+                    </button>
+                  ))}
+                </div>
+                {searchAlternativeCount > searchAlternatives.length && (
+                  <p className="company-search-alternatives-truncated">掲載件数の多い法人から最大50法人を表示しています。</p>
+                )}
+              </div>
+            </details>
+          </div>
+        )}
 
         {debouncedQuery.trim() && searchSummary && !detailLoading && searchTotal > 0 && (
           <div className="records-table" role="region" aria-label="企業検索結果サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>

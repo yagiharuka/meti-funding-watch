@@ -48,6 +48,8 @@ type OrganizationSummary = {
 type CompanySearchResult = {
   organizationSummaries?: OrganizationSummary[];
   organizationSummariesTruncated?: boolean;
+  alternativeOrganizations?: Array<{ name: string; corporateNumber: string; records: number }>;
+  alternativeOrganizationCount?: number;
 };
 
 type SearchEvent = CustomEvent<{
@@ -100,6 +102,17 @@ function fundingLine(o: OrganizationSummary, s: Stage) {
 function card(o: OrganizationSummary, i: number) {
   const id = `${o.corporateNumber}-${i}`;
   return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">事業別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
+}
+
+function alternativeDisclosure(result: CompanySearchResult, query: string) {
+  const organizations = result.alternativeOrganizations ?? [];
+  if (!organizations.length) return "";
+  const total = result.alternativeOrganizationCount ?? organizations.length;
+  const list = organizations.map((organization) => `<button type="button" class="company-search-alternative-item" data-corp="${esc(organization.corporateNumber)}"><span class="company-search-alternative-name">${esc(organization.name)}</span><small>法人番号 ${esc(organization.corporateNumber)} ／ 掲載 ${organization.records.toLocaleString("ja-JP")}件</small></button>`).join("");
+  const truncated = total > organizations.length
+    ? '<p class="company-search-alternatives-truncated">掲載件数の多い法人から最大50法人を表示しています。</p>'
+    : "";
+  return `<div class="company-search-alternatives-context"><details class="company-search-alternatives" open><summary><span>名称に「${esc(query)}」を含む別法人</span><strong>→ ${total.toLocaleString("ja-JP")}法人</strong></summary><div class="company-search-alternatives-body"><p>完全一致とは別法人です。金額は合算せず、法人を選ぶと法人番号だけで検索します。</p><div class="company-search-alternatives-list">${list}</div>${truncated}</div></details></div>`;
 }
 
 function tabs() {
@@ -176,7 +189,7 @@ function render() {
   const gbizBody = orgs.length
     ? `<div class="company-search-organization-list">${orgs.map(card).join("")}</div>`
     : '<p class="company-search-zero-warning">検索0件は、この法人が経産省関係の資金を受けていないことを意味しません。</p>';
-  ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p><a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div>${gbizBody}</div>`;
+  ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p><a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div>${alternativeDisclosure(result, q)}${gbizBody}</div>`;
   records.classList.add("enhanced-company-search-active");
   series = "gbiz";
   pending = null;

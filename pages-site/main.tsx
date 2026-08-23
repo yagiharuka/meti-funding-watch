@@ -11,7 +11,6 @@ import "./company-evidence-ui.css";
 import "./subsidy-semantics-ui.css";
 import "./data-reading-guide.css";
 import "./company-search-ui";
-import "./company-search-alternatives";
 import "./company-evidence-ui";
 import "./subsidy-semantics-ui";
 
