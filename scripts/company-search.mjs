@@ -43,10 +43,17 @@ function entityNames(entity) {
   return [...new Set(names.map((name) => String(name ?? "").trim()).filter(Boolean))];
 }
 
+function entityIdentities(entity) {
+  if (typeof entity?.identity === "string" && Array.isArray(entity.aliasIdentities)) {
+    return [entity.identity, ...entity.aliasIdentities];
+  }
+  return entityNames(entity).map((name) => normalizeCompanyIdentity(name));
+}
+
 export function entityHasExactCompanyIdentity(entity, query) {
   const identity = normalizeCompanyIdentity(query);
   if (!identity) return false;
-  return entityNames(entity).some((name) => normalizeCompanyIdentity(name) === identity);
+  return entityIdentities(entity).includes(identity);
 }
 
 function parseCompanyQuery(query) {
@@ -83,8 +90,7 @@ export function matchCompanyEntities(entities, query) {
   for (const entity of entities) {
     let exactMatch = false;
     let containsMatch = false;
-    for (const name of entityNames(entity)) {
-      const normalizedName = normalizeCompanyIdentity(name);
+    for (const normalizedName of entityIdentities(entity)) {
       if (normalizedName === identity) exactMatch = true;
       if (normalizedName.includes(identity)) containsMatch = true;
       if (exactMatch && containsMatch) break;

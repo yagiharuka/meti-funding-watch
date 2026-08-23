@@ -61,7 +61,8 @@ test("Pages UI receives and immediately shows separate contains corporations", a
     readFile(new URL("../pages-site/company-search-alternatives.css", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/main.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(worker, /matchCompanyEntities\(companyEntities, query\)/);
+  assert.match(worker, /const entityMatches = matchIndexedCompanyEntities\(/);
+  assert.match(worker, /entityMatchCache/);
   assert.match(worker, /alternativeOrganizations, alternativeOrganizationCount/);
   assert.match(page, /名称に「\{debouncedQuery\.trim\(\)\}」を含む別法人/);
   assert.match(source, /名称に「\$\{esc\(query\)\}」を含む別法人/);

@@ -99,9 +99,10 @@ type DataRelease = {
   appShell: Record<string, { sha256: string; bytes: number }>;
   files: Record<string, { sha256: string; bytes: number; rows: number }>;
   companySearch: {
-    schemaVersion: 1;
-    index: { filename: string; sha256: string; bytes: number; entities: number; records: number; bucketCount: number };
+    schemaVersion: 2;
+    index: { filename: string; sha256: string; bytes: number; entities: number; records: number; bucketCount: number; filterPartitionCount: number };
     files: Record<string, { sha256: string; bytes: number; rows: number }>;
+    filterFiles: Record<string, { sha256: string; bytes: number; rows: number }>;
   };
   sourceSnapshots: {
     gbiz: {
@@ -261,14 +262,16 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     || !Number.isSafeInteger(release.preview?.rows) || (release.preview?.rows ?? -1) < 1 || (release.preview?.rows ?? 101) > pageSize
     || !release.appShell || typeof release.appShell !== "object"
     || !release.files || typeof release.files !== "object"
-    || release.companySearch?.schemaVersion !== 1
+    || release.companySearch?.schemaVersion !== 2
     || release.companySearch.index?.filename !== "gbiz-company-search-index.json"
     || !isSha256(release.companySearch.index?.sha256)
     || !Number.isSafeInteger(release.companySearch.index?.bytes) || release.companySearch.index.bytes < 1
     || !Number.isSafeInteger(release.companySearch.index?.entities) || release.companySearch.index.entities < 1
     || release.companySearch.index?.records !== release.recordCount
     || release.companySearch.index?.bucketCount !== 32
+    || !Number.isSafeInteger(release.companySearch.index?.filterPartitionCount) || release.companySearch.index.filterPartitionCount < 1
     || !release.companySearch.files || typeof release.companySearch.files !== "object"
+    || !release.companySearch.filterFiles || typeof release.companySearch.filterFiles !== "object"
     || !release.sourceSnapshots || typeof release.sourceSnapshots !== "object"
   ) {
     throw new Error("公開releaseの形式が不正です");
@@ -299,6 +302,14 @@ function validateRelease(value: unknown): asserts value is DataRelease {
     if (!/^gbiz-company-records-[0-9a-f]{2}\.json$/.test(filename) || !isSha256(metadata.sha256)
       || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 1 || !Number.isSafeInteger(metadata.rows) || metadata.rows < 0) {
       throw new Error("公開releaseの企業検索ファイル情報が不正です");
+    }
+  }
+  const filterFiles = Object.entries(release.companySearch.filterFiles);
+  if (filterFiles.length !== release.companySearch.index.filterPartitionCount) throw new Error("公開releaseの企業フィルタ検索ファイル数が不正です");
+  for (const [filename, metadata] of filterFiles) {
+    if (!/^gbiz-filter-records-[0-9a-f]{16}\.json$/.test(filename) || !isSha256(metadata.sha256)
+      || !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 1 || !Number.isSafeInteger(metadata.rows) || metadata.rows < 1) {
+      throw new Error("公開releaseの企業フィルタ検索ファイル情報が不正です");
     }
   }
   const gbiz = release.sourceSnapshots.gbiz;
