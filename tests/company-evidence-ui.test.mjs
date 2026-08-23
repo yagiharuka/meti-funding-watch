@@ -21,13 +21,14 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.ok(index.recordCount > 10_000, "central company index should use the committed official corpus, not only seed sources");
 
   const sourceIds = new Set(index.sources.map((source) => source.id));
-  assert.deepEqual([...sourceIds], ["meti", "anre", "smea", "jpo", "nedo", "smrj"]);
+  assert.deepEqual([...sourceIds], ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec"]);
   for (const excluded of ["hokkaido", "tohoku", "kanto", "chubu", "kansai", "chugoku", "shikoku", "kyushu", "okinawa"]) {
     assert.equal(sourceIds.has(excluded), false, `${excluded} must not be in the company official search`);
     assert.ok(index.excludedExecutors.includes(excluded), `${excluded} must be explicitly excluded`);
     assert.equal(index.records.some((row) => row.sourceId === excluded), false, `${excluded} rows must not be published in the company index`);
   }
   assert.match(index.scopeNote, /2017年度以降を対象方針/);
+  assert.match(index.scopeNote, /JOGMEC/);
   assert.match(index.scopeNote, /地方経済産業局・沖縄総合事務局は企業検索の対象外/);
   assert.match(index.scopeNote, /見つからないことは支出がないことを意味しない/);
   assert.match(index.scopeNote, /相互に合算しない/);
@@ -42,6 +43,11 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.ok(nedo, "known NEDO company record must remain searchable");
   const smrj = index.records.find((row) => row.sourceId === "smrj" && row.corporateNumber === "1010401023102");
   assert.ok(smrj, "known SMRJ company record must remain searchable");
+  const jogmec = index.records.find((row) => row.sourceId === "jogmec" && row.corporateNumber === "4010001104241");
+  assert.ok(jogmec, "known JOGMEC bid-result record must remain searchable");
+  assert.equal(jogmec.category, "bid_result");
+  assert.equal(jogmec.amountStage, "落札金額（税抜）");
+  assert.equal(jogmec.amount, 22_682_889);
 
   const jointRows = index.records.filter((row) => Array.isArray(row.organizations) && row.organizations.length > 1);
   assert.ok(jointRows.length > 0, "joint-recipient rows from the official corpus must survive index generation");
@@ -94,7 +100,11 @@ test("expanded official UI keeps local allocation and negative-inference warning
   assert.match(source, /公的資金の受領や契約がないことを意味しません/);
   assert.match(source, /href="#data-reading-guide">↓ 読み方/);
   assert.doesNotMatch(source, /金額は交付決定額・契約額など公表時点が異なるため、GビズINFOや行政事業レビューと合算しません/);
-  assert.match(guide, /交付決定額・契約額・レビュー掲載の支出先額/);
+  assert.match(source, /category === "bid_result"/);
+  assert.match(source, /return "入札結果"/);
+  assert.match(source, /row\.amountStage/);
+  assert.match(guide, /交付決定額・契約額・落札金額・レビュー掲載の支出先額/);
+  assert.match(guide, /入札結果の落札金額は契約金額・実支払額とは同一視しません/);
   assert.match(guide, /相互に合算しません/);
   assert.match(source, /現在の収録機関を見る/);
 });
