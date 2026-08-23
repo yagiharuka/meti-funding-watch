@@ -1,6 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 const MIN_FISCAL_YEAR = 2021;
+const OFFICIAL_SUPPLEMENT_EXECUTORS = ["meti", "anre", "smea", "jpo"];
+const OFFICIAL_SUPPLEMENT_NAMES = {
+  meti: "経済産業省本省",
+  anre: "資源エネルギー庁",
+  smea: "中小企業庁",
+  jpo: "特許庁",
+};
 const officialManifest = JSON.parse(await readFile("data/official/manifest.json", "utf8"));
 const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
 
@@ -33,12 +40,15 @@ function validCorporateNumber(value) {
   return typeof value === "string" && /^\d{13}$/.test(value);
 }
 
-const metiRecords = officialRows
-  .filter((row) => row.executorId === "meti" && Number(row.fiscalYear) >= MIN_FISCAL_YEAR && validAmount(row.amount) && row.organization)
+const officialSupplementRecords = officialRows
+  .filter((row) => OFFICIAL_SUPPLEMENT_EXECUTORS.includes(row.executorId)
+    && Number(row.fiscalYear) >= MIN_FISCAL_YEAR
+    && validAmount(row.amount)
+    && row.organization)
   .map((row) => ({
-    id: `meti-${row.id}`,
-    sourceId: "meti",
-    sourceName: "経済産業省本省",
+    id: `${row.executorId}-${row.id}`,
+    sourceId: row.executorId,
+    sourceName: OFFICIAL_SUPPLEMENT_NAMES[row.executorId],
     organization: row.organization,
     corporateNumber: validCorporateNumber(row.corporateNumber) ? row.corporateNumber : "",
     fiscalYear: row.fiscalYear,
@@ -78,7 +88,7 @@ const seedRecords = seeds.sources.flatMap((source) => {
   });
 });
 
-const records = [...metiRecords, ...seedRecords]
+const records = [...officialSupplementRecords, ...seedRecords]
   .map((row) => ({
     ...row,
     // 企業同時検索では受取先だけを照合する。事業名や公表機関名に検索語が
@@ -97,12 +107,13 @@ for (const row of records) {
   ids.add(row.id);
 }
 
+const officialSourceNotes = Object.fromEntries(OFFICIAL_SUPPLEMENT_EXECUTORS.map((id) => [id, {
+  id,
+  name: OFFICIAL_SUPPLEMENT_NAMES[id],
+  coverageNote: `既存の機関公表資料キャッシュのうち、2021年度以降の${OFFICIAL_SUPPLEMENT_NAMES[id]}の契約結果・補助金等交付決定で金額を確認できた行を表示。収録開始年度・区分は機関ごとに異なり、全公表の網羅を主張しない。`,
+}]));
 const sourceNotes = {
-  meti: {
-    id: "meti",
-    name: "経済産業省本省",
-    coverageNote: "既存の機関公表資料キャッシュのうち、2021年度以降の経済産業省本省の契約結果・補助金等交付決定で金額を確認できた行を表示。機関公表資料自体は手動更新の照合系列であり、全公表の網羅を主張しない。",
-  },
+  ...officialSourceNotes,
   ...Object.fromEntries(seeds.sources.map((source) => [source.id, {
     id: source.id,
     name: source.name,
@@ -110,7 +121,7 @@ const sourceNotes = {
   }])),
 };
 
-const sourceOrder = ["meti", "nedo", "smrj"];
+const sourceOrder = ["meti", "anre", "smea", "jpo", "nedo", "smrj"];
 const sources = sourceOrder.map((id) => ({
   ...sourceNotes[id],
   recordCount: records.filter((row) => row.sourceId === id).length,
@@ -120,7 +131,7 @@ const output = {
   schemaVersion: 1,
   generatedAt: [officialManifest.generatedAt, seeds.updatedAt].filter(Boolean).sort().at(-1) ?? seeds.updatedAt,
   minFiscalYear: MIN_FISCAL_YEAR,
-  scopeNote: seeds.scopeNote,
+  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
   recordCount: records.length,
   sources,
   records,
