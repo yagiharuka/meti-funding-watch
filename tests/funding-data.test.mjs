@@ -23,6 +23,7 @@ const pageManifest = JSON.parse(
   await readFile(new URL("../data/pages/manifest.json", import.meta.url), "utf8"),
 );
 const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const homeProgramSearchSource = await readFile(new URL("../app/HomeProgramSearch.tsx", import.meta.url), "utf8");
 const fundingWorkerSource = await readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8");
 const adoptionPageSource = await readFile(new URL("../app/adoptions/page.tsx", import.meta.url), "utf8");
 const adoptionSearchSource = await readFile(new URL("../app/adoptions/AdoptionSearch.tsx", import.meta.url), "utf8");
@@ -410,10 +411,14 @@ test("validates every published corporate number including its check digit", () 
   }
 });
 
-test("presents a Gbiz-only record search without unsupported claims", () => {
+test("keeps the Gbiz company branch separate when the first search also offers review programs", () => {
   const recordsSection = pageSource.slice(
     pageSource.indexOf('<section className="records-section"'),
     pageSource.indexOf('<section className="source-section"'),
+  );
+  const companyBranch = recordsSection.slice(
+    recordsSection.indexOf('{searchTarget === "company" ? <>'),
+    recordsSection.indexOf('</> : ('),
   );
   assert.match(pageSource, /法人等/);
   assert.match(pageSource, /データ出典：GビズINFO/);
@@ -433,13 +438,18 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /funding-search\.worker\.ts/);
   assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
 
-  assert.doesNotMatch(recordsSection, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
-  assert.doesNotMatch(recordsSection, /受取先|支出元・実施機関|契約額/);
-  assert.doesNotMatch(recordsSection, /\broute\b/);
-  assert.doesNotMatch(recordsSection, /GビズINFO掲載値合計/);
-  assert.match(recordsSection, /金額の記載なし/);
-  assert.match(recordsSection, /<th>掲載値合計<\/th>/);
-  assert.doesNotMatch(recordsSection, /交付金額|期間指定API|総支出額合計/);
+  assert.match(recordsSection, /事業名・予算事業ID/);
+  assert.match(recordsSection, /<HomeProgramSearch/);
+  assert.doesNotMatch(companyBranch, /行政事業レビュー|レビューシート|reviewPayments|reviewPrograms/);
+  assert.doesNotMatch(companyBranch, /受取先|支出元・実施機関|契約額/);
+  assert.doesNotMatch(companyBranch, /\broute\b/);
+  assert.doesNotMatch(companyBranch, /GビズINFO掲載値合計/);
+  assert.match(companyBranch, /金額の記載なし/);
+  assert.match(companyBranch, /<th>掲載値合計<\/th>/);
+  assert.doesNotMatch(companyBranch, /交付金額|期間指定API|総支出額合計/);
+  assert.match(homeProgramSearchSource, /data\/review\/manifest\.json/);
+  assert.match(homeProgramSearchSource, /data\/review\/\$\{manifest\.programsFile\}/);
+  assert.match(homeProgramSearchSource, /企業別のGビズINFO掲載行とは合算しません/);
   assert.doesNotMatch(recordsSection, /未収録行|検索結果は網羅的では/);
   assert.doesNotMatch(pageSource, /Power Automate|Dataverse|Power Apps|SharePoint|SPFx|Entra|Azure/);
   assert.doesNotMatch(styleSource, /\.route\b|award_decision|\.finalized\b|\.paid\b/);
@@ -474,9 +484,9 @@ test("keeps Mirasapo adoption records separate from Gbiz amounts", () => {
   assert.match(adoptionApiSource, /maximumBytes = 1_000_000/);
   assert.doesNotMatch(adoptionSearchSource, /補助金採択者検索を開く/);
   assert.doesNotMatch(adoptionSearchSource, /法人番号|交付先|受取先|金額列/);
-  assert.match(viewTabsSource, /企業検索/);
-  assert.match(viewTabsSource, /企業名・法人番号で/);
-  assert.match(viewTabsSource, /行政事業レビュー検索/);
+  assert.match(viewTabsSource, /かんたん検索/);
+  assert.match(viewTabsSource, /企業名・事業名で/);
+  assert.match(viewTabsSource, /行政事業レビュー詳細/);
   assert.doesNotMatch(viewTabsSource, /補助金採択者情報（中小企業庁のみ）|href=.*adoptions\//);
   assert.doesNotMatch(viewTabsSource, /active === "official"|機関公表資料との比較/);
   assert.match(officialPageSource, /<ViewTabs active="official"/);

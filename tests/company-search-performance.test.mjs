@@ -38,11 +38,13 @@ test("軽量索引から選んだ法人の明細は従来の全件検索と一�
 });
 
 test("初期表示と系列タブは大容量データを先読みしない", async () => {
-  const [bridge, worker, combined, evidence] = await Promise.all([
+  const [bridge, worker, combined, evidence, page, programSearch] = await Promise.all([
     text("../pages-site/funding-search-bridge.ts"),
     text("../app/funding-search.worker.ts"),
     text("../app/CombinedCompanyResults.tsx"),
     text("../pages-site/company-evidence-ui.ts"),
+    text("../app/page.tsx"),
+    text("../app/HomeProgramSearch.tsx"),
   ]);
   assert.doesNotMatch(bridge, /funding-search-enhanced\.worker/);
   assert.match(bridge, /new NativeWorker\(scriptURL, options\)/);
@@ -54,4 +56,9 @@ test("初期表示と系列タブは大容量データを先読みしない", as
   assert.match(combined, /activeSeries !== "official"/);
   assert.doesNotMatch(evidence, /Promise\.all\(\[getReviewIndex\(\), getOfficialIndex\(\)\]\)/);
   assert.match(evidence, /meti-company-series-change/);
+  assert.match(page, /searchTarget === "program"[\s\S]*<HomeProgramSearch/);
+  assert.doesNotMatch(page, /fetch\([^\n]*data\/review\/programs\.json/);
+  assert.match(programSearch, /useEffect\(\(\) => \{/);
+  assert.match(programSearch, /data\/review\/\$\{manifest\.programsFile\}/);
+  assert.doesNotMatch(programSearch, /payments-/);
 });

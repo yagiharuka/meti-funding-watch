@@ -51,6 +51,7 @@
 | M-019 | UI失敗時 | 公開artifact・manifest・chunk・commitが食い違っていても正しい公開データとして見える | 高 | GitHub Pages公開 | release・status・manifest・chunk・ID集合をlive verifierで結合検証し、不一致を公開成功扱いしない | `scripts/live-pages-verifier.mjs`, `scripts/pages-update-status.mjs` | `tests/update-status.test.mjs`, `tests/rendered-html.test.mjs` | MITIGATED |
 | M-020 | 金額・集計 | GビズINFOの0円掲載＝最終的な交付額・受注額が0円と確定 | 高 | GビズINFO明細 | — | — | — | OPEN |
 | M-021 | 金額・集計 | GビズINFOの「掲載N件」＝一意な案件数・交付件数 | 中 | GビズINFO企業カード | — | — | — | OPEN |
+| M-022 | 系列間比較 | 最初の検索欄の「事業名」結果＝GビズINFOの活動名称・企業別受取額 | 高 | トップの事業名検索 | 検索対象を明示的に切り替え、行政事業レビューの事業・予算執行として表示し、企業別GビズINFO掲載行と合算しない旨をその場に表示 | `app/page.tsx`, `app/HomeProgramSearch.tsx` | `tests/ui-accuracy.test.mjs`, `tests/funding-data.test.mjs` | MITIGATED |
 
 ## OPEN項目
 
