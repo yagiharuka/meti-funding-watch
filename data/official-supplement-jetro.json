@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-24",
+  "id": "jetro",
+  "name": "JETRO",
+  "coverageNote": "現在はJETRO公式の2026年入札結果のうち、落札者・法人番号・落札決定日・落札金額（税抜）をHTMLで確認できた1件のみ収録。落札金額は契約金額・実支払額として扱わない。JETROの全入札・全契約・随意契約を網羅するものではない。",
+  "records": [
+    {
+      "id": "jetro-2026-budget-accounting-system",
+      "organization": "株式会社NTTデータ・アイ",
+      "corporateNumber": "2011101056358",
+      "fiscalYear": 2025,
+      "date": "2026-03-27",
+      "program": "予算会計システム開発及び保守",
+      "theme": "",
+      "phase": "",
+      "supportYears": "",
+      "category": "bid_result",
+      "amountStage": "落札金額（税抜）",
+      "amount": 1199000000,
+      "sourceUrl": "https://www.jetro.go.jp/procurement/bid/fia/9fa37fee0bb63a6f.html",
+      "sourcePageUrl": "https://www.jetro.go.jp/procurement/bid/fia/9fa37fee0bb63a6f.html"
+    }
+  ]
+}
