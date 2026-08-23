@@ -11,6 +11,24 @@
   margin: 18px auto 20px;
 }
 
+.company-search-series-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 2px 7px;
+}
+
+.company-search-series-heading strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.company-search-series-heading span {
+  color: #718079;
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .company-search-series-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -354,6 +372,10 @@
   .company-search-series-tabs {
     gap: 3px;
     padding: 4px;
+  }
+
+  .company-search-series-heading {
+    justify-content: space-between;
   }
 
   .company-search-series-tabs button {
