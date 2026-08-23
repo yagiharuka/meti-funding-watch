@@ -5,8 +5,16 @@ import { pathToFileURL } from "node:url";
 const CATALOG_PATH = "docs/MISREADING_CATALOG.md";
 const SECTION_HEADING = "### このPRが触るカタログID";
 
-export function validateCatalogPassage({ body = "", changedFiles = [] }) {
-  if (changedFiles.includes(CATALOG_PATH)) return { ok: true, reason: "catalog-updated" };
+export function hasCatalogRowDiff(catalogDiff = "") {
+  return catalogDiff
+    .split("\n")
+    .some((line) => /^[+-]\s*\| M-\d{3} \|/u.test(line));
+}
+
+export function validateCatalogPassage({ body = "", changedFiles = [], catalogDiff = "" }) {
+  if (changedFiles.includes(CATALOG_PATH) && hasCatalogRowDiff(catalogDiff)) {
+    return { ok: true, reason: "catalog-updated" };
+  }
 
   const start = body.indexOf(SECTION_HEADING);
   if (start === -1) return { ok: false, message: `PR本文に「${SECTION_HEADING}」がありません。` };
@@ -17,7 +25,12 @@ export function validateCatalogPassage({ body = "", changedFiles = [] }) {
     .replace(/<!--[\s\S]*?-->/gu, "")
     .trim();
   const match = section.match(/該当なし\s*[：:]\s*(.+)/su);
-  if (!match) return { ok: false, message: "カタログ差分がないPRは「該当なし：理由」を記載してください。" };
+  if (!match) {
+    const detail = changedFiles.includes(CATALOG_PATH)
+      ? "カタログ差分に M-xxx 行の追加・更新がありません。"
+      : "カタログ差分がありません。";
+    return { ok: false, message: `${detail}「該当なし：理由」を記載してください。` };
+  }
 
   const reason = match[1].replace(/\s+/gu, " ").trim();
   if (reason.length < 5) return { ok: false, message: "「該当なし」の理由を具体的に記載してください。" };
@@ -33,11 +46,15 @@ async function main() {
   const headSha = event.pull_request?.head?.sha;
   if (!baseSha || !headSha) throw new Error("pull request base/head SHA is missing");
 
-  const changedFiles = execFileSync("git", ["diff", "--name-only", `${baseSha}...${headSha}`], { encoding: "utf8" })
+  const diffRange = `${baseSha}...${headSha}`;
+  const changedFiles = execFileSync("git", ["diff", "--name-only", diffRange], { encoding: "utf8" })
     .split("\n")
     .map((value) => value.trim())
     .filter(Boolean);
-  const result = validateCatalogPassage({ body: event.pull_request.body ?? "", changedFiles });
+  const catalogDiff = changedFiles.includes(CATALOG_PATH)
+    ? execFileSync("git", ["diff", "--unified=0", diffRange, "--", CATALOG_PATH], { encoding: "utf8" })
+    : "";
+  const result = validateCatalogPassage({ body: event.pull_request.body ?? "", changedFiles, catalogDiff });
   if (!result.ok) {
     console.error(`Misreading catalog gate: ${result.message}`);
     process.exitCode = 1;
