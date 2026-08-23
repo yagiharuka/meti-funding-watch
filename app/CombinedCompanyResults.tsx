@@ -38,7 +38,7 @@ type ReviewCompanyIndex = {
   semantics: { amount: string; aggregationWarning: string };
   recipients: ReviewRecipient[];
 };
-type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj";
+type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj" | "jogmec";
 type OfficialSupplementSource = {
   id: OfficialSupplementSourceId;
   name: string;
@@ -57,7 +57,7 @@ type OfficialSupplementRecord = {
   theme: string;
   phase: string;
   supportYears: string;
-  category: "grant_decision" | "contract_result";
+  category: "grant_decision" | "contract_result" | "bid_result";
   amountStage: string;
   amount: number;
   sourceUrl: string;
@@ -99,6 +99,11 @@ function formatDate(value: string | null) {
   if (!value) return "日付記載なし";
   const [year, month, day] = value.split("-");
   return `${year}年${Number(month)}月${Number(day)}日`;
+}
+function officialCategoryLabel(category: OfficialSupplementRecord["category"]) {
+  if (category === "grant_decision") return "採択・交付決定";
+  if (category === "bid_result") return "入札結果";
+  return "契約結果";
 }
 function getPublicBaseUrl() {
   if (typeof window !== "undefined" && window.location.hostname.endsWith(".chatgpt.site")) {
@@ -235,9 +240,9 @@ export default function CombinedCompanyResults({ query }: Props) {
         <div className="section-heading compact" style={{ marginTop: "1.5rem" }}>
           <div>
             <p className="eyebrow">OFFICIAL SUPPLEMENT</p>
-            <h2>公式補足（本省・エネ庁・中企庁・特許庁・NEDO・中小機構）</h2>
+            <h2>公式補足（本省・エネ庁・中企庁・特許庁・NEDO・中小機構・JOGMEC）</h2>
           </div>
-          <p>2021年度以降を基本対象とする採択・交付決定・契約結果を補足します。機関ごとに実際の収録開始年度は異なり、確認できた公表情報だけを表示します。</p>
+          <p>2021年度以降を基本対象とする採択・交付決定・契約結果・入札結果を補足します。機関ごとに実際の収録開始年度は異なり、確認できた公表情報だけを表示します。</p>
         </div>
         {officialLoading && <div className="result-bar"><strong>公式補足の企業索引を読込中</strong></div>}
         {officialError && <div className="adoption-error" role="alert"><strong>公式補足を検索できません。</strong><p>{officialError}</p></div>}
@@ -247,7 +252,7 @@ export default function CombinedCompanyResults({ query }: Props) {
               <thead><tr><th>公表機関</th><th>受取先</th><th>事業・テーマ</th><th>公表金額</th><th>時点</th><th>原典</th></tr></thead>
               <tbody>{officialMatches.slice(0, 100).map((row) => (
                 <tr key={row.id}>
-                  <td data-label="公表機関"><strong>{row.sourceName}</strong><small>{row.category === "grant_decision" ? "採択・交付決定" : "契約結果"}</small></td>
+                  <td data-label="公表機関"><strong>{row.sourceName}</strong><small>{officialCategoryLabel(row.category)}</small></td>
                   <td data-label="受取先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td>
                   <td data-label="事業・テーマ"><span className="program-name">{row.theme || row.program}</span>{row.theme && <small>{row.program}</small>}{row.phase && <small>{row.phase}{row.supportYears ? `／${row.supportYears}` : ""}</small>}</td>
                   <td className="amount" data-label="公表金額"><strong>{yen.format(row.amount)}</strong><small>{row.amountStage}</small></td>
