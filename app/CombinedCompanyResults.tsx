@@ -38,15 +38,16 @@ type ReviewCompanyIndex = {
   semantics: { amount: string; aggregationWarning: string };
   recipients: ReviewRecipient[];
 };
+type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj";
 type OfficialSupplementSource = {
-  id: "meti" | "nedo" | "smrj";
+  id: OfficialSupplementSourceId;
   name: string;
   coverageNote: string;
   recordCount: number;
 };
 type OfficialSupplementRecord = {
   id: string;
-  sourceId: "meti" | "nedo" | "smrj";
+  sourceId: OfficialSupplementSourceId;
   sourceName: string;
   organization: string;
   corporateNumber: string;
@@ -234,7 +235,7 @@ export default function CombinedCompanyResults({ query }: Props) {
         <div className="section-heading compact" style={{ marginTop: "1.5rem" }}>
           <div>
             <p className="eyebrow">OFFICIAL SUPPLEMENT</p>
-            <h2>公式補足（経産省本省・NEDO・中小機構）</h2>
+            <h2>公式補足（本省・エネ庁・中企庁・特許庁・NEDO・中小機構）</h2>
           </div>
           <p>2021年度以降を基本対象とする採択・交付決定・契約結果を補足します。機関ごとに実際の収録開始年度は異なり、確認できた公表情報だけを表示します。</p>
         </div>
