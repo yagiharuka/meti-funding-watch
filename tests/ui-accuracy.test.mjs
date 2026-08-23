@@ -11,6 +11,7 @@ const officialPageHtml = await readFile(new URL("../pages-site/official/index.ht
 const layoutSource = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
 const tabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
+const homeProgramSearchSource = await readFile(new URL("../app/HomeProgramSearch.tsx", import.meta.url), "utf8");
 const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 
 test("resets hidden agency state whenever the fiscal year changes", () => {
@@ -56,6 +57,16 @@ test("distinguishes page navigation from result-series tabs", () => {
   assert.match(tabsSource, /aria-label="検索ページ"/);
   assert.match(tabsSource, /検索方法/);
   assert.doesNotMatch(tabsSource, /className="view-tabs"|role="tablist"/);
+});
+
+test("offers review-program search in the first search area without merging it into company results", () => {
+  assert.match(pageSource, /aria-label="検索対象"/);
+  assert.match(pageSource, /企業名・法人番号/);
+  assert.match(pageSource, /事業名・予算事業ID/);
+  assert.match(pageSource, /searchTarget !== "company"/);
+  assert.match(homeProgramSearchSource, /事業名の一部、予算事業ID、担当組織/);
+  assert.match(homeProgramSearchSource, /行政事業レビューの事業・予算執行を検索/);
+  assert.match(homeProgramSearchSource, /企業別のGビズINFO掲載行とは合算しません/);
 });
 
 test("uses non-authoritative freshness wording", () => {

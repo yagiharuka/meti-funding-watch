@@ -41,7 +41,7 @@ test("misreading catalog is the explicit audit entrypoint", async () => {
 
 test("every audit dimension has at least one concrete catalog row", async () => {
   const rows = catalogRows(await text("../docs/MISREADING_CATALOG.md"));
-  assert.ok(rows.length >= 21, "catalog must cover the known audit findings and newly exposed gaps");
+  assert.ok(rows.length >= 22, "catalog must cover the known audit findings and newly exposed gaps");
   const rowDimensions = new Set(rows.map((row) => row[1]));
   for (const dimension of AUDIT_DIMENSIONS) {
     assert.ok(rowDimensions.has(dimension), `${dimension}: audit dimension must have at least one catalog row`);
@@ -66,7 +66,7 @@ test("catalog keeps unresolved risks visibly unresolved and records mitigations"
     assert.equal(open[8], "OPEN");
   }
 
-  for (const id of ["M-001", "M-003", "M-004", "M-005", "M-006", "M-009", "M-010", "M-011", "M-015", "M-016", "M-017", "M-018", "M-019"]) {
+  for (const id of ["M-001", "M-003", "M-004", "M-005", "M-006", "M-009", "M-010", "M-011", "M-015", "M-016", "M-017", "M-018", "M-019", "M-022"]) {
     const row = byId.get(id);
     assert.ok(row, `${id} must exist`);
     assert.equal(row[8], "MITIGATED");

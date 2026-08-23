@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
 import CombinedCompanyResults from "@/app/CombinedCompanyResults";
+import HomeProgramSearch from "@/app/HomeProgramSearch";
 import { filterCompanyRecords } from "@/scripts/company-search.mjs";
 import {
   FUNDING_QUERY_MAX_LENGTH,
@@ -158,6 +159,7 @@ type PublicUpdateStatus = {
 };
 
 type UpdateHealth = "loading" | "healthy" | "failed" | "stale" | "unknown";
+type SearchTarget = "company" | "program";
 
 const bundledFundingData = fundingSummary as FundingDataset;
 const pageSize = 100;
@@ -478,6 +480,7 @@ export default function Home() {
   const previewRecordsRef = useRef<FundingRecord[]>([]);
   const [searchBackend, setSearchBackend] = useState<"worker" | "main" | null>(null);
   const requestIdRef = useRef(0);
+  const [searchTarget, setSearchTarget] = useState<SearchTarget>(() => initialSearchParam("target", "company") === "program" ? "program" : "company");
   const [query, setQuery] = useState(() => sanitizeFundingSearchQuery(initialSearchParam("q", "")));
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [isComposingQuery, setIsComposingQuery] = useState(false);
@@ -739,7 +742,7 @@ export default function Home() {
   }, [manifest, release]);
 
   useEffect(() => {
-    if (!searchReady || !release || query !== debouncedQuery || isComposingQuery) return;
+    if (searchTarget !== "company" || !searchReady || !release || query !== debouncedQuery || isComposingQuery) return;
     if (!debouncedQuery.trim() && agency === "all" && stage === "all" && year === defaultYear && page === 0) {
       setDataset((current) => ({ ...current, generatedAt: release.generatedAt, records: previewRecordsRef.current }));
       setSearchTotal(release.recordCount);
@@ -793,7 +796,7 @@ export default function Home() {
     setSearchError(null);
     setDataMode("github");
     setDetailLoading(false);
-  }, [agencies, agency, debouncedQuery, isComposingQuery, manifest?.generatedAt, page, query, release, searchBackend, searchReady, stage, year]);
+  }, [agencies, agency, debouncedQuery, isComposingQuery, manifest?.generatedAt, page, query, release, searchBackend, searchReady, searchTarget, stage, year]);
 
   const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
@@ -820,18 +823,19 @@ export default function Home() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const values: Record<string, string> = {
+      target: searchTarget === "program" ? "program" : "",
       q: query.trim(),
-      agency: effectiveAgency === "all" ? "" : effectiveAgency,
-      stage: stage === "all" ? "" : stage,
-      year: year === defaultYear ? "" : year,
-      page: effectivePage > 0 ? String(effectivePage + 1) : "",
+      agency: searchTarget === "company" && effectiveAgency !== "all" ? effectiveAgency : "",
+      stage: searchTarget === "company" && stage !== "all" ? stage : "",
+      year: searchTarget === "company" && year !== defaultYear ? year : "",
+      page: page > 0 ? String(page + 1) : "",
     };
     for (const [key, value] of Object.entries(values)) {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [effectiveAgency, effectivePage, query, stage, year]);
+  }, [effectiveAgency, page, query, searchTarget, stage, year]);
 
   const dashboardRecordCount = gbizSource?.dashboardRecordCount ?? gbizSource?.officialRecordCount;
   const csvEligibleRecordCount = gbizSource?.csvEligibleRecordCount;
@@ -893,6 +897,12 @@ export default function Home() {
   function changeQuery(nextQuery: string) {
     requestIdRef.current += 1;
     setQuery(nextQuery);
+    setPage(0);
+  }
+
+  function changeSearchTarget(nextTarget: SearchTarget) {
+    requestIdRef.current += 1;
+    setSearchTarget(nextTarget);
     setPage(0);
   }
 
@@ -986,23 +996,28 @@ export default function Home() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">ORGANIZATIONS & PUBLISHED ACTIVITIES</p>
-            <h2>調達（委託を含む）・補助金の掲載情報</h2>
+            <h2>{searchTarget === "company" ? "調達（委託を含む）・補助金の掲載情報" : "行政事業レビューの事業・予算執行"}</h2>
           </div>
-          <p>法人等の名称と法人番号だけを全文検索します。条件を組み合わせて掲載行を確認できます。</p>
+          <p>{searchTarget === "company" ? "法人等の名称と法人番号を検索します。条件を組み合わせて掲載行を確認できます。" : "事業名・予算事業ID・担当組織を検索します。事業索引は選択したときだけ読み込みます。"}</p>
         </div>
 
-        <div className="series-label" aria-label="表示中のデータ系列">
-          <strong>法人等別の調達（委託を含む）・補助金掲載情報</strong>
-          <span>GビズINFO</span>
+        <div className="search-target-switch" role="group" aria-label="検索対象">
+          <span>検索対象</span>
+          <button type="button" className={searchTarget === "company" ? "active" : undefined} aria-pressed={searchTarget === "company"} onClick={() => changeSearchTarget("company")}>企業名・法人番号</button>
+          <button type="button" className={searchTarget === "program" ? "active" : undefined} aria-pressed={searchTarget === "program"} onClick={() => changeSearchTarget("program")}>事業名・予算事業ID</button>
         </div>
-        <div className="filters" aria-label="検索条件">
+        <div className="series-label" aria-label="表示中のデータ系列">
+          <strong>{searchTarget === "company" ? "法人等別の調達（委託を含む）・補助金掲載情報" : "事業別の予算・執行情報"}</strong>
+          <span>{searchTarget === "company" ? "GビズINFO" : "行政事業レビュー"}</span>
+        </div>
+        <div className={`filters${searchTarget === "program" ? " program-search-filters" : ""}`} aria-label="検索条件">
           <label className="search-field">
-            <span className="sr-only">法人等の名称または法人番号で検索</span>
+            <span className="sr-only">{searchTarget === "company" ? "法人等の名称または法人番号で検索" : "事業名、予算事業IDまたは担当組織で検索"}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
               type="search"
               maxLength={FUNDING_QUERY_MAX_LENGTH}
-              placeholder="法人等の名称・法人番号で検索"
+              placeholder={searchTarget === "company" ? "法人等の名称・法人番号で検索" : "事業名・予算事業ID・担当組織で検索"}
               value={query}
               onChange={(event) => changeQuery(event.target.value)}
               onCompositionStart={() => setIsComposingQuery(true)}
@@ -1012,29 +1027,30 @@ export default function Home() {
               }}
             />
           </label>
-          <label>
+          {searchTarget === "company" && <label>
             <span className="sr-only">公表組織</span>
             <select value={effectiveAgency} onChange={(event) => { markSearchPending(); setAgency(event.target.value); setPage(0); }}>
               <option value="all">すべての公表組織</option>
               {agencies.map((item) => <option key={item}>{item}</option>)}
             </select>
-          </label>
-          <label>
+          </label>}
+          {searchTarget === "company" && <label>
             <span className="sr-only">GビズINFO情報種別</span>
             <select value={stage} onChange={(event) => { markSearchPending(); setStage(event.target.value); setPage(0); }}>
               <option value="all">すべての情報種別</option>
               {Object.entries(stageLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
-          </label>
-          <label>
+          </label>}
+          {searchTarget === "company" && <label>
             <span className="sr-only">認定日・受注日基準年度</span>
             <select value={year} onChange={(event) => changeYear(event.target.value)}>
               <option value="all">全期間</option>
               {fiscalYears.map((item) => <option key={item} value={item}>{item}年度（日付基準）</option>)}
               {hasUndatedRecords && <option value="unclassified">年度不明（日付の記載なし）</option>}
             </select>
-          </label>
+          </label>}
         </div>
+        {searchTarget === "company" ? <>
         {unclassifiedDateCount > 0 && (
           <p className="filter-note">
             年度を指定すると、認定日・受注日の記載がない{unclassifiedDateCount.toLocaleString("ja-JP")}行は検索対象から外れます。
@@ -1146,6 +1162,14 @@ export default function Home() {
             <span>{effectivePage + 1} / {totalPages}</span>
             <button disabled={effectivePage + 1 >= totalPages} onClick={() => { markSearchPending(); setPage(Math.min(totalPages - 1, effectivePage + 1)); }}>次へ →</button>
           </nav>
+        )}
+        </> : (
+          <HomeProgramSearch
+            query={debouncedQuery}
+            page={page}
+            onPageChange={setPage}
+            onClear={() => changeQuery("")}
+          />
         )}
       </section>
 
