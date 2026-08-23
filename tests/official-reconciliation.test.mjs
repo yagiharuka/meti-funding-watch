@@ -126,6 +126,6 @@ test("renders an explicit institution-by-year review plan with every other cell 
 
 test("keeps the Gbiz partiality and corporate-number limitation visible", () => {
   assert.match(fundingPageSource, /GビズINFOに法人番号付きで掲載された/);
-  assert.match(fundingPageSource, /経済産業省の全支出・実支払を示すものではありません/);
+  assert.match(fundingPageSource, /経済産業省関係の全支出・実支払を示すものではありません/);
   assert.match(fundingPageSource, /正確性・完全性・最新性を保証しません/);
 });
