@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { reviewProgramHref } from "./review-program-link";
 
 type ReviewProgram = {
   id: string;
@@ -144,7 +145,7 @@ export default function HomeProgramSearch({ query, page, onPageChange, onClear }
             <thead><tr><th scope="col">事業</th><th scope="col">担当組織</th><th scope="col">当初予算</th><th scope="col">執行額</th><th scope="col">レビュー年度</th><th scope="col">原典</th></tr></thead>
             <tbody>{visible.map((row) => (
               <tr key={row.id}>
-                <td data-label="事業"><strong>{row.name}</strong><small>予算事業ID {row.projectNumber}</small></td>
+                <td data-label="事業"><strong><a className="program-detail-link" href={reviewProgramHref(getPublicBaseUrl(), row.id)} aria-label={`${row.name}の事業カードを表示`}>{row.name}</a></strong><small>予算事業ID {row.projectNumber}</small></td>
                 <td data-label="担当組織">{row.organization || "記載なし"}</td>
                 <td className="amount" data-label="当初予算">{formatAmount(row.initialBudget)}<small>{row.budgetFiscalYear}年度のレビューシート掲載値</small></td>
                 <td className="amount" data-label="執行額">{formatAmount(row.execution)}<small>{row.executionFiscalYear ? `${row.executionFiscalYear}年度` : "年度不明"}{row.executionRate === null ? "" : `／執行率 ${row.executionRate}`}</small></td>

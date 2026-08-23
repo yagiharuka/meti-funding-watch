@@ -212,7 +212,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .reviewed-sample { display: block; padding: 7px; border-radius: 9px; background: #e2f5ec; color: #075c47; font-size: 10px; font-weight: 900; line-height: 1.4; }
 .reviewed-sample small { display: block; margin-top: 4px; color: #39665a; font-size: 8px; font-weight: 700; }
 #reconciliation-records, #unreviewed, .records-table tr[id] { scroll-margin-top: 90px; }
-.records-table tr:target { background: #fff8d8; outline: 3px solid #e4bc50; outline-offset: -3px; }
+.records-table tr:target, .records-table tr.direct-program-target { background: #fff8d8; outline: 3px solid #e4bc50; outline-offset: -3px; }
 
 .records-section, .source-section { padding: 0 clamp(22px, 5vw, 78px) 110px; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; max-width: 1440px; margin: 0 auto 34px; }
@@ -262,6 +262,8 @@ tbody tr:hover { background: #fbfcf9; }
 td strong { display: block; max-width: 220px; color: var(--ink); font-size: 13px; line-height: 1.5; }
 td small { display: block; margin-top: 5px; color: #5f716a; font-size: 10px; }
 .program-name { display: block; max-width: 390px; color: var(--ink); font-size: 11px; line-height: 1.55; }
+.program-detail-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--green-dark); text-decoration: underline; text-decoration-color: #8fac9f; text-underline-offset: 3px; }
+.program-detail-link:hover { color: var(--green); text-decoration-color: currentColor; }
 .stage-badge { display: inline-block; padding: 6px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .stage-badge.contracted { background: #e8efff; color: #2858ba; }
 .stage-badge.subsidy_published { background: #fff2d9; color: #965c00; }
