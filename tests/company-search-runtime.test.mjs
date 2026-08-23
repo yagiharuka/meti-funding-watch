@@ -179,6 +179,7 @@ test("zero Gbiz rows show the harm-critical negative-inference warning and keep 
   assert.match(ui.innerHTML, />照合記録<\/button>/);
   assert.match(ui.innerHTML, /class="company-search-zero-warning"/);
   assert.match(ui.innerHTML, /検索0件は、この法人が経産省関係の資金を受けていないことを意味しません/);
+  assert.match(ui.innerHTML, /行政事業レビュー・照合記録のタブも確認してください/);
   assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
 });
 

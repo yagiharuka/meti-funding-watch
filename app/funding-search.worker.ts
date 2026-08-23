@@ -1,15 +1,16 @@
-import { filterCompanyEntities, filterCompanyRecords, INTERNAL_PARTIAL_SEARCH_PREFIX, matchCompanyEntities } from "../scripts/company-search.mjs";
+import { INTERNAL_PARTIAL_SEARCH_PREFIX, matchCompanyEntities, normalizeCompanySearchTerm } from "../scripts/company-search.mjs";
 
 type Stage = "contracted" | "subsidy_published";
 type FundingRecord = { id: string; fiscalYear: number | null; date: string | null; organization: string; corporateNumber: string; sourceAgency: string; program: string; amount: number | null; amountRaw?: string; stage: Stage; sourceKey: string; sourceRowNumber: number; sourceSystem: string };
-type CompanyEntity = { organization: string; corporateNumber: string; aliases: string[]; bucket: string; records: number };
-type CompanySearchIndex = { schemaVersion: 1; generatedAt: string; entityCount: number; recordCount: number; bucketCount: number; agencies: string[]; entities: CompanyEntity[] };
+type CompanyEntity = { organization: string; corporateNumber: string; identity: string; aliases: string[]; aliasIdentities: string[]; bucket: string; records: number };
+type FilterPartition = { filename: string; fiscalYear: number | null; sourceAgency: string; stage: Stage; rows: number };
+type CompanySearchIndex = { schemaVersion: 2; generatedAt: string; entityCount: number; recordCount: number; bucketCount: number; filterPartitionCount: number; agencies: string[]; entities: CompanyEntity[]; filterPartitions: FilterPartition[] };
 type FileMetadata = { sha256: string; bytes: number; rows: number };
 type DataChunkManifest = { generatedAt: string; commitments: Record<string, string> };
 type DataRelease = {
   schemaVersion: 1; commitSha: string; generatedAt: string; recordCount: number; idSetSha256: string;
   files: Record<string, FileMetadata>;
-  companySearch: { schemaVersion: 1; index: { filename: string; sha256: string; bytes: number; entities: number; records: number; bucketCount: number }; files: Record<string, FileMetadata> };
+  companySearch: { schemaVersion: 2; index: { filename: string; sha256: string; bytes: number; entities: number; records: number; bucketCount: number; filterPartitionCount: number }; files: Record<string, FileMetadata>; filterFiles: Record<string, FileMetadata> };
 };
 type InitializeMessage = { type: "initialize"; publicBaseUrl: string; manifest: DataChunkManifest; release: DataRelease };
 type SearchMessage = { type: "search"; requestId: number | string; parameters: string };
@@ -19,9 +20,11 @@ const detailRowsPerOrganization = 100;
 const maxOrganizationSummaries = 50;
 let activeMessage: InitializeMessage | null = null;
 let companyEntities: CompanyEntity[] = [];
+let filterPartitions: FilterPartition[] = [];
 let agencies: string[] = [];
-let legacyRecords: FundingRecord[] | null = null;
 const bucketRequests = new Map<string, Promise<FundingRecord[]>>();
+const filterRequests = new Map<string, Promise<FundingRecord[]>>();
+const entityMatchCache = new Map<string, { exact: CompanyEntity[]; contains: CompanyEntity[]; primary: CompanyEntity[] }>();
 
 self.addEventListener("message", (event: MessageEvent<InitializeMessage | SearchMessage>) => {
   if (event.data.type === "initialize") {
@@ -39,9 +42,11 @@ async function initialize(message: InitializeMessage) {
   validateCompanySearchIndex(value, message);
   activeMessage = message;
   companyEntities = value.entities;
+  filterPartitions = value.filterPartitions;
   agencies = value.agencies;
-  legacyRecords = null;
   bucketRequests.clear();
+  filterRequests.clear();
+  entityMatchCache.clear();
   postMessage({ type: "ready", agencies, releaseCommit: message.release.commitSha, generatedAt: message.release.generatedAt });
 }
 
@@ -49,16 +54,38 @@ function validateCompanySearchIndex(value: unknown, message: InitializeMessage):
   if (!value || typeof value !== "object") throw new Error("企業検索索引の形式が不正です");
   const index = value as Partial<CompanySearchIndex>;
   const metadata = message.release.companySearch.index;
-  if (index.schemaVersion !== 1 || index.generatedAt !== message.release.generatedAt || index.entityCount !== metadata.entities
+  if (index.schemaVersion !== 2 || index.generatedAt !== message.release.generatedAt || index.entityCount !== metadata.entities
     || index.recordCount !== message.release.recordCount || index.recordCount !== metadata.records || index.bucketCount !== metadata.bucketCount
+    || index.filterPartitionCount !== metadata.filterPartitionCount
     || !Array.isArray(index.agencies) || index.agencies.some((agency) => typeof agency !== "string" || !agency)
-    || !Array.isArray(index.entities) || index.entities.length !== index.entityCount) throw new Error("企業検索索引がreleaseと一致しません");
+    || !Array.isArray(index.entities) || index.entities.length !== index.entityCount
+    || !Array.isArray(index.filterPartitions) || index.filterPartitions.length !== index.filterPartitionCount) throw new Error("企業検索索引がreleaseと一致しません");
   for (const entity of index.entities) {
     if (typeof entity?.organization !== "string" || !entity.organization || !/^\d{13}$/.test(entity.corporateNumber)
-      || !Array.isArray(entity.aliases) || entity.aliases.some((alias) => typeof alias !== "string") || !/^[0-9a-f]{2}$/.test(entity.bucket)) {
+      || typeof entity.identity !== "string" || !entity.identity
+      || !Array.isArray(entity.aliases) || entity.aliases.some((alias) => typeof alias !== "string")
+      || !Array.isArray(entity.aliasIdentities) || entity.aliasIdentities.some((identity) => typeof identity !== "string" || !identity)
+      || !/^[0-9a-f]{2}$/.test(entity.bucket)) {
       throw new Error("企業検索索引の法人情報が不正です");
     }
     if (!Number.isSafeInteger(entity.records) || entity.records < 1) throw new Error("企業検索索引の掲載件数が不正です");
+  }
+  const filenames = new Set<string>();
+  let partitionRows = 0;
+  for (const partition of index.filterPartitions) {
+    if (!/^gbiz-filter-records-[0-9a-f]{16}\.json$/.test(partition?.filename)
+      || filenames.has(partition.filename)
+      || (partition.fiscalYear !== null && !Number.isSafeInteger(partition.fiscalYear))
+      || typeof partition.sourceAgency !== "string" || !index.agencies.includes(partition.sourceAgency)
+      || (partition.stage !== "contracted" && partition.stage !== "subsidy_published")
+      || !Number.isSafeInteger(partition.rows) || partition.rows < 1) {
+      throw new Error("企業検索索引のフィルタ区分が不正です");
+    }
+    filenames.add(partition.filename);
+    partitionRows += partition.rows;
+  }
+  if (partitionRows !== index.recordCount || filenames.size !== Object.keys(message.release.companySearch.filterFiles).length) {
+    throw new Error("企業検索索引のフィルタ区分がreleaseと一致しません");
   }
 }
 
@@ -72,7 +99,8 @@ async function search(message: SearchMessage) {
   const page = Number(parameters.get("page") ?? "1");
   validateParameters({ query, agency, stage, year, page });
 
-  if (query.startsWith(INTERNAL_PARTIAL_SEARCH_PREFIX) && agency === "all" && stage === "all" && year === "all") {
+  const forcePartial = query.startsWith(INTERNAL_PARTIAL_SEARCH_PREFIX);
+  if (forcePartial && agency === "all" && stage === "all" && year === "all") {
     postIndexOnlyAlternatives(message, query);
     return;
   }
@@ -81,13 +109,9 @@ async function search(message: SearchMessage) {
   let alternativeOrganizations: Array<{ name: string; corporateNumber: string; records: number }> = [];
   let alternativeOrganizationCount = 0;
   if (query) {
-    const entityMatches = matchCompanyEntities(companyEntities, query) as {
-      exact: CompanyEntity[];
-      contains: CompanyEntity[];
-      primary: CompanyEntity[];
-    };
-    const matchedEntities = entityMatches.primary;
-    if (entityMatches.exact.length) {
+    const entityMatches = matchIndexedCompanyEntities(forcePartial ? query.slice(INTERNAL_PARTIAL_SEARCH_PREFIX.length) : query);
+    const matchedEntities = forcePartial ? entityMatches.contains : entityMatches.primary;
+    if (!forcePartial && entityMatches.exact.length) {
       const primaryNumbers = new Set(matchedEntities.map((entity) => entity.corporateNumber));
       const alternatives = entityMatches.contains
         .filter((entity) => !primaryNumbers.has(entity.corporateNumber))
@@ -103,7 +127,7 @@ async function search(message: SearchMessage) {
       && (agency === "all" || row.sourceAgency === agency) && (stage === "all" || row.stage === stage)
       && (year !== "unclassified" || row.fiscalYear === null) && (!/^\d{4}$/.test(year) || String(row.fiscalYear) === year));
   } else {
-    matching = filterCompanyRecords(await loadAllLegacyRecords(), { query, agency, stage, year }) as FundingRecord[];
+    matching = await loadFilterRecords({ agency, stage, year });
   }
   matching = sortFundingRecords(matching);
   const totalRecords = matching.length;
@@ -122,7 +146,7 @@ async function search(message: SearchMessage) {
 
 function postIndexOnlyAlternatives(message: SearchMessage, query: string) {
   if (!activeMessage) throw new Error("検索データの検証が完了していません");
-  const matched = filterCompanyEntities(companyEntities, query) as CompanyEntity[];
+  const matched = matchIndexedCompanyEntities(query.slice(INTERNAL_PARTIAL_SEARCH_PREFIX.length)).contains;
   const organizations = matched
     .map((entity) => ({ name: entity.organization, corporateNumber: entity.corporateNumber, records: entity.records }))
     .sort((left, right) => right.records - left.records || left.name.localeCompare(right.name, "ja"));
@@ -134,6 +158,15 @@ function postIndexOnlyAlternatives(message: SearchMessage, query: string) {
     organizationSummariesTruncated: organizations.length > maxOrganizationSummaries,
     releaseCommit: activeMessage.release.commitSha, generatedAt: activeMessage.release.generatedAt,
   } });
+}
+
+function matchIndexedCompanyEntities(query: string) {
+  const cacheKey = normalizeCompanySearchTerm(query);
+  const cached = entityMatchCache.get(cacheKey);
+  if (cached) return cached;
+  const matches = matchCompanyEntities(companyEntities, query) as { exact: CompanyEntity[]; contains: CompanyEntity[]; primary: CompanyEntity[] };
+  entityMatchCache.set(cacheKey, matches);
+  return matches;
 }
 
 function validateParameters({ query, agency, stage, year, page }: { query: string; agency: string; stage: string; year: string; page: number }) {
@@ -159,28 +192,33 @@ async function loadCompanyBucket(bucket: string) {
   return request;
 }
 
-async function loadAllLegacyRecords() {
-  if (legacyRecords) return legacyRecords;
+async function loadFilterRecords({ agency, stage, year }: { agency: string; stage: string; year: string }) {
   if (!activeMessage) throw new Error("検索データの検証が完了していません");
-  const message = activeMessage;
-  const entries = Object.entries(message.manifest.commitments).sort(([left], [right]) => left.localeCompare(right));
-  const loaded = await Promise.all(entries.map(async ([yearKey, filename]) => ({ yearKey, filename, rows: parseRows(await loadVerifiedBytes(message, filename, message.release.files[filename]), filename) })));
-  const ids = new Set<string>();
-  const rows: FundingRecord[] = [];
-  for (const item of loaded) {
-    const metadata = message.release.files[item.filename];
-    if (!metadata || item.rows.length !== metadata.rows) throw new Error(`${item.filename}の行数が一致しません`);
-    for (const row of item.rows) {
-      if (item.yearKey === "unclassified" ? row.fiscalYear !== null : String(row.fiscalYear) !== item.yearKey) throw new Error(`${item.filename}の年度がmanifestと一致しません`);
-      if (ids.has(row.id)) throw new Error("公開明細IDが重複しています");
-      ids.add(row.id); rows.push(row);
-    }
-  }
-  if (rows.length !== message.release.recordCount) throw new Error("公開明細の総行数がreleaseと一致しません");
-  const idSetBytes = new TextEncoder().encode(`${[...ids].sort().join("\n")}\n`);
-  if (await sha256(idSetBytes.buffer) !== message.release.idSetSha256) throw new Error("公開明細のID集合がreleaseと一致しません");
-  legacyRecords = sortFundingRecords(rows);
-  return legacyRecords;
+  const selected = filterPartitions.filter((partition) => (agency === "all" || partition.sourceAgency === agency)
+    && (stage === "all" || partition.stage === stage)
+    && (year !== "unclassified" || partition.fiscalYear === null)
+    && (!/^\d{4}$/.test(year) || String(partition.fiscalYear) === year));
+  return (await Promise.all(selected.map(loadFilterPartition))).flat();
+}
+
+async function loadFilterPartition(partition: FilterPartition) {
+  if (!activeMessage) throw new Error("検索データの検証が完了していません");
+  const existing = filterRequests.get(partition.filename);
+  if (existing) return existing;
+  const metadata = activeMessage.release.companySearch.filterFiles[partition.filename];
+  if (!metadata) throw new Error(`${partition.filename}のrelease情報がありません`);
+  const request = loadVerifiedBytes(activeMessage, partition.filename, metadata)
+    .then((bytes) => parseRows(bytes, partition.filename))
+    .then((rows) => {
+      if (rows.length !== metadata.rows || rows.length !== partition.rows) throw new Error(`${partition.filename}の行数が一致しません`);
+      if (rows.some((row) => row.fiscalYear !== partition.fiscalYear || row.sourceAgency !== partition.sourceAgency || row.stage !== partition.stage)) {
+        throw new Error(`${partition.filename}のフィルタ区分が一致しません`);
+      }
+      return rows;
+    })
+    .catch((error) => { filterRequests.delete(partition.filename); throw error; });
+  filterRequests.set(partition.filename, request);
+  return request;
 }
 
 async function loadVerifiedBytes(message: InitializeMessage, filename: string, metadata?: FileMetadata) {

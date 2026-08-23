@@ -385,7 +385,7 @@ test("derives the year selector from declared coverage", () => {
   assert.doesNotMatch(pageSource, /distinctYears\(commitments\.map/);
 });
 
-test("starts with all periods and verifies the company index before loading matching chunks", () => {
+test("starts with all periods and verifies the company index before loading matching partitions", () => {
   assert.match(pageSource, /const defaultYear = ["']all["'];/);
   assert.doesNotMatch(pageSource, /const initialYear\b/);
   assert.match(pageSource, /new Worker\(new URL\("\.\/funding-search\.worker\.ts"/);
@@ -393,8 +393,11 @@ test("starts with all periods and verifies the company index before loading matc
   assert.match(fundingWorkerSource, /rows\.length !== metadata\.rows/);
   assert.match(fundingWorkerSource, /gbiz-company-search-index\.json/);
   assert.match(fundingWorkerSource, /buckets\.map\(loadCompanyBucket\)/);
-  assert.match(fundingWorkerSource, /rows\.length !== message\.release\.recordCount/);
-  assert.match(fundingWorkerSource, /await sha256\(idSetBytes\.buffer\) !== message\.release\.idSetSha256/);
+  assert.match(fundingWorkerSource, /index\.recordCount !== message\.release\.recordCount/);
+  assert.match(fundingWorkerSource, /partitionRows !== index\.recordCount/);
+  assert.match(fundingWorkerSource, /selected\.map\(loadFilterPartition\)/);
+  assert.match(fundingWorkerSource, /rows\.length !== metadata\.rows \|\| rows\.length !== partition\.rows/);
+  assert.doesNotMatch(fundingWorkerSource, /loadAllLegacyRecords/);
 });
 
 test("validates every published corporate number including its check digit", () => {

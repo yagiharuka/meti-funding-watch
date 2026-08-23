@@ -3,6 +3,8 @@ import { execFile } from "node:child_process";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
+import { normalizeCompanyIdentity } from "./company-search.mjs";
+
 const execFileAsync = promisify(execFile);
 const dataDirectory = new URL("../dist-pages/data/", import.meta.url);
 const manifestUrl = new URL("manifest.json", dataDirectory);
@@ -62,21 +64,30 @@ const companySearchIndexUrl = new URL(companySearchIndexFilename, dataDirectory)
 const companySearchIndexText = await readFile(companySearchIndexUrl, "utf8");
 const companySearchIndex = JSON.parse(companySearchIndexText);
 if (
-  companySearchIndex.schemaVersion !== 1
+  companySearchIndex.schemaVersion !== 2
   || companySearchIndex.generatedAt !== manifest.generatedAt
   || !Number.isSafeInteger(companySearchIndex.entityCount)
   || companySearchIndex.entityCount < 1
   || companySearchIndex.recordCount !== ids.length
   || companySearchIndex.bucketCount !== 32
+  || !Number.isSafeInteger(companySearchIndex.filterPartitionCount)
+  || companySearchIndex.filterPartitionCount < 1
   || !Array.isArray(companySearchIndex.agencies)
   || !Array.isArray(companySearchIndex.entities)
   || companySearchIndex.entities.length !== companySearchIndex.entityCount
+  || !Array.isArray(companySearchIndex.filterPartitions)
+  || companySearchIndex.filterPartitions.length !== companySearchIndex.filterPartitionCount
 ) throw new Error("公開releaseの企業検索索引が不正です");
 const companySearchFiles = {};
 const companySearchIds = [];
 const companyNumbersByBucket = new Map();
 for (const entity of companySearchIndex.entities) {
   if (!/^\d{13}$/.test(entity.corporateNumber ?? "") || !/^[0-9a-f]{2}$/.test(entity.bucket ?? "")
+    || typeof entity.identity !== "string" || entity.identity !== normalizeCompanyIdentity(entity.organization)
+    || !Array.isArray(entity.aliases)
+    || !Array.isArray(entity.aliasIdentities)
+    || JSON.stringify(entity.aliasIdentities) !== JSON.stringify([...new Set(entity.aliases.map(normalizeCompanyIdentity))]
+      .filter((identity) => identity && identity !== entity.identity).sort((a, b) => a.localeCompare(b, "ja")))
     || !Number.isSafeInteger(entity.records) || entity.records < 1) {
     throw new Error("公開releaseの企業検索法人情報が不正です");
   }
@@ -102,8 +113,36 @@ if (companySearchIds.length !== ids.length
   || companySearchIds.some((id) => !idSet.has(id))) {
   throw new Error("公開releaseの企業検索明細が元明細と一致しません");
 }
+const companyFilterFiles = {};
+const companyFilterIds = [];
+const filterFilenames = new Set();
+for (const partition of companySearchIndex.filterPartitions) {
+  if (!/^gbiz-filter-records-[0-9a-f]{16}\.json$/.test(partition.filename ?? "")
+    || filterFilenames.has(partition.filename)
+    || (partition.fiscalYear !== null && !Number.isSafeInteger(partition.fiscalYear))
+    || !companySearchIndex.agencies.includes(partition.sourceAgency)
+    || (partition.stage !== "contracted" && partition.stage !== "subsidy_published")
+    || !Number.isSafeInteger(partition.rows) || partition.rows < 1) {
+    throw new Error("公開releaseの企業フィルタ区分が不正です");
+  }
+  filterFilenames.add(partition.filename);
+  const fileUrl = new URL(partition.filename, dataDirectory);
+  const text = await readFile(fileUrl, "utf8");
+  const rows = JSON.parse(text);
+  if (!Array.isArray(rows) || rows.length !== partition.rows
+    || rows.some((row) => row.fiscalYear !== partition.fiscalYear || row.sourceAgency !== partition.sourceAgency || row.stage !== partition.stage)) {
+    throw new Error(`${partition.filename}が企業フィルタ区分と一致しません`);
+  }
+  companyFilterIds.push(...rows.map((row) => row.id));
+  companyFilterFiles[partition.filename] = { sha256: sha256(text), bytes: (await stat(fileUrl)).size, rows: rows.length };
+}
+if (companyFilterIds.length !== ids.length
+  || new Set(companyFilterIds).size !== companyFilterIds.length
+  || companyFilterIds.some((id) => !idSet.has(id))) {
+  throw new Error("公開releaseの企業フィルタ明細が元明細と一致しません");
+}
 const companySearch = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   index: {
     filename: companySearchIndexFilename,
     sha256: sha256(companySearchIndexText),
@@ -111,8 +150,10 @@ const companySearch = {
     entities: companySearchIndex.entityCount,
     records: companySearchIndex.recordCount,
     bucketCount: companySearchIndex.bucketCount,
+    filterPartitionCount: companySearchIndex.filterPartitionCount,
   },
   files: companySearchFiles,
+  filterFiles: companyFilterFiles,
 };
 
 const reviewDirectory = new URL("review/", dataDirectory);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const AUDIT_DIMENSIONS = [
@@ -22,6 +22,18 @@ function catalogRows(source) {
     .split("\n")
     .filter((line) => /^\| M-\d{3} \|/.test(line))
     .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+}
+
+function referencedPaths(cell) {
+  return [...cell.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+}
+
+async function assertPathsExist(id, column, paths) {
+  assert.ok(paths.length > 0, `${id}: ${column} must contain at least one repository path`);
+  for (const path of paths) {
+    assert.match(path, /^(?:app|data|pages-site|scripts|tests)\//, `${id}: ${column} must use a repository-relative path`);
+    await assert.doesNotReject(access(new URL(`../${path}`, import.meta.url)), `${id}: ${column} path does not exist: ${path}`);
+  }
 }
 
 test("misreading catalog is the explicit audit entrypoint", async () => {
@@ -51,27 +63,23 @@ test("every audit dimension has at least one concrete catalog row", async () => 
   }
 });
 
-test("catalog keeps unresolved risks visibly unresolved and records mitigations", async () => {
+test("every catalog row enforces its state contract against real repository paths", async () => {
   const rows = catalogRows(await text("../docs/MISREADING_CATALOG.md"));
   const ids = rows.map((row) => row[0]);
   assert.equal(new Set(ids).size, ids.length, "catalog IDs must be unique");
 
-  const byId = new Map(rows.map((row) => [row[0], row]));
-  for (const id of ["M-008", "M-020", "M-021"]) {
-    const open = byId.get(id);
-    assert.ok(open, `${id} must exist`);
-    assert.equal(open[5], "—", `${id} must not pretend to have a mitigation`);
-    assert.equal(open[6], "—", `${id} must not pretend to have an implementation location`);
-    assert.equal(open[7], "—", `${id} must not pretend to have a test`);
-    assert.equal(open[8], "OPEN");
-  }
-
-  for (const id of ["M-001", "M-003", "M-004", "M-005", "M-006", "M-009", "M-010", "M-011", "M-015", "M-016", "M-017", "M-018", "M-019", "M-022"]) {
-    const row = byId.get(id);
-    assert.ok(row, `${id} must exist`);
-    assert.equal(row[8], "MITIGATED");
-    assert.notEqual(row[5], "—");
-    assert.notEqual(row[6], "—");
-    assert.notEqual(row[7], "—");
+  for (const row of rows) {
+    const [id, , , , , mitigation, location, coverage, state] = row;
+    assert.ok(["OPEN", "MITIGATED", "INHERENT"].includes(state), `${id}: unknown state ${state}`);
+    if (state === "OPEN") {
+      assert.equal(mitigation, "—", `${id}: OPEN must not pretend to have a mitigation`);
+      assert.equal(location, "—", `${id}: OPEN must not pretend to have an implementation location`);
+      assert.equal(coverage, "—", `${id}: OPEN must not pretend to have a test`);
+      continue;
+    }
+    assert.notEqual(mitigation, "—", `${id}: ${state} must describe the current mitigation or source constraint`);
+    await assertPathsExist(id, "所在", referencedPaths(location));
+    if (state === "MITIGATED") await assertPathsExist(id, "テスト", referencedPaths(coverage));
+    else if (coverage !== "—") await assertPathsExist(id, "テスト", referencedPaths(coverage));
   }
 });

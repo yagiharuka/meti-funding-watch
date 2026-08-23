@@ -192,16 +192,16 @@ test("a zero Gbiz match is a finite empty result, not a special failure", () => 
   assert.deepEqual(results, []);
 });
 
-test("all three runtime search paths import the same shared matcher", async () => {
+test("all three runtime search paths use the shared company-search matcher", async () => {
   const [page, worker, enhancedWorker] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/funding-search-enhanced.worker.js", import.meta.url), "utf8"),
   ]);
-  for (const source of [page, worker, enhancedWorker]) {
-    assert.match(source, /filterCompanyRecords/);
-    assert.doesNotMatch(source, /row\.id} \$\{row\.sourceKey/);
-  }
+  assert.match(page, /filterCompanyRecords/);
+  assert.match(worker, /matchCompanyEntities/);
+  assert.match(enhancedWorker, /filterCompanyRecords/);
+  for (const source of [page, worker, enhancedWorker]) assert.doesNotMatch(source, /row\.id} \$\{row\.sourceKey/);
 });
 
 test("Pages build contains the stable company-search mount and current zero-result guardrail", async () => {
@@ -212,6 +212,7 @@ test("Pages build contains the stable company-search mount and current zero-resu
     readFile(new URL(`../dist-pages/assets/${name}`, import.meta.url), "utf8")))).join("\n");
   assert.match(javascript, /company-search-mount/);
   assert.match(javascript, /検索0件は、この法人が経産省関係の資金を受けていないことを意味しません/);
+  assert.match(javascript, /行政事業レビュー・照合記録のタブも確認してください/);
   assert.doesNotMatch(javascript, /GビズINFOでは一致する法人を確認できませんでした/);
   assert.match(javascript, /このデータの読み方/);
   assert.doesNotMatch(javascript, /GビズINFO掲載値合計/);

@@ -188,7 +188,7 @@ function render() {
   }
   const gbizBody = orgs.length
     ? `<div class="company-search-organization-list">${orgs.map(card).join("")}</div>`
-    : '<p class="company-search-zero-warning">検索0件は、この法人が経産省関係の資金を受けていないことを意味しません。</p>';
+    : '<p class="company-search-zero-warning">検索0件は、この法人が経産省関係の資金を受けていないことを意味しません。行政事業レビュー・照合記録のタブも確認してください。</p>';
   ui.innerHTML = `${tabs()}<div class="company-search-gbiz-panel"><div class="company-search-query-heading"><p class="eyebrow">COMPANY SEARCH / GビズINFO</p><h3>「${esc(q)}」の検索結果</h3><p>該当法人 <strong>${orgs.length}件</strong>（法人番号で区別しています）</p><a class="data-reading-guide-link" href="#data-reading-guide">↓ 読み方</a>${result.organizationSummariesTruncated ? '<p class="company-search-warning">一致法人が多いため先頭50法人まで表示しています。</p>' : ""}</div>${alternativeDisclosure(result, q)}${gbizBody}</div>`;
   records.classList.add("enhanced-company-search-active");
   series = "gbiz";

@@ -26,6 +26,7 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
     || name === "official-supplement-index.json"
     || name === "gbiz-company-search-index.json"
     || /^gbiz-company-records-[0-9a-f]{2}\.json$/.test(name)
+    || /^gbiz-filter-records-[0-9a-f]{16}\.json$/.test(name)
     || name === "commitments-preview.json"
     || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
 

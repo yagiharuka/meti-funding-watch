@@ -30,7 +30,7 @@
 
 | ID | 観点 | 誤読 | 被害 | 起きる画面 | 現在の対策 | 所在 | テスト | 状態 |
 |---|---|---|---|---|---|---|---|---|
-| M-001 | 0件・欠落 | 0件＝その法人は経産省関係の資金を受けていない | 高 | GビズINFO企業検索タブ | 検索0件のときだけ、資金を受けていないことを意味しない旨を1文表示 | `pages-site/company-search-ui.ts` | `tests/company-search-runtime.test.mjs` | MITIGATED |
+| M-001 | 0件・欠落 | 0件＝その法人は経産省関係の資金を受けていない | 高 | GビズINFO企業検索タブ | 検索0件のときだけ否定推論を防ぐ文を表示し、行政事業レビュー・照合記録を次に確認するよう案内 | `pages-site/company-search-ui.ts` | `tests/company-search-runtime.test.mjs` | MITIGATED |
 | M-002 | 0件・欠落 | 0件＝行政事業レビュー／公式資料にも該当資金が存在しない | 高 | レビュー・公式資料 | 収録範囲外や未掲載を否定推論に使えない旨を表示 | `app/review/ReviewSearch.tsx`, `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts` | `tests/review-ui-semantics.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
 | M-003 | 金額・集計 | GビズINFOの補助金掲載額は行をまたいで足せる | 高 | 企業カード、年度別、事業別、検索サマリー | 補助金は合計を表示せず、個別明細だけ表示 | `pages-site/company-search-ui.ts`, `pages-site/subsidy-semantics-ui.ts` | `tests/subsidy-semantics-ui.test.mjs`, `tests/company-search-runtime.test.mjs` | MITIGATED |
 | M-004 | 金額・集計 | 行政事業レビューの別シート年度再掲を別支出として足せる | 高 | 同じ企業の行政事業レビュー表示 | レビュー掲載行をまたぐ金額合計を表示せず、理由は「このデータの読み方」に集約 | `app/CombinedCompanyResults.tsx`, `app/DataReadingGuide.tsx`, `scripts/build-review-company-index.mjs` | `tests/review-company-index-semantics.test.mjs` | MITIGATED |
