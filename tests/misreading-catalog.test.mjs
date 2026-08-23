@@ -54,6 +54,13 @@ test("misreading catalog is the explicit audit entrypoint", async () => {
   assert.match(template, /網羅性を批判してください/);
 });
 
+test("CI reruns the catalog gate on PR body edits and tests direct pushes to main", async () => {
+  const workflow = await text("../.github/workflows/ci.yml");
+  assert.match(workflow, /pull_request:\n\s+types: \[opened, synchronize, reopened, edited\]/);
+  assert.match(workflow, /push:\n\s+branches: \[main\]/);
+  assert.match(workflow, /Verify misreading catalog passage/);
+});
+
 test("every audit dimension has at least one concrete catalog row", async () => {
   const rows = catalogRows(await text("../docs/MISREADING_CATALOG.md"));
   assert.ok(rows.length >= 22, "catalog must cover the known audit findings and newly exposed gaps");
@@ -87,7 +94,7 @@ test("every catalog row enforces its state contract against real repository path
   }
 });
 
-test("PR catalog gate requires an explicit no-impact reason when the catalog is unchanged", () => {
+test("PR catalog gate requires an explicit no-impact reason unless an M-row actually changes", () => {
   const blank = validateCatalogPassage({
     body: "## 誤読カタログ\n\n### このPRが触るカタログID\n\n<!-- 該当なしの場合は理由を書く -->\n\n## レビュー依頼",
     changedFiles: ["app/page.tsx"],
@@ -107,9 +114,17 @@ test("PR catalog gate requires an explicit no-impact reason when the catalog is 
   assert.equal(explained.ok, true);
   assert.equal(explained.reason, "explicit-no-impact");
 
+  const whitespaceOnlyCatalog = validateCatalogPassage({
+    body: "### このPRが触るカタログID\n\n## レビュー依頼",
+    changedFiles: ["docs/MISREADING_CATALOG.md"],
+    catalogDiff: "diff --git a/docs/MISREADING_CATALOG.md b/docs/MISREADING_CATALOG.md\n+ \n",
+  });
+  assert.equal(whitespaceOnlyCatalog.ok, false);
+
   const catalogUpdated = validateCatalogPassage({
     body: "",
     changedFiles: ["docs/MISREADING_CATALOG.md", "app/review/ReviewSearch.tsx"],
+    catalogDiff: "-| M-004 | 金額・集計 | 旧 |\n+| M-004 | 金額・集計 | 更新 |\n",
   });
   assert.equal(catalogUpdated.ok, true);
   assert.equal(catalogUpdated.reason, "catalog-updated");
