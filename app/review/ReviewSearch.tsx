@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { REVIEW_PROGRAM_PARAMETER, reviewProgramAnchorId } from "../review-program-link";
+import { REVIEW_PROGRAM_PARAMETER, reviewProgramRecipientsAnchorId } from "../review-program-link";
 
 type FlowLevel = "disclosed_intermediary" | "terminal_in_disclosed_graph" | "unclassified";
 type AmountStatus = "positive" | "zero" | "negative" | "blank" | "invalid";
@@ -65,7 +65,7 @@ export default function ReviewSearch() {
   const [mode, setMode] = useState<"payments" | "programs">("payments");
   const [page, setPage] = useState(0);
   const targetProgramId = useSyncExternalStore(subscribeToProgramTarget, getProgramTargetSnapshot, () => "");
-  const displayedMode = targetProgramId ? "programs" : mode;
+  const displayedMode = targetProgramId ? "payments" : mode;
 
   useEffect(() => {
     let active = true; const controller = new AbortController();
@@ -99,34 +99,34 @@ export default function ReviewSearch() {
   const terms = useMemo(() => normalized.split(" ").filter(Boolean), [normalized]);
   const upstreamTerms = useMemo(() => normalize(upstream).split(" ").filter(Boolean), [upstream]);
   const filteredPayments = useMemo(() => payments.filter((row) => {
+    if (targetProgramId && row.reviewProjectId !== targetProgramId) return false;
     if (year !== "all" && String(row.reviewSheetYear) !== year) return false;
     const recipientHaystack = normalize(searchableOrganization(`${row.organization} ${row.corporateNumber}`));
     const routeNames = [...(row.route ?? []), ...reviewUpstreamNames(row)];
     const routeHaystack = normalize(routeNames.map(searchableOrganization).join(" "));
     return terms.every((term) => recipientHaystack.includes(term))
       && upstreamTerms.every((term) => routeHaystack.includes(term));
-  }).sort((a, b) => (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY) || a.organization.localeCompare(b.organization, "ja")), [payments, terms, upstreamTerms, year]);
+  }).sort((a, b) => (b.amount ?? Number.NEGATIVE_INFINITY) - (a.amount ?? Number.NEGATIVE_INFINITY) || a.organization.localeCompare(b.organization, "ja")), [payments, targetProgramId, terms, upstreamTerms, year]);
   const filteredPrograms = useMemo(() => programs.filter((row) => {
-    if (targetProgramId && row.id !== targetProgramId) return false;
     if (year !== "all" && String(row.reviewSheetYear) !== year) return false;
     const haystack = normalize([row.projectNumber, row.name, row.organization].join(" "));
     return terms.every((term) => haystack.includes(term));
-  }).sort((a, b) => (b.execution ?? -1) - (a.execution ?? -1)), [programs, targetProgramId, terms, year]);
+  }).sort((a, b) => (b.execution ?? -1) - (a.execution ?? -1)), [programs, terms, year]);
   const rows = displayedMode === "payments" ? filteredPayments : filteredPrograms;
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const effective = Math.min(page, pages - 1);
   const visible = rows.slice(effective * PAGE_SIZE, (effective + 1) * PAGE_SIZE);
   const hasFilters = Boolean(targetProgramId) || Boolean(query.trim()) || Boolean(upstream.trim()) || year !== "all";
+  const targetProgram = useMemo(() => programs.find((row) => row.id === targetProgramId) ?? null, [programs, targetProgramId]);
 
-  const targetIsVisible = displayedMode === "programs" && Boolean(targetProgramId)
-    && (visible as ReviewProgram[]).some((row) => row.id === targetProgramId);
+  const targetIsVisible = displayedMode === "payments" && Boolean(targetProgramId) && !loading && !error;
 
   useEffect(() => {
     if (!targetIsVisible) return;
     const frame = window.requestAnimationFrame(() => {
-      const target = document.getElementById(reviewProgramAnchorId(targetProgramId));
+      const target = document.getElementById(reviewProgramRecipientsAnchorId(targetProgramId));
       if (!target) return;
-      target.scrollIntoView({ block: "center" });
+      target.scrollIntoView({ block: "start" });
       target.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
@@ -134,16 +134,17 @@ export default function ReviewSearch() {
 
   function clearTargetProgram() {
     if (!targetProgramId) return;
-    setMode("programs");
+    setMode("payments");
     const url = new URL(window.location.href);
     url.searchParams.delete(REVIEW_PROGRAM_PARAMETER);
     url.hash = "";
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
     window.dispatchEvent(new Event(PROGRAM_TARGET_CHANGE_EVENT));
   }
-  function resetPage(action: () => void) { clearTargetProgram(); action(); setPage(0); }
+  function resetPage(action: () => void) { action(); setPage(0); }
+  function leaveTargetProgram(action: () => void) { clearTargetProgram(); action(); setPage(0); }
   function clear() { clearTargetProgram(); setQuery(""); setUpstream(""); setYear("all"); setPage(0); }
-  function selectUpstream(name: string) { clearTargetProgram(); setUpstream(name); setPage(0); }
+  function selectUpstream(name: string) { setUpstream(name); setPage(0); }
 
   return (
     <section className="official-search-section" aria-labelledby="review-search-title">
@@ -152,8 +153,8 @@ export default function ReviewSearch() {
         <p>支出先企業を検索する欄と、資金経路上の支出元を絞る欄を分けています。支出先額は上流・中間・下流を足し上げません。</p>
       </div>
       <div className="review-mode-tabs" role="group" aria-label="行政事業レビューの表示対象">
-        <button className={displayedMode === "payments" ? "active" : undefined} onClick={() => resetPage(() => setMode("payments"))}>支出先</button>
-        <button className={displayedMode === "programs" ? "active" : undefined} onClick={() => resetPage(() => setMode("programs"))}>事業・予算執行</button>
+        <button className={displayedMode === "payments" ? "active" : undefined} onClick={() => leaveTargetProgram(() => setMode("payments"))}>支出先</button>
+        <button className={displayedMode === "programs" ? "active" : undefined} onClick={() => leaveTargetProgram(() => setMode("programs"))}>事業・予算執行</button>
       </div>
       <div className="filters official-search-filters">
         <label className="search-field"><span className="sr-only">支出先の名称または法人番号で検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg><input type="search" maxLength={100} placeholder={displayedMode === "payments" ? "支出先の名称・法人番号で検索" : "事業名・予算事業ID・担当組織で検索"} value={query} onChange={(e) => resetPage(() => setQuery(e.target.value))} /></label>
@@ -168,10 +169,11 @@ export default function ReviewSearch() {
         <p className="filter-note">上の「支出先」検索は受取先の名称・法人番号だけを対象にします。NEDOや中小機構などが資金経路の途中にある案件を探す場合は、右の資金経路欄を使ってください。</p>
       </>}
       {manifest && manifest.rowAccounting.status !== "complete" && <p className="official-warning"><strong>原資料行数は未照合：</strong>取得証跡と原資料行数の照合が揃っていない年度があります。表示中の{manifest.paymentCount.toLocaleString("ja-JP")}行を原資料の全行とは扱わないでください。</p>}
+      {targetProgram && <p className="direct-program-context"><strong>{targetProgram.name}</strong><span>予算事業ID {targetProgram.projectNumber}のレビューシートに掲載された支出先です。中間・下流など異なる経路の金額は合算しません。</span></p>}
       <div className="result-bar"><span role="status" aria-live="polite">{loading ? <strong>レビュー明細を読込中</strong> : error ? <strong>レビュー明細を取得できません</strong> : <><strong>{rows.length.toLocaleString("ja-JP")}</strong>{displayedMode === "payments" ? "支出先掲載行" : "事業"}</>}</span>{hasFilters && <button onClick={clear}>条件をクリア</button>}</div>
       {error ? <div className="adoption-error" role="alert"><strong>行政事業レビューを表示できません。</strong><p>{error}</p></div> : (
-        <div className="records-table official-results-table" role="region" aria-label="行政事業レビュー検索結果" tabIndex={0}>
-          {displayedMode === "payments" ? <table><thead><tr><th>支出先</th><th>事業</th><th>レビュー掲載の支出先額</th><th>レビューシート記載の支出経路</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewPayment[]).map((row)=><tr key={row.id}><td data-label="支出先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td><td data-label="事業"><span className="program-name">{row.program}</span></td><td className="amount" data-label="レビュー掲載の支出先額">{formatReviewAmount(row)}<small>支出先の合計支出額（他系列と合算不可）</small></td><td className="review-route" data-label="支出経路"><strong>{describeRoute(row)}</strong></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート<small>シート年度であり、支出年度の推定値ではありません</small></td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a><small>支出先ブロック {row.block}{row.sourceRowNumber ? `／CSV ${row.sourceRowNumber}行目` : "／CSV行番号の記録なし"}</small></td></tr>)}</tbody></table> : <table><thead><tr><th>事業</th><th>担当組織</th><th>当初予算</th><th>執行額</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewProgram[]).map((row)=><tr key={row.id} id={reviewProgramAnchorId(row.id)} className={targetProgramId === row.id ? "direct-program-target" : undefined} tabIndex={targetProgramId === row.id ? -1 : undefined} aria-current={targetProgramId === row.id ? "location" : undefined}><td data-label="事業"><strong>{row.name}</strong><small>予算事業ID {row.projectNumber}</small></td><td data-label="担当組織">{row.organization}</td><td className="amount" data-label="当初予算">{row.initialBudget === null ? "記載なし" : yen.format(row.initialBudget)}<small>{row.budgetFiscalYear}年度のレビューシート掲載値</small></td><td className="amount" data-label="執行額">{row.execution === null ? "記載なし" : yen.format(row.execution)}<small>{row.executionFiscalYear ? `${row.executionFiscalYear}年度` : "年度不明"}{row.executionRate === null ? "" : `／執行率 ${row.executionRate}`}</small></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート</td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a></td></tr>)}</tbody></table>}
+        <div className={`records-table official-results-table${targetProgramId ? " direct-program-results" : ""}`} id={targetProgramId ? reviewProgramRecipientsAnchorId(targetProgramId) : undefined} role="region" aria-label={targetProgram ? `${targetProgram.name}の支出先一覧` : "行政事業レビュー検索結果"} tabIndex={0}>
+          {displayedMode === "payments" ? <table><thead><tr><th>支出先</th><th>事業</th><th>レビュー掲載の支出先額</th><th>レビューシート記載の支出経路</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewPayment[]).map((row)=><tr key={row.id}><td data-label="支出先"><strong>{row.organization}</strong><small>{row.corporateNumber || "法人番号の記載なし"}</small></td><td data-label="事業"><span className="program-name">{row.program}</span></td><td className="amount" data-label="レビュー掲載の支出先額">{formatReviewAmount(row)}<small>支出先の合計支出額（他系列と合算不可）</small></td><td className="review-route" data-label="支出経路"><strong>{describeRoute(row)}</strong></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート<small>シート年度であり、支出年度の推定値ではありません</small></td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a><small>支出先ブロック {row.block}{row.sourceRowNumber ? `／CSV ${row.sourceRowNumber}行目` : "／CSV行番号の記録なし"}</small></td></tr>)}</tbody></table> : <table><thead><tr><th>事業</th><th>担当組織</th><th>当初予算</th><th>執行額</th><th>レビュー年度</th><th>原典</th></tr></thead><tbody>{(visible as ReviewProgram[]).map((row)=><tr key={row.id}><td data-label="事業"><strong>{row.name}</strong><small>予算事業ID {row.projectNumber}</small></td><td data-label="担当組織">{row.organization}</td><td className="amount" data-label="当初予算">{row.initialBudget === null ? "記載なし" : yen.format(row.initialBudget)}<small>{row.budgetFiscalYear}年度のレビューシート掲載値</small></td><td className="amount" data-label="執行額">{row.execution === null ? "記載なし" : yen.format(row.execution)}<small>{row.executionFiscalYear ? `${row.executionFiscalYear}年度` : "年度不明"}{row.executionRate === null ? "" : `／執行率 ${row.executionRate}`}</small></td><td data-label="レビュー年度">{row.reviewSheetYear}年度シート</td><td data-label="原典"><a className="source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">行政事業レビュー ↗</a></td></tr>)}</tbody></table>}
           {!loading && !visible.length && <div className="empty-state zero-result-warning"><strong>収録済みレビューシートでは確認できませんでした</strong><span>これは「資金を受けていない」という意味ではありません。未収録年度・支出先詳細がない年度・レビューに掲載されない支出があり得ます。</span></div>}
         </div>
       )}

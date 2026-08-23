@@ -48,14 +48,16 @@ test("makes disclosed review routes understandable without legacy-cache wording"
   assert.doesNotMatch(reviewSearchSource, /旧キャッシュから復元した経路|旧キャッシュから復元した一経路|旧公式CSVキャッシュから復元|旧キャッシュのためCSV行番号不明|公開経路上の位置/);
 });
 
-test("links a home program title to its exact review card instead of only the review page", () => {
+test("links a home program title to that program's recipient rows", () => {
   assert.match(homeProgramSearchSource, /className="program-detail-link"/);
+  assert.match(homeProgramSearchSource, /の支出先一覧を表示/);
   assert.match(homeProgramSearchSource, /reviewProgramHref\(getPublicBaseUrl\(\), row\.id\)/);
   assert.match(reviewProgramLinkSource, /searchParams\.set\(REVIEW_PROGRAM_PARAMETER, programId\)/);
-  assert.match(reviewProgramLinkSource, /url\.hash = reviewProgramAnchorId\(programId\)/);
-  assert.match(reviewSearchSource, /row\.id !== targetProgramId/);
-  assert.match(reviewSearchSource, /id=\{reviewProgramAnchorId\(row\.id\)\}/);
-  assert.match(reviewSearchSource, /scrollIntoView\(\{ block: "center" \}\)/);
+  assert.match(reviewProgramLinkSource, /url\.hash = reviewProgramRecipientsAnchorId\(programId\)/);
+  assert.match(reviewSearchSource, /targetProgramId \? "payments" : mode/);
+  assert.match(reviewSearchSource, /row\.reviewProjectId !== targetProgramId/);
+  assert.match(reviewSearchSource, /レビューシートに掲載された支出先です/);
+  assert.match(reviewSearchSource, /id=\{targetProgramId \? reviewProgramRecipientsAnchorId\(targetProgramId\)/);
+  assert.match(reviewSearchSource, /scrollIntoView\(\{ block: "start" \}\)/);
   assert.match(reviewSearchSource, /target\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(reviewSearchSource, /aria-current=\{targetProgramId === row\.id \? "location"/);
 });
