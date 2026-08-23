@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import fundingSummary from "@/data/funding-summary.json";
 import ViewTabs from "@/app/ViewTabs";
 import CombinedCompanyResults from "@/app/CombinedCompanyResults";
@@ -474,7 +474,8 @@ export default function Home() {
   const [searchBackend, setSearchBackend] = useState<"worker" | "main" | null>(null);
   const requestIdRef = useRef(0);
   const [query, setQuery] = useState(() => sanitizeFundingSearchQuery(initialSearchParam("q", "")));
-  const deferredQuery = useDeferredValue(query);
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [isComposingQuery, setIsComposingQuery] = useState(false);
   const [agency, setAgency] = useState(() => initialSearchParam("agency", "all"));
   const [stage, setStage] = useState(() => {
     const requested = initialSearchParam("stage", "all");
@@ -487,6 +488,12 @@ export default function Home() {
       : defaultYear;
   });
   const [page, setPage] = useState(() => sanitizeFundingSearchPage(initialSearchParam("page", "1")) - 1);
+
+  useEffect(() => {
+    if (isComposingQuery) return;
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 400);
+    return () => window.clearTimeout(timer);
+  }, [isComposingQuery, query]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -714,8 +721,8 @@ export default function Home() {
   }, [manifest, release]);
 
   useEffect(() => {
-    if (!searchReady || !release || query !== deferredQuery) return;
-    if (!deferredQuery.trim() && agency === "all" && stage === "all" && year === defaultYear && page === 0) {
+    if (!searchReady || !release || query !== debouncedQuery || isComposingQuery) return;
+    if (!debouncedQuery.trim() && agency === "all" && stage === "all" && year === defaultYear && page === 0) {
       setDataset((current) => ({ ...current, generatedAt: release.generatedAt, records: previewRecordsRef.current }));
       setSearchTotal(release.recordCount);
       setSearchTotalPages(Math.max(1, Math.ceil(release.recordCount / pageSize)));
@@ -724,10 +731,11 @@ export default function Home() {
       setDetailLoading(false);
       return;
     }
+    markSearchPending();
     const requestId = ++requestIdRef.current;
     const requestedAgency = agency === "all" || agencies.includes(agency) ? agency : "all";
     const parameters = new URLSearchParams({
-      q: deferredQuery.trim(),
+      q: debouncedQuery.trim(),
       agency: requestedAgency,
       stage,
       year,
@@ -743,7 +751,7 @@ export default function Home() {
     }
     if (searchBackend !== "main" || !fallbackRecordsRef.current) return;
     const matching = filterCompanyRecords(fallbackRecordsRef.current, {
-      query: deferredQuery,
+      query: debouncedQuery,
       agency: requestedAgency,
       stage,
       year,
@@ -763,7 +771,7 @@ export default function Home() {
     setSearchError(null);
     setDataMode("github");
     setDetailLoading(false);
-  }, [agencies, agency, deferredQuery, manifest?.generatedAt, page, query, release, searchBackend, searchReady, stage, year]);
+  }, [agencies, agency, debouncedQuery, isComposingQuery, manifest?.generatedAt, page, query, release, searchBackend, searchReady, stage, year]);
 
   const commitments = dataset.records;
   const gbizSource = dataset.sources.find((source) => source.id === "gbiz");
@@ -856,6 +864,12 @@ export default function Home() {
     setSearchError(null);
     setDetailLoading(true);
     setDataMode("loading");
+  }
+
+  function changeQuery(nextQuery: string) {
+    requestIdRef.current += 1;
+    setQuery(nextQuery);
+    setPage(0);
   }
 
   function clearFilters() {
@@ -964,7 +978,12 @@ export default function Home() {
               maxLength={FUNDING_QUERY_MAX_LENGTH}
               placeholder="法人等の名称・法人番号で検索"
               value={query}
-              onChange={(event) => { markSearchPending(); setQuery(event.target.value); setPage(0); }}
+              onChange={(event) => changeQuery(event.target.value)}
+              onCompositionStart={() => setIsComposingQuery(true)}
+              onCompositionEnd={(event) => {
+                setIsComposingQuery(false);
+                changeQuery(event.currentTarget.value);
+              }}
             />
           </label>
           <label>
@@ -998,7 +1017,7 @@ export default function Home() {
 
         <div id="company-search-mount" />
 
-        {query.trim() && searchSummary && !detailLoading && searchTotal > 0 && (
+        {debouncedQuery.trim() && searchSummary && !detailLoading && searchTotal > 0 && (
           <div className="records-table" role="region" aria-label="企業検索結果サマリー" tabIndex={0} style={{ marginBottom: "1rem" }}>
             <table>
               <caption style={{ textAlign: "left", padding: "1rem", fontWeight: 700 }}>検索結果サマリー（現在の検索条件）</caption>
@@ -1020,7 +1039,7 @@ export default function Home() {
           </div>
         )}
 
-        <CombinedCompanyResults query={query} />
+        <CombinedCompanyResults query={debouncedQuery} />
         <div className="result-bar">
           <span role="status" aria-live="polite">
             {searchError ? (
