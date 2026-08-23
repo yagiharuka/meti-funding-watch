@@ -12,7 +12,7 @@ const EXCLUDED_EXECUTORS = new Set([
   "kyushu",
   "okinawa",
 ]);
-const SOURCE_ORDER = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec"];
+const SOURCE_ORDER = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro"];
 
 async function readOptionalJson(path, fallback) {
   try {
@@ -25,6 +25,7 @@ async function readOptionalJson(path, fallback) {
 
 const officialManifest = JSON.parse(await readFile("data/official/manifest.json", "utf8"));
 const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+const jetro = JSON.parse(await readFile("data/official-supplement-jetro.json", "utf8"));
 const centralHistory = JSON.parse(await readFile("data/official-central-history.json", "utf8"));
 const metiLegacy = await readOptionalJson("data/official-meti-legacy-records.json", {
   schemaVersion: 1,
@@ -38,6 +39,10 @@ if (officialManifest.schemaVersion !== 1 || !officialManifest.files || typeof of
 if (seeds.schemaVersion !== 1 || !Array.isArray(seeds.sources)) {
   throw new Error("公式補足シードの形式が不正です");
 }
+if (jetro.schemaVersion !== 1 || jetro.id !== "jetro" || !Array.isArray(jetro.records)) {
+  throw new Error("JETRO公式補足の形式が不正です");
+}
+const seedSources = [...seeds.sources, jetro];
 if (
   centralHistory.schemaVersion !== 1
   || !Array.isArray(centralHistory.documents)
@@ -148,8 +153,8 @@ const centralHistoryRecords = centralHistory.records
   .map((row) => normalizeOfficialRow(row, "official-company-central-", row.sourceId, row.sourceName))
   .filter(Boolean);
 
-const seedRecords = seeds.sources.flatMap((source) => {
-  if (!["nedo", "smrj", "jogmec"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
+const seedRecords = seedSources.flatMap((source) => {
+  if (!["nedo", "smrj", "jogmec", "jetro"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
   if (!Array.isArray(source.records)) throw new Error(`${source.id}: recordsが配列ではありません`);
   return source.records.map((row) => normalizeOfficialRow(
     { ...row, sourceId: source.id, sourceName: source.name },
@@ -174,7 +179,7 @@ for (const row of records) {
 if (centralHistoryRecords.length !== 599) throw new Error(`中央機関旧資料の企業索引行数が不正です: ${centralHistoryRecords.length}/599`);
 if (metiLegacy.recordCount && legacyMetiRecords.length !== 3598) throw new Error(`本省旧資料の企業索引行数が不正です: ${legacyMetiRecords.length}/3598`);
 
-const seedById = new Map(seeds.sources.map((source) => [source.id, source]));
+const seedById = new Map(seedSources.map((source) => [source.id, source]));
 const sourceNotes = new Map();
 for (const id of SOURCE_ORDER) {
   const sourceRows = records.filter((row) => row.sourceId === id);
@@ -182,7 +187,7 @@ for (const id of SOURCE_ORDER) {
   const fiscalYears = fiscalYearsFor(id, records);
   const metadata = executorMetadata[id];
   const seed = seedById.get(id);
-  let name = metadata?.name ?? seed?.name ?? sourceRows[0].sourceName ?? id;
+  const name = metadata?.name ?? seed?.name ?? sourceRows[0].sourceName ?? id;
   let coverageNote;
 
   if (id === "meti") {
@@ -198,13 +203,13 @@ for (const id of SOURCE_ORDER) {
   } else if (id === "smrj") {
     coverageNote = `中小機構本部の2017～2019年度競争入札・随意契約公式PDFから、単一法人番号・契約日・契約金額を一意に検証できた577行を追加。${seed?.coverageNote ?? ""} 地域本部等を含む全契約の網羅データではありません。`;
   } else {
-    coverageNote = seed?.coverageNote ?? "JOGMECの確認済み入札結果のみを収録。全入札・全契約を網羅しません。";
+    coverageNote = seed?.coverageNote ?? `${name}の確認済み公表情報のみを収録。全入札・全契約を網羅しません。`;
   }
   sourceNotes.set(id, { id, name, fiscalYears, recordCount: sourceRows.length, coverageNote });
 }
 
 const sources = SOURCE_ORDER.filter((id) => sourceNotes.has(id)).map((id) => sourceNotes.get(id));
-const generatedCandidates = [officialManifest.generatedAt, seeds.updatedAt, centralHistory.generatedAt, metiLegacy.verifiedAt]
+const generatedCandidates = [officialManifest.generatedAt, seeds.updatedAt, jetro.updatedAt, centralHistory.generatedAt, metiLegacy.verifiedAt]
   .filter(Boolean)
   .map((value) => new Date(value).getTime())
   .filter(Number.isFinite);
@@ -219,7 +224,7 @@ const output = {
   recordCount: records.length,
   sourceCount: sources.length,
   excludedExecutors: [...EXCLUDED_EXECUTORS],
-  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMECの検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
+  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMEC、JETROの検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
   sources,
   records,
 };
