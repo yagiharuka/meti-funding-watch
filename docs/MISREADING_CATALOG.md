@@ -53,7 +53,7 @@
 | M-020 | 金額・集計 | GビズINFOの0円掲載＝最終的な交付額・受注額が0円と確定 | 高 | GビズINFO明細 | — | — | — | OPEN |
 | M-021 | 金額・集計 | GビズINFOの「掲載N件」＝一意な案件数・交付件数 | 中 | GビズINFO企業カード | — | — | — | OPEN |
 | M-022 | 系列間比較 | 最初の検索欄の「事業名」結果＝GビズINFOの活動名称・企業別受取額 | 高 | トップの事業名検索 | 検索対象を明示的に切り替え、行政事業レビューの事業・予算執行として表示し、企業別GビズINFO掲載行と合算しない旨をその場に表示 | `app/page.tsx`, `app/HomeProgramSearch.tsx` | `tests/ui-accuracy.test.mjs`, `tests/funding-data.test.mjs` | MITIGATED |
-| M-023 | 金額・集計 | JOGMECの入札結果にある落札金額＝契約金額・実支払額 | 高 | 企業検索の公式補足（JOGMEC） | 区分を「入札結果」として契約結果から分離し、公表金額の直下に「落札金額（税抜）」を表示する。読み方でも落札金額を契約金額・実支払額と同一視しないことを明示 | `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts`, `app/DataReadingGuide.tsx`, `data/official-supplement-seeds.json` | `tests/official-supplement.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
+| M-023 | 金額・集計 | 公式補足の入札結果にある落札金額＝契約金額・実支払額 | 高 | 企業検索の公式補足（入札結果） | 区分を「入札結果」として契約結果から分離し、公表金額の直下に「落札金額（税抜）」を表示する。読み方でも落札金額を契約金額・実支払額と同一視しないことを明示 | `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts`, `app/DataReadingGuide.tsx`, `data/official-supplement-seeds.json` | `tests/official-supplement.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
 
 ## OPEN項目
 
