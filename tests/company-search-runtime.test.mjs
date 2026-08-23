@@ -183,6 +183,12 @@ test("zero Gbiz rows show the harm-critical negative-inference warning and keep 
 
 test("real company renderer never emits a subsidy aggregate or zero-result warning, but keeps individual detail", async () => {
   const ui = await renderCompanySearch({
+    alternativeOrganizations: [{
+      name: "テスト研究所株式会社",
+      corporateNumber: "2222222222222",
+      records: 4,
+    }],
+    alternativeOrganizationCount: 1,
     organizationSummaries: [{
       name: "テスト株式会社",
       corporateNumber: "1111111111111",
@@ -216,6 +222,9 @@ test("real company renderer never emits a subsidy aggregate or zero-result warni
   assert.doesNotMatch(ui.innerHTML, /company-search-no-total/);
   assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
   assert.match(ui.innerHTML, /<strong class="company-search-amount empty">合計しません<\/strong>/);
+  assert.match(ui.innerHTML, /名称に「テスト株式会社」を含む別法人/);
+  assert.match(ui.innerHTML, /テスト研究所株式会社/);
+  assert.match(ui.innerHTML, /data-corp="2222222222222"/);
   assert.match(ui.innerHTML, /<th>認定日・受注日の年度<\/th>/);
   assert.match(ui.innerHTML, /<th>補助金（掲載件数）<\/th>/);
   assert.match(ui.innerHTML, /認定日基準／金額は合計しません/);

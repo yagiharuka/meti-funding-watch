@@ -60,22 +60,39 @@ function parseCompanyQuery(query) {
 
 export function filterCompanyEntities(entities, query) {
   const parsed = parseCompanyQuery(query);
-  const normalized = normalizeCompanySearchTerm(parsed.query);
-  if (!normalized) return [...entities];
+  const matches = matchCompanyEntities(entities, parsed.query);
+  return parsed.forcePartial ? matches.contains : matches.primary;
+}
+
+export function matchCompanyEntities(entities, query) {
+  const normalized = normalizeCompanySearchTerm(query);
+  if (!normalized) {
+    const all = [...entities];
+    return { exact: [], contains: all, primary: all };
+  }
   if (/^\d{13}$/.test(normalized)) {
-    return entities.filter((entity) => entity.corporateNumber === normalized);
+    const exact = entities.filter((entity) => entity.corporateNumber === normalized);
+    return { exact, contains: exact, primary: exact };
   }
 
-  const identity = normalizeCompanyIdentity(parsed.query);
-  if (!identity) return [];
+  const identity = normalizeCompanyIdentity(query);
+  if (!identity) return { exact: [], contains: [], primary: [] };
 
-  if (!parsed.forcePartial) {
-    const exact = entities.filter((entity) => entityHasExactCompanyIdentity(entity, parsed.query));
-    if (exact.length) return exact;
+  const exact = [];
+  const contains = [];
+  for (const entity of entities) {
+    let exactMatch = false;
+    let containsMatch = false;
+    for (const name of entityNames(entity)) {
+      const normalizedName = normalizeCompanyIdentity(name);
+      if (normalizedName === identity) exactMatch = true;
+      if (normalizedName.includes(identity)) containsMatch = true;
+      if (exactMatch && containsMatch) break;
+    }
+    if (exactMatch) exact.push(entity);
+    if (containsMatch) contains.push(entity);
   }
-
-  return entities.filter((entity) =>
-    entityNames(entity).some((name) => normalizeCompanyIdentity(name).includes(identity)));
+  return { exact, contains, primary: exact.length ? exact : contains };
 }
 
 export function resolveCompanyNumbers(rows, query) {

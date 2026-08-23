@@ -1,4 +1,4 @@
-import { filterCompanyEntities, filterCompanyRecords, INTERNAL_PARTIAL_SEARCH_PREFIX } from "../scripts/company-search.mjs";
+import { filterCompanyEntities, filterCompanyRecords, INTERNAL_PARTIAL_SEARCH_PREFIX, matchCompanyEntities } from "../scripts/company-search.mjs";
 
 type Stage = "contracted" | "subsidy_published";
 type FundingRecord = { id: string; fiscalYear: number | null; date: string | null; organization: string; corporateNumber: string; sourceAgency: string; program: string; amount: number | null; amountRaw?: string; stage: Stage; sourceKey: string; sourceRowNumber: number; sourceSystem: string };
@@ -78,8 +78,24 @@ async function search(message: SearchMessage) {
   }
 
   let matching: FundingRecord[];
+  let alternativeOrganizations: Array<{ name: string; corporateNumber: string; records: number }> = [];
+  let alternativeOrganizationCount = 0;
   if (query) {
-    const matchedEntities = filterCompanyEntities(companyEntities, query) as CompanyEntity[];
+    const entityMatches = matchCompanyEntities(companyEntities, query) as {
+      exact: CompanyEntity[];
+      contains: CompanyEntity[];
+      primary: CompanyEntity[];
+    };
+    const matchedEntities = entityMatches.primary;
+    if (entityMatches.exact.length) {
+      const primaryNumbers = new Set(matchedEntities.map((entity) => entity.corporateNumber));
+      const alternatives = entityMatches.contains
+        .filter((entity) => !primaryNumbers.has(entity.corporateNumber))
+        .sort((left, right) => right.records - left.records || left.organization.localeCompare(right.organization, "ja"));
+      alternativeOrganizationCount = alternatives.length;
+      alternativeOrganizations = alternatives.slice(0, maxOrganizationSummaries)
+        .map((entity) => ({ name: entity.organization, corporateNumber: entity.corporateNumber, records: entity.records }));
+    }
     const numbers = new Set(matchedEntities.map((entity) => entity.corporateNumber));
     const buckets = [...new Set(matchedEntities.map((entity) => entity.bucket))];
     const rows = (await Promise.all(buckets.map(loadCompanyBucket))).flat();
@@ -99,6 +115,7 @@ async function search(message: SearchMessage) {
   postMessage({ type: "result", requestId: message.requestId, result: {
     totalRecords, totalPages, page: effectivePage, pageSize, records: matching.slice(offset, offset + pageSize), summary,
     organizationSummaries, organizationSummariesTruncated: Boolean(query && summary.organizationCount > maxOrganizationSummaries),
+    alternativeOrganizations, alternativeOrganizationCount,
     releaseCommit: activeMessage.release.commitSha, generatedAt: activeMessage.release.generatedAt,
   } });
 }

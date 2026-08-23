@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   INTERNAL_PARTIAL_SEARCH_PREFIX,
   filterCompanyRecords,
+  matchCompanyEntities,
 } from "../scripts/company-search.mjs";
 
 const rows = [
@@ -21,6 +22,15 @@ test("normal search keeps exact-first behavior while the internal contains searc
   const contains = filterCompanyRecords(rows, { query: `${INTERNAL_PARTIAL_SEARCH_PREFIX}NTT` });
   assert.deepEqual(
     [...new Set(contains.map((row) => row.corporateNumber))].sort(),
+    ["1010001143390", "6010601062093", "7010001065142"],
+  );
+});
+
+test("one match pass returns the exact corporation and every separate contains candidate", () => {
+  const matches = matchCompanyEntities(rows, "NTT");
+  assert.deepEqual(matches.primary.map((row) => row.corporateNumber), ["7010001065142"]);
+  assert.deepEqual(
+    matches.contains.map((row) => row.corporateNumber).sort(),
     ["1010001143390", "6010601062093", "7010001065142"],
   );
 });
@@ -43,18 +53,19 @@ test("internal contains search still respects agency, type, and year filters", (
   );
 });
 
-test("Pages UI shows the exact match and keeps alternative corporations visibly discoverable", async () => {
-  const [source, styles, entrypoint] = await Promise.all([
-    readFile(new URL("../pages-site/company-search-alternatives.ts", import.meta.url), "utf8"),
+test("Pages UI receives and immediately shows separate contains corporations", async () => {
+  const [worker, page, source, styles, entrypoint] = await Promise.all([
+    readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../pages-site/company-search-ui.ts", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/company-search-alternatives.css", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/main.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(source, /完全一致：\$\{primaryOrganizations\[0\]\.name\}/);
-  assert.match(source, /ほかに「\$\{query\}」を含む法人があります/);
-  assert.match(source, /→ \$\{totalAlternativeCount\.toLocaleString\("ja-JP"\)\}法人を見る/);
-  assert.match(source, /primaryOrganizations: organizations/);
-  assert.match(source, /button\.dataset\.corp = organization\.corporateNumber/);
-  assert.match(source, /INTERNAL_PARTIAL_SEARCH_PREFIX/);
-  assert.match(styles, /\.company-search-exact-match/);
-  assert.match(entrypoint, /company-search-alternatives/);
+  assert.match(worker, /matchCompanyEntities\(companyEntities, query\)/);
+  assert.match(worker, /alternativeOrganizations, alternativeOrganizationCount/);
+  assert.match(page, /名称に「\{debouncedQuery\.trim\(\)\}」を含む別法人/);
+  assert.match(source, /名称に「\$\{esc\(query\)\}」を含む別法人/);
+  assert.match(source, /data-corp="\$\{esc\(organization\.corporateNumber\)\}"/);
+  assert.match(styles, /\.company-search-alternative-item/);
+  assert.doesNotMatch(entrypoint, /company-search-alternatives"/);
 });
