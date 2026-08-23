@@ -12,6 +12,7 @@
 4. 原資料の制約で解消不能なものは `INHERENT` とし、画面上の読み違い防止だけを評価する。
 5. レビュー依頼は「実装を見てください」ではなく、まず **このカタログの網羅性を批判してください** と依頼する。
 6. すべての行に監査観点を1つ付け、8観点のどこかが空になっていないかCIで検査する。
+7. PRで `M-xxx` 行の追加・更新がない場合は、「このPRが触るカタログID」に **`該当なし：<理由>`** を記載し、CIで未記載・理由なしを拒否する。カタログの空白・改行だけの変更は更新扱いにしない。
 
 ## 監査の入口
 
@@ -33,7 +34,7 @@
 | M-001 | 0件・欠落 | 0件＝その法人は経産省関係の資金を受けていない | 高 | GビズINFO企業検索タブ | 検索0件のときだけ否定推論を防ぐ文を表示し、行政事業レビュー・照合記録を次に確認するよう案内 | `pages-site/company-search-ui.ts` | `tests/company-search-runtime.test.mjs` | MITIGATED |
 | M-002 | 0件・欠落 | 0件＝行政事業レビュー／公式資料にも該当資金が存在しない | 高 | レビュー・公式資料 | 収録範囲外や未掲載を否定推論に使えない旨を表示 | `app/review/ReviewSearch.tsx`, `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts` | `tests/review-ui-semantics.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
 | M-003 | 金額・集計 | GビズINFOの補助金掲載額は行をまたいで足せる | 高 | 企業カード、年度別、事業別、検索サマリー | 補助金は合計を表示せず、個別明細だけ表示 | `pages-site/company-search-ui.ts`, `pages-site/subsidy-semantics-ui.ts` | `tests/subsidy-semantics-ui.test.mjs`, `tests/company-search-runtime.test.mjs` | MITIGATED |
-| M-004 | 金額・集計 | 行政事業レビューの別シート年度再掲を別支出として足せる | 高 | 同じ企業の行政事業レビュー表示 | レビュー掲載行をまたぐ金額合計を表示せず、理由は「このデータの読み方」に集約 | `app/CombinedCompanyResults.tsx`, `app/DataReadingGuide.tsx`, `scripts/build-review-company-index.mjs` | `tests/review-company-index-semantics.test.mjs` | MITIGATED |
+| M-004 | 金額・集計 | 行政事業レビューの別シート年度再掲を別支出として足せる | 高 | 同じ企業の行政事業レビュー表示、事業→支出先一覧 | レビュー掲載行をまたぐ金額合計を表示せず、事業から支出先一覧へ直接入った場合は事業名・予算事業IDとシート年度を併記する | `app/CombinedCompanyResults.tsx`, `app/DataReadingGuide.tsx`, `app/review/ReviewSearch.tsx`, `scripts/build-review-company-index.mjs` | `tests/review-company-index-semantics.test.mjs`, `tests/review-ui-semantics.test.mjs` | MITIGATED |
 | M-005 | 時点・年度 | 年度別件数＝実際の補助金額・採択件数の推移 | 高 | GビズINFO年度フィルタ・年度別表示 | 年度指定時に認定日空欄の除外件数を警告し、補助金額は年度別合計しない | `pages-site/subsidy-semantics-ui.ts`, `pages-site/company-search-ui.ts` | `tests/subsidy-semantics-ui.test.mjs` | MITIGATED |
 | M-006 | 金額・集計 | 共同受注・連名行の公表金額＝各社それぞれの受領額 | 高 | 公式資料明細 | 共同当事者を展開し、公表行全体の金額で各社配分額ではない旨をその場で表示 | `pages-site/company-evidence-ui.ts`, `scripts/company-search.mjs` | `tests/company-evidence-ui.test.mjs`, `tests/company-search-numberless.test.mjs` | MITIGATED |
 | M-007 | 検索・名寄せ | 正規化された「完全一致」1件＝自分が探していた法人で確定 | 中 | GビズINFO企業検索 | 完全一致を主結果にしつつ、同じ検索語を含む別法人候補を同じ応答で別表示し合算しない | `app/funding-search.worker.ts`・`pages-site/company-search-ui.ts`・`app/page.tsx` | `tests/company-search-alternatives.test.mjs` | MITIGATED |
