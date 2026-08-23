@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-19",
-  "scopeNote": "公式補足は、経済産業省本省・NEDO・中小企業基盤整備機構について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
+  "updatedAt": "2026-08-24",
+  "scopeNote": "公式補足は、経済産業省本省・NEDO・中小企業基盤整備機構・JOGMECについて、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
   "sources": [
     {
       "id": "nedo",
@@ -38,6 +38,14 @@
         {"id":"smrj-hq-2026-04-competitive-12","organization":"佐川急便株式会社 関東支店","corporateNumber":"8130001000053","fiscalYear":2026,"date":"2026-04-27","program":"令和8年度書類等運送業務（宅配便・メール便）","theme":"","phase":"","supportYears":"","category":"contract_result","amountStage":"契約金額","amount":124172224,"sourceUrl":"https://www.smrj.go.jp/procurement/bid/contract/fbrion000000dvwx-att/nyuusatuhonbu202604_20260729.pdf"},
         {"id":"smrj-hq-2026-04-competitive-15","organization":"株式会社アカシック","corporateNumber":"5011201000130","fiscalYear":2026,"date":"2026-04-28","program":"省力化ナビの二次開発及び運用保守業務","theme":"","phase":"","supportYears":"","category":"contract_result","amountStage":"契約金額","amount":79750000,"sourceUrl":"https://www.smrj.go.jp/procurement/bid/contract/fbrion000000dvwx-att/nyuusatuhonbu202604_20260729.pdf"},
         {"id":"smrj-hq-2026-04-competitive-16","organization":"荒井建設株式会社","corporateNumber":"5450001000156","fiscalYear":2026,"date":"2026-04-28","program":"令和8年度中小企業大学校旭川校体育館棟外壁等修繕工事","theme":"","phase":"","supportYears":"","category":"contract_result","amountStage":"契約金額","amount":87010000,"sourceUrl":"https://www.smrj.go.jp/procurement/bid/contract/fbrion000000dvwx-att/nyuusatuhonbu202604_20260729.pdf"}
+      ]
+    },
+    {
+      "id": "jogmec",
+      "name": "JOGMEC",
+      "coverageNote": "現在はJOGMECの令和8年度入札結果のうち、落札者・入札日・落札金額（税抜）を公式結果PDFで確認できた1件のみ収録。落札金額は契約金額・実支払額として扱わない。JOGMECの全入札・全契約・随意契約を網羅するものではない。",
+      "records": [
+        {"id":"jogmec-2026-isa-rules-support","organization":"イー・アンド・イーソリューションズ株式会社","corporateNumber":"4010001104241","fiscalYear":2026,"date":"2026-05-15","program":"令和8年度国際海底機構開発規則等に関する対応支援業務","theme":"","phase":"","supportYears":"","category":"bid_result","amountStage":"落札金額（税抜）","amount":22682889,"sourceUrl":"https://www.jogmec.go.jp/content/300801182.pdf","sourcePageUrl":"https://www.jogmec.go.jp/bid/bid_00091.html"}
       ]
     }
   ]
