@@ -12,7 +12,7 @@ const EXCLUDED_EXECUTORS = new Set([
   "kyushu",
   "okinawa",
 ]);
-const SOURCE_ORDER = ["meti", "anre", "smea", "jpo", "nedo", "smrj"];
+const SOURCE_ORDER = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec"];
 
 async function readOptionalJson(path, fallback) {
   try {
@@ -149,7 +149,7 @@ const centralHistoryRecords = centralHistory.records
   .filter(Boolean);
 
 const seedRecords = seeds.sources.flatMap((source) => {
-  if (!["nedo", "smrj"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
+  if (!["nedo", "smrj", "jogmec"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
   if (!Array.isArray(source.records)) throw new Error(`${source.id}: recordsが配列ではありません`);
   return source.records.map((row) => normalizeOfficialRow(
     { ...row, sourceId: source.id, sourceName: source.name },
@@ -195,8 +195,10 @@ for (const id of SOURCE_ORDER) {
     coverageNote = `対象方針は2017年度以降。現在この索引で確認済みなのは${fiscalYears.join("・")}年度の公表資料です。契約結果: ${contractStatus}／交付決定: ${grantStatus}`;
   } else if (id === "nedo") {
     coverageNote = `2017・2018年度の「競争性のない随意契約」公式PDFから、単一受取先・契約日・契約金額を一意に検証できた22行を追加。${seed?.coverageNote ?? ""} NEDO全事業・全契約の網羅データではありません。`;
-  } else {
+  } else if (id === "smrj") {
     coverageNote = `中小機構本部の2017～2019年度競争入札・随意契約公式PDFから、単一法人番号・契約日・契約金額を一意に検証できた577行を追加。${seed?.coverageNote ?? ""} 地域本部等を含む全契約の網羅データではありません。`;
+  } else {
+    coverageNote = seed?.coverageNote ?? "JOGMECの確認済み入札結果のみを収録。全入札・全契約を網羅しません。";
   }
   sourceNotes.set(id, { id, name, fiscalYears, recordCount: sourceRows.length, coverageNote });
 }
@@ -217,7 +219,7 @@ const output = {
   recordCount: records.length,
   sourceCount: sources.length,
   excludedExecutors: [...EXCLUDED_EXECUTORS],
-  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構の検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
+  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMECの検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
   sources,
   records,
 };

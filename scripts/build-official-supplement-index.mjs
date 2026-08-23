@@ -66,7 +66,7 @@ const officialSupplementRecords = officialRows
   }));
 
 const seedRecords = seeds.sources.flatMap((source) => {
-  if (!["nedo", "smrj"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
+  if (!["nedo", "smrj", "jogmec"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
   if (!Array.isArray(source.records)) throw new Error(`${source.id}: recordsが配列ではありません`);
   return source.records.map((row) => {
     if (!row.id || !row.organization || !validAmount(row.amount) || Number(row.fiscalYear) < MIN_FISCAL_YEAR || !row.sourceUrl?.startsWith("https://")) {
@@ -121,7 +121,7 @@ const sourceNotes = {
   }])),
 };
 
-const sourceOrder = ["meti", "anre", "smea", "jpo", "nedo", "smrj"];
+const sourceOrder = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec"];
 const sources = sourceOrder.map((id) => ({
   ...sourceNotes[id],
   recordCount: records.filter((row) => row.sourceId === id).length,
@@ -131,7 +131,7 @@ const output = {
   schemaVersion: 1,
   generatedAt: [officialManifest.generatedAt, seeds.updatedAt].filter(Boolean).sort().at(-1) ?? seeds.updatedAt,
   minFiscalYear: MIN_FISCAL_YEAR,
-  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
+  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構・JOGMECについて、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
   recordCount: records.length,
   sources,
   records,
