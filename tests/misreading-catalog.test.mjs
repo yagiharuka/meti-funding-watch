@@ -63,6 +63,21 @@ test("CI reruns the catalog gate on PR body edits and tests direct pushes to mai
   assert.match(workflow, /Verify misreading catalog passage/);
 });
 
+test("top scope copy separates the two main series, official supplements, and reconciliation records", async () => {
+  const [page, layout, shell] = await Promise.all([
+    text("../app/page.tsx"),
+    text("../app/layout.tsx"),
+    text("../pages-site/index.html"),
+  ]);
+  assert.match(page, /GビズINFOと行政事業レビューを主系列として自動更新します/);
+  assert.match(page, /確認できた公式資料.*公式補足/);
+  assert.match(page, /各系列は収録範囲と金額の意味が異なるため、相互に合算しません/);
+  assert.match(page, /別に「照合の記録」として限定的に示します/);
+  assert.doesNotMatch(page, /所管法人については、NEDO・IPA/);
+  assert.match(layout, /公式資料による補足・照合/);
+  assert.match(shell, /公式資料による補足・照合/);
+});
+
 test("every audit dimension has at least one concrete catalog row", async () => {
   const rows = catalogRows(await text("../docs/MISREADING_CATALOG.md"));
   assert.ok(rows.length >= 22, "catalog must cover the known audit findings and newly exposed gaps");

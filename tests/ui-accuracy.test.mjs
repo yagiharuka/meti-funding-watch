@@ -36,11 +36,13 @@ test("does not render an unavailable status field or its notice", () => {
   assert.doesNotMatch(pageSource, /subsidy_published: "補助金CSV"/);
 });
 
-test("describes two main series and a bounded reconciliation log", () => {
+test("describes two main series, official supplements, and a bounded reconciliation log", () => {
   for (const source of [layoutSource, pageHtml]) {
     assert.match(source, /GビズINFOと行政事業レビューを主系列/);
-    assert.match(source, /機関公表資料との照合結果/);
+    assert.match(source, /公式資料による補足・照合/);
   }
+  assert.match(pageSource, /確認できた公式資料.*公式補足/);
+  assert.match(pageSource, /別に「照合の記録」として限定的に示します/);
   for (const source of [officialPageSource, officialPageHtml]) {
     assert.match(source, /機関公表資料.*GビズINFO掲載値/);
     assert.match(source, /照合/);

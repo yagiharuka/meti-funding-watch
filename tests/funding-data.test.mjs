@@ -426,7 +426,7 @@ test("keeps the Gbiz company branch separate when the first search also offers r
   assert.match(pageSource, /法人等/);
   assert.match(pageSource, /データ出典：GビズINFO/);
   assert.match(pageSource, /全支出・実支払を示すものではありません/);
-  assert.match(pageSource, /経済産業省を原資とする支出かどうかはGビズINFOだけでは判別できません/);
+  assert.match(pageSource, /各系列は収録範囲と金額の意味が異なるため、相互に合算しません/);
   assert.match(pageSource, /GビズINFO情報種別/);
   assert.match(pageSource, /調達（委託を含む）/);
   assert.match(pageSource, /subsidy_published: "補助金"/);
