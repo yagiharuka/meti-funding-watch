@@ -45,12 +45,14 @@ test("misreading catalog is the explicit audit entrypoint", async () => {
 
   assert.match(catalog, /コードを直す前にまずこの表へ行を追加または更新/);
   assert.match(catalog, /このカタログの網羅性を批判してください/);
-  assert.match(catalog, /カタログ差分がない場合.*該当なし：<理由>/);
+  assert.match(catalog, /M-xxx.*該当なし：<理由>/);
+  assert.match(catalog, /空白・改行だけの変更は更新扱いにしない/);
   for (const dimension of AUDIT_DIMENSIONS) assert.match(catalog, new RegExp(dimension));
 
   assert.match(template, /実装より先に `docs\/MISREADING_CATALOG\.md` を確認した/);
   assert.match(template, /docs\/MISREADING_CATALOG\.md/);
   assert.match(template, /該当なし：<理由>/);
+  assert.match(template, /空白・改行だけの変更は更新扱いにせず/);
   assert.match(template, /網羅性を批判してください/);
 });
 
