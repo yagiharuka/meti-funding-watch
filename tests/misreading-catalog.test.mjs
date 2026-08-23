@@ -61,6 +61,8 @@ test("CI reruns the catalog gate on PR body edits and tests direct pushes to mai
   assert.match(workflow, /pull_request:\n\s+types: \[opened, synchronize, reopened, edited\]/);
   assert.match(workflow, /push:\n\s+branches: \[main\]/);
   assert.match(workflow, /Verify misreading catalog passage/);
+  assert.match(workflow, /cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/);
+  assert.doesNotMatch(workflow, /cancel-in-progress: true/);
 });
 
 test("top scope copy separates the two main series, official supplements, and reconciliation records", async () => {
