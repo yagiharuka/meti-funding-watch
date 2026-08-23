@@ -6,6 +6,8 @@ const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "
 const officialPageSource = await readFile(new URL("../app/official/page.tsx", import.meta.url), "utf8");
 const reviewPageSource = await readFile(new URL("../app/review/page.tsx", import.meta.url), "utf8");
 const reviewSearchSource = await readFile(new URL("../app/review/ReviewSearch.tsx", import.meta.url), "utf8");
+const homeProgramSearchSource = await readFile(new URL("../app/HomeProgramSearch.tsx", import.meta.url), "utf8");
+const reviewProgramLinkSource = await readFile(new URL("../app/review-program-link.ts", import.meta.url), "utf8");
 const reviewHtmlSource = await readFile(new URL("../pages-site/review/index.html", import.meta.url), "utf8");
 const tabsSource = await readFile(new URL("../app/ViewTabs.tsx", import.meta.url), "utf8");
 const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
@@ -44,4 +46,16 @@ test("makes disclosed review routes understandable without legacy-cache wording"
   assert.match(reviewSearchSource, /レビューシートCSVの経路情報/);
   assert.match(reviewSearchSource, /複数経路のため直接上流のみ表示/);
   assert.doesNotMatch(reviewSearchSource, /旧キャッシュから復元した経路|旧キャッシュから復元した一経路|旧公式CSVキャッシュから復元|旧キャッシュのためCSV行番号不明|公開経路上の位置/);
+});
+
+test("links a home program title to its exact review card instead of only the review page", () => {
+  assert.match(homeProgramSearchSource, /className="program-detail-link"/);
+  assert.match(homeProgramSearchSource, /reviewProgramHref\(getPublicBaseUrl\(\), row\.id\)/);
+  assert.match(reviewProgramLinkSource, /searchParams\.set\(REVIEW_PROGRAM_PARAMETER, programId\)/);
+  assert.match(reviewProgramLinkSource, /url\.hash = reviewProgramAnchorId\(programId\)/);
+  assert.match(reviewSearchSource, /row\.id !== targetProgramId/);
+  assert.match(reviewSearchSource, /id=\{reviewProgramAnchorId\(row\.id\)\}/);
+  assert.match(reviewSearchSource, /scrollIntoView\(\{ block: "center" \}\)/);
+  assert.match(reviewSearchSource, /target\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(reviewSearchSource, /aria-current=\{targetProgramId === row\.id \? "location"/);
 });
