@@ -121,8 +121,11 @@ test("invalidates stale funding searches and keeps request errors recoverable", 
     pending.indexOf("requestIdRef.current += 1") < pending.indexOf("setDataset"),
     "the old request must be invalidated before rows are cleared",
   );
-  assert.match(pageSource, /query !== deferredQuery/);
-  assert.match(pageSource, /\[agencies, agency, deferredQuery, manifest\?\.generatedAt, page, query, release/);
+  assert.match(pageSource, /window\.setTimeout\(\(\) => setDebouncedQuery\(query\), 400\)/);
+  assert.match(pageSource, /query !== debouncedQuery \|\| isComposingQuery/);
+  assert.match(pageSource, /onCompositionStart=\{\(\) => setIsComposingQuery\(true\)\}/);
+  assert.match(pageSource, /onCompositionEnd=/);
+  assert.match(pageSource, /\[agencies, agency, debouncedQuery, isComposingQuery, manifest\?\.generatedAt, page, query, release/);
   const requestError = pageSource.slice(
     pageSource.indexOf('if (message.type === "error")'),
     pageSource.indexOf("const candidate = message.result"),

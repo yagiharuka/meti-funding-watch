@@ -429,7 +429,7 @@ test("presents a Gbiz-only record search without unsupported claims", () => {
   assert.match(pageSource, /https:\/\/yagiharuka\.github\.io\/meti-funding-watch\//);
   assert.match(pageSource, /manifestSha256|idSetSha256/);
   assert.match(pageSource, /update-chip \$\{updateChipClass\}/);
-  assert.match(pageSource, /q: deferredQuery\.trim\(\)/);
+  assert.match(pageSource, /q: debouncedQuery\.trim\(\)/);
   assert.match(pageSource, /funding-search\.worker\.ts/);
   assert.doesNotMatch(pageSource, /getFundingSearchUrl|haru620328\.chatgpt\.site\/api\/funding/);
 
