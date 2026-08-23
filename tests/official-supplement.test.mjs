@@ -60,7 +60,7 @@ test("既知のNEDO・中小機構公式補足が保持される", async () => {
   assert.equal(pwc.amountStage, "契約金額");
 });
 
-test("Pages公開JSに3機関の公式補足UIとデータがバンドルされる", async () => {
+test("Pages公開JSは公式補足UIだけを持ち、データはタブ選択時用の別ファイルにする", async () => {
   const assets = await readdir("dist-pages/assets");
   const javascript = await Promise.all(
     assets.filter((name) => name.endsWith(".js")).map((name) => readFile(`dist-pages/assets/${name}`, "utf8")),
@@ -68,6 +68,9 @@ test("Pages公開JSに3機関の公式補足UIとデータがバンドルされ�
   const bundle = javascript.join("\n");
   assert.ok(bundle.includes("公式補足（経産省本省・NEDO・中小機構）"));
   assert.ok(bundle.includes("2021年度以降を基本対象"));
-  assert.ok(bundle.includes("京都フュージョニアリング株式会社"));
-  assert.ok(bundle.includes("PwCコンサルティング合同会社"));
+  assert.ok(!bundle.includes("京都フュージョニアリング株式会社"));
+  assert.ok(!bundle.includes("PwCコンサルティング合同会社"));
+  const published = await readJson("dist-pages/data/official-supplement-index.json");
+  assert.ok(published.records.some((row) => row.organization === "京都フュージョニアリング株式会社"));
+  assert.ok(published.records.some((row) => row.organization === "PwCコンサルティング合同会社"));
 });

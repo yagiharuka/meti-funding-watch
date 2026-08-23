@@ -14,6 +14,8 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   assert.ok(dataEntries.includes("commitments-preview.json"));
   assert.ok(dataEntries.includes("review"));
   assert.ok(dataEntries.includes("official-company-index.json"));
+  assert.ok(dataEntries.includes("official-supplement-index.json"));
+  assert.ok(dataEntries.includes("gbiz-company-search-index.json"));
   assert.equal(dataEntries.includes("official"), false);
   assert.ok(dataEntries.some((name) => name.startsWith("commitments-")));
   assert.ok(dataEntries.every((name) =>
@@ -21,6 +23,9 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
     || name === "review"
     || name === "review-company-index.json"
     || name === "official-company-index.json"
+    || name === "official-supplement-index.json"
+    || name === "gbiz-company-search-index.json"
+    || /^gbiz-company-records-[0-9a-f]{2}\.json$/.test(name)
     || name === "commitments-preview.json"
     || /^commitments-(?:\d{4}|unclassified)\.json$/.test(name)));
 

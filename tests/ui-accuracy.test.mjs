@@ -83,7 +83,7 @@ test("search state is reflected in the URL", () => {
   assert.match(adoptionSource, /popstate/);
 });
 
-test("verifies the release and searches verified static chunks with a worker fallback", () => {
+test("verifies the release and searches verified company buckets with a full-data fallback", () => {
   assert.match(pageSource, /fetch\(`\$\{publicBaseUrl\}release\.json\?load=\$\{cacheKey\}`/);
   assert.match(pageSource, /await sha256\(manifestBytes\).*candidateRelease\.manifestSha256/);
   assert.match(pageSource, /candidateRelease\.preview\.sha256/);
@@ -97,7 +97,9 @@ test("verifies the release and searches verified static chunks with a worker fal
   assert.match(fundingWorkerSource, /metadata\.sha256/);
   assert.match(fundingWorkerSource, /message\.release\.idSetSha256/);
   assert.match(fundingWorkerSource, /searchParams\.set\("release", message\.release\.commitSha\)/);
-  assert.match(fundingWorkerSource, /Math\.min\(4, entries\.length\)/);
+  assert.match(fundingWorkerSource, /activeMessage\.release\.companySearch\.files\[filename\]/);
+  assert.match(fundingWorkerSource, /buckets\.map\(loadCompanyBucket\)/);
+  assert.match(fundingWorkerSource, /cache: "force-cache"/);
   assert.match(pageSource, /loadVerifiedFundingRecords\(getPublicBaseUrl\(\), manifest, release/);
   assert.match(pageSource, /setSearchBackend\("main"\)/);
   assert.match(pageSource, /await sha256\(idSetBytes\.buffer\) !== release\.idSetSha256/);

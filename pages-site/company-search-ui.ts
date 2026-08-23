@@ -106,6 +106,11 @@ function tabs() {
   return `<div class="company-search-series-tabs" role="tablist" aria-label="検索結果の出典系列"><button type="button" role="tab" data-series="gbiz">GビズINFO</button><button type="button" role="tab" data-series="review">行政事業レビュー</button><button type="button" role="tab" data-series="official">公式資料</button></div>`;
 }
 
+function announceSeries() {
+  if (typeof window.dispatchEvent !== "function" || typeof CustomEvent !== "function") return;
+  window.dispatchEvent(new CustomEvent("meti-company-series-change", { detail: { series } }));
+}
+
 function markCombined() {
   const records = document.querySelector<HTMLElement>("#records");
   const combined = records?.querySelector<HTMLElement>(':scope > section[aria-labelledby="combined-company-review-title"]');
@@ -145,6 +150,7 @@ function syncSeries() {
     b.tabIndex = active ? 0 : -1;
   });
   markCombined();
+  announceSeries();
 }
 
 function render() {
