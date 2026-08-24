@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 export const AIST_LIST_URLS = Object.freeze([
   "https://www.aist.go.jp/aist_j/procure/supplyinfo/pub/dai_ippan/chuu_rakusatsu",
@@ -11,6 +11,7 @@ const FETCH_HEADERS = {
   accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
   "user-agent": "Mozilla/5.0 (compatible; meti-funding-watch/1.0; +https://github.com/yagiharuka/meti-funding-watch)",
 };
+const IDENTITY_FIELDS = ["organization", "corporateNumber", "date", "program", "category"];
 
 function decodeEntities(value = "") {
   return String(value)
@@ -138,7 +139,19 @@ async function fetchHtml(url, fetchImpl = fetch) {
 
 function mergeRecords(previous, current) {
   const byId = new Map(previous.map((row) => [row.id, row]));
-  for (const row of current) byId.set(row.id, row);
+  for (const row of current) {
+    const old = byId.get(row.id);
+    if (old) {
+      const changedIdentity = IDENTITY_FIELDS.filter((field) => (old[field] ?? null) !== (row[field] ?? null));
+      if (changedIdentity.length) {
+        throw new Error(`AIST既存行の識別項目が変わりました: ${row.id} (${changedIdentity.join(", ")})`);
+      }
+      if (old.amount !== row.amount || old.amountStage !== row.amountStage) {
+        throw new Error(`AIST既存行の公表金額が変わりました: ${row.id}`);
+      }
+    }
+    byId.set(row.id, row);
+  }
   return [...byId.values()].sort((a, b) =>
     (b.date ?? "").localeCompare(a.date ?? "")
     || a.id.localeCompare(b.id));
