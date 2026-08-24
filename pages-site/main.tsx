@@ -14,9 +14,9 @@ import "./site-balance-and-suggestions.css";
 import "./company-search-ui";
 import "./company-evidence-ui";
 import "./subsidy-semantics-ui";
-import "./site-balance-and-suggestions";
 
-// GitHub Pages production shell; search enhancements are installed before React mounts.
+// GitHub Pages production shell. DOM-balancing copy is installed after React's
+// first paint so it always sees the rendered filter notes and other targets.
 const root = document.getElementById("root");
 
 if (!root) {
@@ -29,3 +29,7 @@ createRoot(root).render(
     <Home />
   </StrictMode>,
 );
+
+requestAnimationFrame(() => {
+  void import("./site-balance-and-suggestions");
+});
