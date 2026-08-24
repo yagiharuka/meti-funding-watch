@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-24T02:15:00.000Z",
+  "id": "ipa",
+  "name": "情報処理推進機構（IPA）",
+  "coverageNote": "IPA公式の2023年度「契約に係る情報の公表」のうち、令和5年10月分PDFで契約相手方・法人番号・契約日・契約金額を確認でき、当サイトのGビズINFO 2023年度・年度不明収録に同一案件が見当たらない1行だけを補足する。IPAの全年度・全契約を網羅するものではない。",
+  "records": [
+    {
+      "id": "ipa-2023-10-03-society5-skills",
+      "organization": "デロイトトーマツコンサルティング合同会社",
+      "corporateNumber": "7010001088960",
+      "fiscalYear": 2023,
+      "date": "2023-10-03",
+      "program": "Society5.0を実現するためのスキル標準の改訂等業務",
+      "theme": "",
+      "phase": "",
+      "supportYears": "",
+      "category": "contract_result",
+      "amountStage": "契約金額",
+      "amount": 44000000,
+      "sourceUrl": "https://www.ipa.go.jp/archive/choutatsu/zuikei/ps6vr7000000ryfg-att/keiyaku202310.pdf",
+      "sourcePageUrl": "https://www.ipa.go.jp/archive/choutatsu/zuikei/zuikei2023.html",
+      "sourceKey": "ipa-keiyaku202310-society5-skills"
+    }
+  ]
+}
