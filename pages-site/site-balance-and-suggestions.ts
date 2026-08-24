@@ -61,16 +61,21 @@ function renderSuggestions(query: string, result: SearchResult) {
   box.id = SUGGESTIONS_ID;
   box.className = "company-name-suggestions";
   box.setAttribute("role", "listbox");
-  box.setAttribute("aria-label", `「${query}」を含む企業名候補`);
+  box.setAttribute("aria-label", `名称に「${query}」を含む企業名の部分一致候補`);
 
   const heading = document.createElement("div");
   heading.className = "company-name-suggestions-heading";
   const headingLabel = document.createElement("span");
-  headingLabel.textContent = "企業名の候補";
+  headingLabel.textContent = "企業名の部分一致候補";
   const headingQuery = document.createElement("small");
-  headingQuery.textContent = `「${query}」を含む法人`;
+  headingQuery.textContent = `名称に「${query}」を含む法人`;
   heading.append(headingLabel, headingQuery);
   box.append(heading);
+
+  const note = document.createElement("p");
+  note.className = "company-name-suggestions-note";
+  note.textContent = "名称の部分一致だけで表示しています。資本関係・取引関係などの「関連会社」を示すものではありません。";
+  box.append(note);
 
   const list = document.createElement("div");
   list.className = "company-name-suggestions-list";
@@ -83,7 +88,7 @@ function renderSuggestions(query: string, result: SearchResult) {
     const name = document.createElement("strong");
     name.textContent = candidate.name;
     const meta = document.createElement("small");
-    meta.textContent = `法人番号 ${candidate.corporateNumber} ／ 掲載 ${candidate.records.toLocaleString("ja-JP")}件`;
+    meta.textContent = `法人番号 ${candidate.corporateNumber} ／ GビズINFO掲載行 ${candidate.records.toLocaleString("ja-JP")}行`;
     button.append(name, meta);
     list.append(button);
   }
