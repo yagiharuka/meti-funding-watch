@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-24T02:50:00.000Z",
+  "id": "rieti",
+  "name": "経済産業研究所（RIETI）",
+  "coverageNote": "RIETI公式の2024年10月一般競争契約PDFで契約相手方・法人番号・契約日・契約金額を確認でき、当サイトのGビズINFO 2024年度収録に同一案件が見当たらない1行を補足する。年度不明収録にも同一案件がないことをCIで直接検証する。RIETIの全年度・全契約を網羅するものではない。契約金額は実支払額を意味しない。",
+  "records": [
+    {
+      "id": "rieti-2024-10-08-fdi-employment-adjustment",
+      "organization": "株式会社帝国データバンク",
+      "corporateNumber": "7010401018377",
+      "fiscalYear": 2024,
+      "date": "2024-10-08",
+      "program": "2024年度「海外直接投資における雇用調整に関する調査」",
+      "theme": "",
+      "phase": "",
+      "supportYears": "",
+      "category": "contract_result",
+      "amountStage": "契約金額",
+      "amount": 6516571,
+      "sourceUrl": "https://www.rieti.go.jp/jp/about/competitive_bid/pdf/2410.pdf",
+      "sourcePageUrl": "https://www.rieti.go.jp/jp/procurement/240805/",
+      "sourceKey": "rieti-2410-fdi-employment-adjustment"
+    }
+  ]
+}

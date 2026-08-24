@@ -38,7 +38,7 @@ type ReviewCompanyIndex = {
   semantics: { amount: string; aggregationWarning: string };
   recipients: ReviewRecipient[];
 };
-type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj" | "jogmec" | "jetro" | "aist" | "inpit" | "nite";
+type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj" | "jogmec" | "jetro" | "aist" | "inpit" | "nite" | "ipa" | "rieti";
 type OfficialSupplementSource = {
   id: OfficialSupplementSourceId;
   name: string;

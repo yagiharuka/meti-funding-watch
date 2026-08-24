@@ -12,7 +12,7 @@ const EXCLUDED_EXECUTORS = new Set([
   "kyushu",
   "okinawa",
 ]);
-const SOURCE_ORDER = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa"];
+const SOURCE_ORDER = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa", "rieti"];
 
 async function readOptionalJson(path, fallback) {
   try {
@@ -30,6 +30,7 @@ const aist = JSON.parse(await readFile("data/official-supplement-aist.json", "ut
 const inpit = JSON.parse(await readFile("data/official-supplement-inpit.json", "utf8"));
 const nite = JSON.parse(await readFile("data/official-supplement-nite.json", "utf8"));
 const ipa = JSON.parse(await readFile("data/official-supplement-ipa.json", "utf8"));
+const rieti = JSON.parse(await readFile("data/official-supplement-rieti.json", "utf8"));
 const centralHistory = JSON.parse(await readFile("data/official-central-history.json", "utf8"));
 const metiLegacy = await readOptionalJson("data/official-meti-legacy-records.json", {
   schemaVersion: 1,
@@ -43,7 +44,7 @@ if (officialManifest.schemaVersion !== 1 || !officialManifest.files || typeof of
 if (seeds.schemaVersion !== 1 || !Array.isArray(seeds.sources)) {
   throw new Error("公式補足シードの形式が不正です");
 }
-for (const source of [jetro, aist, inpit, nite, ipa]) {
+for (const source of [jetro, aist, inpit, nite, ipa, rieti]) {
   if (source.schemaVersion !== 1 || !source.id || !Array.isArray(source.records)) {
     throw new Error(`${source.name ?? source.id ?? "追加公式補足"}の形式が不正です`);
   }
@@ -53,7 +54,8 @@ if (aist.id !== "aist") throw new Error("産総研公式補足のIDが不正で�
 if (inpit.id !== "inpit") throw new Error("INPIT公式補足のIDが不正です");
 if (nite.id !== "nite") throw new Error("NITE公式補足のIDが不正です");
 if (ipa.id !== "ipa") throw new Error("IPA公式補足のIDが不正です");
-const seedSources = [...seeds.sources, jetro, aist, inpit, nite, ipa];
+if (rieti.id !== "rieti") throw new Error("RIETI公式補足のIDが不正です");
+const seedSources = [...seeds.sources, jetro, aist, inpit, nite, ipa, rieti];
 if (
   centralHistory.schemaVersion !== 1
   || !Array.isArray(centralHistory.documents)
@@ -165,7 +167,7 @@ const centralHistoryRecords = centralHistory.records
   .filter(Boolean);
 
 const seedRecords = seedSources.flatMap((source) => {
-  if (!["nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
+  if (!["nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa", "rieti"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
   if (!Array.isArray(source.records)) throw new Error(`${source.id}: recordsが配列ではありません`);
   return source.records.map((row) => normalizeOfficialRow(
     { ...row, sourceId: source.id, sourceName: source.name },
@@ -220,7 +222,7 @@ for (const id of SOURCE_ORDER) {
 }
 
 const sources = SOURCE_ORDER.filter((id) => sourceNotes.has(id)).map((id) => sourceNotes.get(id));
-const generatedCandidates = [officialManifest.generatedAt, seeds.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt, ipa.updatedAt, centralHistory.generatedAt, metiLegacy.verifiedAt]
+const generatedCandidates = [officialManifest.generatedAt, seeds.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt, ipa.updatedAt, rieti.updatedAt, centralHistory.generatedAt, metiLegacy.verifiedAt]
   .filter(Boolean)
   .map((value) => new Date(value).getTime())
   .filter(Number.isFinite);
@@ -235,7 +237,7 @@ const output = {
   recordCount: records.length,
   sourceCount: sources.length,
   excludedExecutors: [...EXCLUDED_EXECUTORS],
-  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMEC、JETRO、産業技術総合研究所、工業所有権情報・研修館（INPIT）、製品評価技術基盤機構（NITE）、情報処理推進機構（IPA）の検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
+  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMEC、JETRO、産業技術総合研究所、工業所有権情報・研修館（INPIT）、製品評価技術基盤機構（NITE）、情報処理推進機構（IPA）、経済産業研究所（RIETI）の検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
   sources,
   records,
 };
