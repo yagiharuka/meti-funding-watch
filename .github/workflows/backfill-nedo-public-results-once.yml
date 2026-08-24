@@ -16,7 +16,7 @@ permissions:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Check out feature branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -72,7 +72,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -f .audit/nedo-public-results-backfill.log
+          git add -f .audit/nedo-public-results-backfill.log .audit/nedo-public-results-diagnostics.json
           git commit -m "chore(audit): record NEDO backfill failure"
           git push origin HEAD:${GITHUB_REF_NAME}
 
