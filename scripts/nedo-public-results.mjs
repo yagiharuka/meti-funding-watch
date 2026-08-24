@@ -200,7 +200,7 @@ function cleanDecisionTitle(value = "") {
 
 function extractCellStringsFromHtml(html) {
   const values = [];
-  for (const match of String(html).matchAll(/<(?:td|th|li|p|dd|dt|div|span|strong|a)\b[^>]*>([\s\S]*?)<\/(?:td|th|li|p|dd|dt|div|span|strong|a)>/gi)) {
+  for (const match of String(html).matchAll(/<(?:td|th|li|p|dd|dt)\b[^>]*>([\s\S]*?)<\/(?:td|th|li|p|dd|dt)>/gi)) {
     const value = text(match[1]);
     if (value) values.push(...value.split("\n").map((part) => part.trim()).filter(Boolean));
   }
@@ -262,9 +262,13 @@ export function parseNedoDecisionHtml(html, sourcePageUrl, fiscalYear) {
   const sectionStrings = extractParticipantSectionStrings(html);
   let directOrganizations = extractOrganizations(sectionStrings);
   const selectedCount = selectedCountFromText(plain);
-  if (!directOrganizations.length && selectedCount === 1) {
+  if (!directOrganizations.length) {
     const wholePageOrganizations = extractOrganizations(extractCellStringsFromHtml(html));
-    if (wholePageOrganizations.length === 1) directOrganizations = wholePageOrganizations;
+    if (selectedCount === 1 && wholePageOrganizations.length === 1) {
+      directOrganizations = wholePageOrganizations;
+    } else if (sectionStrings.length && wholePageOrganizations.length) {
+      directOrganizations = wholePageOrganizations;
+    }
   }
   return {
     sourcePageUrl,
