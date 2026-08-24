@@ -1,8 +1,17 @@
 # 公式資料は主系列より更新頻度が低いため月次で再取得する。
 # 毎月2日05:30 JST（前日20:30 UTC）に実行し、手動実行も残す。
+# 個別機関のparser・testをmainへ反映したときは、その機関を含む公式資料を直ちに再取得する。
 name: Refresh official funding data
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/*-official-supplement.mjs"
+      - "tests/*-official-supplement.test.mjs"
+      - "scripts/build-official-supplement-index.mjs"
+      - "package.json"
   schedule:
     - cron: "30 20 1 * *"
   workflow_dispatch:
