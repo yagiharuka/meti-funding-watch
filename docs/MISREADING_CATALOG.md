@@ -54,7 +54,7 @@
 | M-021 | 金額・集計 | GビズINFOの「掲載N件」＝一意な案件数・交付件数 | 中 | GビズINFO企業カード | — | — | — | OPEN |
 | M-022 | 系列間比較 | 最初の検索欄の「事業名」結果＝GビズINFOの活動名称・企業別受取額 | 高 | トップの事業名検索 | 検索対象を明示的に切り替え、行政事業レビューの事業・予算執行として表示し、企業別GビズINFO掲載行と合算しない旨をその場に表示 | `app/page.tsx`, `app/HomeProgramSearch.tsx` | `tests/ui-accuracy.test.mjs`, `tests/funding-data.test.mjs` | MITIGATED |
 | M-023 | 金額・集計 | 公式補足の入札結果にある落札金額＝契約金額・実支払額 | 高 | 企業検索の公式補足（入札結果） | 区分を「入札結果」として契約結果から分離し、公表金額の直下に「落札金額（税抜）」を表示する。読み方でも落札金額を契約金額・実支払額と同一視しないことを明示 | `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts`, `app/DataReadingGuide.tsx`, `data/official-supplement-seeds.json`, `data/official-supplement-jetro.json` | `tests/official-supplement.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
-| M-024 | UI失敗時 | 公式補足の自動取得元のHTML・PDF・Excel形式が変わりparserが0件・誤解析になっても、正常更新されたように見える | 高 | 企業検索の公式補足（自動取得） | AISTでは一覧件数・detail件数・解析率・必須項目・既存行不変をfail-closedで検証済み。月次化する各機関も同等の構造検証と既存行保護を実装するまで自動更新対象にしない | `scripts/aist-official-supplement.mjs`, `.github/workflows/refresh-official-data.yml` | `tests/aist-official-supplement.test.mjs` | OPEN |
+| M-024 | UI失敗時 | 公式補足の自動取得元のHTML・PDF・Excel形式が変わりparserが0件・誤解析になっても、正常更新されたように見える | 高 | 企業検索の公式補足（自動取得） | — | — | — | OPEN |
 | M-025 | 金額・集計 | 公式資料の「契約金額」＝実際に支払われた金額 | 高 | 企業検索の公式補足（契約結果） | 読み方で契約額・契約金額は契約時点の公表値で実支払額と同一視しないことを明示。単価契約では調達予定総額として掲載される場合があることも示し、INPITの該当行は `契約金額（調達予定総額）` として原資料の意味を保持する | `app/DataReadingGuide.tsx`, `data/official-supplement-inpit.json`, `scripts/build-official-supplement-index.mjs` | `tests/company-evidence-ui.test.mjs`, `tests/official-supplement.test.mjs` | MITIGATED |
 | M-026 | 出典・鮮度 | GitHub上のコミット済み公式補足索引＝現在のビルダが生成する公開用派生データ | 高 | GitHub上のJSON、再利用・監査 | — | — | — | OPEN |
 
