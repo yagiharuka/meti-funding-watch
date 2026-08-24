@@ -59,8 +59,8 @@ test("participant extraction keeps Toyota and other legal organizations but not 
     "国立研究開発法人新エネルギー・産業技術総合開発機構",
   ];
   assert.deepEqual(extractOrganizations(values), [
-    "株式会社豊田中央研究所",
     "トヨタ自動車株式会社",
+    "株式会社豊田中央研究所",
     "国立大学法人東京大学",
   ]);
 });
