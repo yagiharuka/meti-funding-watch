@@ -7,10 +7,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Temporary write permission on this maintenance branch only. This is removed
-# after the stale committed official supplement index has been regenerated.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -46,16 +44,3 @@ jobs:
 
       - name: Build and test with repository fixtures
         run: npm test
-
-      - name: Bootstrap stale committed official supplement index
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/monthly-official-refresh-20260824'
-        run: |
-          if git diff --quiet -- data/official-supplement-index.json; then
-            echo "Committed official supplement index is already current."
-            exit 0
-          fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/official-supplement-index.json
-          git commit -m "chore(data): synchronize official supplement index"
-          git push origin HEAD:${{ github.head_ref }}
