@@ -67,12 +67,17 @@ test("既知のNEDO・中小機構・JOGMEC・JETRO・産総研公式補足が�
   assert.equal(jogmec.amount, 22_682_889);
   assert.equal(jogmec.category, "bid_result");
   assert.equal(jogmec.amountStage, "落札金額（税抜）");
+  assert.equal(jogmec.date, "2026-05-15");
+  assert.match(jogmec.sourceUrl, /jogmec\.go\.jp\/content\/300801182\.pdf$/);
 
   const jetro = index.records.find((row) => row.sourceId === "jetro" && row.corporateNumber === "2011101056358");
   assert.ok(jetro);
   assert.equal(jetro.amount, 1_199_000_000);
   assert.equal(jetro.category, "bid_result");
   assert.equal(jetro.amountStage, "落札金額（税抜）");
+  assert.equal(jetro.date, "2026-03-27");
+  assert.equal(jetro.fiscalYear, 2025);
+  assert.match(jetro.sourceUrl, /jetro\.go\.jp\/procurement\/bid\/fia\/9fa37fee0bb63a6f\.html$/);
 
   const aist = index.records.find((row) => row.sourceId === "aist" && row.corporateNumber === "9010501010505");
   assert.ok(aist);
@@ -98,6 +103,11 @@ test("Pages公開JSは公式補足UIだけを持ち、データは別ファイ�
   const published = await readJson("dist-pages/data/official-supplement-index.json");
   assert.ok(published.records.some((row) => row.organization === "京都フュージョニアリング株式会社"));
   assert.ok(published.records.some((row) => row.organization === "PwCコンサルティング合同会社"));
+  assert.ok(published.records.some((row) => row.organization === "イー・アンド・イーソリューションズ株式会社" && row.amountStage === "落札金額（税抜）"));
+  assert.ok(published.records.some((row) => row.organization === "株式会社NTTデータ・アイ" && row.amountStage === "落札金額（税抜）"));
+  assert.ok(published.records.some((row) => row.sourceId === "anre"));
+  assert.ok(published.records.some((row) => row.sourceId === "smea"));
+  assert.ok(published.records.some((row) => row.sourceId === "jpo"));
   assert.ok(published.records.some((row) => row.sourceId === "jogmec"));
   assert.ok(published.records.some((row) => row.sourceId === "jetro"));
   assert.ok(published.records.some((row) => row.sourceId === "aist" && row.organization === "日本電計株式会社"));
