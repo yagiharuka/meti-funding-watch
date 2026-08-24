@@ -54,12 +54,14 @@ test("internal contains search still respects agency, type, and year filters", (
 });
 
 test("Pages UI receives and immediately shows separate contains corporations", async () => {
-  const [worker, page, source, styles, entrypoint] = await Promise.all([
+  const [worker, page, source, styles, entrypoint, suggestionSource, suggestionStyles] = await Promise.all([
     readFile(new URL("../app/funding-search.worker.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/company-search-ui.ts", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/company-search-alternatives.css", import.meta.url), "utf8"),
     readFile(new URL("../pages-site/main.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../pages-site/site-balance-and-suggestions.ts", import.meta.url), "utf8"),
+    readFile(new URL("../pages-site/site-balance-and-suggestions.css", import.meta.url), "utf8"),
   ]);
   assert.match(worker, /const entityMatches = matchIndexedCompanyEntities\(/);
   assert.match(worker, /entityMatchCache/);
@@ -69,4 +71,9 @@ test("Pages UI receives and immediately shows separate contains corporations", a
   assert.match(source, /data-corp="\$\{esc\(organization\.corporateNumber\)\}"/);
   assert.match(styles, /\.company-search-alternative-item/);
   assert.doesNotMatch(entrypoint, /company-search-alternatives"/);
+
+  assert.match(suggestionSource, /企業名の部分一致候補/);
+  assert.match(suggestionSource, /「関連会社」を示すものではありません/);
+  assert.match(suggestionSource, /GビズINFO掲載行 \$\{candidate\.records\.toLocaleString\("ja-JP"\)\}行/);
+  assert.match(suggestionStyles, /\.company-name-suggestions-note/);
 });
