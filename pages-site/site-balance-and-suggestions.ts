@@ -29,6 +29,10 @@ function clearSuggestions() {
   document.getElementById(SUGGESTIONS_ID)?.remove();
 }
 
+function setText(element: Element | null | undefined, value: string) {
+  if (element && element.textContent !== value) element.textContent = value;
+}
+
 function setNativeInputValue(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   if (!setter) return;
@@ -91,17 +95,14 @@ function balanceSiteCopy() {
   document.querySelector(".hero-scope-warning")?.remove();
   document.querySelector(".hero-note")?.remove();
 
-  const recordsNav = document.querySelector<HTMLAnchorElement>('.topbar nav a[href="#records"]');
-  if (recordsNav) recordsNav.textContent = "検索";
-
-  const secondaryAction = document.querySelector<HTMLAnchorElement>(".hero-actions .secondary-action");
-  if (secondaryAction) secondaryAction.textContent = "企業・事業を検索";
+  setText(document.querySelector<HTMLAnchorElement>('.topbar nav a[href="#records"]'), "検索");
+  setText(document.querySelector<HTMLAnchorElement>(".hero-actions .secondary-action"), "企業・事業を検索");
 
   const sourceSection = document.querySelector<HTMLElement>("#sources");
-  const sourceIntro = sourceSection?.querySelector<HTMLElement>(".section-heading.light > p");
-  if (sourceIntro) {
-    sourceIntro.textContent = "GビズINFOと行政事業レビューは週次、実装済みの公式補足は月次で、それぞれ独立して更新します。";
-  }
+  setText(
+    sourceSection?.querySelector<HTMLElement>(".section-heading.light > p"),
+    "GビズINFOと行政事業レビューは週次、実装済みの公式補足は月次で、それぞれ独立して更新します。",
+  );
 
   if (sourceSection && !document.getElementById("series-update-overview")) {
     const detailGrid = sourceSection.querySelector(".source-grid");
@@ -116,10 +117,10 @@ function balanceSiteCopy() {
     detailGrid?.insertAdjacentElement("beforebegin", overview);
   }
 
-  const footerText = document.querySelector<HTMLElement>("footer > p");
-  if (footerText) {
-    footerText.textContent = "GビズINFO、行政事業レビュー、機関公表資料などの公開情報を抽出・整形して作成した非公式サイトです。原資料と本サイトの抽出・取込について、正確性・完全性・最新性を保証するものではありません。";
-  }
+  setText(
+    document.querySelector<HTMLElement>("footer > p"),
+    "GビズINFO、行政事業レビュー、機関公表資料などの公開情報を抽出・整形して作成した非公式サイトです。原資料と本サイトの抽出・取込について、正確性・完全性・最新性を保証するものではありません。",
+  );
 }
 
 window.addEventListener("meti-funding-search-result", ((event: SearchEvent) => {
