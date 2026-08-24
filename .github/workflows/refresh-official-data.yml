@@ -40,7 +40,7 @@ jobs:
           retention-days: 90
       - name: Validate official snapshot and supplement before commit
         run: |
-          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/aist-official-supplement.test.mjs tests/nedo-official-supplement.test.mjs tests/smrj-official-supplement.test.mjs tests/jetro-official-supplement.test.mjs tests/nite-official-supplement.test.mjs tests/ipa-official-supplement.test.mjs tests/inpit-official-supplement.test.mjs tests/rieti-official-supplement.test.mjs
+          node --test tests/official-data.test.mjs tests/official-evidence-receipts.test.mjs tests/official-golden-records.test.mjs tests/aist-official-supplement.test.mjs tests/nedo-official-supplement.test.mjs tests/smrj-official-supplement.test.mjs tests/jetro-official-supplement.test.mjs tests/nite-official-supplement.test.mjs tests/ipa-official-supplement.test.mjs tests/inpit-official-supplement.test.mjs tests/rieti-official-supplement.test.mjs tests/jogmec-official-supplement.test.mjs
           npm run build:pages
           node --test tests/official-supplement.test.mjs
       - name: Commit only official data and supplement index
