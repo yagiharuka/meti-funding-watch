@@ -1,0 +1,38 @@
+name: Apply NEDO direct HTML hotfix once
+
+on:
+  push:
+    branches:
+      - feat/nedo-2017-2025-public-results-20260825
+    paths:
+      - ".github/workflows/apply-nedo-direct-html-hotfix-once.yml"
+      - "scripts/apply-nedo-direct-html-hotfix.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Apply direct HTML parser hotfix
+        run: node scripts/apply-nedo-direct-html-hotfix.mjs
+      - name: Remove one-time helper and workflow
+        run: rm scripts/apply-nedo-direct-html-hotfix.mjs .github/workflows/apply-nedo-direct-html-hotfix-once.yml
+      - name: Commit parser hotfix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/nedo-public-results.mjs
+          git rm --cached scripts/apply-nedo-direct-html-hotfix.mjs .github/workflows/apply-nedo-direct-html-hotfix-once.yml
+          git commit -m "fix: parse direct NEDO participant tables and paragraphs"
+          git push origin HEAD:${GITHUB_REF_NAME}
