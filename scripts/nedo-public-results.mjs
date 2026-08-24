@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import ExcelJS from "exceljs";
 import { unzipSync } from "fflate";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -23,11 +23,12 @@ export const NEDO_YEAR_INDEX = new Map([
 ]);
 
 const PARTICIPANT_ATTACHMENT_PATTERN = /(実施予定先|実施先一覧|実施者一覧|委託予定先|委託先予定|委託先一覧|助成予定先|助成先一覧|助成金交付予定先|交付予定先|交付決定事業者|交付決定先|採択事業者|採択者一覧|採択先一覧|採択テーマ一覧|採択案件一覧|採択結果|認定VC|実施体制)/u;
-const PARTICIPANT_SECTION_PATTERN = /(実施予定先|実施先|実施者|委託予定先|委託先|助成予定先|助成先|交付予定先|交付決定事業者|交付決定先|採択事業者|採択者|採択先)/u;
+const PARTICIPANT_SECTION_PATTERN = /(実施予定先|実施先|実施者|委託予定先|委託先|助成予定先|助成先|交付予定先|交付決定事業者|交付決定先|採択事業者|採択者|採択先|採択提案|採択テーマ|採択案件|受入機関|受賞者|審査結果)/u;
 const EXCLUDED_ATTACHMENT_PATTERN = /(採択審査委員|審査委員|評価委員|公募要領|仕様書|基本計画|実施方針|提案書作成要領|契約約款|説明会資料|採択テーマ概要)/u;
 const GENERIC_ATTACHMENT_PATTERN = /^(?:別紙|別添|添付|資料)\d+/u;
 const NO_SELECTION_PATTERN = /(採択候補(?:は)?なし|採択者(?:は)?なし|実施予定先(?:は)?なし|提案が\s*0\s*件|応募が\s*0\s*件|応募(?:が)?ありませんでした|応募なし|採択に至りませんでした)/u;
-const PARTICIPANT_CONTEXT_PATTERN = /(実施予定先|委託予定先|助成予定先|交付決定|採択(?:先|者|事業者|テーマ))/u;
+const PARTICIPANT_CONTEXT_PATTERN = /(実施予定先|委託予定先|助成予定先|交付決定|採択(?:先|者|事業者|テーマ|提案)|受賞者)/u;
+const NON_FUNDING_DECISION_PATTERN = /(公募中止|RFI(?:実施)?結果|情報提供依頼.*結果|一次審査通過|1次審査通過|予選通過|スクリーニング通過|ファイナリスト決定)/iu;
 const HEADER_NOISE_PATTERN = /(採択テーマ|研究開発項目|研究開発テーマ|事業名|テーマ名|提案書受理番号|申請者|採択先|実施予定先|委託予定先|助成予定先|交付決定先|スキーム|フェーズ|一覧|別紙|別添)/u;
 const NEDO_NAME = "国立研究開発法人新エネルギー・産業技術総合開発機構";
 
@@ -199,7 +200,7 @@ function cleanDecisionTitle(value = "") {
 
 function extractCellStringsFromHtml(html) {
   const values = [];
-  for (const match of String(html).matchAll(/<(?:td|th|li|p|dd)\b[^>]*>([\s\S]*?)<\/(?:td|th|li|p|dd)>/gi)) {
+  for (const match of String(html).matchAll(/<(?:td|th|li|p|dd|dt|div|span|strong|a)\b[^>]*>([\s\S]*?)<\/(?:td|th|li|p|dd|dt|div|span|strong|a)>/gi)) {
     const value = text(match[1]);
     if (value) values.push(...value.split("\n").map((part) => part.trim()).filter(Boolean));
   }
@@ -240,7 +241,9 @@ function attachmentCandidates(html, sourcePageUrl, plain) {
     const label = text(match[2]);
     const normalized = compact(label);
     if (EXCLUDED_ATTACHMENT_PATTERN.test(normalized)) continue;
-    const url = canonicalSourceUrl(match[1], sourcePageUrl);
+    const candidateUrl = nedoOrWarpUrl(match[1], sourcePageUrl);
+    if (!candidateUrl) continue;
+    const url = canonicalSourceUrl(candidateUrl.href, sourcePageUrl);
     const item = { url, label };
     if (PARTICIPANT_ATTACHMENT_PATTERN.test(normalized)) explicit.push(item);
     else if (GENERIC_ATTACHMENT_PATTERN.test(normalized) && PARTICIPANT_CONTEXT_PATTERN.test(plain)) generic.push(item);
@@ -271,6 +274,7 @@ export function parseNedoDecisionHtml(html, sourcePageUrl, fiscalYear) {
     attachments: attachmentCandidates(html, sourcePageUrl, plain),
     directOrganizations,
     noSelection: NO_SELECTION_PATTERN.test(plain),
+    nonFundingDecision: NON_FUNDING_DECISION_PATTERN.test(plain),
     selectedCount,
   };
 }
@@ -282,7 +286,6 @@ function trimCandidate(value) {
     .replace(/[\s　]+/g, " ")
     .replace(/^[\s・●○■□◆◇※*＊\-–—―\d０-９.．()（）①-⑳]+/u, "")
     .replace(/^(?:代表提案者|共同提案者|申請者|採択先|実施予定先|委託予定先|助成予定先|交付決定先)\s*[:：]?\s*/u, "")
-    .replace(/(?:（|\().*?(?:）|\))$/u, "")
     .trim();
 }
 
@@ -311,14 +314,21 @@ function trailingTokenCandidate(piece, end) {
 function organizationFragments(value) {
   const normalized = trimCandidate(value);
   if (!normalized) return [];
-  const pieces = normalized.split(/[|｜;；]/u).map(trimCandidate).filter(Boolean);
+  const sources = [normalized];
+  for (const match of normalized.matchAll(/[（(]([^）)]{2,300})[）)]/gu)) sources.push(match[1]);
+  const pieces = sources
+    .flatMap((item) => item.split(/[|｜;；、，,／/]/u))
+    .map(trimCandidate)
+    .filter(Boolean);
   const found = new Set();
   for (const piece of pieces) {
     if (plausibleOrganization(piece) && !HEADER_NOISE_PATTERN.test(piece)) found.add(piece);
     for (const form of PREFIX_FORMS) {
       let index = piece.indexOf(form);
       while (index >= 0) {
-        const candidate = trimCandidate(piece.slice(index, Math.min(piece.length, index + 100)));
+        const tail = piece.slice(index, Math.min(piece.length, index + 100));
+        const boundary = tail.search(/[、，,;；|｜／/）)]/u);
+        const candidate = trimCandidate(boundary > 0 ? tail.slice(0, boundary) : tail);
         if (plausibleOrganization(candidate) && !HEADER_NOISE_PATTERN.test(candidate)) found.add(candidate);
         index = piece.indexOf(form, index + form.length);
       }
@@ -375,21 +385,32 @@ function pdfStrings(items) {
       for (let end = start + 1; end < Math.min(cells.length, start + 5); end += 1) {
         const current = cells[end];
         const gap = current.x - (previous.x + Math.max(0, previous.width));
-        if (gap > 24) break;
+        if (gap > 48) break;
         value += ` ${current.text}`;
         strings.push(value);
         previous = current;
       }
     }
   }
+  const sourceOrder = items.filter((item) => typeof item?.str === "string" && item.str.trim()).map((item) => text(item.str));
+  for (let start = 0; start < sourceOrder.length; start += 1) {
+    let value = sourceOrder[start];
+    for (let end = start + 1; end < Math.min(sourceOrder.length, start + 5); end += 1) {
+      value += ` ${sourceOrder[end]}`;
+      if (PREFIX_FORMS.some((form) => value.includes(form)) || SUFFIX_FORMS.some((form) => value.includes(form))) strings.push(value);
+    }
+  }
   return strings;
 }
+
+const PDFJS_CMAP_URL = `${fileURLToPath(new URL("../node_modules/pdfjs-dist/cmaps/", import.meta.url))}/`;
+const PDFJS_STANDARD_FONT_DATA_URL = `${fileURLToPath(new URL("../node_modules/pdfjs-dist/standard_fonts/", import.meta.url))}/`;
 
 async function parsePdfOrganizations(buffer, url) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 5 || buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
     throw new Error(`NEDO PDFシグネチャがありません: ${url}`);
   }
-  const task = getDocument({ data: new Uint8Array(buffer), disableFontFace: true, isEvalSupported: false, useSystemFonts: false, verbosity: 0 });
+  const task = getDocument({ data: new Uint8Array(buffer), disableFontFace: true, isEvalSupported: false, useSystemFonts: false, cMapUrl: PDFJS_CMAP_URL, cMapPacked: true, standardFontDataUrl: PDFJS_STANDARD_FONT_DATA_URL, verbosity: 0 });
   try {
     const pdf = await task.promise;
     if (pdf.numPages < 1 || pdf.numPages > 150) throw new Error(`NEDO participant PDFページ数が想定外です: ${pdf.numPages}`);
@@ -495,7 +516,7 @@ function participantRecord(decision, organization, sourceUrl) {
 }
 
 async function parseDecisionParticipants(decision, fetchImpl) {
-  if (decision.noSelection) return [];
+  if (decision.noSelection || decision.nonFundingDecision) return [];
   const byOrganization = new Map();
   for (const organization of decision.directOrganizations) {
     byOrganization.set(organization, participantRecord(decision, organization, decision.sourcePageUrl));
@@ -595,6 +616,7 @@ async function discoverMasterResults(years, fetchImpl, failures, { archived = fa
 async function parseResultPages(fiscalYear, resultLinks, fetchImpl, failures) {
   let parsedDecisionCount = 0;
   let noSelectionDecisionCount = 0;
+  let excludedDecisionCount = 0;
   const rows = [];
   const parsed = await mapBatches(resultLinks, 6, async (sourcePageUrl) => {
     let decision;
@@ -616,6 +638,7 @@ async function parseResultPages(fiscalYear, resultLinks, fetchImpl, failures) {
           attachments: decision.attachments,
           directOrganizations: decision.directOrganizations,
           noSelection: decision.noSelection,
+          nonFundingDecision: decision.nonFundingDecision,
         } : null),
       });
       return null;
@@ -625,9 +648,10 @@ async function parseResultPages(fiscalYear, resultLinks, fetchImpl, failures) {
     if (!result) continue;
     parsedDecisionCount += 1;
     if (result.decision.noSelection) noSelectionDecisionCount += 1;
+    if (result.decision.nonFundingDecision) excludedDecisionCount += 1;
     rows.push(...result.participants);
   }
-  return { rows, parsedDecisionCount, noSelectionDecisionCount };
+  return { rows, parsedDecisionCount, noSelectionDecisionCount, excludedDecisionCount };
 }
 
 export async function collectNedoPublicResults({ years = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], fetchImpl = fetch } = {}) {
@@ -687,6 +711,7 @@ export async function collectNedoPublicResults({ years = [2017, 2018, 2019, 2020
         resultPageCount: matchingLinks.length,
         parsedDecisionCount: result.parsedDecisionCount,
         noSelectionDecisionCount: result.noSelectionDecisionCount,
+        excludedDecisionCount: result.excludedDecisionCount,
         participantRecordCount: result.rows.length,
         maxVisitedMasterPage: group.maxVisitedPage ?? null,
         stoppedAtDate: group.stoppedAtDate ?? null,
