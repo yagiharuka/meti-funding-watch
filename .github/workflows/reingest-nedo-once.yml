@@ -1,0 +1,54 @@
+name: One-time NEDO DTSU and GX reingest
+
+on:
+  push:
+    branches:
+      - reingest/nedo-dtsu-gx-full
+    paths:
+      - ".github/workflows/reingest-nedo-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-nedo-reingest
+  cancel-in-progress: false
+
+jobs:
+  reingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/nedo-dtsu-gx-full
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reingest every DTSU and GX company page
+        run: node scripts/nedo-official-supplement.mjs
+      - name: Rebuild the public official supplement index
+        run: node scripts/build-official-supplement-index.mjs
+      - name: Validate NEDO rows and the combined supplement
+        run: |
+          node --test tests/nedo-official-supplement.test.mjs tests/official-supplement.test.mjs
+          node --input-type=module -e '
+            import { readFile } from "node:fs/promises";
+            const data = JSON.parse(await readFile("data/official-supplement-nedo.json", "utf8"));
+            if (data.parseFailureCount !== 0) throw new Error(`parse failures: ${data.parseFailureCount}`);
+            if (data.listingCount !== data.parsedCount + data.amountUnavailableCount) {
+              throw new Error(`row accounting mismatch: ${data.parsedCount}+${data.amountUnavailableCount}/${data.listingCount}`);
+            }
+            if (data.records.length < 40) throw new Error(`too few retained records: ${data.records.length}`);
+            console.log(JSON.stringify({ listingCount: data.listingCount, parsedCount: data.parsedCount, amountUnavailableCount: data.amountUnavailableCount, retainedRecords: data.records.length }));
+          '
+      - name: Commit generated data and remove this one-time workflow
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/official-supplement-nedo.json data/official-supplement-index.json
+          git rm .github/workflows/reingest-nedo-once.yml
+          git commit -m "chore(data): reingest all NEDO DTSU and GX pages"
+          git push origin HEAD:reingest/nedo-dtsu-gx-full
