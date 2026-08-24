@@ -38,7 +38,7 @@ type ReviewCompanyIndex = {
   semantics: { amount: string; aggregationWarning: string };
   recipients: ReviewRecipient[];
 };
-type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj" | "jogmec" | "jetro";
+type OfficialSupplementSourceId = "meti" | "anre" | "smea" | "jpo" | "nedo" | "smrj" | "jogmec" | "jetro" | "aist";
 type OfficialSupplementSource = {
   id: OfficialSupplementSourceId;
   name: string;
@@ -240,7 +240,7 @@ export default function CombinedCompanyResults({ query }: Props) {
         <div className="section-heading compact" style={{ marginTop: "1.5rem" }}>
           <div>
             <p className="eyebrow">OFFICIAL SUPPLEMENT</p>
-            <h2>公式補足（本省・エネ庁・中企庁・特許庁・NEDO・中小機構・JOGMEC・JETRO）</h2>
+            <h2>公式補足</h2>
           </div>
           <p>2021年度以降を基本対象とする採択・交付決定・契約結果・入札結果を補足します。機関ごとに実際の収録開始年度は異なり、確認できた公表情報だけを表示します。</p>
         </div>
