@@ -16,6 +16,7 @@ on:
       - "data/official/**"
       - "data/official-supplement-seeds.json"
       - "data/official-supplement-jetro.json"
+      - "data/official-supplement-aist.json"
       - "data/official-supplement-index.json"
       - "data/funding-data.json"
       - "data/funding-summary.json"

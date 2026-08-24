@@ -21,7 +21,7 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.ok(index.recordCount > 10_000, "central company index should use the committed official corpus, not only seed sources");
 
   const sourceIds = new Set(index.sources.map((source) => source.id));
-  assert.deepEqual([...sourceIds], ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro"]);
+  assert.deepEqual([...sourceIds], ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist"]);
   for (const excluded of ["hokkaido", "tohoku", "kanto", "chubu", "kansai", "chugoku", "shikoku", "kyushu", "okinawa"]) {
     assert.equal(sourceIds.has(excluded), false, `${excluded} must not be in the company official search`);
     assert.ok(index.excludedExecutors.includes(excluded), `${excluded} must be explicitly excluded`);
@@ -30,6 +30,7 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.match(index.scopeNote, /2017年度以降を対象方針/);
   assert.match(index.scopeNote, /JOGMEC/);
   assert.match(index.scopeNote, /JETRO/);
+  assert.match(index.scopeNote, /産業技術総合研究所/);
   assert.match(index.scopeNote, /地方経済産業局・沖縄総合事務局は企業検索の対象外/);
   assert.match(index.scopeNote, /見つからないことは支出がないことを意味しない/);
   assert.match(index.scopeNote, /相互に合算しない/);
@@ -54,6 +55,11 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.equal(jetro.category, "bid_result");
   assert.equal(jetro.amountStage, "落札金額（税抜）");
   assert.equal(jetro.amount, 1_199_000_000);
+  const aist = index.records.find((row) => row.sourceId === "aist" && row.corporateNumber === "9010501010505");
+  assert.ok(aist, "known AIST contract result must remain searchable");
+  assert.equal(aist.category, "contract_result");
+  assert.equal(aist.amountStage, "契約金額（税込額）");
+  assert.equal(aist.amount, 28_282_100);
 
   const jointRows = index.records.filter((row) => Array.isArray(row.organizations) && row.organizations.length > 1);
   assert.ok(jointRows.length > 0, "joint-recipient rows from the official corpus must survive index generation");

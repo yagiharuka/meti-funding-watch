@@ -32,7 +32,7 @@ function referencedPaths(cell) {
 async function assertPathsExist(id, column, paths) {
   assert.ok(paths.length > 0, `${id}: ${column} must contain at least one repository path`);
   for (const path of paths) {
-    assert.match(path, /^(?:app|data|pages-site|scripts|tests)\//, `${id}: ${column} must use a repository-relative path`);
+    assert.match(path, /^(?:(?:app|data|pages-site|scripts|tests)\/|\.github\/workflows\/)/, `${id}: ${column} must use a repository-relative path`);
     await assert.doesNotReject(access(new URL(`../${path}`, import.meta.url)), `${id}: ${column} path does not exist: ${path}`);
   }
 }
