@@ -61,7 +61,11 @@ function renderSuggestions(query: string, result: SearchResult) {
 
   const heading = document.createElement("div");
   heading.className = "company-name-suggestions-heading";
-  heading.innerHTML = `<span>企業名の候補</span><small>「${query.replace(/[&<>"']/g, "")}」を含む法人</small>`;
+  const headingLabel = document.createElement("span");
+  headingLabel.textContent = "企業名の候補";
+  const headingQuery = document.createElement("small");
+  headingQuery.textContent = `「${query}」を含む法人`;
+  heading.append(headingLabel, headingQuery);
   box.append(heading);
 
   const list = document.createElement("div");
