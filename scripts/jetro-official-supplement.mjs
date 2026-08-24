@@ -73,6 +73,20 @@ export function parseJetroListingHtml(html, listUrl = JETRO_LIST_URL, { minLinks
   return values;
 }
 
+function parseAwardee(text, sourceUrl) {
+  const blockMatch = text.match(/落札者\s*([\s\S]*?)(?=\n(?:選定方法|落札金額|公告日|備考)\b)/u);
+  if (!blockMatch) throw new Error(`JETRO落札者を取得できません: ${sourceUrl}`);
+  const lines = blockMatch[1].split("\n").map((line) => line.trim()).filter(Boolean);
+  if (!lines.length) throw new Error(`JETRO落札者を取得できません: ${sourceUrl}`);
+
+  const corporateNumber = blockMatch[1].match(/法人番号[:：]\s*(\d{13})/u)?.[1] ?? "";
+  const organization = lines[0]
+    .replace(/[（(]\s*法人番号[:：].*$/u, "")
+    .trim();
+  if (!organization) throw new Error(`JETRO落札者名を取得できません: ${sourceUrl}`);
+  return { organization, corporateNumber };
+}
+
 export function parseJetroDetailHtml(html, sourceUrl) {
   const text = htmlToText(html);
   if (!text.includes("入札結果")) return null;
@@ -88,10 +102,7 @@ export function parseJetroDetailHtml(html, sourceUrl) {
   if (!dateMatch) throw new Error(`JETRO落札決定日を取得できません: ${sourceUrl}`);
   const date = isoDate(dateMatch[1], dateMatch[2], dateMatch[3]);
 
-  const partyMatch = text.match(/落札者\s*([^\n]+?)\s*[（(]\s*法人番号[:：]\s*(\d{13})\s*[）)]/u);
-  if (!partyMatch) throw new Error(`JETRO落札者または法人番号を取得できません: ${sourceUrl}`);
-  const organization = partyMatch[1].trim();
-  const corporateNumber = partyMatch[2];
+  const { organization, corporateNumber } = parseAwardee(text, sourceUrl);
 
   const amountMatch = text.match(/落札金額\s*([\d,]+)\s*円(?:\s*[（(]([^）)]+)[）)])?/u);
   if (!amountMatch) throw new Error(`JETRO落札金額を取得できません: ${sourceUrl}`);
@@ -186,7 +197,7 @@ export async function refreshJetroOfficialSupplement({ fetchImpl = fetch, output
     updatedAt: new Date().toISOString(),
     id: "jetro",
     name: "JETRO",
-    coverageNote: `JETRO公式「入札情報」の直近掲載案件から、入札結果が公表済みで落札者・13桁法人番号・落札決定日・落札金額を定型HTMLで確認できた行を継続取得。今回 ${links.length}ページを確認し、入札結果 ${parsed.length}件を解析。過去に確認済みの行は一覧掲載終了後も保持する。落札金額は契約金額・実支払額として扱わない。JETROの全入札・随意契約を網羅するものではない。`,
+    coverageNote: `JETRO公式「入札情報」の直近掲載案件から、入札結果が公表済みで落札者・落札決定日・落札金額を定型HTMLで確認できた行を継続取得。法人番号は公表されている場合のみ保持する。今回 ${links.length}ページを確認し、入札結果 ${parsed.length}件を解析。過去に確認済みの行は一覧掲載終了後も保持する。落札金額は契約金額・実支払額として扱わない。JETROの全入札・随意契約を網羅するものではない。`,
     listingCount: links.length,
     parsedCount: parsed.length,
     parseFailureCount: failures.length,
