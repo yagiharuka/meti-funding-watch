@@ -20,6 +20,7 @@ on:
       - "data/official-supplement-inpit.json"
       - "data/official-supplement-nite.json"
       - "data/official-supplement-ipa.json"
+      - "data/official-supplement-rieti.json"
       - "data/official-supplement-index.json"
       - "data/funding-data.json"
       - "data/funding-summary.json"
