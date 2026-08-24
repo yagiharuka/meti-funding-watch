@@ -24,6 +24,16 @@
   color: #64748b;
 }
 
+.company-name-suggestions-note {
+  margin: 0;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .company-name-suggestions-list {
   display: grid;
   max-height: 22rem;
