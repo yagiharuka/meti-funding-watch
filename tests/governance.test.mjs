@@ -5,7 +5,7 @@ import test from "node:test";
 // Publication regression coverage for the combined company-search release.
 const workflows = new URL("../.github/workflows/", import.meta.url);
 
-test("publishes only the two main series and keeps official refresh manual", async () => {
+test("publishes only the two main series and refreshes official evidence monthly", async () => {
   const [source, review, gbiz, official] = await Promise.all([
     readFile(new URL("update-data.yml", workflows), "utf8"),
     readFile(new URL("update-review-data.yml", workflows), "utf8"),
@@ -35,8 +35,10 @@ test("publishes only the two main series and keeps official refresh manual", asy
     assert.match(refreshWorkflow, /if: steps\.commit_data\.outputs\.changed == 'true'/);
   }
   assert.match(official, /workflow_dispatch:/);
-  assert.doesNotMatch(official, /schedule:|push:/);
+  assert.match(official, /schedule:[\s\S]*cron: "30 20 1 \* \*"/);
+  assert.doesNotMatch(official, /push:/);
   assert.match(official, /npm run update:official/);
+  assert.match(official, /cancel-in-progress: false/);
   assert.match(official, /GITHUB_TOKENで作ったbot commitはpush workflowを起動しない/);
   assert.match(official, /if: steps\.commit_data\.outputs\.changed == 'true'/);
   assert.match(official, /gh workflow run update-data\.yml --ref main -f publish_only=true/);
