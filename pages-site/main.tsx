@@ -10,9 +10,11 @@ import "./company-search-alternatives.css";
 import "./company-evidence-ui.css";
 import "./subsidy-semantics-ui.css";
 import "./data-reading-guide.css";
+import "./site-balance-and-suggestions.css";
 import "./company-search-ui";
 import "./company-evidence-ui";
 import "./subsidy-semantics-ui";
+import "./site-balance-and-suggestions";
 
 // GitHub Pages production shell; search enhancements are installed before React mounts.
 const root = document.getElementById("root");
