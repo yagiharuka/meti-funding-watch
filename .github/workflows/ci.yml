@@ -39,6 +39,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify committed official supplement index
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          git diff --exit-code -- data/official-supplement-index.json
+
       - name: Lint
         run: npm run lint
 
