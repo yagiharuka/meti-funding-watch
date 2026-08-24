@@ -161,5 +161,7 @@ document.addEventListener("click", (event) => {
 const root = document.getElementById("root");
 if (root) {
   balanceSiteCopy();
+  requestAnimationFrame(balanceSiteCopy);
+  window.addEventListener("load", balanceSiteCopy, { once: true });
   new MutationObserver(() => requestAnimationFrame(balanceSiteCopy)).observe(root, { childList: true, subtree: true });
 }
