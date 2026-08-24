@@ -1,8 +1,11 @@
-# 2026-08-18: 1人運用での維持コストを抑えるため、機関公表資料は
-# GビズINFOとの照合用に位置付け、外部取得は手動実行時だけ行います。
+# 2026-08-24: 機関公表資料はGビズINFOとの照合用として、月1回だけ外部再取得します。
+# 手動実行も残し、parser異常や0件化は既存のfail-closed検証で公開しません。
 name: Refresh official funding data
 
 on:
+  schedule:
+    # 毎月1日 00:17 UTC = 09:17 JST。GitHub Actionsの月初混雑を避けて少しずらす。
+    - cron: "17 0 1 * *"
   workflow_dispatch:
 
 permissions:
