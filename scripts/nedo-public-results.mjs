@@ -131,7 +131,8 @@ export function parseNedoFieldResultsHtml(html, fieldUrl) {
   const resultLinks = new Set();
   for (const row of String(html).matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
     const rowText = text(row[1]);
-    if (!rowText.includes("決定")) continue;
+    const cells = [...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((match) => compact(match[1]));
+    if (!cells.includes("決定")) continue;
     const anchors = [...row[1].matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
     for (const candidate of anchors.slice().reverse()) {
       const url = nedoOrWarpUrl(candidate[1], fieldUrl);
@@ -289,6 +290,7 @@ function trimCandidate(value) {
 
 function plausibleOrganization(value) {
   if (!value || value.length < 3 || value.length > 100) return false;
+  if (PREFIX_FORMS.includes(value) || SUFFIX_FORMS.includes(value)) return false;
   if (value.includes(NEDO_NAME) || /NEDO|採択審査|評価委員|事務局|担当者|E-?mail|実施予定先一覧/u.test(value)) return false;
   if (HEADER_NOISE_PATTERN.test(value) && value.length > 55) return false;
   return PREFIX_FORMS.some((form) => value.includes(form))
