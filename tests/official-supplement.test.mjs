@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  assertOfficialGbizAbsence,
+  programsLookSameForGapAudit,
+} from "../scripts/official-gbiz-gap-audit.mjs";
+
 function normalize(value = "") {
   return String(value)
     .normalize("NFKC")
@@ -10,13 +15,6 @@ function normalize(value = "") {
     .replace(/[\s　]+/g, " ")
     .toLocaleLowerCase("ja-JP")
     .trim();
-}
-
-function normalizeProgram(value = "") {
-  return String(value)
-    .normalize("NFKC")
-    .replace(/[\s　「」『』【】()（）・,，.。:：/／_-]+/g, "")
-    .toLocaleLowerCase("ja-JP");
 }
 
 async function readJson(path) {
@@ -57,16 +55,34 @@ test("公式補足は13機関を公開する", async () => {
   }
 });
 
-test("RIETI補足案件はGビズINFOの2024年度・年度不明収録に同一案件がない", async () => {
-  const corporateNumber = "7010401018377";
-  const subject = normalizeProgram("海外直接投資における雇用調整に関する調査");
-  for (const path of ["data/pages/commitments-2024.json", "data/pages/commitments-unclassified.json"]) {
-    const rows = await readJson(path);
-    const matches = rows.filter((row) =>
-      row.corporateNumber === corporateNumber
-      && normalizeProgram(row.program).includes(subject));
-    assert.equal(matches.length, 0, `${path}: RIETI公式補足と同一案件がGビズINFO側に存在します`);
-  }
+test("GビズINFO欠落を収録条件にする公式補足は宣言ソースの全レコードを検証する", async () => {
+  const result = await assertOfficialGbizAbsence();
+  assert.deepEqual(result.sourceIds, ["rieti"]);
+  assert.equal(result.declaredRecordCount, result.verifiedRecordCount);
+  assert.ok(result.verifiedRecordCount >= 1);
+
+  const rieti = await readJson("data/official-supplement-rieti.json");
+  assert.equal(rieti.gbizAbsenceRequired, true);
+  assert.match(rieti.coverageNote, /全レコードで機械検証/);
+  assert.doesNotMatch(rieti.coverageNote, /2024年10月|1行を補足/);
+});
+
+test("GビズINFO欠落監査の案件名比較は年度表記差と限定的な追記を吸収する", () => {
+  assert.equal(
+    programsLookSameForGapAudit(
+      "2024年度「海外直接投資における雇用調整に関する調査」",
+      "海外直接投資における雇用調整に関する調査",
+    ),
+    true,
+  );
+  assert.equal(
+    programsLookSameForGapAudit(
+      "令和6年度 海外直接投資における雇用調整に関する調査",
+      "海外直接投資における雇用調整に関する調査（追加分析を含む）",
+    ),
+    true,
+  );
+  assert.equal(programsLookSameForGapAudit("情報システム運用", "情報システム調査"), false);
 });
 
 test("既知のNEDO・中小機構・JOGMEC・JETRO・産総研・INPIT・NITE・IPA・RIETI公式補足が保持される", async () => {
