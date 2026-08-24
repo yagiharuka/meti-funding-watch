@@ -1,45 +1,36 @@
-file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:723
+file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:748
     throw new Error(`NEDO 2017-2025公募結果バックフィルに未解決資料があります: ${messages.length}\n${messages.slice(0, 30).join("\n")}${messages.length > 30 ? `\n...ほか${messages.length - 30}件` : ""}`);
           ^
 
-Error: NEDO 2017-2025公募結果バックフィルに未解決資料があります: 54
+Error: NEDO 2017-2025公募結果バックフィルに未解決資料があります: 22
 WARP公募検索から2017・2018年度の決定ページを取得できません / WARP先頭ページ: maxPage=1, dates=none..none, text=NDL Web Archiving Project (WARP) 
 
 -->
 
 .privacy-confirmation[data-astro-cid-bbdvxe3m]{background-color:#fff;bottom:.5rem;border-radius:.5rem;box-shadow:0 1px 8px #0000003d;display:grid;gap:1rem;grid-template-rows:auto auto 1fr;left:.5rem;m
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AT093_100187.html
-NEDO・WARP外URLです: https://www8.cao.go.jp/cstp/bio/bio2019_honbun.pdf
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100224.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100227.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100232.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100243.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100246.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AB3_100013.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100351.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100252.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100253.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100254.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/IT3_100255.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/KH3_100108.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00012.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AN3_100130.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AT093_100214.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100403.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100437.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CD3_100354.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100262.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100263.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/IT3_100295.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/IT3_100296.html
-NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/IT3_100301.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00036.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00047.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00052.html
 NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00059.html
-...ほか24件
-    at refreshNedoPublicResults (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:723:11)
-    at async main (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:757:18)
-    at async file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:761:81
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AT093_100229.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100452.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100468.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100478.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CD3_100377.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100296.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/FF3_100387.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CD3_100402.html
+NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/NA3_100231.html
+    at refreshNedoPublicResults (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:748:11)
+    at async main (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:782:18)
+    at async file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:786:81
 
 Node.js v22.23.2
