@@ -85,7 +85,7 @@ test("INPIT positioned table parser keeps contract amount semantics and identity
 });
 
 test("INPIT recognizes a dash amount as non-publishable instead of zero", () => {
-  const parsed = parseInpitTableItems(oneRowItems({ amount: "－", remarks: "" }), DOCUMENT);
+  const parsed = parseInpitTableItems(oneRowItems({ amount: "－", remarks: "－" }), DOCUMENT);
   assert.equal(parsed.rowCount, 1);
   assert.equal(parsed.records.length, 0);
   assert.deepEqual(parsed.noAmountOrdinals, [1]);
