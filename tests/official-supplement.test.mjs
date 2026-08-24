@@ -16,19 +16,19 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
-test("公式補足は9機関を公開する", async () => {
+test("公式補足は10機関を公開する", async () => {
   const index = await readJson("data/official-supplement-index.json");
   assert.equal(index.schemaVersion, 1);
   assert.equal(index.minFiscalYear, 2021);
-  assert.deepEqual(index.sources.map((source) => source.id), ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist"]);
+  assert.deepEqual(index.sources.map((source) => source.id), ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit"]);
   assert.equal(index.recordCount, index.records.length);
   assert.ok(index.records.length > 0);
   assert.ok(index.records.some((row) => row.sourceId === "meti" && row.fiscalYear === 2021), "経産省本省の2021年度レコードが必要です");
-  for (const id of ["anre", "smea", "jpo", "jogmec", "jetro", "aist"]) {
+  for (const id of ["anre", "smea", "jpo", "jogmec", "jetro", "aist", "inpit"]) {
     assert.ok(index.records.some((row) => row.sourceId === id), `${id}: 確認済み公式補足が必要です`);
   }
 
-  const allowed = new Set(["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist"]);
+  const allowed = new Set(["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit"]);
   for (const row of index.records) {
     assert.ok(allowed.has(row.sourceId), `unexpected source: ${row.sourceId}`);
     assert.ok(Number.isInteger(row.fiscalYear) && row.fiscalYear >= 2021, `${row.id}: fiscal year`);
@@ -50,7 +50,7 @@ test("公式補足は9機関を公開する", async () => {
   }
 });
 
-test("既知のNEDO・中小機構・JOGMEC・JETRO・産総研公式補足が保持される", async () => {
+test("既知のNEDO・中小機構・JOGMEC・JETRO・産総研・INPIT公式補足が保持される", async () => {
   const index = await readJson("data/official-supplement-index.json");
   const kyoto = index.records.find((row) => row.sourceId === "nedo" && row.corporateNumber === "6130001065395");
   assert.ok(kyoto);
@@ -86,6 +86,14 @@ test("既知のNEDO・中小機構・JOGMEC・JETRO・産総研公式補足が�
   assert.equal(aist.amountStage, "契約金額（税込額）");
   assert.equal(aist.date, "2026-07-29");
   assert.match(aist.sourceUrl, /aist\.go\.jp\/aist_j\/procure\/supplyinfo\/pub\/detail\/RNN24EJU$/);
+
+  const inpit = index.records.find((row) => row.sourceId === "inpit" && row.corporateNumber === "1030001125866");
+  assert.ok(inpit);
+  assert.equal(inpit.amount, 1_634_160);
+  assert.equal(inpit.category, "contract_result");
+  assert.equal(inpit.amountStage, "契約金額（調達予定総額）");
+  assert.equal(inpit.date, "2025-04-03");
+  assert.match(inpit.sourceUrl, /inpit\.go\.jp\/kobo\/contract_info\/r07\/r07kb000001\.pdf$/);
 });
 
 test("Pages公開JSは公式補足UIだけを持ち、データは別ファイルにする", async () => {
@@ -97,7 +105,7 @@ test("Pages公開JSは公式補足UIだけを持ち、データは別ファイ�
   assert.ok(bundle.includes("公式補足"));
   assert.ok(bundle.includes("2021年度以降を基本対象"));
   assert.ok(bundle.includes("入札結果"));
-  for (const name of ["京都フュージョニアリング株式会社", "PwCコンサルティング合同会社", "イー・アンド・イーソリューションズ株式会社", "株式会社NTTデータ・アイ", "日本電計株式会社"]) {
+  for (const name of ["京都フュージョニアリング株式会社", "PwCコンサルティング合同会社", "イー・アンド・イーソリューションズ株式会社", "株式会社NTTデータ・アイ", "日本電計株式会社", "株式会社テストイベント企画"]) {
     assert.ok(!bundle.includes(name), `${name}: 明細はJS bundleへ埋め込まない`);
   }
   const published = await readJson("dist-pages/data/official-supplement-index.json");
@@ -111,4 +119,5 @@ test("Pages公開JSは公式補足UIだけを持ち、データは別ファイ�
   assert.ok(published.records.some((row) => row.sourceId === "jogmec"));
   assert.ok(published.records.some((row) => row.sourceId === "jetro"));
   assert.ok(published.records.some((row) => row.sourceId === "aist" && row.organization === "日本電計株式会社"));
+  assert.ok(published.records.some((row) => row.sourceId === "inpit" && row.amountStage === "契約金額（調達予定総額）"));
 });
