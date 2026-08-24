@@ -149,14 +149,15 @@ test("rejects identity changes and corrections above the automatic limit", () =>
   );
 });
 
-test("keeps official acquisition manual and publication free of external refreshes", async () => {
+test("keeps official acquisition monthly and publication free of external refreshes", async () => {
   const [publish, official, gbiz] = await Promise.all([
     readFile(new URL("../.github/workflows/update-data.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/refresh-official-data.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/refresh-gbiz-data.yml", import.meta.url), "utf8"),
   ]);
   assert.match(official, /workflow_dispatch:/);
-  assert.doesNotMatch(official, /schedule:|push:/);
+  assert.match(official, /schedule:[\s\S]*cron: "30 20 1 \* \*"/);
+  assert.doesNotMatch(official, /push:/);
   assert.match(official, /npm run update:official/);
   assert.match(gbiz, /schedule:[\s\S]*cron: "0 21 \* \* 1"/);
   assert.match(gbiz, /npm run update:data/);
