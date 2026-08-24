@@ -34,6 +34,16 @@ source = source.replace(
   'const ENGLISH_FORM_PATTERN = /\\b(?:Inc\\.?|Incorporated|Corp\\.?|Corporation|Co\\.?\\s*,?\\s*Ltd\\.?|Ltd\\.?|LLC|L\\.L\\.C\\.|GmbH|S\\.A\\.|B\\.V\\.|AS(?:A)?(?:,\\s*Japan Branch)?|Japan Branch)$/iu;',
 );
 
+source = source.replace(
+  '  const firstUrl = pageUrl(1);\n  const first = parseNedoMasterSearchHtml(await fetchHtml(firstUrl, fetchImpl), firstUrl);',
+  '  const firstUrl = pageUrl(1);\n  const firstHtml = await fetchHtml(firstUrl, fetchImpl);\n  const first = parseNedoMasterSearchHtml(firstHtml, firstUrl);',
+);
+
+source = source.replace(
+  '    throw new Error(`${archived ? "WARP" : "現行"}公募検索から${years.join("・")}年度の決定ページを取得できません`);',
+  '    const probe = archived ? ` / WARP先頭ページ: maxPage=${first.maxPage}, dates=${first.minPublishedDate ?? "none"}..${first.maxPublishedDate ?? "none"}, text=${text(firstHtml).slice(0, 240)}` : "";\n    throw new Error(`${archived ? "WARP" : "現行"}公募検索から${years.join("・")}年度の決定ページを取得できません${probe}`);',
+);
+
 if (source === original) {
   console.log("NEDO parser hotfix already applied.");
 } else {
