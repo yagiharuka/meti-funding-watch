@@ -90,6 +90,14 @@ test("JOGMEC listing parser keeps regular and appendix monthly PDFs in the curre
   assert.equal(documents[2].url, "https://www.jogmec.go.jp/content/300802221.pdf");
 });
 
+test("JOGMEC listing parser fails closed when the current fiscal-year section disappears", () => {
+  const html = `<h2>2025年度</h2><a href="/content/old.pdf">3月 (PDF : 81KB)</a>`;
+  assert.throws(
+    () => parseJogmecListingHtml(html, JOGMEC_RESULTS_URL, { fiscalYear: 2026 }),
+    /2026年度見出しがありません/,
+  );
+});
+
 test("JOGMEC positioned parser keeps contract price, but not unpublished or unit-only prices", () => {
   const parsed = parseJogmecTableItems(tableItems(), DOCUMENT);
   assert.equal(parsed.rowCount, 3);
