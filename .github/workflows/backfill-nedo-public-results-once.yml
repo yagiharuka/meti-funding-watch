@@ -6,6 +6,8 @@ on:
       - feat/nedo-2017-2025-public-results-20260825
     paths:
       - ".github/workflows/backfill-nedo-public-results-once.yml"
+      - "scripts/nedo-public-results.mjs"
+      - "tests/nedo-public-results.test.mjs"
   workflow_dispatch:
 
 permissions:
