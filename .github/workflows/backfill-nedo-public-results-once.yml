@@ -34,9 +34,31 @@ jobs:
         run: node --test tests/nedo-public-results.test.mjs
 
       - name: Backfill NEDO FY2017-FY2025 official result participants
-        run: node scripts/nedo-public-results.mjs --years=2017-2025
+        id: backfill
+        continue-on-error: true
+        run: |
+          mkdir -p .audit
+          set +e
+          node scripts/nedo-public-results.mjs --years=2017-2025 2>&1 | tee .audit/nedo-public-results-backfill.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Persist backfill failure diagnostics
+        if: steps.backfill.outcome != 'success'
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f .audit/nedo-public-results-backfill.log
+          git commit -m "chore(audit): record NEDO backfill failure"
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Fail after persisting diagnostics
+        if: steps.backfill.outcome != 'success'
+        run: exit 1
 
       - name: Commit backfilled NEDO result index
+        if: steps.backfill.outcome == 'success'
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
