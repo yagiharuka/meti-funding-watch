@@ -73,6 +73,12 @@
   font-size: 0.9rem;
 }
 
+/* React側の年度警告が旧文言のままでも、年度不明の偏りを必ず表示するフォールバック。 */
+#records > .filter-note::after {
+  content: " 日付の記載がない行の大半は中小企業庁の補助金です。そのため、年度指定時の結果では中小企業庁の補助金が大きく欠けます。";
+  font-weight: 700;
+}
+
 @media (max-width: 720px) {
   .company-name-suggestions-heading,
   .company-name-suggestion {
