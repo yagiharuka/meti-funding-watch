@@ -53,7 +53,7 @@ function normalizeOrganization(value = "") {
 }
 
 function normalizeSupportYears(value = "") {
-  return String(value).replace(/\s+/g, "").replace(/-/g, "～");
+  return String(value).replace(/\s+/g, "").replace(/[~〜～-]/g, "～");
 }
 
 function sourceSlug(sourceUrl) {
