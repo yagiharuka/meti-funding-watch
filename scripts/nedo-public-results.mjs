@@ -22,11 +22,11 @@ export const NEDO_YEAR_INDEX = new Map([
   [2025, "https://www.nedo.go.jp/koubo/2025_list.html"],
 ]);
 
-const PARTICIPANT_ATTACHMENT_PATTERN = /(実施予定先|実施先一覧|実施者一覧|委託予定先|委託先予定|委託先一覧|助成予定先|助成先一覧|助成金交付予定先|交付予定先|交付決定事業者|交付決定先|採択事業者|採択者一覧|採択先一覧|採択テーマ一覧|採択案件一覧|採択結果|実施体制)/u;
+const PARTICIPANT_ATTACHMENT_PATTERN = /(実施予定先|実施先一覧|実施者一覧|委託予定先|委託先予定|委託先一覧|助成予定先|助成先一覧|助成金交付予定先|交付予定先|交付決定事業者|交付決定先|採択事業者|採択者一覧|採択先一覧|採択テーマ一覧|採択案件一覧|採択結果|認定VC|実施体制)/u;
 const PARTICIPANT_SECTION_PATTERN = /(実施予定先|実施先|実施者|委託予定先|委託先|助成予定先|助成先|交付予定先|交付決定事業者|交付決定先|採択事業者|採択者|採択先)/u;
 const EXCLUDED_ATTACHMENT_PATTERN = /(採択審査委員|審査委員|評価委員|公募要領|仕様書|基本計画|実施方針|提案書作成要領|契約約款|説明会資料|採択テーマ概要)/u;
 const GENERIC_ATTACHMENT_PATTERN = /^(?:別紙|別添|添付|資料)\d+/u;
-const NO_SELECTION_PATTERN = /(採択候補(?:は)?なし|採択者(?:は)?なし|実施予定先(?:は)?なし|提案が\s*0\s*件|応募が\s*0\s*件|応募なし|採択に至りませんでした)/u;
+const NO_SELECTION_PATTERN = /(採択候補(?:は)?なし|採択者(?:は)?なし|実施予定先(?:は)?なし|提案が\s*0\s*件|応募が\s*0\s*件|応募(?:が)?ありませんでした|応募なし|採択に至りませんでした)/u;
 const PARTICIPANT_CONTEXT_PATTERN = /(実施予定先|委託予定先|助成予定先|交付決定|採択(?:先|者|事業者|テーマ))/u;
 const HEADER_NOISE_PATTERN = /(採択テーマ|研究開発項目|研究開発テーマ|事業名|テーマ名|提案書受理番号|申請者|採択先|実施予定先|委託予定先|助成予定先|交付決定先|スキーム|フェーズ|一覧|別紙|別添)/u;
 const NEDO_NAME = "国立研究開発法人新エネルギー・産業技術総合開発機構";
@@ -40,7 +40,7 @@ const PREFIX_FORMS = [
 const SUFFIX_FORMS = [
   "有限責任監査法人", "監査法人", "株式会社", "有限会社", "合同会社", "合資会社", "合名会社",
 ];
-const ENGLISH_FORM_PATTERN = /\b(?:Inc\.?|Incorporated|Corp\.?|Corporation|Co\.?\s*,?\s*Ltd\.?|Ltd\.?|LLC|L\.L\.C\.|GmbH|S\.A\.|B\.V\.)$/iu;
+const ENGLISH_FORM_PATTERN = /\b(?:Inc\.?|Incorporated|Corp\.?|Corporation|Co\.?\s*,?\s*Ltd\.?|Ltd\.?|LLC|L\.L\.C\.|GmbH|S\.A\.|B\.V\.|AS(?:A)?(?:,\s*Japan Branch)?|Japan Branch)$/iu;
 
 function decodeEntities(value = "") {
   return String(value)
@@ -130,10 +130,8 @@ export function parseNedoAnnualIndexHtml(html, annualUrl) {
 export function parseNedoFieldResultsHtml(html, fieldUrl) {
   const resultLinks = new Set();
   for (const row of String(html).matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
-    const rowText = text(row[1]);
-    const cells = [...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((match) => compact(match[1]));
-    if (!cells.includes("決定")) continue;
     const anchors = [...row[1].matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
+    if (anchors.length < 2) continue;
     for (const candidate of anchors.slice().reverse()) {
       const url = nedoOrWarpUrl(candidate[1], fieldUrl);
       if (!url) continue;
@@ -553,7 +551,8 @@ async function discoverMasterResults(years, fetchImpl, failures, { archived = fa
   const wanted = new Set(years);
   const pageUrl = (page) => archived ? archivedMasterSearchUrl(page) : `${LIVE_MASTER_SEARCH_BASE}${page}`;
   const firstUrl = pageUrl(1);
-  const first = parseNedoMasterSearchHtml(await fetchHtml(firstUrl, fetchImpl), firstUrl);
+  const firstHtml = await fetchHtml(firstUrl, fetchImpl);
+  const first = parseNedoMasterSearchHtml(firstHtml, firstUrl);
   const all = [...first.decisions];
   const earliestWanted = `${Math.min(...years)}-04-01`;
   let maxVisitedPage = 1;
@@ -581,7 +580,8 @@ async function discoverMasterResults(years, fetchImpl, failures, { archived = fa
   }
   const decisions = all.filter((item) => wanted.has(item.fiscalYear));
   if (!decisions.length) {
-    throw new Error(`${archived ? "WARP" : "現行"}公募検索から${years.join("・")}年度の決定ページを取得できません`);
+    const probe = archived ? ` / WARP先頭ページ: maxPage=${first.maxPage}, dates=${first.minPublishedDate ?? "none"}..${first.maxPublishedDate ?? "none"}, text=${text(firstHtml).slice(0, 240)}` : "";
+    throw new Error(`${archived ? "WARP" : "現行"}公募検索から${years.join("・")}年度の決定ページを取得できません${probe}`);
   }
   return {
     discovery: archived ? "warp-master-search" : "current-master-search",
