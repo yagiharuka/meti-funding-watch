@@ -27,28 +27,59 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Reingest every DTSU and GX company page
-        run: node scripts/nedo-official-supplement.mjs
-      - name: Rebuild the public official supplement index
-        run: node scripts/build-official-supplement-index.mjs
-      - name: Validate NEDO rows and the combined supplement
+      - name: Reingest, rebuild and validate while preserving the complete result
+        id: reingest
+        shell: bash
         run: |
-          node --test tests/nedo-official-supplement.test.mjs tests/official-supplement.test.mjs
-          node --input-type=module -e '
-            import { readFile } from "node:fs/promises";
-            const data = JSON.parse(await readFile("data/official-supplement-nedo.json", "utf8"));
-            if (data.parseFailureCount !== 0) throw new Error(`parse failures: ${data.parseFailureCount}`);
-            if (data.listingCount !== data.parsedCount + data.amountUnavailableCount) {
-              throw new Error(`row accounting mismatch: ${data.parsedCount}+${data.amountUnavailableCount}/${data.listingCount}`);
-            }
-            if (data.records.length < 40) throw new Error(`too few retained records: ${data.records.length}`);
-            console.log(JSON.stringify({ listingCount: data.listingCount, parsedCount: data.parsedCount, amountUnavailableCount: data.amountUnavailableCount, retainedRecords: data.records.length }));
-          '
-      - name: Commit generated data and remove this one-time workflow
+          mkdir -p .audit
+          status=0
+          {
+            echo "== NEDO DTSU/GX live reingest =="
+            node scripts/nedo-official-supplement.mjs || status=$?
+            if [ "$status" -eq 0 ]; then
+              echo "== Rebuild combined official supplement index =="
+              node scripts/build-official-supplement-index.mjs || status=$?
+            fi
+            if [ "$status" -eq 0 ]; then
+              echo "== Regression tests =="
+              node --test tests/nedo-official-supplement.test.mjs tests/official-supplement.test.mjs || status=$?
+            fi
+            if [ "$status" -eq 0 ]; then
+              echo "== Row accounting =="
+              node --input-type=module -e '
+                import { readFile } from "node:fs/promises";
+                const data = JSON.parse(await readFile("data/official-supplement-nedo.json", "utf8"));
+                if (data.parseFailureCount !== 0) throw new Error(`parse failures: ${data.parseFailureCount}`);
+                if (data.listingCount !== data.parsedCount + data.amountUnavailableCount) {
+                  throw new Error(`row accounting mismatch: ${data.parsedCount}+${data.amountUnavailableCount}/${data.listingCount}`);
+                }
+                if (data.records.length < 40) throw new Error(`too few retained records: ${data.records.length}`);
+                console.log(JSON.stringify({ listingCount: data.listingCount, parsedCount: data.parsedCount, amountUnavailableCount: data.amountUnavailableCount, retainedRecords: data.records.length }));
+              ' || status=$?
+            fi
+            echo "exitStatus=$status"
+          } > .audit/nedo-dtsu-gx-reingest.log 2>&1
+          cat .audit/nedo-dtsu-gx-reingest.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - name: Commit generated data or failure evidence and remove this one-time workflow
+        shell: bash
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/official-supplement-nedo.json data/official-supplement-index.json
+          git add .audit/nedo-dtsu-gx-reingest.log
+          if [ "${{ steps.reingest.outputs.status }}" -eq 0 ]; then
+            git add data/official-supplement-nedo.json data/official-supplement-index.json
+          fi
           git rm .github/workflows/reingest-nedo-once.yml
-          git commit -m "chore(data): reingest all NEDO DTSU and GX pages"
-          git push origin HEAD:reingest/nedo-dtsu-gx-full
+          git commit -m "chore(data): record NEDO DTSU and GX full reingest"
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/nedo-dtsu-gx-full
+            if git push origin HEAD:reingest/nedo-dtsu-gx-full; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1
+      - name: Fail after preserving evidence when live reingest did not validate
+        if: steps.reingest.outputs.status != '0'
+        run: exit 1
