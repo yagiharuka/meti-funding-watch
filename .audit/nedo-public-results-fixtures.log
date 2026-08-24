@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: NEDO annual index discovers only field list pages
+ok 1 - NEDO annual index discovers only field list pages
+  ---
+  duration_ms: 1.888923
+  type: 'test'
+  ...
+# Subtest: NEDO field list uses the result link and ignores rows without results
+ok 2 - NEDO field list uses the result link and ignores rows without results
+  ---
+  duration_ms: 0.690525
+  type: 'test'
+  ...
+# Subtest: NEDO decision parser identifies participant attachments without confusing review committees
+ok 3 - NEDO decision parser identifies participant attachments without confusing review committees
+  ---
+  duration_ms: 2.565687
+  type: 'test'
+  ...
+# Subtest: participant extraction keeps Toyota and other legal organizations but not NEDO or headings
+not ok 4 - participant extraction keeps Toyota and other legal organizations but not NEDO or headings
+  ---
+  duration_ms: 15.601315
+  type: 'test'
+  location: '/home/runner/work/meti-funding-watch/meti-funding-watch/tests/nedo-public-results.test.mjs:53:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'トヨタ自動車株式会社',
+        '株式会社豊田中央研究所',
+    -   'トヨタ自動車株式会社',
+        '国立大学法人東京大学'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '株式会社豊田中央研究所'
+    1: 'トヨタ自動車株式会社'
+    2: '国立大学法人東京大学'
+  actual:
+    0: 'トヨタ自動車株式会社'
+    1: '株式会社豊田中央研究所'
+    2: '国立大学法人東京大学'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/meti-funding-watch/meti-funding-watch/tests/nedo-public-results.test.mjs:61:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 434.515622
