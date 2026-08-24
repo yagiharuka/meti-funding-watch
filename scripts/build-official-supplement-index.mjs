@@ -14,11 +14,12 @@ const jetro = JSON.parse(await readFile("data/official-supplement-jetro.json", "
 const aist = JSON.parse(await readFile("data/official-supplement-aist.json", "utf8"));
 const inpit = JSON.parse(await readFile("data/official-supplement-inpit.json", "utf8"));
 const nite = JSON.parse(await readFile("data/official-supplement-nite.json", "utf8"));
+const ipa = JSON.parse(await readFile("data/official-supplement-ipa.json", "utf8"));
 
 if (seeds.schemaVersion !== 1 || !Array.isArray(seeds.sources)) {
   throw new Error("公式補足シードの形式が不正です");
 }
-for (const source of [jetro, aist, inpit, nite]) {
+for (const source of [jetro, aist, inpit, nite, ipa]) {
   if (source.schemaVersion !== 1 || !source.id || !Array.isArray(source.records)) {
     throw new Error(`${source.name ?? source.id ?? "追加公式補足"}の形式が不正です`);
   }
@@ -27,7 +28,8 @@ if (jetro.id !== "jetro") throw new Error("JETRO公式補足のIDが不正です
 if (aist.id !== "aist") throw new Error("産総研公式補足のIDが不正です");
 if (inpit.id !== "inpit") throw new Error("INPIT公式補足のIDが不正です");
 if (nite.id !== "nite") throw new Error("NITE公式補足のIDが不正です");
-const seedSources = [...seeds.sources, jetro, aist, inpit, nite];
+if (ipa.id !== "ipa") throw new Error("IPA公式補足のIDが不正です");
+const seedSources = [...seeds.sources, jetro, aist, inpit, nite, ipa];
 
 const officialFiles = Object.entries(officialManifest.files ?? {})
   .filter(([year]) => Number(year) >= MIN_FISCAL_YEAR)
@@ -80,7 +82,7 @@ const officialSupplementRecords = officialRows
   }));
 
 const seedRecords = seedSources.flatMap((source) => {
-  if (!["nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
+  if (!["nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
   if (!Array.isArray(source.records)) throw new Error(`${source.id}: recordsが配列ではありません`);
   return source.records.map((row) => {
     if (!row.id || !row.organization || !validAmount(row.amount) || Number(row.fiscalYear) < MIN_FISCAL_YEAR || !row.sourceUrl?.startsWith("https://")) {
@@ -133,7 +135,7 @@ const sourceNotes = {
   }])),
 };
 
-const sourceOrder = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite"];
+const sourceOrder = ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa"];
 const sources = sourceOrder.map((id) => ({
   ...sourceNotes[id],
   recordCount: records.filter((row) => row.sourceId === id).length,
@@ -141,9 +143,9 @@ const sources = sourceOrder.map((id) => ({
 
 const output = {
   schemaVersion: 1,
-  generatedAt: [officialManifest.generatedAt, seeds.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt].filter(Boolean).sort().at(-1) ?? seeds.updatedAt,
+  generatedAt: [officialManifest.generatedAt, seeds.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt, ipa.updatedAt].filter(Boolean).sort().at(-1) ?? seeds.updatedAt,
   minFiscalYear: MIN_FISCAL_YEAR,
-  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構・JOGMEC・JETRO・産業技術総合研究所・工業所有権情報・研修館（INPIT）・製品評価技術基盤機構（NITE）について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
+  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構・JOGMEC・JETRO・産業技術総合研究所・工業所有権情報・研修館（INPIT）・製品評価技術基盤機構（NITE）・情報処理推進機構（IPA）について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
   recordCount: records.length,
   sources,
   records,
