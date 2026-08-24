@@ -54,21 +54,19 @@
 | M-021 | 金額・集計 | GビズINFOの「掲載N件」＝一意な案件数・交付件数 | 中 | GビズINFO企業カード | — | — | — | OPEN |
 | M-022 | 系列間比較 | 最初の検索欄の「事業名」結果＝GビズINFOの活動名称・企業別受取額 | 高 | トップの事業名検索 | 検索対象を明示的に切り替え、行政事業レビューの事業・予算執行として表示し、企業別GビズINFO掲載行と合算しない旨をその場に表示 | `app/page.tsx`, `app/HomeProgramSearch.tsx` | `tests/ui-accuracy.test.mjs`, `tests/funding-data.test.mjs` | MITIGATED |
 | M-023 | 金額・集計 | 公式補足の入札結果にある落札金額＝契約金額・実支払額 | 高 | 企業検索の公式補足（入札結果） | 区分を「入札結果」として契約結果から分離し、公表金額の直下に「落札金額（税抜）」を表示する。読み方でも落札金額を契約金額・実支払額と同一視しないことを明示 | `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts`, `app/DataReadingGuide.tsx`, `data/official-supplement-seeds.json`, `data/official-supplement-jetro.json` | `tests/official-supplement.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
-| M-024 | UI失敗時 | 公式補足の自動取得元のHTML・PDF・Excel形式が変わりparserが0件・誤解析になっても、正常更新されたように見える | 高 | 企業検索の公式補足（自動取得） | — | — | — | OPEN |
+| M-024 | UI失敗時 | 公式補足の自動取得元のHTML・PDF・Excel形式が変わりparserが0件・誤解析になっても、正常更新されたように見える | 高 | 企業検索の公式補足（自動取得） | 月次自動取得する各機関で、取得失敗、対象年度・見出し消失、0件、列構造変化、資料数・掲載行数の後退、既存行の識別情報・名称・金額の変化をfail-closedで停止する。金額非公表行や単価表示は0円・契約総額へ変換せず別計数する | `scripts/nedo-official-supplement.mjs`, `scripts/smrj-official-supplement.mjs`, `scripts/jetro-official-supplement.mjs`, `scripts/aist-official-supplement.mjs`, `scripts/nite-official-supplement.mjs`, `scripts/ipa-official-supplement.mjs`, `scripts/inpit-official-supplement.mjs`, `scripts/rieti-official-supplement.mjs`, `scripts/jogmec-official-supplement.mjs` | `tests/nedo-official-supplement.test.mjs`, `tests/smrj-official-supplement.test.mjs`, `tests/jetro-official-supplement.test.mjs`, `tests/aist-official-supplement.test.mjs`, `tests/nite-official-supplement.test.mjs`, `tests/ipa-official-supplement.test.mjs`, `tests/inpit-official-supplement.test.mjs`, `tests/rieti-official-supplement.test.mjs`, `tests/jogmec-official-supplement.test.mjs` | MITIGATED |
 | M-025 | 金額・集計 | 公式資料の「契約金額」＝実際に支払われた金額 | 高 | 企業検索の公式補足（契約結果） | 読み方で契約額・契約金額は契約時点の公表値で実支払額と同一視しないことを明示。単価契約では調達予定総額として掲載される場合があることも示し、INPITの該当行は `契約金額（調達予定総額）` として原資料の意味を保持する | `app/DataReadingGuide.tsx`, `data/official-supplement-inpit.json`, `scripts/build-official-supplement-index.mjs` | `tests/company-evidence-ui.test.mjs`, `tests/official-supplement.test.mjs` | MITIGATED |
-| M-026 | 出典・鮮度 | GitHub上のコミット済み公式補足索引＝現在のビルダが生成する公開用派生データ | 高 | GitHub上のJSON、再利用・監査 | — | — | — | OPEN |
+| M-026 | 出典・鮮度 | GitHub上のコミット済み公式補足索引＝現在のビルダが生成する公開用派生データ | 高 | GitHub上のJSON、再利用・監査 | `official-supplement-index.json` を現行ビルダ出力で同期し、CIのclean checkoutで再生成した後にコミット済みファイルとの差分があれば失敗させる。月次公式更新でも同派生索引を明示的なcommit対象として維持する | `scripts/build-official-supplement-index.mjs`, `.github/workflows/ci.yml`, `.github/workflows/refresh-official-data.yml` | CI `Verify committed official supplement index` | MITIGATED |
 
 ## OPEN項目
 
-`OPEN` は修正漏れではなく、次の監査・修正対象を明示するための状態です。現在の未対策は次の5件です。
+`OPEN` は修正漏れではなく、次の監査・修正対象を明示するための状態です。現在の未対策は次の3件です。
 
-1. **M-026** コミット済み派生索引とビルド結果がずれ、GitHub上のraw dataだけが古く見える問題。
-2. **M-024** 月次自動取得parserの形式変更・0件・誤解析を正常更新と扱う問題。
-3. **M-020** 0円掲載を最終的な交付額・受注額0円と断定できるように見える問題。
-4. **M-008** 旧商号を入力すれば現在の同一法人を必ず検索できるように見える問題。
-5. **M-021** 「掲載N件」を一意な案件数・交付件数と読める問題。
+1. **M-020** 0円掲載を最終的な交付額・受注額0円と断定できるように見える問題。
+2. **M-008** 旧商号を入力すれば現在の同一法人を必ず検索できるように見える問題。
+3. **M-021** 「掲載N件」を一意な案件数・交付件数と読める問題。
 
-M-026は派生索引を再生成してコミットし、CIでビルド後差分を禁止するまで対策済みにしません。M-024は月次自動取得へ移す各機関でfail-closed検証を実装するまで対策済みにしません。M-020はGビズINFO全件CSVに状態情報がないため、0円行の意味を原典側でどこまで確定できるかを調べるまで対策済みにしません。M-008は旧商号履歴の根拠データをどこまで保持できるかを確認するまで対策済みにしません。M-021は表示を「掲載行」に統一すれば足りるか、検索結果・企業カード・詳細画面を通して確認してから対応します。
+M-020はGビズINFO全件CSVに状態情報がないため、0円行の意味を原典側でどこまで確定できるかを調べるまで対策済みにしません。M-008は旧商号履歴の根拠データをどこまで保持できるかを確認するまで対策済みにしません。M-021は表示を「掲載行」に統一すれば足りるか、検索結果・企業カード・詳細画面を通して確認してから対応します。
 
 ## 注記配置の原則
 
