@@ -18,6 +18,7 @@ on:
       - "data/official-supplement-jetro.json"
       - "data/official-supplement-aist.json"
       - "data/official-supplement-inpit.json"
+      - "data/official-supplement-nite.json"
       - "data/official-supplement-index.json"
       - "data/funding-data.json"
       - "data/funding-summary.json"

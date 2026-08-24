@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-24T01:25:00.000Z",
+  "id": "nite",
+  "name": "製品評価技術基盤機構（NITE）",
+  "coverageNote": "現在はNITE公式の競争入札結果（物品役務等）で契約日・契約相手方・13桁法人番号・契約金額を確認できた2025年度の1行だけを収録。NITEの全年度・全契約・随意契約を網羅するものではない。",
+  "records": [
+    {
+      "id": "nite-2025-chemical-substances-contact-system",
+      "organization": "株式会社DTS",
+      "corporateNumber": "9010401018458",
+      "fiscalYear": 2025,
+      "date": "2025-08-01",
+      "program": "化審法連絡システムの開発並びに運用及び保守",
+      "theme": "",
+      "phase": "",
+      "supportYears": "",
+      "category": "contract_result",
+      "amountStage": "契約金額",
+      "amount": 15994000,
+      "sourceUrl": "https://www.nite.go.jp/data/000159026.pdf",
+      "sourcePageUrl": "https://www.nite.go.jp/data/000159026.pdf",
+      "sourceKey": "nite-000159026-1"
+    }
+  ]
+}
