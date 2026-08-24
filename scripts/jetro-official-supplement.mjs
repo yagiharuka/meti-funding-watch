@@ -74,7 +74,7 @@ export function parseJetroListingHtml(html, listUrl = JETRO_LIST_URL, { minLinks
 }
 
 function parseAwardee(text, sourceUrl) {
-  const blockMatch = text.match(/落札者\s*([\s\S]*?)(?=\n(?:選定方法|落札金額|公告日|備考)\b)/u);
+  const blockMatch = text.match(/落札者\s*([\s\S]*?)(?=\n(?:選定方法|落札金額|公告日|備考)(?:\n|$))/u);
   if (!blockMatch) throw new Error(`JETRO落札者を取得できません: ${sourceUrl}`);
   const lines = blockMatch[1].split("\n").map((line) => line.trim()).filter(Boolean);
   if (!lines.length) throw new Error(`JETRO落札者を取得できません: ${sourceUrl}`);
