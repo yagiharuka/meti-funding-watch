@@ -1,0 +1,20 @@
+file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:341
+    throw new Error(`NEDO 2017-2025公募結果バックフィルに未解決資料があります: ${collected.failures.length}\n${collected.failures.slice(0, 30).join("\n")}${collected.failures.length > 30 ? `\n...ほか${collected.failures.length - 30}件` : ""}`);
+          ^
+
+Error: NEDO 2017-2025公募結果バックフィルに未解決資料があります: 9
+2017: NEDO取得失敗: HTTP 404 https://www.nedo.go.jp/koubo/h29_list.html
+2018: NEDO取得失敗: HTTP 404 https://www.nedo.go.jp/koubo/h30_list.html
+2019: NEDO取得失敗: HTTP 404 https://www.nedo.go.jp/koubo/2019_list.html
+2020: NEDO取得失敗: HTTP 404 https://www.nedo.go.jp/koubo/2020_list.html
+2021: NEDO外URLです: https://x.com/nedo_info
+2022: NEDO外URLです: https://x.com/nedo_info
+2023: NEDO外URLです: https://x.com/nedo_info
+2024: NEDO外URLです: https://x.com/nedo_info
+2025: NEDO外URLです: https://x.com/nedo_info
+    at refreshNedoPublicResults (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:341:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async main (file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:375:18)
+    at async file:///home/runner/work/meti-funding-watch/meti-funding-watch/scripts/nedo-public-results.mjs:379:81
+
+Node.js v22.23.2
