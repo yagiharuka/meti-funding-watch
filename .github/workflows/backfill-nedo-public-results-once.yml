@@ -8,10 +8,17 @@ on:
       - ".github/workflows/backfill-nedo-public-results-once.yml"
       - "scripts/nedo-public-results.mjs"
       - "tests/nedo-public-results.test.mjs"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/backfill-nedo-public-results-once.yml"
+      - "scripts/nedo-public-results.mjs"
+      - "tests/nedo-public-results.test.mjs"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   backfill:
@@ -20,9 +27,6 @@ jobs:
     steps:
       - name: Check out feature branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -43,19 +47,6 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit "$status"
 
-      - name: Persist fixture failure diagnostics
-        if: steps.fixtures.outcome != 'success'
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -f .audit/nedo-public-results-fixtures.log
-          git commit -m "chore(audit): record NEDO fixture failure"
-          git push origin HEAD:${GITHUB_REF_NAME}
-
-      - name: Fail after fixture diagnostics
-        if: steps.fixtures.outcome != 'success'
-        run: exit 1
-
       - name: Backfill NEDO FY2017-FY2025 official result participants
         id: backfill
         if: steps.fixtures.outcome == 'success'
@@ -67,25 +58,26 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit "$status"
 
-      - name: Persist backfill failure diagnostics
-        if: steps.fixtures.outcome == 'success' && steps.backfill.outcome != 'success'
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -f .audit/nedo-public-results-backfill.log .audit/nedo-public-results-diagnostics.json
-          git commit -m "chore(audit): record NEDO backfill failure"
-          git push origin HEAD:${GITHUB_REF_NAME}
+      - name: Upload NEDO backfill evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nedo-public-results-evidence-${{ github.run_id }}
+          path: |
+            .audit/nedo-public-results-fixtures.log
+            .audit/nedo-public-results-backfill.log
+            .audit/nedo-public-results-diagnostics.json
+            data/official-supplement-nedo-public-results.json
+          if-no-files-found: warn
+          retention-days: 30
 
-      - name: Fail after backfill diagnostics
-        if: steps.fixtures.outcome == 'success' && steps.backfill.outcome != 'success'
-        run: exit 1
-
-      - name: Commit backfilled NEDO result index
-        if: steps.fixtures.outcome == 'success' && steps.backfill.outcome == 'success'
+      - name: Fail unless fixtures and backfill both succeeded
+        if: always()
+        env:
+          FIXTURE_OUTCOME: ${{ steps.fixtures.outcome }}
+          BACKFILL_OUTCOME: ${{ steps.backfill.outcome }}
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/official-supplement-nedo-public-results.json
-          git diff --cached --quiet && { echo "::error::Expected NEDO backfill output to change."; exit 1; }
-          git commit -m "chore(data): backfill NEDO public results 2017-2025"
-          git push origin HEAD:${GITHUB_REF_NAME}
+          if [[ "$FIXTURE_OUTCOME" != "success" || "$BACKFILL_OUTCOME" != "success" ]]; then
+            echo "::error::NEDO FY2017-FY2025 backfill is not complete."
+            exit 1
+          fi
