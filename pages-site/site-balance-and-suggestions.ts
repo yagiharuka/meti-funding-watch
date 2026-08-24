@@ -117,6 +117,16 @@ function balanceSiteCopy() {
     detailGrid?.insertAdjacentElement("beforebegin", overview);
   }
 
+  const yearFilterNote = [...document.querySelectorAll<HTMLElement>("#records .filter-note")]
+    .find((element) => element.textContent?.includes("年度を指定すると"));
+  const undatedCount = yearFilterNote?.textContent?.match(/(\d[\d,]*)行/)?.[1];
+  if (yearFilterNote && undatedCount) {
+    setText(
+      yearFilterNote,
+      `年度を指定すると、認定日・受注日の記載がない${undatedCount}行は検索対象から外れます。日付の記載がない行の大半は中小企業庁の補助金です。そのため、年度指定時の結果では中小企業庁の補助金が大きく欠けます。`,
+    );
+  }
+
   setText(
     document.querySelector<HTMLElement>("footer > p"),
     "GビズINFO、行政事業レビュー、機関公表資料などの公開情報を抽出・整形して作成した非公式サイトです。原資料と本サイトの抽出・取込について、正確性・完全性・最新性を保証するものではありません。",
