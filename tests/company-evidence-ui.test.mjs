@@ -21,7 +21,7 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.ok(index.recordCount > 10_000, "central company index should use the committed official corpus, not only seed sources");
 
   const sourceIds = new Set(index.sources.map((source) => source.id));
-  assert.deepEqual([...sourceIds], ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite"]);
+  assert.deepEqual([...sourceIds], ["meti", "anre", "smea", "jpo", "nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa"]);
   for (const excluded of ["hokkaido", "tohoku", "kanto", "chubu", "kansai", "chugoku", "shikoku", "kyushu", "okinawa"]) {
     assert.equal(sourceIds.has(excluded), false, `${excluded} must not be in the company official search`);
     assert.ok(index.excludedExecutors.includes(excluded), `${excluded} must be explicitly excluded`);
@@ -33,6 +33,7 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.match(index.scopeNote, /産業技術総合研究所/);
   assert.match(index.scopeNote, /INPIT/);
   assert.match(index.scopeNote, /NITE/);
+  assert.match(index.scopeNote, /IPA/);
   assert.match(index.scopeNote, /地方経済産業局・沖縄総合事務局は企業検索の対象外/);
   assert.match(index.scopeNote, /見つからないことは支出がないことを意味しない/);
   assert.match(index.scopeNote, /相互に合算しない/);
@@ -72,6 +73,12 @@ test("official company index uses central bodies only with a FY2017 target floor
   assert.equal(nite.category, "contract_result");
   assert.equal(nite.amountStage, "契約金額");
   assert.equal(nite.amount, 15_994_000);
+  const ipa = index.records.find((row) => row.sourceId === "ipa" && row.corporateNumber === "7010001088960");
+  assert.ok(ipa, "known IPA official-only contract result must remain searchable");
+  assert.equal(ipa.category, "contract_result");
+  assert.equal(ipa.amountStage, "契約金額");
+  assert.equal(ipa.amount, 44_000_000);
+  assert.equal(ipa.program, "Society5.0を実現するためのスキル標準の改訂等業務");
 
   const jointRows = index.records.filter((row) => Array.isArray(row.organizations) && row.organizations.length > 1);
   assert.ok(jointRows.length > 0, "joint-recipient rows from the official corpus must survive index generation");
