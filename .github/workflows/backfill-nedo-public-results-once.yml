@@ -6,7 +6,6 @@ on:
       - feat/nedo-2017-2025-public-results-20260825
     paths:
       - ".github/workflows/backfill-nedo-public-results-once.yml"
-      - "scripts/apply-nedo-backfill-hotfix.mjs"
       - "scripts/nedo-public-results.mjs"
       - "tests/nedo-public-results.test.mjs"
   workflow_dispatch:
@@ -32,21 +31,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      - name: Apply pending NEDO parser hotfix
-        run: node scripts/apply-nedo-backfill-hotfix.mjs
-
-      - name: Persist NEDO parser hotfix
-        run: |
-          if git diff --quiet -- scripts/nedo-public-results.mjs; then
-            echo "Parser hotfix already committed."
-            exit 0
-          fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add scripts/nedo-public-results.mjs
-          git commit -m "fix(nedo): require exact decision status and reject bare legal forms"
-          git push origin HEAD:${GITHUB_REF_NAME}
 
       - name: Verify NEDO parser fixtures
         id: fixtures
