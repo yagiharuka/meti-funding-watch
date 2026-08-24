@@ -1,0 +1,161 @@
+{
+  "generatedAt": "2026-08-24T16:29:36.406Z",
+  "years": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "partialRecordCount": 272,
+  "yearStats": [
+    {
+      "fiscalYear": 2019,
+      "discovery": "current-master-search",
+      "fieldCount": null,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": 344,
+      "stoppedAtDate": "2020-01-08"
+    },
+    {
+      "fiscalYear": 2020,
+      "discovery": "current-master-search",
+      "fieldCount": null,
+      "resultPageCount": 18,
+      "parsedDecisionCount": 14,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 272,
+      "maxVisitedMasterPage": 344,
+      "stoppedAtDate": "2020-01-08"
+    },
+    {
+      "fiscalYear": 2021,
+      "discovery": "annual-field-index",
+      "fieldCount": 25,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2022,
+      "discovery": "annual-field-index",
+      "fieldCount": 26,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2023,
+      "discovery": "annual-field-index",
+      "fieldCount": 27,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2024,
+      "discovery": "annual-field-index",
+      "fieldCount": 26,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2025,
+      "discovery": "annual-field-index",
+      "fieldCount": 26,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    }
+  ],
+  "failureCount": 5,
+  "failures": [
+    {
+      "phase": "historical-discovery",
+      "years": [
+        2017,
+        2018
+      ],
+      "message": "WARP公募検索から2017・2018年度の決定ページを取得できません"
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2020,
+      "url": "https://www.nedo.go.jp/koubo/AT093_100168.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AT093_100168.html",
+      "diagnostic": {
+        "program": "「海外研究者招へい事業(国際研究協力ジャパントラスト事業)」",
+        "date": "2020-11-10",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2020,
+      "url": "https://www.nedo.go.jp/koubo/AT093_100173.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AT093_100173.html",
+      "diagnostic": {
+        "program": "「海外研究者招へい事業(国際研究協力ジャパントラスト事業)」に係る再公募結果について",
+        "date": "2020-12-18",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2020,
+      "url": "https://www.nedo.go.jp/koubo/CA3_100288.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100288.html",
+      "diagnostic": {
+        "program": "「研究開発型スタートアップ支援事業 /ベンチャーキャピタル等の認定」に係る認定VCの決定について",
+        "date": "2021-03-29",
+        "selectedCount": 18,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2020,
+      "url": "https://www.nedo.go.jp/koubo/EV3_100216.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100216.html",
+      "diagnostic": {
+        "program": "「省エネ化・低温室効果を達成できる次世代冷媒・冷凍空調技術及び評価手法の開発/トラック・バス等における搭載空調機器等への次世代冷媒使用時のリスクに関する調査」",
+        "date": "2020-08-12",
+        "selectedCount": 1,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    }
+  ]
+}
