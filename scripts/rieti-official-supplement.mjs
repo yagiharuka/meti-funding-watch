@@ -276,8 +276,8 @@ function mergeRecords(previous, current) {
 
 export async function refreshRietiOfficialSupplement({ fetchImpl = fetch, outputPath = OUTPUT_PATH, now = new Date() } = {}) {
   const previous = JSON.parse(await readFile(outputPath, "utf8"));
-  if (previous.schemaVersion !== 1 || previous.id !== "rieti" || !Array.isArray(previous.records)) {
-    throw new Error("RIETI公式補足の既存ファイル形式が不正です");
+  if (previous.schemaVersion !== 1 || previous.id !== "rieti" || previous.gbizAbsenceRequired !== true || !Array.isArray(previous.records)) {
+    throw new Error("RIETI公式補足の既存ファイル形式またはGビズINFO欠落検証ポリシーが不正です");
   }
   const fiscalYear = currentFiscalYear(now);
   const allowEmpty = now.getUTCMonth() + 1 === 4;
@@ -292,7 +292,8 @@ export async function refreshRietiOfficialSupplement({ fetchImpl = fetch, output
     updatedAt: new Date().toISOString(),
     id: "rieti",
     name: "経済産業研究所（RIETI）",
-    coverageNote: `RIETI公式「競争入札に係る契約締結情報」の${fiscalYear}年度月別PDFを月次確認し、件名・契約日・相手方・法人番号・契約金額を位置情報で解析する。単価契約等で「年間想定額」が併記される場合は、その年間想定額を「契約金額（年間想定額）」として保持する。法人番号が13桁でない公表行は推測補完せず空欄で保持する。今回 ${documents.length}資料・${parsed.length}行を解析。過去の確認済み行は保持する。随意契約やRIETIの全契約を網羅するものではない。`,
+    gbizAbsenceRequired: true,
+    coverageNote: "RIETI公式「競争入札に係る契約締結情報」の月別PDFから、件名・契約日・相手方・法人番号・契約金額を確認できる行を対象とする。欠落補足として公開する条件として、13桁法人番号・年度・正規化した件名で当サイトのGビズINFO同年度および年度不明収録を照合し、同一案件がないことを全レコードで機械検証する。検証できない行や重複候補が見つかった更新は公開しない。随意契約やRIETIの全年度・全契約を網羅するものではなく、契約金額は実支払額を意味しない。",
     fiscalYear,
     documentCount: documents.length,
     parsedCount: parsed.length,
