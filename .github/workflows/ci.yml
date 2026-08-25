@@ -49,3 +49,68 @@ jobs:
 
       - name: Build and test with repository fixtures
         run: npm test
+
+  apply_toyota_nedo_fix_once:
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/subsidy-summary-copy-20260825'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply the bounded source and data fix
+        run: node scripts/apply-toyota-nedo-ui-fix.mjs
+
+      - name: Rebuild indexes and run the full fixture suite
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+          node --test tests/company-search-safety.test.mjs tests/subsidy-semantics-ui.test.mjs tests/company-evidence-ui.test.mjs tests/nedo-official-supplement.test.mjs tests/official-supplement.test.mjs
+          npm test
+
+      - name: Commit the validated result and restore ordinary CI
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/ci.yml
+          git rm scripts/apply-toyota-nedo-ui-fix.mjs
+          git add \
+            pages-site/company-search-ui.ts \
+            pages-site/subsidy-semantics-ui.ts \
+            pages-site/company-evidence-ui.ts \
+            scripts/build-official-supplement-index.mjs \
+            scripts/build-official-company-index.mjs \
+            scripts/nedo-official-supplement.mjs \
+            data/official-supplement-nedo.json \
+            data/official-supplement-index.json \
+            tests/subsidy-semantics-ui.test.mjs \
+            tests/company-search-safety.test.mjs \
+            tests/company-evidence-ui.test.mjs \
+            tests/nedo-official-supplement.test.mjs \
+            tests/official-supplement.test.mjs \
+            .github/workflows/ci.yml
+          git commit -m "fix: show subsidy totals and Toyota NEDO participation"
+          for attempt in 1 2 3; do
+            git pull --rebase origin fix/subsidy-summary-copy-20260825
+            if git push origin HEAD:fix/subsidy-summary-copy-20260825; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1
