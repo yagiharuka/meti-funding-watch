@@ -148,3 +148,22 @@ test("expanded official UI keeps local allocation and negative-inference warning
   assert.match(guide, /相互に合算しません/);
   assert.match(source, /現在の収録機関を見る/);
 });
+
+
+test("Toyota NEDO implementation rows stay searchable without inventing a company amount", async () => {
+  const index = await json("public/data/official-company-index.json");
+  const rows = index.records.filter((row) => row.sourceId === "nedo" && row.corporateNumber === "1180301018771");
+  assert.equal(rows.length, 3);
+  assert.ok(rows.every((row) => row.organization === "トヨタ自動車株式会社"));
+  assert.ok(rows.every((row) => row.category === "implementation_decision"));
+  assert.ok(rows.every((row) => row.amount === null));
+  assert.ok(rows.some((row) => row.program === "電気自動車用革新型蓄電池開発"));
+  assert.ok(rows.some((row) => row.theme.includes("海外輸入水素")));
+  assert.ok(rows.some((row) => row.theme.includes("工場脱炭素化")));
+
+  const source = await text("pages-site/company-evidence-ui.ts");
+  assert.match(source, /implementation_decision/);
+  assert.match(source, /実施予定先/);
+  assert.match(source, /個社額の記載なし/);
+  assert.match(source, /row\.amount !== null/);
+});

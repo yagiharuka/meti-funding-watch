@@ -66,19 +66,16 @@ let scheduledFrame = 0;
 const esc = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 const amount = (n: number) => n >= 1e8 ? `${short.format(n / 1e8)}億円` : n >= 1e4 ? `${short.format(n / 1e4)}万円` : yen.format(n);
 const label = (s: Stage) => s === "contracted" ? "調達・委託" : "補助金";
-const note = (s: Stage) => s === "contracted" ? "受注額" : "GビズINFO補助金掲載額";
+const note = (s: Stage) => s === "contracted" ? "受注額" : "GビズINFO掲載額";
 const stage = (o: OrganizationSummary, s: Stage): AmountSummary => o.byStage.find((x) => x.stage === s) ?? { records: 0, amount: 0, amountKnownCount: 0 };
 const date = (v: string | null) => v || "日付の記載なし";
 
 function moneyCell(x: AmountSummary, s: Stage) {
-  if (s === "subsidy_published") {
-    return `<strong>合計しません</strong><small>個別の掲載額は明細で確認</small>`;
-  }
   return x.amountKnownCount ? `<strong title="${esc(yen.format(x.amount))}">${esc(amount(x.amount))}</strong><small>※${note(s)}</small>` : `<strong>—</strong><small>※${note(s)}</small>`;
 }
 
 function yearTable(o: OrganizationSummary) {
-  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>認定日・受注日の年度</th><th>調達・委託（件数／受注額）</th><th>補助金（掲載件数）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>認定日基準／金額は合計しません</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>認定日・受注日の年度</th><th>調達・委託（件数／受注額）</th><th>補助金（件数／掲載額）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountKnownCount ? esc(amount(y.subsidy_published.amount)) : "—"}／掲載額</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function programTable(o: OrganizationSummary) {
@@ -93,9 +90,6 @@ function detailTable(o: OrganizationSummary) {
 
 function fundingLine(o: OrganizationSummary, s: Stage) {
   const x = stage(o, s);
-  if (s === "subsidy_published") {
-    return `<div class="company-search-funding-line"><span class="company-search-funding-kind">補助金</span><strong class="company-search-count">${x.records}件</strong><strong class="company-search-amount empty">合計しません</strong><small>個別の掲載額は明細で確認${x.records > x.amountKnownCount ? `／金額記載 ${x.amountKnownCount}件` : ""}</small></div>`;
-  }
   return `<div class="company-search-funding-line"><span class="company-search-funding-kind">${label(s)}</span><strong class="company-search-count">${x.records}件</strong><strong class="company-search-amount${x.amountKnownCount ? "" : " empty"}" title="${x.amountKnownCount ? esc(yen.format(x.amount)) : ""}">${x.amountKnownCount ? esc(amount(x.amount)) : "—"}</strong><small>※${note(s)}${x.records > x.amountKnownCount ? `／金額記載 ${x.amountKnownCount}件` : ""}</small></div>`;
 }
 

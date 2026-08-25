@@ -24,12 +24,12 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   assert.match(app, /<th>直近5年度<\/th>/);
   assert.match(app, /掲載行の多い活動名称・件名/);
 
-  // Company cards natively suppress subsidy aggregates, but no longer carry the long explanation.
-  assert.match(company, /if \(s === "subsidy_published"\)/);
-  assert.match(company, /合計しません/);
-  assert.match(company, /個別の掲載額は明細で確認/);
+  // Company cards display same-corporation subsidy published amounts while keeping cross-corporation aggregation blocked.
+  assert.doesNotMatch(company, /合計しません/);
+  assert.doesNotMatch(company, /個別の掲載額は明細で確認/);
   assert.match(company, /認定日・受注日の年度/);
-  assert.match(company, /補助金（掲載件数）/);
+  assert.match(company, /補助金（件数／掲載額）/);
+  assert.match(company, /subsidy_published\.amountKnownCount/);
   assert.match(company, /事業別を見る/);
   assert.match(company, /href="#data-reading-guide">↓ 読み方/);
   assert.doesNotMatch(company, /subsidySemanticsNote|subsidy-semantics-note/);
@@ -49,7 +49,8 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   assert.match(guard, /runGuarded\("year-warning", renderYearWarning\)/);
   assert.doesNotMatch(guard, /renderSemanticsNote|SUBSIDY_NOTE|runGuarded\("note"/);
   assert.doesNotMatch(guard, /patchCompanyExperience/);
-  assert.match(guard, /row\.children\.length !== 3/);
+  assert.doesNotMatch(guard, /replaceCell|合計しません|個別の掲載額は明細で確認|row\.children\.length !== 3/);
+  assert.match(guard, /setText\(headers\[2\], "掲載値合計"\)/);
   assert.match(guard, /subsidy-semantics-ready/);
   assert.match(css, /\[aria-label="企業検索結果サマリー"\] tbody tr \{\s*visibility: hidden;/s);
   assert.match(css, /\.subsidy-semantics-ready tbody tr \{\s*visibility: visible;/s);

@@ -65,6 +65,10 @@ function validAmount(value) {
   return typeof value === "number" && Number.isFinite(value) && Number.isSafeInteger(value);
 }
 
+function validPublishedAmount(value, category) {
+  return validAmount(value) || (value === null && category === "implementation_decision");
+}
+
 function validCorporateNumber(value) {
   return typeof value === "string" && /^\d{13}$/.test(value);
 }
@@ -98,7 +102,7 @@ const seedRecords = seedSources.flatMap((source) => {
   if (!["nedo", "smrj", "jogmec", "jetro", "aist", "inpit", "nite", "ipa", "rieti"].includes(source.id)) throw new Error(`公式補足シードに未許可の機関があります: ${source.id}`);
   if (!Array.isArray(source.records)) throw new Error(`${source.id}: recordsが配列ではありません`);
   return source.records.map((row) => {
-    if (!row.id || !row.organization || !validAmount(row.amount) || Number(row.fiscalYear) < MIN_FISCAL_YEAR || !row.sourceUrl?.startsWith("https://")) {
+    if (!row.id || !row.organization || !validPublishedAmount(row.amount, row.category) || Number(row.fiscalYear) < MIN_FISCAL_YEAR || !row.sourceUrl?.startsWith("https://")) {
       throw new Error(`${source.id}: 公式補足シード明細が不正です: ${row.id ?? "(idなし)"}`);
     }
     return {
@@ -125,7 +129,7 @@ const records = [...officialSupplementRecords, ...seedRecords]
   .sort((a, b) =>
     (b.fiscalYear ?? -1) - (a.fiscalYear ?? -1)
     || (b.date ?? "").localeCompare(a.date ?? "")
-    || b.amount - a.amount
+    || (b.amount ?? -1) - (a.amount ?? -1)
     || a.organization.localeCompare(b.organization, "ja"));
 
 const ids = new Set();
@@ -158,7 +162,7 @@ const output = {
   schemaVersion: 1,
   generatedAt: [officialManifest.generatedAt, seeds.updatedAt, nedo.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt, ipa.updatedAt, rieti.updatedAt].filter(Boolean).sort().at(-1) ?? seeds.updatedAt,
   minFiscalYear: MIN_FISCAL_YEAR,
-  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構・JOGMEC・JETRO・産業技術総合研究所・工業所有権情報・研修館（INPIT）・製品評価技術基盤機構（NITE）・情報処理推進機構（IPA）・経済産業研究所（RIETI）について、2021年度以降を基本対象とし、受取先と金額を確認できた公表情報だけを表示する。機関ごとに実際の収録開始年度は異なる。各機関の全制度・全契約を網羅するものではなく、GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
+  scopeNote: "公式補足は、経済産業省本省・資源エネルギー庁・中小企業庁・特許庁・NEDO・中小企業基盤整備機構・JOGMEC・JETRO・産業技術総合研究所・工業所有権情報・研修館（INPIT）・製品評価技術基盤機構（NITE）・情報処理推進機構（IPA）・経済産業研究所（RIETI）について、2021年度以降を基本対象とする。受取先と金額を確認できた公表行に加え、実施予定先として受取先を確認できても個社別金額が公表されていない行は金額なしとして区別して表示する。機関ごとに実際の収録開始年度は異なり、各機関の全制度・全契約を網羅するものではない。GビズINFO掲載値や行政事業レビュー支出額とは合算しない。",
   recordCount: records.length,
   sources,
   records,

@@ -25,6 +25,7 @@ async function readOptionalJson(path, fallback) {
 
 const officialManifest = JSON.parse(await readFile("data/official/manifest.json", "utf8"));
 const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+const nedo = JSON.parse(await readFile("data/official-supplement-nedo.json", "utf8"));
 const jetro = JSON.parse(await readFile("data/official-supplement-jetro.json", "utf8"));
 const aist = JSON.parse(await readFile("data/official-supplement-aist.json", "utf8"));
 const inpit = JSON.parse(await readFile("data/official-supplement-inpit.json", "utf8"));
@@ -44,18 +45,19 @@ if (officialManifest.schemaVersion !== 1 || !officialManifest.files || typeof of
 if (seeds.schemaVersion !== 1 || !Array.isArray(seeds.sources)) {
   throw new Error("公式補足シードの形式が不正です");
 }
-for (const source of [jetro, aist, inpit, nite, ipa, rieti]) {
+for (const source of [nedo, jetro, aist, inpit, nite, ipa, rieti]) {
   if (source.schemaVersion !== 1 || !source.id || !Array.isArray(source.records)) {
     throw new Error(`${source.name ?? source.id ?? "追加公式補足"}の形式が不正です`);
   }
 }
+if (nedo.id !== "nedo") throw new Error("NEDO公式補足のIDが不正です");
 if (jetro.id !== "jetro") throw new Error("JETRO公式補足のIDが不正です");
 if (aist.id !== "aist") throw new Error("産総研公式補足のIDが不正です");
 if (inpit.id !== "inpit") throw new Error("INPIT公式補足のIDが不正です");
 if (nite.id !== "nite") throw new Error("NITE公式補足のIDが不正です");
 if (ipa.id !== "ipa") throw new Error("IPA公式補足のIDが不正です");
 if (rieti.id !== "rieti") throw new Error("RIETI公式補足のIDが不正です");
-const seedSources = [...seeds.sources, jetro, aist, inpit, nite, ipa, rieti];
+const seedSources = [nedo, ...seeds.sources.filter((source) => source.id !== "nedo"), jetro, aist, inpit, nite, ipa, rieti];
 if (
   centralHistory.schemaVersion !== 1
   || !Array.isArray(centralHistory.documents)
@@ -94,6 +96,9 @@ function normalizeSearch(value = "") {
 function validAmount(value) {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
+function validPublishedAmount(value, category) {
+  return validAmount(value) || (value === null && category === "implementation_decision");
+}
 function validCorporateNumber(value) {
   return typeof value === "string" && /^\d{13}$/.test(value);
 }
@@ -119,7 +124,7 @@ function normalizeOfficialRow(row, idPrefix, fallbackSourceId = null, fallbackSo
     !SOURCE_ORDER.includes(sourceId)
     || EXCLUDED_EXECUTORS.has(sourceId)
     || Number(row.fiscalYear) < MIN_FISCAL_YEAR
-    || !validAmount(row.amount)
+    || !validPublishedAmount(row.amount, row.category)
     || !row.organization
     || !validHttps(sourceUrl)
   ) return null;
@@ -181,7 +186,7 @@ const records = [...governmentRecords, ...legacyMetiRecords, ...centralHistoryRe
   .sort((a, b) =>
     (b.fiscalYear ?? -1) - (a.fiscalYear ?? -1)
     || (b.date ?? "").localeCompare(a.date ?? "")
-    || b.amount - a.amount
+    || (b.amount ?? -1) - (a.amount ?? -1)
     || a.organization.localeCompare(b.organization, "ja"));
 
 const ids = new Set();
@@ -222,7 +227,7 @@ for (const id of SOURCE_ORDER) {
 }
 
 const sources = SOURCE_ORDER.filter((id) => sourceNotes.has(id)).map((id) => sourceNotes.get(id));
-const generatedCandidates = [officialManifest.generatedAt, seeds.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt, ipa.updatedAt, rieti.updatedAt, centralHistory.generatedAt, metiLegacy.verifiedAt]
+const generatedCandidates = [officialManifest.generatedAt, seeds.updatedAt, nedo.updatedAt, jetro.updatedAt, aist.updatedAt, inpit.updatedAt, nite.updatedAt, ipa.updatedAt, rieti.updatedAt, centralHistory.generatedAt, metiLegacy.verifiedAt]
   .filter(Boolean)
   .map((value) => new Date(value).getTime())
   .filter(Number.isFinite);
@@ -237,7 +242,7 @@ const output = {
   recordCount: records.length,
   sourceCount: sources.length,
   excludedExecutors: [...EXCLUDED_EXECUTORS],
-  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMEC、JETRO、産業技術総合研究所、工業所有権情報・研修館（INPIT）、製品評価技術基盤機構（NITE）、情報処理推進機構（IPA）、経済産業研究所（RIETI）の検証済み公表資料だけを使用する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
+  scopeNote: "企業検索用の公式資料索引。2017年度以降を対象方針とし、経済産業省本省、資源エネルギー庁、中小企業庁、特許庁、NEDO、中小企業基盤整備機構、JOGMEC、JETRO、産業技術総合研究所、工業所有権情報・研修館（INPIT）、製品評価技術基盤機構（NITE）、情報処理推進機構（IPA）、経済産業研究所（RIETI）の検証済み公表資料だけを使用する。実施予定先だけを確認でき、個社別金額が公表されていない行は金額なしとして表示する。地方経済産業局・沖縄総合事務局は企業検索の対象外。機関ごと・年度ごとに実際の収録範囲は異なり、2017年度以降の全年度・全制度・全契約を網羅するものではない。ここで見つからないことは支出がないことを意味しない。GビズINFO掲載値、行政事業レビュー支出額、公式資料の金額は相互に合算しない。",
   sources,
   records,
 };

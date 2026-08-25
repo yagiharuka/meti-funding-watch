@@ -183,7 +183,7 @@ test("zero Gbiz rows show the harm-critical negative-inference warning and keep 
   assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
 });
 
-test("real company renderer never emits a subsidy aggregate or zero-result warning, but keeps individual detail", async () => {
+test("real company renderer shows same-corporation subsidy totals without a zero-result warning and keeps individual detail", async () => {
   const ui = await renderCompanySearch({
     alternativeOrganizations: [{
       name: "テスト研究所株式会社",
@@ -223,17 +223,17 @@ test("real company renderer never emits a subsidy aggregate or zero-result warni
   assert.doesNotMatch(ui.innerHTML, /掲載法人自身の収益・最終受益額を示すものではありません/);
   assert.doesNotMatch(ui.innerHTML, /company-search-no-total/);
   assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
-  assert.match(ui.innerHTML, /<strong class="company-search-amount empty">合計しません<\/strong>/);
+  assert.doesNotMatch(ui.innerHTML, /合計しません|個別の掲載額は明細で確認/);
+  assert.match(ui.innerHTML, /<strong class="company-search-amount" title="￥987,654,321">9\.9億円<\/strong><small>※GビズINFO掲載額<\/small>/);
   assert.match(ui.innerHTML, /名称に「テスト株式会社」を含む別法人/);
   assert.match(ui.innerHTML, /テスト研究所株式会社/);
   assert.match(ui.innerHTML, /data-corp="2222222222222"/);
   assert.match(ui.innerHTML, /<th>認定日・受注日の年度<\/th>/);
-  assert.match(ui.innerHTML, /<th>補助金（掲載件数）<\/th>/);
-  assert.match(ui.innerHTML, /認定日基準／金額は合計しません/);
+  assert.match(ui.innerHTML, /<th>補助金（件数／掲載額）<\/th>/);
+  assert.match(ui.innerHTML, /9\.9億円／掲載額/);
   assert.match(ui.innerHTML, />事業別を見る<\/button>/);
   assert.doesNotMatch(ui.innerHTML, /金額の大きい事業を見る/);
-  assert.doesNotMatch(ui.innerHTML, /987,654,321|9\.9億円|98765\.4万円/);
-  assert.match(ui.innerHTML, /<strong>[^<]*200[^<]*<\/strong><small>※GビズINFO補助金掲載額<\/small>/);
+  assert.match(ui.innerHTML, /<strong>[^<]*200[^<]*<\/strong><small>※GビズINFO掲載額<\/small>/);
 
   const labels = visibleLabels(ui.innerHTML);
   for (const label of labels) {

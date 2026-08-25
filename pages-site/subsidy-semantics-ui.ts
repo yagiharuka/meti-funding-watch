@@ -34,22 +34,6 @@ function scheduleApply() {
   });
 }
 
-function replaceCell(cell: Element | undefined, strongText: string, smallText: string) {
-  if (!cell) throw new Error("Expected subsidy summary cell is missing");
-  if (
-    cell.getAttribute("data-subsidy-semantics") === "patched"
-    && cell.querySelector("strong")?.textContent === strongText
-    && cell.querySelector("small")?.textContent === smallText
-  ) return;
-  cell.innerHTML = "";
-  const strong = document.createElement("strong");
-  strong.textContent = strongText;
-  const small = document.createElement("small");
-  small.textContent = smallText;
-  cell.append(strong, small);
-  cell.setAttribute("data-subsidy-semantics", "patched");
-}
-
 function setText(element: Element | undefined | null, value: string) {
   if (element && element.textContent !== value) element.textContent = value;
 }
@@ -68,12 +52,7 @@ function patchReactSummary() {
       if (labels[2] !== "掲載値合計" && labels[2] !== "掲載値") {
         throw new Error(`Unexpected stage summary amount header: ${labels[2] ?? "missing"}`);
       }
-      setText(headers[2], "掲載値");
-      for (const row of table.querySelectorAll("tbody tr")) {
-        if (!row.querySelector(".stage-badge.subsidy_published")) continue;
-        if (row.children.length !== 3) throw new Error(`Unexpected stage summary column count: ${row.children.length}`);
-        replaceCell([...row.children][2], "合計しません", "個別の掲載額は明細で確認");
-      }
+      setText(headers[2], "掲載値合計");
     }
 
     if (labels[0] === "直近5年度") setText(headers[0], "認定日・受注日の直近5年度");

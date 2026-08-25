@@ -37,7 +37,8 @@ test("公式補足は13機関を公開する", async () => {
   for (const row of index.records) {
     assert.ok(allowed.has(row.sourceId), `unexpected source: ${row.sourceId}`);
     assert.ok(Number.isInteger(row.fiscalYear) && row.fiscalYear >= 2021, `${row.id}: fiscal year`);
-    assert.ok(Number.isSafeInteger(row.amount), `${row.id}: amount`);
+    if (row.category === "implementation_decision") assert.equal(row.amount, null, `${row.id}: implementation amount`);
+    else assert.ok(Number.isSafeInteger(row.amount), `${row.id}: amount`);
     assert.ok(row.organization, `${row.id}: organization`);
     assert.match(row.sourceUrl, /^https:\/\//, `${row.id}: source URL`);
     assert.equal(
@@ -184,4 +185,15 @@ test("Pages公開JSは公式補足UIだけを持ち、データは別ファイ�
   assert.ok(published.records.some((row) => row.sourceId === "nite" && row.organization === "株式会社DTS"));
   assert.ok(published.records.some((row) => row.sourceId === "ipa" && row.organization === "デロイトトーマツコンサルティング合同会社"));
   assert.ok(published.records.some((row) => row.sourceId === "rieti" && row.organization === "株式会社帝国データバンク"));
+});
+
+
+test("Toyota NEDO implementation destinations are published without a fabricated amount", async () => {
+  const index = await readJson("data/official-supplement-index.json");
+  const rows = index.records.filter((row) => row.sourceId === "nedo" && row.corporateNumber === "1180301018771");
+  assert.equal(rows.length, 3);
+  assert.ok(rows.every((row) => row.category === "implementation_decision"));
+  assert.ok(rows.every((row) => row.amount === null));
+  assert.ok(rows.every((row) => row.amountStage === "個社別金額は公表資料に記載なし"));
+  assert.match(index.scopeNote, /個社別金額が公表されていない行は金額なし/);
 });
