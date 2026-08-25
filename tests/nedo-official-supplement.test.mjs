@@ -69,7 +69,7 @@ test("NEDO parser skips DTSU rows and rejects an unparseable GX amount table", (
   );
 });
 
-
+// 月次更新で、手動確認済みのNEDO公募結果行を件数下限の比較対象にして消さないための契約。
 test("NEDO refresh compares the parser floor only with prior startup rows", async () => {
   const source = await readFile(new URL("../scripts/nedo-official-supplement.mjs", import.meta.url), "utf8");
   assert.match(source, /previousStartupCount/);
