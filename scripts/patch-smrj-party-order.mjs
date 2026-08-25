@@ -11,6 +11,43 @@ const parserPath = "scripts/smrj-official-supplement.mjs";
 let parser = await readFile(parserPath, "utf8");
 parser = replaceOnce(
   parser,
+  `function parseJapaneseEraDate(raw, fiscalYear) {
+  const match = clean(raw).match(/^(\\d{1,2})\\.(\\d{1,2})\\.(\\d{1,2})$/u);
+  if (!match) return null;
+  const eraYear = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const candidates = [1988 + eraYear, 2018 + eraYear]
+    .map((year) => ({ year, date: validDate(year, month, day) }))
+    .filter((candidate) => candidate.date && fiscalYearForDate(candidate.year, month) === fiscalYear);
+  return candidates.length === 1 ? candidates[0].date : null;
+}`,
+  `function parseJapaneseEraDate(raw, fiscalYear) {
+  const match = clean(raw).match(/^(\\d{1,2})\\.(\\d{1,2})\\.(\\d{1,2})$/u);
+  if (!match) return null;
+  const eraYear = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const candidates = [1988 + eraYear, 2018 + eraYear]
+    .map((year) => ({
+      year,
+      date: validDate(year, month, day),
+      fiscalDistance: Math.abs(fiscalYearForDate(year, month) - fiscalYear),
+    }))
+    .filter((candidate) => candidate.date)
+    .sort((left, right) => left.fiscalDistance - right.fiscalDistance || left.year - right.year);
+  if (!candidates.length || candidates[0].fiscalDistance > 1) return null;
+  if (candidates[1]?.fiscalDistance === candidates[0].fiscalDistance) return null;
+  return candidates[0].date;
+}
+
+export function parseSmrjContractDate(raw, fiscalYear) {
+  return parseJapaneseEraDate(raw, fiscalYear);
+}`,
+  "SMRJ fiscal-year-crossing date",
+);
+parser = replaceOnce(
+  parser,
   `      let organization = sameLineName;
       if (!organization) {
         const names = [];
@@ -91,10 +128,11 @@ tests = replaceOnce(
   tests,
   `  parseSmrjListingHtml,
   parseSmrjPositionedPages,`,
-  `  parseSmrjListingHtml,
+  `  parseSmrjContractDate,
+  parseSmrjListingHtml,
   parseSmrjPartyLines,
   parseSmrjPositionedPages,`,
-  "SMRJ party test import",
+  "SMRJ regression imports",
 );
 if (tests.includes("address-number-name ordering")) throw new Error("SMRJ party regression test already exists");
 tests = `${tests.trimEnd()}
@@ -109,7 +147,13 @@ test("SMRJ party parser accepts address-number-name ordering without losing the 
     [{ organization: "株式会社アイネット", corporateNumber: "5010001067883" }],
   );
 });
+
+test("SMRJ contract date parser accepts a prior-fiscal-year original date only when the era is unambiguous", () => {
+  assert.equal(parseSmrjContractDate("28.3.23", 2016), "2016-03-23");
+  assert.equal(parseSmrjContractDate("8.4.10", 2026), "2026-04-10");
+  assert.equal(parseSmrjContractDate("28.3.23", 2026), null);
+});
 `;
 await writeFile(testPath, tests);
 
-console.log("Patched SMRJ party ordering, diagnostics, and the regression test.");
+console.log("Patched SMRJ dates, party ordering, diagnostics, and regression tests.");
