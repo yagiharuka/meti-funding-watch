@@ -1,14 +1,17 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const path = "scripts/smrj-official-supplement.mjs";
-const before = await readFile(path, "utf8");
-const oldBlock = `  if (corporateIndexes.length) {
-    let previousBoundary = -1;
-    for (const index of corporateIndexes) {
-      const line = values[index];
-      const corporateNumber = line.match(/(\\d{13})/u)?.[1] ?? "";
-      const sameLineName = clean(line.split(/法人(?:番号|場号)/u)[0].replace(/[()（）:：]/gu, " "));
-      let organization = sameLineName;
+function replaceOnce(source, search, replacement, label) {
+  const index = source.indexOf(search);
+  if (index < 0) throw new Error(`${label}: replacement target not found`);
+  if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
+  return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
+}
+
+const parserPath = "scripts/smrj-official-supplement.mjs";
+let parser = await readFile(parserPath, "utf8");
+parser = replaceOnce(
+  parser,
+  `      let organization = sameLineName;
       if (!organization) {
         const names = [];
         for (let cursor = index - 1; cursor > previousBoundary && names.length < 3; cursor -= 1) {
@@ -18,62 +21,84 @@ const oldBlock = `  if (corporateIndexes.length) {
           if (ORGANIZATION_MARKER.test(candidate) || candidate.length > 8) break;
         }
         organization = clean(names.join(" "));
-      }
-      if (!organization || !validCorporateNumber(corporateNumber)) {
-        throw new Error(\`中小機構本部: 契約相手方と法人番号の対応を確定できません (\${values.join(" / ")})\`);
-      }
-      parties.push({ organization: normalizeOrganization(organization), corporateNumber });
-      previousBoundary = index;
-    }
-  } else {`;
-
-const newBlock = `  if (corporateIndexes.length) {
-    for (let position = 0; position < corporateIndexes.length; position += 1) {
-      const index = corporateIndexes[position];
-      const previousBoundary = corporateIndexes[position - 1] ?? -1;
-      const nextBoundary = corporateIndexes[position + 1] ?? values.length;
-      const line = values[index];
-      const corporateNumber = line.match(/(\\d{13})/u)?.[1] ?? "";
-      const sameLineName = clean(line.split(/法人(?:番号|場号)/u)[0].replace(/[()（）:：]/gu, " "));
-      let organization = sameLineName;
+      }`,
+  `      let organization = sameLineName;
       if (!organization) {
-        const namesBefore = [];
-        for (let cursor = index - 1; cursor > previousBoundary && namesBefore.length < 3; cursor -= 1) {
+        const nextBoundary = corporateIndexes.find((candidateIndex) => candidateIndex > index) ?? values.length;
+        const candidateIndexes = [];
+        for (let cursor = previousBoundary + 1; cursor < nextBoundary; cursor += 1) {
+          if (cursor === index) continue;
           const candidate = values[cursor];
-          if (/法人(?:番号|場号)/u.test(candidate)) break;
-          if (looksLikeAddress(candidate)) {
-            if (namesBefore.length) break;
-            continue;
-          }
-          namesBefore.unshift(candidate);
-          if (ORGANIZATION_MARKER.test(candidate) || candidate.length > 8) break;
+          if (!candidate || looksLikeAddress(candidate) || /法人(?:番号|場号)/u.test(candidate)) continue;
+          candidateIndexes.push(cursor);
         }
-        organization = clean(namesBefore.join(" "));
-      }
-      if (!organization) {
-        const namesAfter = [];
-        for (let cursor = index + 1; cursor < nextBoundary && namesAfter.length < 3; cursor += 1) {
-          const candidate = values[cursor];
-          if (/法人(?:番号|場号)/u.test(candidate)) break;
-          if (looksLikeAddress(candidate)) {
-            if (namesAfter.length) break;
-            continue;
+        candidateIndexes.sort((left, right) =>
+          Math.abs(left - index) - Math.abs(right - index)
+          || Number(ORGANIZATION_MARKER.test(values[right])) - Number(ORGANIZATION_MARKER.test(values[left]))
+          || Number(left > index) - Number(right > index));
+        const nearest = candidateIndexes[0];
+        if (Number.isInteger(nearest)) {
+          const direction = nearest < index ? -1 : 1;
+          const names = [];
+          for (
+            let cursor = nearest;
+            cursor > previousBoundary && cursor < nextBoundary && names.length < 3;
+            cursor += direction
+          ) {
+            if (cursor === index) break;
+            const candidate = values[cursor];
+            if (!candidate || looksLikeAddress(candidate) || /法人(?:番号|場号)/u.test(candidate)) break;
+            if (direction < 0) names.unshift(candidate);
+            else names.push(candidate);
           }
-          namesAfter.push(candidate);
-          if (ORGANIZATION_MARKER.test(candidate) || candidate.length > 8) break;
+          organization = clean(names.join(" "));
         }
-        organization = clean(namesAfter.join(" "));
-      }
-      if (!organization || !validCorporateNumber(corporateNumber)) {
-        throw new Error(\`中小機構本部: 契約相手方と法人番号の対応を確定できません (\${values.join(" / ")})\`);
-      }
-      parties.push({ organization: normalizeOrganization(organization), corporateNumber });
-    }
-  } else {`;
+      }`,
+  "SMRJ party order",
+);
+parser = replaceOnce(
+  parser,
+  `  return result;
+}
 
-const index = before.indexOf(oldBlock);
-if (index < 0) throw new Error("SMRJ party-order patch target not found");
-if (before.indexOf(oldBlock, index + oldBlock.length) >= 0) throw new Error("SMRJ party-order patch target is not unique");
-const after = `${before.slice(0, index)}${newBlock}${before.slice(index + oldBlock.length)}`;
-await writeFile(path, after);
-console.log("Patched SMRJ party parsing for address/corporate-number/name order.");
+function headerStart(items, pattern) {`,
+  `  return result;
+}
+
+export function parseSmrjPartyLines(lines) {
+  return parseParties(lines);
+}
+
+function headerStart(items, pattern) {`,
+  "SMRJ party test export",
+);
+await writeFile(parserPath, parser);
+
+const testPath = "tests/smrj-official-supplement.test.mjs";
+let tests = await readFile(testPath, "utf8");
+tests = replaceOnce(
+  tests,
+  `  parseSmrjListingHtml,
+  parseSmrjPositionedPages,`,
+  `  parseSmrjListingHtml,
+  parseSmrjPartyLines,
+  parseSmrjPositionedPages,`,
+  "SMRJ party test import",
+);
+if (tests.includes("address-number-name ordering")) throw new Error("SMRJ party regression test already exists");
+tests = `${tests.trimEnd()}
+
+test("SMRJ party parser accepts address-number-name ordering without losing the corporation", () => {
+  assert.deepEqual(
+    parseSmrjPartyLines([
+      "東京都中央区銀座7-16-21",
+      "(法人番号 5010001067883)",
+      "(株)アイネット",
+    ]),
+    [{ organization: "株式会社アイネット", corporateNumber: "5010001067883" }],
+  );
+});
+`;
+await writeFile(testPath, tests);
+
+console.log("Patched SMRJ party ordering and added the regression test.");
