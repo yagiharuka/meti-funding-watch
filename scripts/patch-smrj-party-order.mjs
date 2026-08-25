@@ -72,6 +72,17 @@ export function parseSmrjPartyLines(lines) {
 function headerStart(items, pattern) {`,
   "SMRJ party test export",
 );
+parser = replaceOnce(
+  parser,
+  `      if (!program) throw new Error(\`中小機構本部: \${document.url} p\${page.pageNumber} \${anchor.ordinal}行目の件名が空です\`);`,
+  `      if (!program) {
+        const diagnostics = rowItems
+          .map((item) => \`\${item.text}@\${item.x.toFixed(4)},\${item.y.toFixed(4)}\`)
+          .join(" | ");
+        throw new Error(\`中小機構本部: \${document.url} p\${page.pageNumber} \${anchor.ordinal}行目の件名が空です (anchor=\${anchor.x.toFixed(4)},\${anchor.y.toFixed(4)} program=\${schema.starts.program.toFixed(4)} officer=\${schema.starts.officer.toFixed(4)} items=\${diagnostics})\`);
+      }`,
+  "SMRJ empty program diagnostics",
+);
 await writeFile(parserPath, parser);
 
 const testPath = "tests/smrj-official-supplement.test.mjs";
@@ -101,4 +112,4 @@ test("SMRJ party parser accepts address-number-name ordering without losing the 
 `;
 await writeFile(testPath, tests);
 
-console.log("Patched SMRJ party ordering and added the regression test.");
+console.log("Patched SMRJ party ordering, diagnostics, and the regression test.");
