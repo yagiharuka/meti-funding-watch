@@ -1,0 +1,406 @@
+{
+  "generatedAt": "2026-08-24T16:59:11.847Z",
+  "years": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "partialRecordCount": 41510,
+  "yearStats": [
+    {
+      "fiscalYear": 2019,
+      "discovery": "current-master-search",
+      "fieldCount": null,
+      "resultPageCount": 0,
+      "parsedDecisionCount": 0,
+      "noSelectionDecisionCount": 0,
+      "excludedDecisionCount": 0,
+      "participantRecordCount": 0,
+      "maxVisitedMasterPage": 344,
+      "stoppedAtDate": "2020-01-08"
+    },
+    {
+      "fiscalYear": 2020,
+      "discovery": "current-master-search",
+      "fieldCount": null,
+      "resultPageCount": 18,
+      "parsedDecisionCount": 18,
+      "noSelectionDecisionCount": 2,
+      "excludedDecisionCount": 0,
+      "participantRecordCount": 2518,
+      "maxVisitedMasterPage": 344,
+      "stoppedAtDate": "2020-01-08"
+    },
+    {
+      "fiscalYear": 2021,
+      "discovery": "annual-field-index",
+      "fieldCount": 25,
+      "resultPageCount": 214,
+      "parsedDecisionCount": 214,
+      "noSelectionDecisionCount": 9,
+      "excludedDecisionCount": 0,
+      "participantRecordCount": 9673,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2022,
+      "discovery": "annual-field-index",
+      "fieldCount": 26,
+      "resultPageCount": 207,
+      "parsedDecisionCount": 204,
+      "noSelectionDecisionCount": 5,
+      "excludedDecisionCount": 1,
+      "participantRecordCount": 8069,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2023,
+      "discovery": "annual-field-index",
+      "fieldCount": 27,
+      "resultPageCount": 204,
+      "parsedDecisionCount": 195,
+      "noSelectionDecisionCount": 4,
+      "excludedDecisionCount": 2,
+      "participantRecordCount": 7523,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2024,
+      "discovery": "annual-field-index",
+      "fieldCount": 26,
+      "resultPageCount": 193,
+      "parsedDecisionCount": 186,
+      "noSelectionDecisionCount": 2,
+      "excludedDecisionCount": 2,
+      "participantRecordCount": 8307,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    },
+    {
+      "fiscalYear": 2025,
+      "discovery": "annual-field-index",
+      "fieldCount": 26,
+      "resultPageCount": 168,
+      "parsedDecisionCount": 166,
+      "noSelectionDecisionCount": 1,
+      "excludedDecisionCount": 4,
+      "participantRecordCount": 5420,
+      "maxVisitedMasterPage": null,
+      "stoppedAtDate": null
+    }
+  ],
+  "failureCount": 22,
+  "failures": [
+    {
+      "phase": "historical-discovery",
+      "years": [
+        2017,
+        2018
+      ],
+      "message": "WARP公募検索から2017・2018年度の決定ページを取得できません / WARP先頭ページ: maxPage=1, dates=none..none, text=NDL Web Archiving Project (WARP) \n\n-->\n\n.privacy-confirmation[data-astro-cid-bbdvxe3m]{background-color:#fff;bottom:.5rem;border-radius:.5rem;box-shadow:0 1px 8px #0000003d;display:grid;gap:1rem;grid-template-rows:auto auto 1fr;left:.5rem;m"
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2022,
+      "url": "https://www.nedo.go.jp/koubo/AB3_100013.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AB3_100013.html",
+      "diagnostic": {
+        "program": "「職員のエンゲージメントに関する分析調査」",
+        "date": "2022-08-04",
+        "selectedCount": 4,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2022,
+      "url": "https://www.nedo.go.jp/koubo/KH3_100108.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/KH3_100108.html",
+      "diagnostic": {
+        "program": "「NEDOの広報活動に係る調査」",
+        "date": "2023-03-16",
+        "selectedCount": 2,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2022,
+      "url": "https://www.nedo.go.jp/koubo/SE3_100001_00012.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00012.html",
+      "diagnostic": {
+        "program": "「超高圧水素インフラ本格普及技術研究開発事業/国際展開、国際標準化等に関する研究開発/水素供給インフラに係る技術基準等検討のための調査研究」",
+        "date": "2022-07-01",
+        "selectedCount": 2,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/AN3_100130.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AN3_100130.html",
+      "diagnostic": {
+        "program": "「オフィス環境整備計画の立案に係る調査」",
+        "date": "2023-12-01",
+        "selectedCount": 2,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/CA3_100403.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100403.html",
+      "diagnostic": {
+        "program": "「ディープテック・スタートアップ支援事業等の公募プロセス高度化に向けた調査」",
+        "date": "2023-06-30",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/CA3_100437.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100437.html",
+      "diagnostic": {
+        "program": "2024年度「研究開発型スタートアップの起業・経営人材確保等支援事業/ディープテック分野での人材発掘・起業家育成事業(NEP)/開拓コース」公募",
+        "date": "2024-04-08",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/IT3_100295.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/IT3_100295.html",
+      "diagnostic": {
+        "program": "「ポスト5G情報通信システ厶基盤強化研究開発事業/先端半導体に係るシナリオ別経済的影響分析調査」",
+        "date": "2023-08-16",
+        "selectedCount": 1,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/IT3_100296.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/IT3_100296.html",
+      "diagnostic": {
+        "program": "「ポスト5G情報通信システ厶基盤強化研究開発事業/先端半導体に係る技術開発等支援の効果分析調査」",
+        "date": "2023-10-24",
+        "selectedCount": 2,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/SE3_100001_00036.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00036.html",
+      "diagnostic": {
+        "program": "「次世代全固体蓄電池材料の評価・基盤技術開発」",
+        "date": "2023-04-17",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/SE3_100001_00047.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00047.html",
+      "diagnostic": {
+        "program": "「スマートコミュニティ関連技術やサービスに関する標準化及び海外動向調査」",
+        "date": "2023-08-07",
+        "selectedCount": 2,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/SE3_100001_00052.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00052.html",
+      "diagnostic": {
+        "program": "「競争的な水素サプライチェーン構築に向けた技術開発事業/総合調査研究/水電解装置に関連する法規制等の課題整理に係る調査」",
+        "date": "2023-08-21",
+        "selectedCount": 1,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2023,
+      "url": "https://www.nedo.go.jp/koubo/SE3_100001_00059.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/SE3_100001_00059.html",
+      "diagnostic": {
+        "program": "「競争的な水素サプライチェーン構築に向けた技術開発事業/総合調査研究」",
+        "date": "2023-09-15",
+        "selectedCount": 4,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/AT093_100229.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/AT093_100229.html",
+      "diagnostic": {
+        "program": "2024年度「Innovation for Cool Earth Forum(ICEF)の実施に係る国際連携及び情報発信等事業」",
+        "date": "2024-03-29",
+        "selectedCount": 2,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/CA3_100452.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100452.html",
+      "diagnostic": {
+        "program": "「事業会社等が保有する革新的な技術を活用したカーブアウトによるディープテック・スタートアップ創出等促進事業」",
+        "date": "2024-05-30",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/CA3_100468.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100468.html",
+      "diagnostic": {
+        "program": "「ディープテック・スタートアップ支援事業等の公募プロセス高度化等に向けた調査」",
+        "date": "2024-12-25",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/CA3_100478.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CA3_100478.html",
+      "diagnostic": {
+        "program": "2025年度「研究開発型スタートアップの起業・経営人材確保等支援事業/ディープテック分野での人材発掘・起業家育成事業(NEP)/開拓コース」",
+        "date": "2025-04-15",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/CD3_100377.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CD3_100377.html",
+      "diagnostic": {
+        "program": "「NEDO懸賞金活用型プログラム/サイボーグAIチャレンジ/NEDO Challenge, Motion Decoding Using Biosignals」の受賞者決定について",
+        "date": "2024-12-19",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/EV3_100296.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/EV3_100296.html",
+      "diagnostic": {
+        "program": "「カーボンリサイクル・次世代火力発電等技術開発/CO2有効利用拠点における技術開発」",
+        "date": "2025-04-11",
+        "selectedCount": 9,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2024,
+      "url": "https://www.nedo.go.jp/koubo/FF3_100387.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/FF3_100387.html",
+      "diagnostic": {
+        "program": "2024年度「木質バイオマス燃料等の安定的・効率的な供給・利用システム構築支援事業/木質バイオマス燃料(チップ、ペレット)の安定的・効率的な製造・輸送等システムの構築に向けた実証事業」",
+        "date": "2024-06-05",
+        "selectedCount": 1,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2025,
+      "url": "https://www.nedo.go.jp/koubo/CD3_100402.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/CD3_100402.html",
+      "diagnostic": {
+        "program": "「NEDO懸賞金活用型プログラム/GENIAC-PRIZE」の受賞者決定について",
+        "date": "2026-04-02",
+        "selectedCount": null,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    },
+    {
+      "phase": "decision",
+      "fiscalYear": 2025,
+      "url": "https://www.nedo.go.jp/koubo/NA3_100231.html",
+      "message": "NEDO実施予定先を抽出できません: https://www.nedo.go.jp/koubo/NA3_100231.html",
+      "diagnostic": {
+        "program": "「フロンティア領域の探索・重点支援のためのGXイノベーション・エコシステム構築事業推進に係る検討」",
+        "date": "2025-07-07",
+        "selectedCount": 4,
+        "attachmentCount": 0,
+        "attachmentDiagnostics": [],
+        "directOrganizations": []
+      }
+    }
+  ]
+}

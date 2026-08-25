@@ -1,0 +1,85 @@
+name: Backfill NEDO public results once
+
+on:
+  push:
+    branches:
+      - feat/nedo-2017-2025-public-results-20260825
+    paths:
+      - ".github/workflows/backfill-nedo-public-results-once.yml"
+      - "scripts/nedo-public-results.mjs"
+      - "tests/nedo-public-results.test.mjs"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/backfill-nedo-public-results-once.yml"
+      - "scripts/nedo-public-results.mjs"
+      - "tests/nedo-public-results.test.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify NEDO parser fixtures
+        id: fixtures
+        continue-on-error: true
+        run: |
+          mkdir -p .audit
+          set +e
+          node --test tests/nedo-public-results.test.mjs 2>&1 | tee .audit/nedo-public-results-fixtures.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Backfill NEDO FY2017-FY2025 official result participants
+        id: backfill
+        if: steps.fixtures.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/nedo-public-results.mjs --years=2017-2025 2>&1 | tee .audit/nedo-public-results-backfill.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Upload NEDO backfill evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nedo-public-results-evidence-${{ github.run_id }}
+          path: |
+            .audit/nedo-public-results-fixtures.log
+            .audit/nedo-public-results-backfill.log
+            .audit/nedo-public-results-diagnostics.json
+            data/official-supplement-nedo-public-results.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail unless fixtures and backfill both succeeded
+        if: always()
+        env:
+          FIXTURE_OUTCOME: ${{ steps.fixtures.outcome }}
+          BACKFILL_OUTCOME: ${{ steps.backfill.outcome }}
+        run: |
+          if [[ "$FIXTURE_OUTCOME" != "success" || "$BACKFILL_OUTCOME" != "success" ]]; then
+            echo "::error::NEDO FY2017-FY2025 backfill is not complete."
+            exit 1
+          fi
+
+# rerun after direct participant parser hotfix
