@@ -111,6 +111,39 @@ function headerStart(items, pattern) {`,
 );
 parser = replaceOnce(
   parser,
+  `  return deduplicated;
+}
+
+function inWindow(item, left, right) {`,
+  `  return deduplicated.filter((anchor, index, anchors) => {
+    const upper = index === 0
+      ? (schema.headerY + anchor.y) / 2
+      : (anchors[index - 1].y + anchor.y) / 2;
+    const lower = index + 1 < anchors.length
+      ? (anchor.y + anchors[index + 1].y) / 2
+      : 0.015;
+    const rowItems = page.items.filter((item) => item !== anchor.item && item.y <= upper && item.y > lower);
+    const hasProgram = rowItems.some((item) =>
+      item.x >= Math.max(0, schema.starts.program - 0.055)
+      && item.x < schema.starts.officer - 0.01
+      && clean(item.text));
+    const hasDate = rowItems.some((item) =>
+      item.x >= schema.starts.date - 0.03
+      && item.x < schema.starts.organization - 0.015
+      && /\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}/u.test(item.text));
+    const hasOrganization = rowItems.some((item) =>
+      item.x >= schema.starts.organization - 0.035
+      && item.x < schema.starts.reason - 0.015
+      && clean(item.text));
+    return hasProgram || (hasDate && hasOrganization);
+  });
+}
+
+function inWindow(item, left, right) {`,
+  "SMRJ isolated ordinal filtering",
+);
+parser = replaceOnce(
+  parser,
   `      if (!program) throw new Error(\`中小機構本部: \${document.url} p\${page.pageNumber} \${anchor.ordinal}行目の件名が空です\`);`,
   `      if (!program) {
         const diagnostics = rowItems
@@ -153,7 +186,20 @@ test("SMRJ contract date parser accepts a prior-fiscal-year original date only w
   assert.equal(parseSmrjContractDate("8.4.10", 2026), "2026-04-10");
   assert.equal(parseSmrjContractDate("28.3.23", 2026), null);
 });
+
+test("SMRJ positioned parser ignores a standalone ordinal-like layout number with no row content", () => {
+  const page = positionedPage();
+  page.items.push(item("4", 0.015, 0.20, 0.01));
+  const parsed = parseSmrjPositionedPages({
+    url: "https://www.smrj.go.jp/procurement/bid/contract/example-layout-number.pdf",
+    sourcePageUrl: SMRJ_HQ_CONTRACT_URL,
+    fiscalYear: 2026,
+    contractType: "competitive",
+  }, [page]);
+  assert.equal(parsed.totalRows, 3);
+  assert.equal(parsed.records.length, 3);
+});
 `;
 await writeFile(testPath, tests);
 
-console.log("Patched SMRJ dates, party ordering, diagnostics, and regression tests.");
+console.log("Patched SMRJ dates, party ordering, ordinal filtering, diagnostics, and regression tests.");
