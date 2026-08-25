@@ -1,0 +1,143 @@
+name: One-time SMRJ headquarters history reingest
+
+on:
+  push:
+    branches:
+      - reingest/smrj-hq-history-20260825-release5
+    paths:
+      - ".github/workflows/reingest-smrj-hq-history-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-smrj-hq-history-reingest
+  cancel-in-progress: false
+
+jobs:
+  reingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out the reingest branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/smrj-hq-history-20260825-release5
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply, reingest and validate while preserving evidence
+        id: reingest
+        shell: bash
+        run: |
+          mkdir -p .audit
+          set +e
+          (
+            set -euo pipefail
+            echo "== Install SMRJ HQ history parser =="
+            cp scripts/smrj-hq-history-v3.mjs scripts/smrj-official-supplement.mjs
+            cp tests/smrj-hq-history-v3.test.mjs tests/smrj-official-supplement.test.mjs
+            node scripts/smrj-hq-history-patch-v3.mjs
+            node scripts/smrj-hq-history-hotfix-v3.mjs
+            command -v pdftotext
+
+            echo "== Discover and reprocess all headquarters competitive/discretionary PDFs =="
+            SMRJ_REPROCESS_ALL=1 node scripts/smrj-official-supplement.mjs
+
+            echo "== Rebuild public official indexes =="
+            node scripts/build-official-supplement-index.mjs
+            node scripts/build-official-company-index.mjs
+
+            echo "== Validate source accounting =="
+            node --input-type=module -e '
+              import { readFile } from "node:fs/promises";
+              const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+              const source = seeds.sources.find((item) => item.id === "smrj");
+              if (!source) throw new Error("SMRJ source missing");
+              if (source.collectionStatus !== "complete") throw new Error(`collectionStatus=${source.collectionStatus}`);
+              if (source.scope?.organizationUnit !== "本部") throw new Error(`organizationUnit=${source.scope?.organizationUnit}`);
+              if (source.scope?.fiscalYearFrom !== 2015) throw new Error(`fiscalYearFrom=${source.scope?.fiscalYearFrom}`);
+              if (source.parseFailureCount !== 0) throw new Error(`parseFailureCount=${source.parseFailureCount}`);
+              if (source.discoveredDocumentCount < 20) throw new Error(`documents=${source.discoveredDocumentCount}`);
+              if (source.records.length < 50) throw new Error(`records=${source.records.length}`);
+              if (source.parsedDocumentCount + source.noResultDocumentCount !== source.totalDocumentCount) {
+                throw new Error(`document accounting=${source.parsedDocumentCount}+${source.noResultDocumentCount}/${source.totalDocumentCount}`);
+              }
+              if (source.printedRowCount !== source.records.length + source.duplicateRecordCount + source.amountUnavailableCount) {
+                throw new Error(`row accounting=${source.records.length}+${source.duplicateRecordCount}+${source.amountUnavailableCount}/${source.printedRowCount}`);
+              }
+              const currentYear = new Date().getUTCMonth() + 1 >= 4 ? new Date().getUTCFullYear() : new Date().getUTCFullYear() - 1;
+              for (let year = 2015; year <= currentYear; year += 1) {
+                const kinds = source.coverageMatrix?.[year] ?? [];
+                if (!kinds.includes("competitive") || !kinds.includes("discretionary")) throw new Error(`coverage gap ${year}: ${kinds.join(",")}`);
+              }
+              console.log(JSON.stringify({
+                records: source.records.length,
+                documents: source.totalDocumentCount,
+                parsedDocuments: source.parsedDocumentCount,
+                noResultDocuments: source.noResultDocumentCount,
+                printedRows: source.printedRowCount,
+                amountUnavailable: source.amountUnavailableCount,
+                duplicates: source.duplicateRecordCount,
+                years: [source.scope.fiscalYearFrom, source.scope.fiscalYearTo],
+              }));
+            '
+
+            echo "== Full repository build and fixture tests =="
+            npm test
+          ) > .audit/smrj-hq-full-history.log 2>&1
+          status=$?
+          set -e
+          cat .audit/smrj-hq-full-history.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Commit validated data or failure evidence
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .audit/smrj-hq-full-history.log
+
+          if [ "${{ steps.reingest.outputs.status }}" -eq 0 ]; then
+            git rm \
+              .github/workflows/reingest-smrj-hq-history-once.yml \
+              scripts/smrj-hq-history-v2.mjs \
+              scripts/smrj-hq-history-v3.mjs \
+              scripts/smrj-hq-history-patch-v3.mjs \
+              scripts/smrj-hq-history-hotfix-v3.mjs \
+              tests/smrj-hq-history-v3.test.mjs
+            git add \
+              scripts/smrj-official-supplement.mjs \
+              scripts/build-official-supplement-index.mjs \
+              scripts/build-official-company-index.mjs \
+              tests/smrj-official-supplement.test.mjs \
+              tests/company-evidence-ui.test.mjs \
+              tests/official-supplement.test.mjs \
+              data/official-supplement-seeds.json \
+              data/official-supplement-index.json
+            git commit -m "chore(data): reingest SMRJ headquarters full history"
+          else
+            git commit -m "chore(audit): record SMRJ headquarters reingest failure"
+          fi
+
+          git restore .
+          git clean -fd
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/smrj-hq-history-20260825-release5
+            if git push origin HEAD:reingest/smrj-hq-history-20260825-release5; then
+              break
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+
+      - name: Fail after preserving evidence when reingest did not validate
+        if: steps.reingest.outputs.status != '0'
+        run: exit 1
