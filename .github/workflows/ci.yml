@@ -79,7 +79,6 @@ jobs:
         run: |
           node scripts/build-official-supplement-index.mjs
           node scripts/build-official-company-index.mjs
-          node --test tests/company-search-safety.test.mjs tests/subsidy-semantics-ui.test.mjs tests/company-evidence-ui.test.mjs tests/nedo-official-supplement.test.mjs tests/official-supplement.test.mjs
           npm test
 
       - name: Commit the validated result and restore ordinary CI
