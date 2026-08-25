@@ -49,3 +49,33 @@ jobs:
 
       - name: Build and test with repository fixtures
         run: npm test
+
+  diagnose_smrj_hq_once:
+    if: github.event_name == 'pull_request' && github.head_ref == 'reingest/smrj-hq-full-history'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the reingest branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Inventory every HQ contract PDF and inspect representative layouts
+        run: node scripts/smrj-hq-diagnostic.mjs
+
+      - name: Preserve the diagnostic inventory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smrj-hq-diagnostic-${{ github.run_id }}
+          path: .audit/smrj-hq-diagnostic.json
+          if-no-files-found: error
+          retention-days: 30
