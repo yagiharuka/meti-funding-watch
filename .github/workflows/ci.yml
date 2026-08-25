@@ -73,7 +73,10 @@ jobs:
         run: npm ci
 
       - name: Apply dedicated SMRJ index, UI, workflow and test integration
-        run: node scripts/apply-smrj-hq-integration.mjs
+        shell: bash
+        run: |
+          mkdir -p .audit
+          node scripts/apply-smrj-hq-integration.mjs 2>&1 | tee .audit/smrj-hq-integration.log
 
       - name: Reingest every published SMRJ headquarters contract PDF
         id: reingest
@@ -124,6 +127,7 @@ jobs:
         with:
           name: smrj-hq-reingest-${{ github.run_id }}
           path: |
+            .audit/smrj-hq-integration.log
             .audit/smrj-hq-reingest.log
             .audit/smrj-hq-reingest.json
           if-no-files-found: error
