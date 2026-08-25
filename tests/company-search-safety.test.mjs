@@ -217,3 +217,13 @@ test("Pages build contains the stable company-search mount and current zero-resu
   assert.match(javascript, /このデータの読み方/);
   assert.doesNotMatch(javascript, /GビズINFO掲載値合計/);
 });
+
+
+test("same-corporation subsidy amounts are visible in the company summary", async () => {
+  const source = await readFile(new URL("../pages-site/company-search-ui.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /合計しません/);
+  assert.doesNotMatch(source, /個別の掲載額は明細で確認/);
+  assert.match(source, /補助金（件数／掲載額）/);
+  assert.match(source, /y\.subsidy_published\.amountKnownCount/);
+  assert.match(source, /x\.amountKnownCount \? esc\(amount\(x\.amount\)\) : "—"/);
+});

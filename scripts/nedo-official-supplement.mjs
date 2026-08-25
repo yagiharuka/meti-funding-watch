@@ -190,17 +190,22 @@ export async function refreshNedoOfficialSupplement({ fetchImpl = fetch, outputP
   if (failures.length) {
     throw new Error(`NEDO detail取得・解析失敗を検出しました: ${failures.length}/${links.length}\n${failures.slice(0, 10).join("\n")}`);
   }
-  if (parsed.length < previous.records.length || parsed.length < 5) {
-    throw new Error(`NEDO GX解析件数が既存収録を下回りました: ${parsed.length}/${previous.records.length}`);
+  const previousStartupCount = previous.records.filter((row) =>
+    row.sourcePageUrl === NEDO_SEARCH_URL
+    || /^https:\/\/www\.nedo\.go\.jp\/activities\/startups\/company[\w-]*\.html$/u.test(row.sourceUrl),
+  ).length;
+  if (parsed.length < previousStartupCount || parsed.length < 5) {
+    throw new Error(`NEDO GX解析件数が既存スタートアップ収録を下回りました: ${parsed.length}/${previousStartupCount}`);
   }
 
   const records = mergeNedoRecords(previous.records, parsed);
+  const publicResultCount = records.filter((row) => row.category === "implementation_decision").length;
   const output = {
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
     id: "nedo",
     name: "NEDO",
-    coverageNote: `NEDOのDTSU・GX採択事業者検索サイトから、GX分野のディープテック・スタートアップ支援について企業名・研究開発テーマ・フェーズ・事業年度・交付決定額を定型HTMLで継続取得。今回 ${links.length}ページを確認し、GX ${parsed.length}件を解析。過去に確認済みの行は一覧掲載終了後も保持する。NEDO全事業・全契約を網羅するものではない。`,
+    coverageNote: `NEDOのDTSU・GX採択事業者検索サイトから、GX分野のディープテック・スタートアップ支援について企業名・研究開発テーマ・フェーズ・事業年度・交付決定額を定型HTMLで継続取得。今回 ${links.length}ページを確認し、GX ${parsed.length}件を解析。加えて、NEDO公募結果資料で実施予定先を確認できる行を${publicResultCount}件保持し、個社別金額が公表されていない行は0円にせず金額なしとして区別する。過去に確認済みの行は一覧掲載終了後も保持する。NEDO全事業・全契約を網羅するものではない。`,
     listingCount: links.length,
     parsedCount: parsed.length,
     parseFailureCount: failures.length,

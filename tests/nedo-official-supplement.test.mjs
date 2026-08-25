@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -66,4 +67,12 @@ test("NEDO parser skips DTSU rows and rejects an unparseable GX amount table", (
     () => parseNedoCompanyHtml(companyHtml({ amount: "非公開" }), sourceUrl),
     /交付決定表を解析できません/,
   );
+});
+
+
+test("NEDO refresh compares the parser floor only with prior startup rows", async () => {
+  const source = await readFile(new URL("../scripts/nedo-official-supplement.mjs", import.meta.url), "utf8");
+  assert.match(source, /previousStartupCount/);
+  assert.match(source, /implementation_decision/);
+  assert.doesNotMatch(source, /parsed\.length < previous\.records\.length/);
 });
