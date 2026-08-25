@@ -1,0 +1,198 @@
+name: Retry SMRJ headquarters history reingest v4
+
+on:
+  push:
+    branches:
+      - reingest/smrj-hq-history-20260825-release5
+    paths:
+      - ".github/workflows/retry-smrj-hq-history-v4.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: retry-smrj-hq-history-v4
+  cancel-in-progress: false
+
+jobs:
+  reingest_merge_publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - name: Check out the reingest branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/smrj-hq-history-20260825-release5
+          fetch-depth: 0
+
+      - name: Stop cleanly when PR 73 is already merged
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          state=$(gh pr view 73 --json state --jq .state)
+          merged_at=$(gh pr view 73 --json mergedAt --jq '.mergedAt // ""')
+          if [ "$state" = "MERGED" ] || [ -n "$merged_at" ]; then
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.pr.outputs.merged != 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.pr.outputs.merged != 'true'
+        run: npm ci
+
+      - name: Reingest every published headquarters document and run all tests
+        if: steps.pr.outputs.merged != 'true'
+        id: reingest
+        shell: bash
+        run: |
+          mkdir -p .audit
+          set +e
+          (
+            set -euo pipefail
+            echo "== Install v4 SMRJ HQ parser and tests =="
+            cp scripts/smrj-hq-history-v4.mjs scripts/smrj-official-supplement.mjs
+            cp tests/smrj-hq-history-v4.test.mjs tests/smrj-official-supplement.test.mjs
+            node scripts/smrj-hq-history-compat-v4.mjs
+            command -v pdftotext
+
+            echo "== Remove temporary files before repository-governance tests =="
+            for file in \
+              .github/workflows/reingest-smrj-hq-history-once.yml \
+              .github/workflows/finalize-smrj-hq-history.yml \
+              .github/workflows/finalize-smrj-hq-history-v2.yml \
+              .github/workflows/retry-smrj-hq-history-v4.yml \
+              scripts/smrj-hq-history-v2.mjs \
+              scripts/smrj-hq-history-v3.mjs \
+              scripts/smrj-hq-history-v4.mjs \
+              scripts/smrj-hq-history-patch-v3.mjs \
+              scripts/smrj-hq-history-hotfix-v3.mjs \
+              scripts/smrj-hq-history-compat-v4.mjs \
+              tests/smrj-hq-history-v3.test.mjs \
+              tests/smrj-hq-history-v4.test.mjs; do
+              if [ -e "$file" ]; then rm -f "$file"; fi
+            done
+
+            echo "== Live discovery and full reprocessing =="
+            SMRJ_REPROCESS_ALL=1 node scripts/smrj-official-supplement.mjs
+
+            echo "== Rebuild derived indexes =="
+            node scripts/build-official-supplement-index.mjs
+            node scripts/build-official-company-index.mjs
+
+            echo "== Verify exact scope and accounting =="
+            node --input-type=module -e '
+              import { readFile } from "node:fs/promises";
+              const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+              const source = seeds.sources.find((item) => item.id === "smrj");
+              if (!source) throw new Error("SMRJ source missing");
+              if (source.collectionStatus !== "complete") throw new Error(`collectionStatus=${source.collectionStatus}`);
+              if (source.scope?.organizationUnit !== "本部") throw new Error(`organizationUnit=${source.scope?.organizationUnit}`);
+              if (source.scope?.fiscalYearFrom !== 2015) throw new Error(`fiscalYearFrom=${source.scope?.fiscalYearFrom}`);
+              if (source.scope?.contractKinds?.join(",") !== "competitive,discretionary") throw new Error(`contractKinds=${source.scope?.contractKinds}`);
+              if (source.parseFailureCount !== 0) throw new Error(`parseFailureCount=${source.parseFailureCount}`);
+              if (source.records.length < 50) throw new Error(`records=${source.records.length}`);
+              if (source.discoveredDocumentCount < 20) throw new Error(`documents=${source.discoveredDocumentCount}`);
+              if (source.parsedDocumentCount + source.noResultDocumentCount !== source.totalDocumentCount) throw new Error("document accounting mismatch");
+              if (source.printedRowCount !== source.records.length + source.duplicateRecordCount + source.amountUnavailableCount) throw new Error("row accounting mismatch");
+              const currentYear = new Date().getUTCMonth() + 1 >= 4 ? new Date().getUTCFullYear() : new Date().getUTCFullYear() - 1;
+              for (let year = 2015; year <= currentYear; year += 1) {
+                const kinds = source.coverageMatrix?.[year] ?? [];
+                if (!kinds.includes("competitive") || !kinds.includes("discretionary")) throw new Error(`coverage gap ${year}: ${kinds.join(",")}`);
+              }
+              if (source.records.some((row) => row.amount === null)) throw new Error("published records contain null amount");
+              console.log(JSON.stringify({
+                records: source.records.length,
+                documents: source.totalDocumentCount,
+                parsedDocuments: source.parsedDocumentCount,
+                noResultDocuments: source.noResultDocumentCount,
+                printedRows: source.printedRowCount,
+                amountUnavailable: source.amountUnavailableCount,
+                duplicates: source.duplicateRecordCount,
+                fiscalYearFrom: source.scope.fiscalYearFrom,
+                fiscalYearTo: source.scope.fiscalYearTo,
+              }));
+            '
+
+            echo "== Full fixture build and tests =="
+            npm test
+          ) > .audit/smrj-hq-full-history-v4.log 2>&1
+          status=$?
+          set -e
+          cat .audit/smrj-hq-full-history-v4.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Preserve failure evidence and comment on PR 73
+        if: steps.pr.outputs.merged != 'true' && steps.reingest.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          cp .audit/smrj-hq-full-history-v4.log /tmp/smrj-v4-failure.log
+          git restore .
+          git clean -fd
+          mkdir -p .audit
+          cp /tmp/smrj-v4-failure.log .audit/smrj-hq-full-history-v4.log
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .audit/smrj-hq-full-history-v4.log
+          git commit -m "chore(audit): record SMRJ headquarters v4 reingest failure" || true
+          git pull --rebase origin reingest/smrj-hq-history-20260825-release5
+          git push origin HEAD:reingest/smrj-hq-history-20260825-release5
+          {
+            echo '### 中小機構本部・全履歴再収録 v4 の失敗ログ'
+            echo
+            echo '```text'
+            tail -n 160 .audit/smrj-hq-full-history-v4.log
+            echo '```'
+          } > /tmp/smrj-comment.md
+          gh pr comment 73 --body-file /tmp/smrj-comment.md
+          exit 1
+
+      - name: Commit the validated full-history result
+        if: steps.pr.outputs.merged != 'true' && steps.reingest.outputs.status == '0'
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "chore(data): reingest SMRJ headquarters full history"
+          git restore .
+          git clean -fd
+          git pull --rebase origin reingest/smrj-hq-history-20260825-release5
+          git push origin HEAD:reingest/smrj-hq-history-20260825-release5
+
+      - name: Squash merge PR 73
+        if: steps.pr.outputs.merged != 'true' && steps.reingest.outputs.status == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge 73 --squash --admin \
+            --subject "中小機構本部の競争入札・随意契約を2015年度から再収録" \
+            --body "本部のみを対象に、競争入札・随意契約の公式PDFと公式ページ上の該当なし表示を年度×契約類型で棚卸しし、行数会計とfail-closed検証を通過した履歴を公開する。"
+
+      - name: Publish and verify GitHub Pages
+        if: steps.pr.outputs.merged != 'true' && steps.reingest.outputs.status == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run update-data.yml --ref main -f publish_only=true
+          sleep 10
+          run_id=$(gh run list --workflow update-data.yml --branch main --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "::error::Publication workflow run was not found."
+            exit 1
+          fi
+          gh run watch "$run_id" --exit-status
