@@ -8,6 +8,9 @@ const FETCH_HEADERS = {
   "user-agent": "Mozilla/5.0 (compatible; meti-funding-watch/1.0; +https://github.com/yagiharuka/meti-funding-watch)",
 };
 const IDENTITY_FIELDS = ["organization", "program", "theme", "phase", "supportYears", "category"];
+const MIN_LISTING_LINKS = 50;
+const DTSU_PROGRAM = "ディープテック・スタートアップ支援事業";
+const GX_PROGRAM = "GX分野のディープテック・スタートアップに対する実用化研究開発・量産化実証支援事業";
 
 function decodeEntities(value = "") {
   return String(value)
@@ -36,24 +39,52 @@ function htmlToText(html = "") {
     .trim();
 }
 
-function sectionValue(text, label, nextLabels) {
-  const start = text.indexOf(label);
+function sectionValue(text, labels, nextLabels) {
+  const lines = String(text).split("\n").map((line) => line.trim()).filter(Boolean);
+  const start = lines.findIndex((line) => labels.includes(line));
   if (start < 0) return "";
-  const tail = text.slice(start + label.length).replace(/^\s+/, "");
-  let end = tail.length;
-  for (const next of nextLabels) {
-    const index = tail.indexOf(next);
-    if (index >= 0 && index < end) end = index;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (nextLabels.includes(lines[index])) break;
+    return lines[index];
   }
-  return tail.slice(0, end).split("\n").map((line) => line.trim()).filter(Boolean)[0] ?? "";
+  return "";
 }
 
 function normalizeOrganization(value = "") {
   return String(value).replace(/^NEDO\s*/u, "").trim();
 }
 
+function canonicalProgram(value = "") {
+  const normalized = String(value).normalize("NFKC").replace(/[\s　]+/g, "").trim();
+  if (normalized.includes("GX分野のディープテック・スタートアップ")) return GX_PROGRAM;
+  if (normalized.includes("ディープテック・スタートアップ支援事業")) return DTSU_PROGRAM;
+  return "";
+}
+
 function normalizeSupportYears(value = "") {
-  return String(value).replace(/\s+/g, "").replace(/[~〜～-]/g, "～");
+  const normalized = String(value)
+    .normalize("NFKC")
+    .replace(/[ \t]/g, "")
+    .replace(/[~〜－ー-]/g, "～");
+  const range = normalized.match(/(20\d{2})(?:年|年度)?～(20\d{2})(?:年|年度)?/u);
+  if (range) return `${range[1]}～${range[2]}年度`;
+  const single = normalized.match(/(20\d{2})(?:年|年度)/u);
+  return single ? `${single[1]}年度` : "";
+}
+
+function amountInYen(tableText = "") {
+  const amountMatch = String(tableText).match(/([\d,.]+)\s*(百万円|万円|千円|円)/u);
+  if (!amountMatch) return null;
+  const value = Number(amountMatch[1].replace(/,/g, ""));
+  const multipliers = {
+    百万円: 1_000_000,
+    万円: 10_000,
+    千円: 1_000,
+    円: 1,
+  };
+  const amount = value * multipliers[amountMatch[2]];
+  if (!Number.isSafeInteger(amount) || amount <= 0) return null;
+  return amount;
 }
 
 function sourceSlug(sourceUrl) {
@@ -62,7 +93,7 @@ function sourceSlug(sourceUrl) {
   return filename;
 }
 
-export function parseNedoListingHtml(html, listUrl = NEDO_SEARCH_URL, { minLinks = 10 } = {}) {
+export function parseNedoListingHtml(html, listUrl = NEDO_SEARCH_URL, { minLinks = MIN_LISTING_LINKS } = {}) {
   const links = new Set();
   const pattern = /<a\b[^>]*href=["']([^"']*\/activities\/startups\/company[\w-]*\.html(?:\?[^"']*)?)["'][^>]*>/gi;
   for (const match of String(html).matchAll(pattern)) {
@@ -83,33 +114,41 @@ export function parseNedoCompanyHtml(html, sourceUrl) {
   const organization = normalizeOrganization(htmlToText(heading));
   if (!organization) throw new Error(`NEDO企業名を取得できません: ${sourceUrl}`);
 
-  const program = sectionValue(text, "事業名", ["研究開発テーマ", "事業概要", "事業内容"]);
-  if (!program) throw new Error(`NEDO事業名を取得できません: ${sourceUrl}`);
-  if (!program.includes("GX分野のディープテック・スタートアップ")) return null;
+  const programRaw = sectionValue(text, ["事業名"], ["研究開発テーマ", "助成事業名", "事業概要", "事業内容"]);
+  const program = canonicalProgram(programRaw);
+  if (!program) throw new Error(`NEDO事業名を判定できません: ${sourceUrl}`);
 
-  const theme = sectionValue(text, "研究開発テーマ", ["事業概要", "事業内容", "フェーズ"]);
+  const theme = sectionValue(
+    text,
+    ["研究開発テーマ", "助成事業名"],
+    ["事業概要", "助成事業概要", "事業内容", "助成事業内容", "フェーズ"],
+  );
   if (!theme) throw new Error(`NEDO研究開発テーマを取得できません: ${sourceUrl}`);
 
   const amountHeader = text.indexOf("交付決定額");
   if (amountHeader < 0) throw new Error(`NEDO交付決定額欄がありません: ${sourceUrl}`);
   const tableText = text.slice(amountHeader, amountHeader + 1500);
-  const phase = tableText.match(/\b(STS|PCA)\b/u)?.[1] ?? "";
-  const supportYearsRaw = tableText.match(/(20\d{2})\s*[～~-]\s*(20\d{2})\s*年度/u)?.[0] ?? "";
-  const supportYears = normalizeSupportYears(supportYearsRaw);
-  const amountMatch = tableText.match(/([\d,.]+)\s*百万円/u);
-  if (!phase || !supportYears || !amountMatch) {
-    throw new Error(`NEDO交付決定表を解析できません: ${sourceUrl}`);
+  const phase = tableText.match(/\b(STS|PCA|DMP)\b/u)?.[1] ?? "";
+  const supportYearsMatch = tableText.match(/20\d{2}(?:年|年度)?\s*[～〜~－ー-]\s*20\d{2}(?:年|年度)?|20\d{2}(?:年|年度)/u)?.[0] ?? "";
+  const supportYears = normalizeSupportYears(supportYearsMatch);
+  if (!phase || !supportYears) throw new Error(`NEDO交付決定表を解析できません: ${sourceUrl}`);
+
+  const tableLines = tableText.split("\n").map((line) => line.trim()).filter(Boolean);
+  const supportYearLineIndex = tableLines.findIndex((line) => normalizeSupportYears(line) === supportYears);
+  const amountCell = supportYearLineIndex >= 0 ? (tableLines[supportYearLineIndex + 1] ?? "") : "";
+  const amount = amountInYen(amountCell);
+  if (amount === null) {
+    if (/^(?:非公開|―|—|ー|－|-)$/u.test(amountCell)) return null;
+    throw new Error(`NEDO交付決定額を解析できません: ${sourceUrl}`);
   }
   const startYear = Number(supportYears.match(/20\d{2}/u)?.[0]);
-  const amountMillions = Number(amountMatch[1].replace(/,/g, ""));
-  const amount = amountMillions * 1_000_000;
-  if (!Number.isSafeInteger(startYear) || startYear < 2021 || !Number.isSafeInteger(amount) || amount <= 0) {
-    throw new Error(`NEDO年度または交付決定額が不正です: ${sourceUrl}`);
+  if (!Number.isSafeInteger(startYear) || startYear < 2021) {
+    throw new Error(`NEDO年度が不正です: ${sourceUrl}`);
   }
 
   const slug = sourceSlug(sourceUrl);
   return {
-    id: `nedo-gx-${slug}`,
+    id: `nedo-startup-${slug}`,
     organization,
     corporateNumber: "",
     fiscalYear: startYear,
@@ -123,7 +162,7 @@ export function parseNedoCompanyHtml(html, sourceUrl) {
     amount,
     sourceUrl,
     sourcePageUrl: NEDO_SEARCH_URL,
-    sourceKey: `nedo-gx-${slug}`,
+    sourceKey: `nedo-startup-${slug}`,
   };
 }
 
@@ -169,8 +208,13 @@ export async function refreshNedoOfficialSupplement({ fetchImpl = fetch, outputP
 
   const listingHtml = await fetchHtml(NEDO_SEARCH_URL, fetchImpl, { minBytes: 20_000 });
   const links = parseNedoListingHtml(listingHtml);
+  if (Number.isInteger(previous.listingCount) && links.length < previous.listingCount) {
+    throw new Error(`NEDO掲載ページ数が既存確認値を下回りました: ${links.length}/${previous.listingCount}`);
+  }
+
   const parsed = [];
   const failures = [];
+  let amountUnavailableCount = 0;
   const batchSize = 8;
   for (let offset = 0; offset < links.length; offset += batchSize) {
     const batch = links.slice(offset, offset + batchSize);
@@ -184,14 +228,19 @@ export async function refreshNedoOfficialSupplement({ fetchImpl = fetch, outputP
     for (const result of results) {
       if (result.row) parsed.push(result.row);
       else if (result.error) failures.push(result.error);
+      else amountUnavailableCount += 1;
     }
   }
 
   if (failures.length) {
     throw new Error(`NEDO detail取得・解析失敗を検出しました: ${failures.length}/${links.length}\n${failures.slice(0, 10).join("\n")}`);
   }
-  if (parsed.length < previous.records.length || parsed.length < 5) {
-    throw new Error(`NEDO GX解析件数が既存収録を下回りました: ${parsed.length}/${previous.records.length}`);
+  const previousParsedFloor = Math.max(previous.records.length, Number(previous.parsedCount) || 0);
+  if (parsed.length < previousParsedFloor || parsed.length < 40) {
+    throw new Error(`NEDO DTSU・GX解析件数が既存収録または最低基準を下回りました: ${parsed.length}/${previousParsedFloor}`);
+  }
+  if (parsed.length + amountUnavailableCount !== links.length) {
+    throw new Error(`NEDO掲載ページの行数会計が一致しません: ${parsed.length}+${amountUnavailableCount}/${links.length}`);
   }
 
   const records = mergeNedoRecords(previous.records, parsed);
@@ -200,9 +249,10 @@ export async function refreshNedoOfficialSupplement({ fetchImpl = fetch, outputP
     updatedAt: new Date().toISOString(),
     id: "nedo",
     name: "NEDO",
-    coverageNote: `NEDOのDTSU・GX採択事業者検索サイトから、GX分野のディープテック・スタートアップ支援について企業名・研究開発テーマ・フェーズ・事業年度・交付決定額を定型HTMLで継続取得。今回 ${links.length}ページを確認し、GX ${parsed.length}件を解析。過去に確認済みの行は一覧掲載終了後も保持する。NEDO全事業・全契約を網羅するものではない。`,
+    coverageNote: `NEDOのDTSU・GX採択事業者検索サイトに掲載された${links.length}ページをすべて確認し、企業名・研究開発テーマ・フェーズ・事業年度・数値で公表された交付決定額を継続取得。今回 ${parsed.length}件を解析し、金額が非公開または記号表示の${amountUnavailableCount}件は0円に変換せず収録対象外とした。過去に確認済みの行は一覧掲載終了後も保持する。NEDOの他事業・調達契約・全支出を網羅するものではない。`,
     listingCount: links.length,
     parsedCount: parsed.length,
+    amountUnavailableCount,
     parseFailureCount: failures.length,
     records,
   };
@@ -212,7 +262,7 @@ export async function refreshNedoOfficialSupplement({ fetchImpl = fetch, outputP
 
 async function main() {
   const output = await refreshNedoOfficialSupplement();
-  console.log(`NEDO official supplement: ${output.records.length} retained / ${output.parsedCount}/${output.listingCount} GX parsed`);
+  console.log(`NEDO official supplement: ${output.records.length} retained / ${output.parsedCount}/${output.listingCount} DTSU・GX parsed / ${output.amountUnavailableCount} amount unavailable`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
