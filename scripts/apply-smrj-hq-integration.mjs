@@ -94,7 +94,12 @@ await updateText("pages-site/company-evidence-ui.ts", (input) => replaceOnce(
   "official nullable amount copy",
 ));
 
-await updateText(".github/workflows/update-data.yml", (input) => replaceOnce(input, '      - "data/official-supplement-nedo.json"\n      - "data/official-supplement-jetro.json"', '      - "data/official-supplement-nedo.json"\n      - "data/official-supplement-smrj.json"\n      - "data/official-supplement-jetro.json"', "publish SMRJ path"));
+await updateText(".github/workflows/update-data.yml", (input) => replaceOnce(
+  input,
+  '      - "data/official-supplement-seeds.json"\n      - "data/official-supplement-jetro.json"',
+  '      - "data/official-supplement-seeds.json"\n      - "data/official-supplement-smrj.json"\n      - "data/official-supplement-jetro.json"',
+  "publish SMRJ path",
+));
 
 await updateText(".github/workflows/refresh-official-data.yml", (input) => {
   const source = input.replaceAll('data/official-supplement-nedo.json data/official-supplement-jetro.json', 'data/official-supplement-nedo.json data/official-supplement-smrj.json data/official-supplement-jetro.json');
