@@ -204,6 +204,16 @@
   line-height: 1.55;
 }
 
+.company-search-dedup-note {
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid #edf0ed;
+  background: #f7faf8;
+  color: #53645e;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
 .company-search-disclosure-controls {
   display: flex;
   flex-wrap: wrap;
