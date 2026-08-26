@@ -72,6 +72,12 @@ parser = replaceOnce(
 );
 parser = replaceOnce(
   parser,
+  '      .filter((line) => line.date && line.y < schema.headerY - 0.003)',
+  '      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)',
+  "JOGMEC exclude document dates from row anchors",
+);
+parser = replaceOnce(
+  parser,
   `  for (const page of pages) {
     schema = buildSchema(page, document, schema);`,
   `  for (const rawPage of pages) {
@@ -107,6 +113,12 @@ tests = replaceOnce(
   '    item(date, 0.39, y, 0.08),',
   '    item(`${date} ${organization}`, 0.39, y, 0.08),',
   "JOGMEC joined date-row regression fixture",
+);
+tests = replaceOnce(
+  tests,
+  '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),',
+  '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),\n      item("令和8年7月2日作成", 0.39, 0.05, 0.08),\n      item("<注>", 0.08, 0.05, 0.04),',
+  "JOGMEC footer date regression fixture",
 );
 tests = replaceOnce(
   tests,
@@ -154,4 +166,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for quarter-turn PDFs, date-column anchors, appendix references, split headers, and diagnostics.");
+console.log("Patched JOGMEC parser for rotated PDFs, footer-date exclusion, appendix references, split headers, and diagnostics.");
