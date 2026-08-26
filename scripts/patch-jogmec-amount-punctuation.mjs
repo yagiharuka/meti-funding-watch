@@ -21,8 +21,8 @@ const testPath = "tests/jogmec-official-supplement.test.mjs";
 let tests = await readFile(testPath, "utf8");
 tests = replaceOnce(
   tests,
-  '  assert.equal(classifyJogmecAmount("¥12,345,678", "competitive").amount, 12_345_678);',
-  '  assert.equal(classifyJogmecAmount("¥12,345,678", "competitive").amount, 12_345_678);\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);',
+  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");',
+  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);',
   "JOGMEC punctuation amount regression",
 );
 await writeFile(testPath, tests);
