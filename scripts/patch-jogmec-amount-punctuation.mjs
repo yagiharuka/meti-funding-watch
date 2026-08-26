@@ -11,6 +11,12 @@ const parserPath = "scripts/jogmec-official-supplement.mjs";
 let parser = await readFile(parserPath, "utf8");
 parser = replaceOnce(
   parser,
+  '  const normalized = compact(raw).replace(/[￥\\\\]/gu, "¥");',
+  '  const normalized = compact(raw)\n    .replace(/[￥\\\\]/gu, "¥")\n    .replace(/(?:令和|平成)(?:元|\\d{1,2})年\\d{1,2}月\\d{1,2}日(?:作成)?$/u, "");',
+  "JOGMEC amount-cell creation-date annotation",
+);
+parser = replaceOnce(
+  parser,
   '.replace(/[¥円()（）税込税抜き消費税を除く]/gu, "");',
   '.replace(/[¥円()（）税込税抜き消費税を除く－—―-]/gu, "");',
   "JOGMEC amount-cell punctuation",
@@ -22,9 +28,9 @@ let tests = await readFile(testPath, "utf8");
 tests = replaceOnce(
   tests,
   '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");',
-  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);',
-  "JOGMEC punctuation amount regression",
+  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);\n  assert.equal(classifyJogmecAmount("¥1,608,902 令和6年7月16日作成", "competitive").amount, 1_608_902);',
+  "JOGMEC annotated amount regression",
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC amount parsing for standalone separator dashes.");
+console.log("Patched JOGMEC amount parsing for separator dashes and trailing creation-date annotations.");
