@@ -1,0 +1,272 @@
+name: JOGMEC final reingest controller
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jogmec-final-controller-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'reingest/jogmec-full-history')
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out the JOGMEC reingest branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/jogmec-full-history
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply JOGMEC integration when the branch still contains the one-shot patch set
+        shell: bash
+        run: |
+          mkdir -p .audit
+          if [[ -f scripts/apply-jogmec-full-history-integration.mjs ]]; then
+            node scripts/apply-jogmec-full-history-integration.mjs 2>&1 | tee .audit/jogmec-integration.log
+            for patch in \
+              scripts/patch-jogmec-live-layout.mjs \
+              scripts/patch-jogmec-appendix.mjs \
+              scripts/patch-jogmec-amount-punctuation.mjs \
+              scripts/patch-jogmec-unit-amount.mjs \
+              scripts/patch-jogmec-variable-units.mjs
+            do
+              if [[ -f "$patch" ]]; then
+                node "$patch" 2>&1 | tee -a .audit/jogmec-integration.log
+              fi
+            done
+            if [[ ! -f scripts/jogmec-live-autofix.mjs ]]; then
+              echo "::error::JOGMEC live autofix controller is missing."
+              exit 1
+            fi
+            node scripts/jogmec-live-autofix.mjs 2>&1 | tee .audit/jogmec-reingest.log
+          else
+            echo "Branch already contains the integrated JOGMEC parser and data."
+          fi
+
+      - name: Validate complete source and row accounting before any merge
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          const requiredIntegers = [
+            "documentCount",
+            "parsedDocumentCount",
+            "totalRows",
+            "publishedRowCount",
+            "amountUnavailableRowCount",
+            "nonTotalAmountRowCount",
+            "nonJpyAmountRowCount",
+            "parseFailureCount",
+          ];
+          for (const key of requiredIntegers) {
+            if (!Number.isSafeInteger(data[key]) || data[key] < 0) throw new Error(`JOGMEC ${key} is invalid`);
+          }
+          if (data.collectionStatus !== "complete") throw new Error(`JOGMEC collectionStatus is ${data.collectionStatus}, not complete`);
+          if (data.documentCount === 0 || data.parsedDocumentCount !== data.documentCount) {
+            throw new Error(`JOGMEC documents are incomplete: ${data.parsedDocumentCount}/${data.documentCount}`);
+          }
+          if (data.parseFailureCount !== 0) throw new Error(`JOGMEC parse failures remain: ${data.parseFailureCount}`);
+          const accounted = data.publishedRowCount
+            + data.amountUnavailableRowCount
+            + data.nonTotalAmountRowCount
+            + data.nonJpyAmountRowCount;
+          if (accounted !== data.totalRows) throw new Error(`JOGMEC row accounting mismatch: ${accounted}/${data.totalRows}`);
+          if (!Array.isArray(data.records) || data.records.length !== data.totalRows) {
+            throw new Error(`JOGMEC record count mismatch: ${data.records?.length}/${data.totalRows}`);
+          }
+          console.log(JSON.stringify({
+            collectionStatus: data.collectionStatus,
+            documents: `${data.parsedDocumentCount}/${data.documentCount}`,
+            totalRows: data.totalRows,
+            published: data.publishedRowCount,
+            unavailable: data.amountUnavailableRowCount,
+            nonTotal: data.nonTotalAmountRowCount,
+            nonJpy: data.nonJpyAmountRowCount,
+          }));
+          NODE
+
+      - name: Rebuild both official indexes and run the full repository suite
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+          npm test
+
+      - name: Write the final auditable receipt
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          let decisions = [];
+          try {
+            decisions = JSON.parse(await readFile(".audit/jogmec-autofix-decisions.json", "utf8"));
+          } catch {}
+          const receipt = {
+            generatedAt: new Date().toISOString(),
+            collectionStatus: data.collectionStatus,
+            minFiscalYear: data.minFiscalYear,
+            maxFiscalYear: data.maxFiscalYear,
+            documentCount: data.documentCount,
+            parsedDocumentCount: data.parsedDocumentCount,
+            totalRows: data.totalRows,
+            publishedRowCount: data.publishedRowCount,
+            amountUnavailableRowCount: data.amountUnavailableRowCount,
+            nonTotalAmountRowCount: data.nonTotalAmountRowCount,
+            nonJpyAmountRowCount: data.nonJpyAmountRowCount,
+            parseFailureCount: data.parseFailureCount,
+            sourceListUrls: data.listUrls,
+            autoClassifiedAmountTexts: decisions,
+          };
+          await writeFile(".audit/jogmec-reingest.json", `${JSON.stringify(receipt, null, 2)}\n`);
+          console.log(JSON.stringify(receipt));
+          NODE
+
+      - name: Preserve final diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jogmec-final-controller-${{ github.run_id }}
+          path: |
+            .audit/jogmec-integration.log
+            .audit/jogmec-reingest.log
+            .audit/jogmec-autofix-*.log
+            .audit/jogmec-autofix-decisions.json
+            .audit/jogmec-reingest.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Commit only verified production files and restore ordinary CI
+        id: commit
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/ci.yml
+          git rm -f \
+            .github/workflows/jogmec-*-once.yml \
+            scripts/apply-jogmec-full-history-integration.mjs \
+            scripts/patch-jogmec-*.mjs \
+            scripts/jogmec-live-autofix.mjs \
+            scripts/patch-smrj-prior-correction.mjs || true
+          git add \
+            scripts/jogmec-official-supplement.mjs \
+            scripts/build-official-supplement-index.mjs \
+            scripts/build-official-company-index.mjs \
+            pages-site/company-evidence-ui.ts \
+            .github/workflows/update-data.yml \
+            .github/workflows/refresh-official-data.yml \
+            tests/jogmec-official-supplement.test.mjs \
+            tests/official-supplement.test.mjs \
+            tests/company-evidence-ui.test.mjs \
+            data/official-supplement-jogmec.json \
+            data/official-supplement-index.json \
+            public/data/official-company-index.json \
+            .github/workflows/ci.yml
+          git add -f .audit/jogmec-reingest.json
+          if git diff --cached --quiet; then
+            echo "No production changes remain to commit."
+          else
+            git commit -m "feat(data): reingest JOGMEC contract result history"
+          fi
+          git reset --hard HEAD
+          git clean -fd
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/jogmec-full-history
+            if git push origin HEAD:reingest/jogmec-full-history; then
+              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1
+
+      - name: Dispatch ordinary CI for the cleaned production commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref reingest/jogmec-full-history
+
+      - name: Wait for ordinary CI to pass on the cleaned commit
+        env:
+          EXPECTED_SHA: ${{ steps.commit.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for attempt in $(seq 1 90); do
+            run_json="$(gh run list --workflow ci.yml --branch reingest/jogmec-full-history --event workflow_dispatch --limit 20 --json databaseId,headSha,status,conclusion,createdAt)"
+            run_id="$(jq -r --arg sha "$EXPECTED_SHA" '[.[] | select(.headSha == $sha)] | sort_by(.databaseId) | last | .databaseId // empty' <<<"$run_json")"
+            if [[ -n "$run_id" ]]; then
+              status="$(jq -r --argjson id "$run_id" '.[] | select(.databaseId == $id) | .status' <<<"$run_json")"
+              conclusion="$(jq -r --argjson id "$run_id" '.[] | select(.databaseId == $id) | .conclusion // ""' <<<"$run_json")"
+              echo "CI run $run_id: $status / $conclusion"
+              if [[ "$status" == "completed" ]]; then
+                [[ "$conclusion" == "success" ]] && exit 0
+                gh run view "$run_id" --log-failed || true
+                exit 1
+              fi
+            fi
+            sleep 10
+          done
+          echo "::error::Timed out waiting for ordinary CI."
+          exit 1
+
+      - name: Mark the verified PR ready and squash-merge it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr ready 78 || true
+          gh pr merge 78 --squash --delete-branch
+
+      - name: Dispatch publication for the merged main commit
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          merge_sha="$(gh pr view 78 --json mergeCommit --jq '.mergeCommit.oid')"
+          test -n "$merge_sha"
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+          gh workflow run update-data.yml --ref main -f publish_only=true
+
+      - name: Wait for GitHub Pages deployment and live verification
+        env:
+          EXPECTED_SHA: ${{ steps.publish.outputs.merge_sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for attempt in $(seq 1 120); do
+            run_json="$(gh run list --workflow update-data.yml --branch main --event workflow_dispatch --limit 20 --json databaseId,headSha,status,conclusion,createdAt)"
+            run_id="$(jq -r --arg sha "$EXPECTED_SHA" '[.[] | select(.headSha == $sha)] | sort_by(.databaseId) | last | .databaseId // empty' <<<"$run_json")"
+            if [[ -n "$run_id" ]]; then
+              status="$(jq -r --argjson id "$run_id" '.[] | select(.databaseId == $id) | .status' <<<"$run_json")"
+              conclusion="$(jq -r --argjson id "$run_id" '.[] | select(.databaseId == $id) | .conclusion // ""' <<<"$run_json")"
+              echo "Publication run $run_id: $status / $conclusion"
+              if [[ "$status" == "completed" ]]; then
+                [[ "$conclusion" == "success" ]] && exit 0
+                gh run view "$run_id" --log-failed || true
+                exit 1
+              fi
+            fi
+            sleep 10
+          done
+          echo "::error::Timed out waiting for verified GitHub Pages publication."
+          exit 1
