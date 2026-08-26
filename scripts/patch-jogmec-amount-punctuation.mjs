@@ -11,6 +11,12 @@ const parserPath = "scripts/jogmec-official-supplement.mjs";
 let parser = await readFile(parserPath, "utf8");
 parser = replaceOnce(
   parser,
+  'const UNIT_PATTERN = /(?:単価|[／/]\\s*(?:1|一)?\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|L)|(?:1|一)\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|L)\\s*(?:あたり|当たり))/iu;',
+  'const UNIT_PATTERN = /(?:単価|[／/]\\s*(?:1|一)?\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|l|kw|kwh|mw|mwh)|(?:1|一)\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|l|kw|kwh|mw|mwh)\\s*(?:あたり|当たり))/iu;',
+  "JOGMEC energy-unit prices",
+);
+parser = replaceOnce(
+  parser,
   '  const normalized = compact(raw).replace(/[￥\\\\]/gu, "¥");',
   '  const normalized = compact(raw)\n    .replace(/[￥\\\\]/gu, "¥")\n    .replace(/(?:令和|平成)(?:元|\\d{1,2})年\\d{1,2}月\\d{1,2}日(?:作成)?$/u, "");',
   "JOGMEC amount-cell creation-date annotation",
@@ -28,9 +34,9 @@ let tests = await readFile(testPath, "utf8");
 tests = replaceOnce(
   tests,
   '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");',
-  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);\n  assert.equal(classifyJogmecAmount("¥1,608,902 令和6年7月16日作成", "competitive").amount, 1_608_902);',
-  "JOGMEC annotated amount regression",
+  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);\n  assert.equal(classifyJogmecAmount("¥1,608,902 令和6年7月16日作成", "competitive").amount, 1_608_902);\n  assert.equal(classifyJogmecAmount("¥11.2/kwh", "competitive").amountStatus, "non_total");',
+  "JOGMEC annotated and unit amount regressions",
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC amount parsing for separator dashes and trailing creation-date annotations.");
+console.log("Patched JOGMEC amount parsing for separator dashes, creation dates, and energy-unit prices.");
