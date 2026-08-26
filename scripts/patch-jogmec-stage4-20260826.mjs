@@ -76,46 +76,54 @@ function targetStatus(classification, titleAndSample) {
 function fileType(url, contentType = "") {`,
     "inventory content sample helpers",
   );
+
+  const previousCandidateBlock = [
+    "        let documentTitle = candidate.anchorText;",
+    "        let bodyClassification = candidate.classification;",
+    "        let bodyYears = candidate.inferredYears;",
+    '        if (type === "html") {',
+    '          const html = fetched.buffer.toString("utf8");',
+    "          documentTitle = titleFromHtml(html) || documentTitle;",
+    "          const sample = clean(html).slice(0, 20_000);",
+    '          bodyClassification = classify(`${candidate.context} ${documentTitle} ${sample}`);',
+    '          bodyYears = [...new Set([...bodyYears, ...inferYears(`${documentTitle} ${sample}`)])].sort((a, b) => a - b);',
+    "        }",
+    "        return {",
+    "          ...candidate,",
+    "          finalUrl: fetched.finalUrl,",
+    "          title: documentTitle,",
+    "          classification: bodyClassification,",
+    "          inferredYears: bodyYears,",
+    "          fileType: type,",
+  ].join("\n");
+  const classifiedCandidateBlock = [
+    "        let documentTitle = candidate.anchorText;",
+    '        if (type === "html") documentTitle = titleFromHtml(fetched.buffer.toString("utf8")) || documentTitle;',
+    '        let sample = "";',
+    "        let sampleError = null;",
+    "        try { sample = await documentTextSample(type, fetched.buffer); }",
+    "        catch (error) { sampleError = error instanceof Error ? error.message : String(error); }",
+    '        const evidenceText = [candidate.context, documentTitle, sample].join(" ");',
+    "        const bodyClassification = classify(evidenceText);",
+    '        const titleAndSample = [documentTitle, sample].join(" ");',
+    "        const bodyYears = [...new Set([...candidate.inferredYears, ...inferYears(titleAndSample)])].sort((a, b) => a - b);",
+    "        const actualTargetStatus = targetStatus(bodyClassification, titleAndSample);",
+    "        return {",
+    "          ...candidate,",
+    "          finalUrl: fetched.finalUrl,",
+    "          title: documentTitle,",
+    "          classification: bodyClassification,",
+    '          resultLikely: actualTargetStatus === "result",',
+    "          targetStatus: actualTargetStatus,",
+    "          inferredYears: bodyYears,",
+    "          textSample: sample.slice(0, 4_000),",
+    "          sampleError,",
+    "          fileType: type,",
+  ].join("\n");
   source = replaceOnce(
     source,
-    `        let documentTitle = candidate.anchorText;
-        let bodyClassification = candidate.classification;
-        let bodyYears = candidate.inferredYears;
-        if (type === "html") {
-          const html = fetched.buffer.toString("utf8");
-          documentTitle = titleFromHtml(html) || documentTitle;
-          const sample = clean(html).slice(0, 20_000);
-          bodyClassification = classify(`${candidate.context} ${documentTitle} ${sample}`);
-          bodyYears = [...new Set([...bodyYears, ...inferYears(`${documentTitle} ${sample}`)])].sort((a, b) => a - b);
-        }
-        return {
-          ...candidate,
-          finalUrl: fetched.finalUrl,
-          title: documentTitle,
-          classification: bodyClassification,
-          inferredYears: bodyYears,
-          fileType: type,`,
-    `        let documentTitle = candidate.anchorText;
-        if (type === "html") documentTitle = titleFromHtml(fetched.buffer.toString("utf8")) || documentTitle;
-        let sample = "";
-        let sampleError = null;
-        try { sample = await documentTextSample(type, fetched.buffer); }
-        catch (error) { sampleError = error instanceof Error ? error.message : String(error); }
-        const evidenceText = `${candidate.context} ${documentTitle} ${sample}`;
-        const bodyClassification = classify(evidenceText);
-        const bodyYears = [...new Set([...candidate.inferredYears, ...inferYears(`${documentTitle} ${sample}`)])].sort((a, b) => a - b);
-        const actualTargetStatus = targetStatus(bodyClassification, `${documentTitle} ${sample}`);
-        return {
-          ...candidate,
-          finalUrl: fetched.finalUrl,
-          title: documentTitle,
-          classification: bodyClassification,
-          resultLikely: actualTargetStatus === "result",
-          targetStatus: actualTargetStatus,
-          inferredYears: bodyYears,
-          textSample: sample.slice(0, 4_000),
-          sampleError,
-          fileType: type,`,
+    previousCandidateBlock,
+    classifiedCandidateBlock,
     "inventory content-level classification",
   );
   source = replaceOnce(
