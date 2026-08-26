@@ -66,6 +66,12 @@ function buildSchema(page, document, previous = null) {`,
 );
 parser = replaceOnce(
   parser,
+  '  if (!normalized || NO_AMOUNT_PATTERN.test(normalized)) {',
+  '  if (!normalized || NO_AMOUNT_PATTERN.test(normalized) || /別紙参照/u.test(normalized)) {',
+  "JOGMEC appendix-reference amount",
+);
+parser = replaceOnce(
+  parser,
   `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
       .map((line) => ({ ...line, date: japaneseDate(line.text) }))
       .filter((line) => line.date && line.y < schema.headerY - 0.003)
@@ -152,6 +158,12 @@ tests = replaceOnce(
 test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
   "JOGMEC quarter-turn parser test",
 );
+tests = replaceOnce(
+  tests,
+  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");',
+  '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("別紙参照", "competitive").amountStatus, "unavailable");',
+  "JOGMEC appendix-reference regression",
+);
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for quarter-turn PDFs, split headers, joined-row dates, and diagnostics.");
+console.log("Patched JOGMEC parser for quarter-turn PDFs, appendix references, split headers, joined-row dates, and diagnostics.");
