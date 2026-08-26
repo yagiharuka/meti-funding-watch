@@ -1,5 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+// Stage three is generated through String.raw, so its escaped nested template literal
+// must be converted before Node parses the generated stage-one module.
 const path = "scripts/jogmec-reingest-stage1-20260826.mjs";
 const before = await readFile(path, "utf8");
 const invalid = "      parsed.record.parseMethod = \\\`pdf_positioned_\\${anchorType}\\\`;";
