@@ -1,5 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+import "./patch-jogmec-appendix-contract-layout.mjs";
+
 function replaceOnce(source, search, replacement, label) {
   const index = source.indexOf(search);
   if (index < 0) throw new Error(`${label}: replacement target not found`);
