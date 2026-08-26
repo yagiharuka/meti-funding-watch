@@ -29,6 +29,43 @@ parser = replaceOnce(
 );
 parser = replaceOnce(
   parser,
+  `function headerItem(items, pattern) {
+  const matches = items.filter((item) => pattern.test(compact(item.text)));
+  if (!matches.length) return null;
+  return matches.sort((left, right) => right.y - left.y || left.x - right.x)[0];
+}
+
+function buildSchema(page, document, previous = null) {`,
+  `function headerItem(items, pattern) {
+  const matches = items.filter((item) => pattern.test(compact(item.text)));
+  if (!matches.length) return null;
+  return matches.sort((left, right) => right.y - left.y || left.x - right.x)[0];
+}
+
+function normalizeJogmecPage(page) {
+  const programHeader = headerItem(page.items, /物品等又は役務の名称/u);
+  const dateHeader = headerItem(page.items, /契約を締結した日/u);
+  if (!programHeader || !dateHeader) return page;
+  const isQuarterTurn = Math.abs(programHeader.x - dateHeader.x) < 0.04
+    && Math.abs(programHeader.y - dateHeader.y) > 0.10;
+  if (!isQuarterTurn) return page;
+  return {
+    ...page,
+    items: page.items.map((item) => ({
+      ...item,
+      x: item.y,
+      y: 1 - item.x,
+      w: Math.max(item.h || 0, 0.002),
+      h: Math.max(item.w || 0, 0.002),
+    })),
+  };
+}
+
+function buildSchema(page, document, previous = null) {`,
+  "JOGMEC quarter-turn coordinate normalization",
+);
+parser = replaceOnce(
+  parser,
   `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
       .map((line) => ({ ...line, date: japaneseDate(line.text) }))
       .filter((line) => line.date && line.y < schema.headerY - 0.003)
@@ -38,6 +75,15 @@ parser = replaceOnce(
       .filter((line) => line.date && line.y < schema.headerY - 0.003)
       .sort((left, right) => right.y - left.y);`,
   "JOGMEC whole-row date anchors",
+);
+parser = replaceOnce(
+  parser,
+  `  for (const page of pages) {
+    schema = buildSchema(page, document, schema);`,
+  `  for (const rawPage of pages) {
+    const page = normalizeJogmecPage(rawPage);
+    schema = buildSchema(page, document, schema);`,
+  "JOGMEC normalize each page",
 );
 parser = replaceOnce(
   parser,
@@ -68,6 +114,44 @@ tests = replaceOnce(
   '    item(`${date} ${organization}`, 0.39, y, 0.08),',
   "JOGMEC joined date-row regression fixture",
 );
+tests = replaceOnce(
+  tests,
+  `}
+
+function document(contractType) {`,
+  `}
+
+function quarterTurnPage(contractType) {
+  const page = positionedPage(contractType);
+  return {
+    ...page,
+    items: page.items.map((entry) => ({
+      ...entry,
+      x: 1 - entry.y,
+      y: entry.x,
+      w: entry.h,
+      h: entry.w,
+    })),
+  };
+}
+
+function document(contractType) {`,
+  "JOGMEC quarter-turn regression fixture",
+);
+tests = replaceOnce(
+  tests,
+  `test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
+  `test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {
+  const parsed = parseJogmecPositionedPages(document("competitive"), [quarterTurnPage("competitive")]);
+  assert.equal(parsed.totalRows, 4);
+  assert.equal(parsed.records[0].organization, "株式会社アルファ");
+  assert.equal(parsed.records[0].program, "円建て契約");
+  assert.equal(parsed.records[0].amount, 12_345_678);
+});
+
+test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
+  "JOGMEC quarter-turn parser test",
+);
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for split headers, joined-row dates, and row diagnostics.");
+console.log("Patched JOGMEC parser for quarter-turn PDFs, split headers, joined-row dates, and diagnostics.");
