@@ -77,8 +77,9 @@ jobs:
         run: |
           mkdir -p .audit
           node scripts/apply-smrj-hq-integration.mjs 2>&1 | tee .audit/smrj-hq-integration.log
-          node scripts/patch-smrj-party-order.mjs 2>&1 | tee -a .audit/smrj-hq-integration.log
-          node scripts/patch-smrj-blank-amount.mjs 2>&1 | tee -a .audit/smrj-hq-integration.log
+          for patch in scripts/patch-smrj-*.mjs; do
+            node "$patch" 2>&1 | tee -a .audit/smrj-hq-integration.log
+          done
 
       - name: Reingest every published SMRJ headquarters contract PDF
         id: reingest
@@ -143,7 +144,7 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git fetch origin main
           git checkout origin/main -- .github/workflows/ci.yml
-          git rm scripts/apply-smrj-hq-integration.mjs scripts/smrj-hq-diagnostic.mjs scripts/patch-smrj-party-order.mjs scripts/patch-smrj-blank-amount.mjs
+          git rm scripts/apply-smrj-hq-integration.mjs scripts/smrj-hq-diagnostic.mjs scripts/patch-smrj-*.mjs
           git add \
             scripts/smrj-official-supplement.mjs \
             scripts/build-official-supplement-index.mjs \
