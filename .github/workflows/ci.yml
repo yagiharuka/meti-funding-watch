@@ -50,14 +50,14 @@ jobs:
       - name: Build and test with repository fixtures
         run: npm test
 
-  inventory_jogmec_sources_once:
-    if: github.event_name == 'pull_request' && github.head_ref == 'reingest/jogmec-full-history'
+  apply_and_reingest_smrj_hq_once:
+    if: github.event_name == 'pull_request' && github.head_ref == 'reingest/smrj-hq-full-history'
     permissions:
       contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Check out the JOGMEC reingest branch
+      - name: Check out the reingest branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.head_ref }}
@@ -72,34 +72,105 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Inventory official JOGMEC result sources
-        run: node scripts/diagnose-jogmec-official-sources.mjs
+      - name: Apply dedicated SMRJ integration and parser regressions
+        shell: bash
+        run: |
+          mkdir -p .audit
+          node scripts/apply-smrj-hq-integration.mjs 2>&1 | tee .audit/smrj-hq-integration.log
+          for patch in scripts/patch-smrj-*.mjs; do
+            node "$patch" 2>&1 | tee -a .audit/smrj-hq-integration.log
+          done
 
-      - name: Preserve the source inventory
+      - name: Reingest every published SMRJ headquarters contract PDF
+        id: reingest
+        shell: bash
+        run: |
+          mkdir -p .audit
+          set +e
+          node scripts/smrj-official-supplement.mjs > .audit/smrj-hq-reingest.log 2>&1
+          status=$?
+          set -e
+          cat .audit/smrj-hq-reingest.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Build indexes and run the full repository suite
+        if: steps.reingest.outputs.status == '0'
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+          npm test
+
+      - name: Write the auditable reingest receipt
+        if: steps.reingest.outputs.status == '0'
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-smrj.json", "utf8"));
+          const receipt = {
+            generatedAt: new Date().toISOString(),
+            collectionStatus: data.collectionStatus,
+            minFiscalYear: data.minFiscalYear,
+            maxFiscalYear: data.maxFiscalYear,
+            documentCount: data.documentCount,
+            parsedDocumentCount: data.parsedDocumentCount,
+            totalRows: data.totalRows,
+            publishedRowCount: data.publishedRowCount,
+            amountUnavailableRowCount: data.amountUnavailableRowCount,
+            nonTotalAmountRowCount: data.nonTotalAmountRowCount,
+            parseFailureCount: data.parseFailureCount,
+            sourceListUrl: data.listUrl,
+          };
+          await writeFile(".audit/smrj-hq-reingest.json", `${JSON.stringify(receipt, null, 2)}\n`);
+          console.log(JSON.stringify(receipt));
+          NODE
+
+      - name: Preserve live-reingest diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: jogmec-source-discovery-${{ github.run_id }}
-          path: .audit/jogmec-discovery
+          name: smrj-hq-reingest-${{ github.run_id }}
+          path: |
+            .audit/smrj-hq-integration.log
+            .audit/smrj-hq-reingest.log
+            .audit/smrj-hq-reingest.json
           if-no-files-found: error
           retention-days: 90
 
-      - name: Commit the inventory and restore ordinary CI
+      - name: Commit the verified source, data and ordinary CI
+        if: steps.reingest.outputs.status == '0'
         shell: bash
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git fetch origin main
           git checkout origin/main -- .github/workflows/ci.yml
-          git rm .github/workflows/jogmec-discovery-once.yml scripts/diagnose-jogmec-official-sources.mjs
-          git add -f .audit/jogmec-discovery
-          git add docs/jogmec-reingest-plan.md .github/workflows/ci.yml
-          git commit -m "audit: inventory JOGMEC official result sources"
+          git rm scripts/apply-smrj-hq-integration.mjs scripts/smrj-hq-diagnostic.mjs scripts/patch-smrj-*.mjs
+          git add \
+            scripts/smrj-official-supplement.mjs \
+            scripts/build-official-supplement-index.mjs \
+            scripts/build-official-company-index.mjs \
+            pages-site/company-evidence-ui.ts \
+            .github/workflows/update-data.yml \
+            .github/workflows/refresh-official-data.yml \
+            tests/smrj-official-supplement.test.mjs \
+            tests/official-supplement.test.mjs \
+            tests/company-evidence-ui.test.mjs \
+            data/official-supplement-smrj.json \
+            data/official-supplement-index.json \
+            .audit/smrj-hq-reingest.json \
+            .github/workflows/ci.yml
+          git commit -m "feat(data): reingest complete SMRJ headquarters history"
+          git reset --hard HEAD
+          git clean -fd
           for attempt in 1 2 3; do
-            git pull --rebase origin reingest/jogmec-full-history
-            if git push origin HEAD:reingest/jogmec-full-history; then
+            git pull --rebase origin reingest/smrj-hq-full-history
+            if git push origin HEAD:reingest/smrj-hq-full-history; then
               exit 0
             fi
             echo "Push raced; retrying ($attempt/3)."
           done
           exit 1
+
+      - name: Fail after preserving evidence when the live reingest is invalid
+        if: steps.reingest.outputs.status != '0'
+        run: exit 1
