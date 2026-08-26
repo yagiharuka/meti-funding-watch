@@ -39,6 +39,19 @@ parser = replaceOnce(
       .sort((left, right) => right.y - left.y);`,
   "JOGMEC whole-row date anchors",
 );
+parser = replaceOnce(
+  parser,
+  `      if (!program || !organization) {
+        throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です\`);
+      }`,
+  `      if (!program || !organization) {
+        const diagnostics = rowItems
+          .map((item) => \`\${item.text}@\${item.x.toFixed(4)},\${item.y.toFixed(4)}\`)
+          .join(" | ");
+        throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です (program=\${JSON.stringify(program)} organization=\${JSON.stringify(organizationCell)} bounds=\${JSON.stringify(schema.bounds)} items=\${diagnostics})\`);
+      }`,
+  "JOGMEC row-boundary diagnostics",
+);
 await writeFile(parserPath, parser);
 
 const testPath = "tests/jogmec-official-supplement.test.mjs";
@@ -57,4 +70,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for split headers and joined-row contract dates.");
+console.log("Patched JOGMEC parser for split headers, joined-row dates, and row diagnostics.");
