@@ -1,17 +1,35 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-// Stage three is generated through String.raw, so its escaped nested template literal
-// must be converted before Node parses the generated stage-one module.
+// Stage three is generated through String.raw. Repair the generated module before
+// Node parses it, and keep ordinal row labels out of the first semantic column.
 const path = "scripts/jogmec-reingest-stage1-20260826.mjs";
 const before = await readFile(path, "utf8");
-const invalid = "      parsed.record.parseMethod = \\\`pdf_positioned_\\${anchorType}\\\`;";
-const valid = '      parsed.record.parseMethod = "pdf_positioned_" + anchorType;';
-const matches = before.split(invalid).length - 1;
-if (matches === 1) {
-  await writeFile(path, before.replace(invalid, valid));
-  console.log("Repaired generated JOGMEC positioned-parser parseMethod syntax.");
-} else if (matches === 0 && before.includes(valid)) {
-  console.log("Generated JOGMEC positioned-parser syntax was already repaired.");
+let after = before;
+
+const invalidParseMethod = "      parsed.record.parseMethod = \\\`pdf_positioned_\\${anchorType}\\\`;";
+const validParseMethod = '      parsed.record.parseMethod = "pdf_positioned_" + anchorType;';
+const invalidParseMethodCount = after.split(invalidParseMethod).length - 1;
+if (invalidParseMethodCount === 1) {
+  after = after.replace(invalidParseMethod, validParseMethod);
+} else if (!(invalidParseMethodCount === 0 && after.includes(validParseMethod))) {
+  throw new Error(`JOGMEC generated parseMethod syntax: expected one invalid or one repaired line, got invalid=${invalidParseMethodCount}`);
+}
+
+const unfilteredRowItems = "    const rowItems = page.items.filter((item) => item.y <= upper && item.y > lower);";
+const filteredRowItems = `    const rowItems = page.items.filter((item) =>
+      item.y <= upper
+      && item.y > lower
+      && !(anchorType === "ordinal" && item === anchor.item));`;
+const unfilteredRowCount = after.split(unfilteredRowItems).length - 1;
+if (unfilteredRowCount === 1) {
+  after = after.replace(unfilteredRowItems, filteredRowItems);
+} else if (!(unfilteredRowCount === 0 && after.includes(filteredRowItems))) {
+  throw new Error(`JOGMEC generated ordinal-anchor filter: expected one unfiltered or one repaired block, got unfiltered=${unfilteredRowCount}`);
+}
+
+if (after !== before) {
+  await writeFile(path, after);
+  console.log("Repaired generated JOGMEC positioned-parser syntax and ordinal anchors.");
 } else {
-  throw new Error(`JOGMEC generated parseMethod syntax: expected one invalid or one repaired line, got invalid=${matches}`);
+  console.log("Generated JOGMEC positioned-parser repairs were already applied.");
 }
