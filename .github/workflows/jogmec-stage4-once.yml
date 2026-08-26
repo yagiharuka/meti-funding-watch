@@ -6,6 +6,8 @@ on:
       - reingest/jogmec-full-history
     paths:
       - ".github/workflows/jogmec-stage4-once.yml"
+      - "scripts/patch-jogmec-stage3-20260826.mjs"
+      - "scripts/patch-jogmec-stage3-generated-syntax.mjs"
       - "scripts/patch-jogmec-stage4-20260826.mjs"
   workflow_dispatch:
 
@@ -40,6 +42,9 @@ jobs:
             node scripts/patch-jogmec-stage3-20260826.mjs
           fi
           node scripts/patch-jogmec-stage4-20260826.mjs
+          node scripts/patch-jogmec-stage3-generated-syntax.mjs
+          node --check scripts/jogmec-inventory-20260826.mjs
+          node --check scripts/jogmec-reingest-stage1-20260826.mjs
       - name: Rebuild content-classified inventory and strict records
         run: |
           mkdir -p .audit
@@ -101,6 +106,7 @@ jobs:
             scripts/apply-jogmec-stage1-integration-20260826.mjs \
             scripts/patch-jogmec-stage2-20260826.mjs \
             scripts/patch-jogmec-stage3-20260826.mjs \
+            scripts/patch-jogmec-stage3-generated-syntax.mjs \
             scripts/patch-jogmec-stage4-20260826.mjs; do
             test ! -e "$path" || git rm "$path"
           done
