@@ -87,6 +87,15 @@ parser = replaceOnce(
 );
 parser = replaceOnce(
   parser,
+  `      const anchor = dateLines[index];
+      const upper = index === 0`,
+  `      const anchor = dateLines[index];
+      if (/(?:作成|更新|<注>)/u.test(anchor.text)) continue;
+      const upper = index === 0`,
+  "JOGMEC document-date row guard",
+);
+parser = replaceOnce(
+  parser,
   `      if (!program || !organization) {
         throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です\`);
       }`,
@@ -166,4 +175,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for rotated PDFs, footer-date exclusion, appendix references, split headers, and diagnostics.");
+console.log("Patched JOGMEC parser for rotated PDFs, footer-date guards, appendix references, split headers, and diagnostics.");
