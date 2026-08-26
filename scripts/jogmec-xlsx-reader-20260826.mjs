@@ -1,5 +1,12 @@
 import { inflateRawSync } from "node:zlib";
 
+// The one-time inventory process runs after stage-three code generation but before
+// the generated stage-one module is parsed. Repair that generated syntax here so
+// failed workflow attempts can be retried against the latest branch checkout.
+if (/jogmec-inventory-20260826\.mjs$/u.test(String(process.argv[1] ?? ""))) {
+  await import("./patch-jogmec-stage3-generated-syntax.mjs");
+}
+
 function cleanXmlText(value = "") {
   return String(value)
     .replace(/&amp;/gu, "&")
