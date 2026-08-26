@@ -40,15 +40,22 @@ parser = replaceOnce(
     if (!matches.length && amountCandidates.length === 1) matches = amountCandidates;
 
     if (!matches.length) {
-      const correctedNonTotal = partyCandidates.filter(({ row }) =>
-        row.amount === null
-        && row.amountStatus === "non_total"
-        && programComparable(row.program, prior.program));
-      if (correctedNonTotal.length === 1) matches = correctedNonTotal;
+      const nonTotalCandidates = partyCandidates.filter(({ row }) =>
+        row.amount === null && row.amountStatus === "non_total");
+      const comparableNonTotal = nonTotalCandidates.filter(({ row }) =>
+        programComparable(row.program, prior.program));
+      if (comparableNonTotal.length === 1) matches = comparableNonTotal;
+      else if (!comparableNonTotal.length && nonTotalCandidates.length === 1) matches = nonTotalCandidates;
     }
 
     if (matches.length !== 1) {
-      throw new Error(\`中小機構本部: 既存検証行を現在資料へ一意に対応できません (\${prior.id}: \${matches.length}/\${amountCandidates.length}/\${partyCandidates.length})\`);
+      const diagnostic = partyCandidates.map(({ row }) => ({
+        program: row.program,
+        amount: row.amount,
+        amountStatus: row.amountStatus,
+        sourceUrl: row.sourceUrl,
+      }));
+      throw new Error(\`中小機構本部: 既存検証行を現在資料へ一意に対応できません (\${prior.id}: \${matches.length}/\${amountCandidates.length}/\${partyCandidates.length}; \${JSON.stringify(diagnostic)})\`);
     }
     const { row, index } = matches[0];`,
   "SMRJ prior non-total correction",
@@ -109,7 +116,7 @@ test("SMRJ merge corrects a previous numeric amendment amount to non-total witho
     ...prior,
     id: "new-layout-id",
     organization: "株式会社日本経済廣告社",
-    program: "『Japan Venture Awards 2020』に係る業務請負（第2回変更）",
+    program: "PDF配置差で旧文字列と一致しない変更契約行",
     amount: null,
     amountStatus: "non_total",
     amountStage: "単価・変動額（契約総額の記載なし）",
@@ -122,6 +129,31 @@ test("SMRJ merge corrects a previous numeric amendment amount to non-total witho
   assert.equal(merged[0].amount, null);
   assert.equal(merged[0].amountStatus, "non_total");
   assert.equal(merged[0].amountStage, "単価・変動額（契約総額の記載なし）");
+});
+
+test("SMRJ merge still fails closed when multiple non-total rows share the same party and date", () => {
+  const prior = {
+    id: "prior-ambiguous-row",
+    organization: "株式会社テスト",
+    corporateNumber: "1000000000001",
+    fiscalYear: 2026,
+    date: "2026-04-10",
+    program: "旧件名",
+    category: "contract_result",
+    amount: 10_000_000,
+  };
+  const current = ["変更A", "変更B"].map((program, index) => ({
+    ...prior,
+    id: `current-non-total-${index}`,
+    program,
+    amount: null,
+    amountStatus: "non_total",
+    amountStage: "単価・変動額（契約総額の記載なし）",
+  }));
+  assert.throws(
+    () => mergeSmrjWithPrevious(current, [prior]),
+    /既存検証行を現在資料へ一意に対応できません/,
+  );
 });
 
 test("SMRJ merge still fails closed on an unexplained published-amount change", () => {
@@ -150,4 +182,4 @@ test("SMRJ merge still fails closed on an unexplained published-amount change", 
 `;
 await writeFile(testPath, tests);
 
-console.log("Patched SMRJ prior amendment corrections and added fail-closed regression tests.");
+console.log("Patched SMRJ prior non-total corrections and added fail-closed regression tests.");
