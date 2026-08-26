@@ -258,7 +258,7 @@ await updateText(".github/workflows/refresh-official-data.yml", (input) => {
   const needle = 'data/official-supplement-nite.json data/official-supplement-ipa.json';
   const replacement = 'data/official-supplement-nite.json data/official-supplement-jogmec.json data/official-supplement-ipa.json';
   const count = input.split(needle).length - 1;
-  if (count !== 3) throw new Error(`official refresh JOGMEC path: expected 3 matches, got ${count}`);
+  if (count !== 2) throw new Error(`official refresh JOGMEC path: expected 2 matches, got ${count}`);
   return input.replaceAll(needle, replacement);
 });
 
