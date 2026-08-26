@@ -72,18 +72,6 @@ parser = replaceOnce(
 );
 parser = replaceOnce(
   parser,
-  `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
-      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
-      .filter((line) => line.date && line.y < schema.headerY - 0.003)
-      .sort((left, right) => right.y - left.y);`,
-  `    const dateLines = groupLines(page.items)
-      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
-      .filter((line) => line.date && line.y < schema.headerY - 0.003)
-      .sort((left, right) => right.y - left.y);`,
-  "JOGMEC whole-row date anchors",
-);
-parser = replaceOnce(
-  parser,
   `  for (const page of pages) {
     schema = buildSchema(page, document, schema);`,
   `  for (const rawPage of pages) {
@@ -166,4 +154,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for quarter-turn PDFs, appendix references, split headers, joined-row dates, and diagnostics.");
+console.log("Patched JOGMEC parser for quarter-turn PDFs, date-column anchors, appendix references, split headers, and diagnostics.");
