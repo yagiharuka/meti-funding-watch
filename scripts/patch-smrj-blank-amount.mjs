@@ -19,10 +19,11 @@ const AMENDMENT_AMOUNT_PATTERN = /(?:増額|減額|変更額|差額|契約変更
 parser = replaceOnce(
   parser,
   `  const nonTotal = NON_TOTAL_PATTERN.test(rowText) || distinctNumbers.length > 1;`,
-  `  const nonTotal = NON_TOTAL_PATTERN.test(rowText)
+  `  const hasExplicitContractAmount = distinctNumbers.length === 1;
+  const nonTotal = distinctNumbers.length > 1
     || AMENDMENT_AMOUNT_PATTERN.test(financialText)
-    || distinctNumbers.length > 1;`,
-  "SMRJ amendment financial-column scope",
+    || (!hasExplicitContractAmount && NON_TOTAL_PATTERN.test(rowText));`,
+  "SMRJ explicit contract amount precedence",
 );
 parser = replaceOnce(
   parser,
@@ -90,7 +91,24 @@ test("SMRJ positioned parser keeps an explicit contract amount even when the not
   assert.equal(row.amountStatus, "published");
   assert.equal(row.amountStage, "契約金額");
 });
+
+test("SMRJ positioned parser keeps an explicit contract amount when notes show a monthly-price breakdown", () => {
+  const page = positionedPage();
+  page.items.push(item("設定作業費用:3,300,000円(総額)", 0.93, 0.72, 0.06));
+  page.items.push(item("利用料:月額220,000円×18ヵ月", 0.93, 0.70, 0.06));
+  const parsed = parseSmrjPositionedPages({
+    url: "https://www.smrj.go.jp/procurement/bid/contract/example-monthly-breakdown.pdf",
+    sourcePageUrl: SMRJ_HQ_CONTRACT_URL,
+    fiscalYear: 2026,
+    contractType: "competitive",
+  }, [page]);
+  const row = parsed.records.find((value) => value.sourceRowNumber === 1);
+  assert.ok(row);
+  assert.equal(row.amount, 12_345_678);
+  assert.equal(row.amountStatus, "published");
+  assert.equal(row.amountStage, "契約金額");
+});
 `;
 await writeFile(testPath, tests);
 
-console.log("Patched SMRJ blank amounts and amendment-column semantics with regression tests.");
+console.log("Patched SMRJ explicit contract amounts, blanks and amendment semantics with regression tests.");
