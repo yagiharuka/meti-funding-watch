@@ -77,9 +77,9 @@ jobs:
         run: |
           mkdir -p .audit
           node scripts/apply-jogmec-full-history-integration.mjs 2>&1 | tee .audit/jogmec-integration.log
-          for patch in scripts/patch-jogmec-*.mjs; do
-            node "$patch" 2>&1 | tee -a .audit/jogmec-integration.log
-          done
+          node scripts/patch-jogmec-live-layout.mjs 2>&1 | tee -a .audit/jogmec-integration.log
+          node scripts/patch-jogmec-appendix.mjs 2>&1 | tee -a .audit/jogmec-integration.log
+          node scripts/patch-jogmec-amount-punctuation.mjs 2>&1 | tee -a .audit/jogmec-integration.log
 
       - name: Reingest every published JOGMEC competitive and discretionary contract PDF
         id: reingest
