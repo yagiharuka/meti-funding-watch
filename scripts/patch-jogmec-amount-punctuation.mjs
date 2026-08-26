@@ -13,6 +13,12 @@ const parserPath = "scripts/jogmec-official-supplement.mjs";
 let parser = await readFile(parserPath, "utf8");
 parser = replaceOnce(
   parser,
+  '      return nextItem ? (item.x + nextItem.x) / 2 : 1.05;',
+  '      return nextItem ? (item.x + nextItem.x) / 2 + 1e-6 : 1.05;',
+  "JOGMEC appendix boundary epsilon",
+);
+parser = replaceOnce(
+  parser,
   'const UNIT_PATTERN = /(?:単価|[／/]\\s*(?:1|一)?\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|L)|(?:1|一)\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|L)\\s*(?:あたり|当たり))/iu;',
   'const UNIT_PATTERN = /(?:単価|[／/]\\s*(?:1|一)?\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|l|kw|kwh|mw|mwh)|(?:1|一)\\s*(?:頁|ページ|件|台|人|時間|日|回|式|枚|冊|部|kg|t|m|l|kw|kwh|mw|mwh)\\s*(?:あたり|当たり))/iu;',
   "JOGMEC energy-unit prices",
@@ -41,4 +47,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC amount parsing for separator dashes, creation dates, and energy-unit prices.");
+console.log("Patched JOGMEC amount parsing for separator dashes, creation dates, energy-unit prices, and appendix boundaries.");
