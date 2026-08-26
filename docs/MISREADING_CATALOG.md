@@ -33,9 +33,9 @@
 |---|---|---|---|---|---|---|---|---|
 | M-001 | 0件・欠落 | 0件＝その法人は経産省関係の資金を受けていない | 高 | GビズINFO企業検索タブ | 検索0件のときだけ否定推論を防ぐ文を表示し、行政事業レビュー・照合記録を次に確認するよう案内 | `pages-site/company-search-ui.ts` | `tests/company-search-runtime.test.mjs` | MITIGATED |
 | M-002 | 0件・欠落 | 0件＝行政事業レビュー／公式資料にも該当資金が存在しない | 高 | レビュー・公式資料 | 収録範囲外や未掲載を否定推論に使えない旨を表示 | `app/review/ReviewSearch.tsx`, `app/CombinedCompanyResults.tsx`, `pages-site/company-evidence-ui.ts` | `tests/review-ui-semantics.test.mjs`, `tests/company-evidence-ui.test.mjs` | MITIGATED |
-| M-003 | 金額・集計 | GビズINFOの補助金掲載額は行をまたいで足せる | 高 | 企業カード、年度別、事業別、検索サマリー | 補助金は合計を表示せず、個別明細だけ表示 | `pages-site/company-search-ui.ts`, `pages-site/subsidy-semantics-ui.ts` | `tests/subsidy-semantics-ui.test.mjs`, `tests/company-search-runtime.test.mjs` | MITIGATED |
+| M-003 | 金額・集計 | GビズINFOの補助金掲載額は、同一交付の年度違い・表記違い・丸め違いによる再掲を含むまま行をまたいで足せる | 高 | 企業カード、年度別、事業別、検索サマリー | 同一法人番号内で、同一または近似する事業名かつ掲載額差が±0.1%以内の補助金行を重複掲載候補として1件に畳んでから集計し、除外件数を併記する。明細は削除せず全掲載行を表示する | `scripts/subsidy-deduplication.mjs`, `app/funding-search.worker.ts`, `pages-site/company-search-ui.ts` | `tests/subsidy-deduplication.test.mjs`, `tests/company-search-runtime.test.mjs`, `tests/subsidy-semantics-ui.test.mjs` | MITIGATED |
 | M-004 | 金額・集計 | 行政事業レビューの別シート年度再掲を別支出として足せる | 高 | 同じ企業の行政事業レビュー表示、事業→支出先一覧 | レビュー掲載行をまたぐ金額合計を表示せず、事業から支出先一覧へ直接入った場合は事業名・予算事業IDとシート年度を併記する | `app/CombinedCompanyResults.tsx`, `app/DataReadingGuide.tsx`, `app/review/ReviewSearch.tsx`, `scripts/build-review-company-index.mjs` | `tests/review-company-index-semantics.test.mjs`, `tests/review-ui-semantics.test.mjs` | MITIGATED |
-| M-005 | 時点・年度 | 年度別件数＝実際の補助金額・採択件数の推移 | 高 | GビズINFO年度フィルタ・年度別表示 | 年度指定時に認定日空欄の除外件数を警告し、補助金額は年度別合計しない | `pages-site/subsidy-semantics-ui.ts`, `pages-site/company-search-ui.ts` | `tests/subsidy-semantics-ui.test.mjs` | MITIGATED |
+| M-005 | 時点・年度 | 年度別件数・掲載額＝実際の補助金額・採択件数の推移 | 高 | GビズINFO年度フィルタ・年度別表示 | 年度指定時に認定日空欄の除外件数を警告する。年度別掲載額もM-003と同じ重複候補除外後の参考集計とし、除外件数を併記して推移とは断定しない | `scripts/subsidy-deduplication.mjs`, `pages-site/subsidy-semantics-ui.ts`, `pages-site/company-search-ui.ts` | `tests/subsidy-deduplication.test.mjs`, `tests/subsidy-semantics-ui.test.mjs`, `tests/company-search-runtime.test.mjs` | MITIGATED |
 | M-006 | 金額・集計 | 共同受注・連名行の公表金額＝各社それぞれの受領額 | 高 | 公式資料明細 | 共同当事者を展開し、公表行全体の金額で各社配分額ではない旨をその場で表示 | `pages-site/company-evidence-ui.ts`, `scripts/company-search.mjs` | `tests/company-evidence-ui.test.mjs`, `tests/company-search-numberless.test.mjs` | MITIGATED |
 | M-007 | 検索・名寄せ | 正規化された「完全一致」1件＝自分が探していた法人で確定 | 中 | GビズINFO企業検索 | 完全一致を主結果にしつつ、同じ検索語を含む別法人候補を同じ応答で別表示し合算しない | `app/funding-search.worker.ts`・`pages-site/company-search-ui.ts`・`app/page.tsx` | `tests/company-search-alternatives.test.mjs` | MITIGATED |
 | M-008 | 検索・名寄せ | 旧商号を入力すれば現在の同一法人を必ず検索できる | 高 | 全企業検索 | — | — | — | OPEN |
@@ -73,7 +73,7 @@ M-020はGビズINFO全件CSVに状態情報がないため、0円行の意味を
 ## 注記配置の原則
 
 - **上に置く**：読み違えると人が損をする一文。原則として、その誤読が発生する条件のときだけ表示する。
-- **その場に残す**：数字の代わりに表示する `合計しません`、年度指定時の警告、候補展開時の非合算表示など、操作と不可分な表示。
+- **その場に残す**：重複掲載候補として集計から除外した件数、年度指定時の警告、候補展開時の非合算表示など、操作と不可分な表示。
 - **下へ畳む**：定義、背景、系列間の違い、資金経路、補助金の状態違いなど、読めば理解できる説明。
 
 判断基準は、**「読み違えると人が損をする一文」だけを上に置き、「読めば分かることの説明」は下げる**、です。
