@@ -6,6 +6,8 @@ on:
       - reingest/jogmec-full-history
     paths:
       - ".github/workflows/jogmec-stage4-once.yml"
+      - "scripts/patch-jogmec-stage4-20260826.mjs"
+  workflow_dispatch:
 
 permissions:
   contents: write
