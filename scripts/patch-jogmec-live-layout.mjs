@@ -100,12 +100,14 @@ parser = replaceOnce(
         throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です\`);
       }`,
   `      if (!program || !organization) {
+        const rowText = clean(rowItems.map((item) => item.text).join(" "));
+        if (/^(?:<注>|注)/u.test(program) && /(?:作成|再就職|取引高|公表項目)/u.test(rowText)) continue;
         const diagnostics = rowItems
           .map((item) => \`\${item.text}@\${item.x.toFixed(4)},\${item.y.toFixed(4)}\`)
           .join(" | ");
         throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です (program=\${JSON.stringify(program)} organization=\${JSON.stringify(organizationCell)} bounds=\${JSON.stringify(schema.bounds)} items=\${diagnostics})\`);
       }`,
-  "JOGMEC row-boundary diagnostics",
+  "JOGMEC footer-note row guard",
 );
 await writeFile(parserPath, parser);
 
@@ -126,8 +128,8 @@ tests = replaceOnce(
 tests = replaceOnce(
   tests,
   '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),',
-  '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),\n      item("令和8年7月2日作成", 0.39, 0.05, 0.08),\n      item("<注>", 0.08, 0.05, 0.04),',
-  "JOGMEC footer date regression fixture",
+  '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),\n      item("令和8年7月2日作成", 0.39, 0.05, 0.08),\n      item("<注>", 0.08, 0.05, 0.04),\n      item("公表項目及び再就職に係る注記", 0.08, 0.04, 0.20),',
+  "JOGMEC footer note regression fixture",
 );
 tests = replaceOnce(
   tests,
@@ -175,4 +177,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for rotated PDFs, footer-date guards, appendix references, split headers, and diagnostics.");
+console.log("Patched JOGMEC parser for rotated PDFs, footer-note guards, appendix references, split headers, and diagnostics.");
