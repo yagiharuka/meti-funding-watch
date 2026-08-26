@@ -72,11 +72,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply dedicated JOGMEC index, UI, workflow and test integration
+      - name: Apply dedicated JOGMEC integration and live-layout regressions
         shell: bash
         run: |
           mkdir -p .audit
           node scripts/apply-jogmec-full-history-integration.mjs 2>&1 | tee .audit/jogmec-integration.log
+          node scripts/patch-jogmec-live-layout.mjs 2>&1 | tee -a .audit/jogmec-integration.log
 
       - name: Reingest every published JOGMEC competitive and discretionary contract PDF
         id: reingest
@@ -142,7 +143,7 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git fetch origin main
           git checkout origin/main -- .github/workflows/ci.yml
-          git rm scripts/apply-jogmec-full-history-integration.mjs
+          git rm scripts/apply-jogmec-full-history-integration.mjs scripts/patch-jogmec-live-layout.mjs
           git add \
             scripts/jogmec-official-supplement.mjs \
             scripts/build-official-supplement-index.mjs \
