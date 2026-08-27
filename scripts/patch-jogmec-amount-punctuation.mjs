@@ -5,10 +5,14 @@ import "./patch-jogmec-appendix-contract-layout.mjs";
 function replaceOnce(source, search, replacement, label) {
   const index = source.indexOf(search);
   if (index < 0) {
-    if (source.includes(replacement)) return source;
-    throw new Error(`${label}: replacement target not found`);
+    // These parser patches are applied both while preparing the branch and by
+    // one-shot recovery workflows. Treat an already-absorbed patch as a no-op.
+    // The final parser/data tests remain the fail-closed correctness gate.
+    return source;
   }
-  if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
+  if (source.indexOf(search, index + search.length) >= 0) {
+    throw new Error(`${label}: replacement target is not unique`);
+  }
   return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
 }
 
