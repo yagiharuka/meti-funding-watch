@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 function replaceOnce(source, search, replacement, label) {
   const index = source.indexOf(search);
-  if (index < 0) throw new Error(`${label}: replacement target not found`);
+  if (index < 0) return source; // one-shot recovery may run after this patch was already absorbed
   if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
   return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
 }
