@@ -4,7 +4,10 @@ import "./patch-jogmec-appendix-contract-layout.mjs";
 
 function replaceOnce(source, search, replacement, label) {
   const index = source.indexOf(search);
-  if (index < 0) throw new Error(`${label}: replacement target not found`);
+  if (index < 0) {
+    if (source.includes(replacement)) return source;
+    throw new Error(`${label}: replacement target not found`);
+  }
   if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
   return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
 }
