@@ -44,6 +44,33 @@ parser = replaceOnce(
 );
 parser = replaceOnce(
   parser,
+  `  const programHeader = headerItem(page.items, /物品等又は役務の名称/u);
+  const dateHeader = headerItem(page.items, /契約を締結した日/u);
+  if (!programHeader || !dateHeader) return page;
+  const isQuarterTurn = Math.abs(programHeader.x - dateHeader.x) < 0.04
+    && Math.abs(programHeader.y - dateHeader.y) > 0.10;
+  if (!isQuarterTurn) return page;`,
+  `  const headerCandidates = [
+    headerItem(page.items, /物品等又は役務の名称/u),
+    headerItem(page.items, /契約担当役の氏名及び所在地/u),
+    headerItem(page.items, /契約を締結した日/u),
+    headerItem(page.items, /契約の相手先の商号又は名称及び所在地/u),
+    headerItem(page.items, /一般競争入札(?:及び)?|随意契約/u),
+    headerItem(page.items, /^予定価格/u),
+    headerItem(page.items, /^契約価格|^契約金額/u),
+    headerItem(page.items, /^落札率/u),
+  ].filter(Boolean);
+  if (headerCandidates.length < 4) return page;
+  const xs = headerCandidates.map((item) => item.x);
+  const ys = headerCandidates.map((item) => item.y);
+  const xSpread = Math.max(...xs) - Math.min(...xs);
+  const ySpread = Math.max(...ys) - Math.min(...ys);
+  const isQuarterTurn = xSpread < 0.08 && ySpread > 0.25;
+  if (!isQuarterTurn) return page;`,
+  "JOGMEC rotated-table header-cluster detection",
+);
+parser = replaceOnce(
+  parser,
   `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
       .map((line) => ({ ...line, date: japaneseDate(line.text) }))
       .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
@@ -53,11 +80,6 @@ parser = replaceOnce(
       .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
       .sort((left, right) => right.y - left.y);
     if (!dateLines.length) {
-      // Some JOGMEC monthly PDFs place the contract date text object outside
-      // the geometric date column even though the visual row is correct.
-      // Use the date-bearing text object itself as the vertical anchor. Creation
-      // dates and notes stay excluded; all remaining cells are still parsed and
-      // reconciled through the ordinary column schema below.
       dateLines = page.items
         .map((item) => ({ y: item.y, items: [item], text: clean(item.text), date: japaneseDate(item.text) }))
         .filter((line) => line.date
@@ -110,4 +132,4 @@ test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", ()
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC amount parsing and displaced date-object handling.");
+console.log("Patched JOGMEC rotated-table detection, amount parsing, and displaced date-object handling.");
