@@ -83,6 +83,26 @@ parser = replaceOnce(
 );
 parser = replaceOnce(
   parser,
+  `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
+      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
+      .sort((left, right) => right.y - left.y);`,
+  `    const dateCandidates = (items) => groupLines(items)
+      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
+      .sort((left, right) => right.y - left.y);
+    let dateLines = dateCandidates(page.items.filter((item) => inBounds(item, schema.bounds.date)));
+    if (!dateLines.length) {
+      // Some JOGMEC PDFs shift the printed date text outside the header-derived
+      // date column even though the remaining table columns are unchanged.
+      // Recover only the row anchor from the full horizontal line; all other
+      // fields still use the strict schema bounds below.
+      dateLines = dateCandidates(page.items);
+    }`,
+  "JOGMEC shifted-date row anchors",
+);
+parser = replaceOnce(
+  parser,
   `  for (const page of pages) {
     schema = buildSchema(page, document, schema);`,
   `  for (const rawPage of pages) {
@@ -143,6 +163,18 @@ tests = replaceOnce(
 function document(contractType) {`,
   `}
 
+function shiftedDatePage(contractType) {
+  const page = positionedPage(contractType);
+  return {
+    ...page,
+    items: page.items.map((entry) => (
+      /^(?:令和|平成)/u.test(entry.text) && !/(?:作成|更新)/u.test(entry.text)
+        ? { ...entry, x: 0.30 }
+        : entry
+    )),
+  };
+}
+
 function quarterTurnPage(contractType) {
   const page = positionedPage(contractType);
   return {
@@ -158,12 +190,20 @@ function quarterTurnPage(contractType) {
 }
 
 function document(contractType) {`,
-  "JOGMEC quarter-turn regression fixture",
+  "JOGMEC shifted-date regression fixture",
 );
 tests = replaceOnce(
   tests,
   `test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
-  `test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {
+  `test("JOGMEC shifted date text falls back to full-line row anchors", () => {
+  const parsed = parseJogmecPositionedPages(document("competitive"), [shiftedDatePage("competitive")]);
+  assert.equal(parsed.totalRows, 4);
+  assert.equal(parsed.records.map((row) => row.date).join(","), "2026-04-01,2026-04-02,2026-04-03,2026-04-04");
+  assert.equal(parsed.records[0].organization, "株式会社アルファ");
+  assert.equal(parsed.records[0].amount, 12_345_678);
+});
+
+test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {
   const parsed = parseJogmecPositionedPages(document("competitive"), [quarterTurnPage("competitive")]);
   assert.equal(parsed.totalRows, 4);
   assert.equal(parsed.records[0].organization, "株式会社アルファ");
@@ -172,7 +212,7 @@ tests = replaceOnce(
 });
 
 test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
-  "JOGMEC quarter-turn parser test",
+  "JOGMEC shifted-date and quarter-turn parser tests",
 );
 tests = replaceOnce(
   tests,
@@ -182,4 +222,4 @@ tests = replaceOnce(
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC parser for rotated PDFs, footer-note guards, appendix references, split headers, and diagnostics.");
+console.log("Patched JOGMEC parser for rotated PDFs, shifted date columns, footer-note guards, appendix references, split headers, and diagnostics.");
