@@ -1,8 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-function replaceOnce(source, search, replacement, label) {
+function replaceOnce(source, search, replacement, label, { optional = false } = {}) {
   const index = source.indexOf(search);
-  if (index < 0) throw new Error(`${label}: replacement target not found`);
+  if (index < 0) {
+    if (source.includes(replacement) || optional) return source;
+    throw new Error(`${label}: replacement target not found`);
+  }
   if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
   return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
 }
@@ -10,7 +13,7 @@ function replaceOnce(source, search, replacement, label) {
 async function updateText(path, transform) {
   const before = await readFile(path, "utf8");
   const after = transform(before);
-  if (after === before) throw new Error(`${path}: no change produced`);
+  if (after === before) return;
   await writeFile(path, after);
 }
 
@@ -31,6 +34,7 @@ await updateText("scripts/jogmec-official-supplement.mjs", (input) => {
   const isQuarterTurn = Math.abs(primaryHeader.x - secondaryHeader.x) < 0.04
     && Math.abs(primaryHeader.y - secondaryHeader.y) > 0.10;`,
     "JOGMEC appendix orientation detection",
+    { optional: true },
   );
   source = replaceOnce(
     source,
