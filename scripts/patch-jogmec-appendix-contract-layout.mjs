@@ -1,8 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-function replaceOnce(source, search, replacement, label) {
+function replaceOnce(source, search, replacement, label, { optional = false } = {}) {
   const index = source.indexOf(search);
-  if (index < 0) throw new Error(`${label}: replacement target not found`);
+  if (index < 0) {
+    if (source.includes(replacement) || optional) return source;
+    throw new Error(`${label}: replacement target not found`);
+  }
   if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
   return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
 }
@@ -15,6 +18,7 @@ parser = replaceOnce(
   "  const secondaryHeader = headerItem(page.items, /契約を締結した日|落札価格/u);",
   "  const secondaryHeader = headerItem(page.items, /契約を締結した日|落札価格|契約価格/u);",
   "JOGMEC appendix contract-layout orientation",
+  { optional: true },
 );
 
 parser = replaceOnce(
@@ -127,7 +131,7 @@ await writeFile(parserPath, parser);
 
 const testPath = "tests/jogmec-official-supplement.test.mjs";
 let tests = await readFile(testPath, "utf8");
-tests += `
+if (!tests.includes("function contractAppendixPage()")) tests += `
 
 function contractAppendixPage() {
   const logical = {
