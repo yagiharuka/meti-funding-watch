@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import "./patch-jogmec-appendix-contract-layout.mjs";
+import "./patch-jogmec-shared-orientation.mjs";
 
 function replaceOnce(source, search, replacement, label) {
   const index = source.indexOf(search);
