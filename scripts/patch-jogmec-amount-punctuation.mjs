@@ -42,6 +42,34 @@ parser = replaceOnce(
   '.replace(/[¥円()（）税込税抜き消費税を除く－—―-]/gu, "");',
   "JOGMEC amount-cell punctuation",
 );
+parser = replaceOnce(
+  parser,
+  `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
+      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
+      .sort((left, right) => right.y - left.y);`,
+  `    let dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
+      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
+      .sort((left, right) => right.y - left.y);
+    if (!dateLines.length) {
+      // Some JOGMEC monthly PDFs expose the whole contract row as one text line,
+      // so the date glyphs fall outside the geometric date column. Recover only
+      // rows that also contain the contract-method marker; this excludes creation
+      // dates and footnotes while keeping the row accounting fail-closed.
+      const methodPattern = document.contractType === "competitive"
+        ? /(?:一般競争入札|指名競争入札)/u
+        : /(?:随意契約|企画競争|公募)/u;
+      dateLines = groupLines(page.items)
+        .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+        .filter((line) => line.date
+          && methodPattern.test(line.text)
+          && !/(?:作成|更新|<注>)/u.test(line.text)
+          && line.y < schema.headerY - 0.003)
+        .sort((left, right) => right.y - left.y);
+    }`,
+  "JOGMEC joined-row date anchor fallback",
+);
 await writeFile(parserPath, parser);
 
 const testPath = "tests/jogmec-official-supplement.test.mjs";
@@ -52,6 +80,37 @@ tests = replaceOnce(
   '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("- ¥75,900,000", "competitive").amount, 75_900_000);\n  assert.equal(classifyJogmecAmount("¥1,608,902 令和6年7月16日作成", "competitive").amount, 1_608_902);\n  assert.equal(classifyJogmecAmount("¥11.2/kwh", "competitive").amountStatus, "non_total");',
   "JOGMEC annotated and unit amount regressions",
 );
+tests = replaceOnce(
+  tests,
+  `function quarterTurnPage(contractType) {`,
+  `function joinedRowDateAnchorPage(contractType) {
+  const page = positionedPage(contractType);
+  return {
+    ...page,
+    items: page.items.map((entry) =>
+      /^(?:令和|平成)/u.test(entry.text) && Math.abs(entry.x - 0.39) < 0.001
+        ? { ...entry, x: 0.27, w: 0.04 }
+        : entry),
+  };
+}
+
+function quarterTurnPage(contractType) {`,
+  "JOGMEC joined-row date-anchor fixture",
+);
+tests = replaceOnce(
+  tests,
+  `test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {`,
+  `test("JOGMEC joined-row layout recovers dates outside the geometric date column", () => {
+  const parsed = parseJogmecPositionedPages(document("competitive"), [joinedRowDateAnchorPage("competitive")]);
+  assert.equal(parsed.totalRows, 4);
+  assert.equal(parsed.records[0].date, "2026-04-01");
+  assert.equal(parsed.records[0].organization, "株式会社アルファ");
+  assert.equal(parsed.records[0].amount, 12_345_678);
+});
+
+test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {`,
+  "JOGMEC joined-row date-anchor parser test",
+);
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC amount parsing for separator dashes, creation dates, energy-unit prices, and appendix boundaries.");
+console.log("Patched JOGMEC amount parsing and joined-row date-anchor handling.");
