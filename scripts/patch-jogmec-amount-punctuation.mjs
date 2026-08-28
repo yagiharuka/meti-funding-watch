@@ -53,22 +53,19 @@ parser = replaceOnce(
       .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
       .sort((left, right) => right.y - left.y);
     if (!dateLines.length) {
-      // Some JOGMEC monthly PDFs expose the whole contract row as one text line,
-      // so the date glyphs fall outside the geometric date column. Recover only
-      // rows that also contain the contract-method marker; this excludes creation
-      // dates and footnotes while keeping the row accounting fail-closed.
-      const methodPattern = document.contractType === "competitive"
-        ? /(?:一般競争入札|指名競争入札)/u
-        : /(?:随意契約|企画競争|公募)/u;
-      dateLines = groupLines(page.items)
-        .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      // Some JOGMEC monthly PDFs place the contract date text object outside
+      // the geometric date column even though the visual row is correct.
+      // Use the date-bearing text object itself as the vertical anchor. Creation
+      // dates and notes stay excluded; all remaining cells are still parsed and
+      // reconciled through the ordinary column schema below.
+      dateLines = page.items
+        .map((item) => ({ y: item.y, items: [item], text: clean(item.text), date: japaneseDate(item.text) }))
         .filter((line) => line.date
-          && methodPattern.test(line.text)
           && !/(?:作成|更新|<注>)/u.test(line.text)
           && line.y < schema.headerY - 0.003)
         .sort((left, right) => right.y - left.y);
     }`,
-  "JOGMEC joined-row date anchor fallback",
+  "JOGMEC displaced date-object fallback",
 );
 await writeFile(parserPath, parser);
 
@@ -95,7 +92,7 @@ tests = replaceOnce(
 }
 
 function quarterTurnPage(contractType) {`,
-  "JOGMEC joined-row date-anchor fixture",
+  "JOGMEC displaced date-object fixture",
 );
 tests = replaceOnce(
   tests,
@@ -109,8 +106,8 @@ tests = replaceOnce(
 });
 
 test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {`,
-  "JOGMEC joined-row date-anchor parser test",
+  "JOGMEC displaced date-object parser test",
 );
 await writeFile(testPath, tests);
 
-console.log("Patched JOGMEC amount parsing and joined-row date-anchor handling.");
+console.log("Patched JOGMEC amount parsing and displaced date-object handling.");
