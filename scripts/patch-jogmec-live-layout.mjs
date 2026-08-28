@@ -45,10 +45,15 @@ function buildSchema(page, document, previous = null) {`,
 function normalizeJogmecPage(page) {
   const programHeader = headerItem(page.items, /物品等又は役務の名称/u);
   const dateHeader = headerItem(page.items, /契約を締結した日/u);
-  if (!programHeader || !dateHeader) return page;
-  const isQuarterTurn = Math.abs(programHeader.x - dateHeader.x) < 0.04
-    && Math.abs(programHeader.y - dateHeader.y) > 0.10;
-  if (!isQuarterTurn) return page;
+  const organizationHeader = headerItem(page.items, /契約の相手先の商号又は名称及び所在地/u);
+  const methodHeader = headerItem(page.items, /一般競争入札(?:及び)?|随意契約/u);
+  const classicQuarterTurn = Boolean(programHeader && dateHeader
+    && Math.abs(programHeader.x - dateHeader.x) < 0.04
+    && Math.abs(programHeader.y - dateHeader.y) > 0.10);
+  const clusteredQuarterTurn = Boolean(organizationHeader && methodHeader
+    && Math.abs(organizationHeader.x - methodHeader.x) < 0.03
+    && Math.abs(organizationHeader.y - methodHeader.y) > 0.15);
+  if (!classicQuarterTurn && !clusteredQuarterTurn) return page;
   return {
     ...page,
     items: page.items.map((item) => ({
