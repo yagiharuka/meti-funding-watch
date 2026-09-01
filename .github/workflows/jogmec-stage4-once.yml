@@ -1,0 +1,136 @@
+name: One-time JOGMEC content-classified reingest
+
+on:
+  push:
+    branches:
+      - reingest/jogmec-full-history
+    paths:
+      - ".github/workflows/jogmec-stage4-once.yml"
+      - "scripts/patch-jogmec-stage3-20260826.mjs"
+      - "scripts/patch-jogmec-stage3-generated-syntax.mjs"
+      - "scripts/patch-jogmec-stage4-20260826.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-jogmec-stage4
+  cancel-in-progress: false
+
+jobs:
+  reingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/jogmec-full-history
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Ensure all parser stages and apply content classification
+        shell: bash
+        run: |
+          if ! grep -q 'jogmec-xlsx-reader-20260826' scripts/jogmec-reingest-stage1-20260826.mjs; then
+            node scripts/patch-jogmec-stage2-20260826.mjs
+          fi
+          if ! grep -q 'parseJogmecPositionedPage' scripts/jogmec-reingest-stage1-20260826.mjs; then
+            node scripts/patch-jogmec-stage3-20260826.mjs
+          fi
+          node scripts/patch-jogmec-stage4-20260826.mjs
+          node scripts/patch-jogmec-stage3-generated-syntax.mjs
+          node --check scripts/jogmec-inventory-20260826.mjs
+          node --check scripts/jogmec-reingest-stage1-20260826.mjs
+      - name: Rebuild content-classified inventory and strict records
+        run: |
+          mkdir -p .audit
+          node scripts/jogmec-inventory-20260826.mjs
+          node scripts/jogmec-reingest-stage1-20260826.mjs
+          node --test tests/jogmec-reingest-stage1.test.mjs
+      - name: Sync index-compatible rows without zero-filling
+        run: node scripts/sync-jogmec-stage1-to-seeds-20260826.mjs
+      - name: Rebuild indexes and run all tests
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+          npm test
+      - name: Verify content-level target accounting
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const inventory = JSON.parse(await readFile("data/official-supplement-jogmec-inventory.json", "utf8"));
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+          const source = seeds.sources.find((entry) => entry.id === "jogmec");
+          const resultCandidates = inventory.candidates.filter((candidate) => candidate.targetStatus === "result" && !candidate.fetchError);
+          if (resultCandidates.length !== inventory.resultCandidateCount) throw new Error(`result count mismatch: ${resultCandidates.length}/${inventory.resultCandidateCount}`);
+          if (data.resultCandidateCount < data.parsedDocumentCount) throw new Error("parsed documents exceed result candidates");
+          if (source.records.length < data.priorRecordCount) throw new Error("published rows regressed");
+          for (const row of data.records) {
+            if (row.amount === 0 && /記載なし|非公表|単価|個社別/u.test(row.amountStage)) throw new Error(`zero-filled row: ${row.id}`);
+          }
+          console.log(JSON.stringify({
+            crawledPageCount: inventory.crawledPageCount,
+            allCandidateCount: inventory.candidateCount,
+            resultCandidateCount: inventory.resultCandidateCount,
+            announcementOnlyCount: inventory.candidates.filter((candidate) => candidate.targetStatus === "announcement_only").length,
+            unknownCandidateCount: inventory.candidates.filter((candidate) => candidate.targetStatus === "unknown").length,
+            parsedDocumentCount: data.parsedDocumentCount,
+            unparsedDocumentCount: data.unparsedDocumentCount,
+            newlyParsedRecordCount: data.newlyParsedRecordCount,
+            retainedRecordCount: data.recordCount,
+            publishedRecordCount: source.records.length,
+            collectionStatus: data.collectionStatus,
+          }));
+          NODE
+      - name: Commit verified content-classified result and remove temporary files
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          for path in \
+            .github/workflows/jogmec-inventory-once.yml \
+            .github/workflows/jogmec-stage1-once.yml \
+            .github/workflows/jogmec-integrate-once.yml \
+            .github/workflows/jogmec-sync-stage1-once.yml \
+            .github/workflows/jogmec-stage2-once.yml \
+            .github/workflows/jogmec-stage3-once.yml; do
+            test ! -e "$path" || git rm "$path"
+          done
+          git rm .github/workflows/jogmec-stage4-once.yml
+          for path in \
+            scripts/apply-jogmec-stage1-integration-20260826.mjs \
+            scripts/patch-jogmec-stage2-20260826.mjs \
+            scripts/patch-jogmec-stage3-20260826.mjs \
+            scripts/patch-jogmec-stage3-generated-syntax.mjs \
+            scripts/patch-jogmec-stage4-20260826.mjs; do
+            test ! -e "$path" || git rm "$path"
+          done
+          git add \
+            scripts/jogmec-inventory-20260826.mjs \
+            scripts/jogmec-reingest-stage1-20260826.mjs \
+            scripts/jogmec-xlsx-reader-20260826.mjs \
+            scripts/sync-jogmec-stage1-to-seeds-20260826.mjs \
+            tests/jogmec-reingest-stage1.test.mjs \
+            data/official-supplement-jogmec-inventory.json \
+            data/official-supplement-jogmec.json \
+            data/official-supplement-seeds.json \
+            data/official-supplement-index.json \
+            public/data/official-company-index.json \
+            .audit/jogmec-inventory.json \
+            .audit/jogmec-reingest-stage1.json
+          git commit -m "feat(data): classify and parse JOGMEC official results"
+          git reset --hard HEAD
+          git clean -fd
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/jogmec-full-history
+            if git push origin HEAD:reingest/jogmec-full-history; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1

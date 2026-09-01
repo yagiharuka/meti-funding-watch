@@ -1,57 +1,20 @@
-name: CI
+name: JOGMEC full reingest with unit-rate handling
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
-  push:
-    branches: [main]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: jogmec-unit-rate-once-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Verify misreading catalog passage
-        run: node scripts/check-misreading-catalog-pr.mjs
-
-      - name: Verify repository hygiene
-        run: node scripts/check-repository-hygiene.mjs
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify committed official supplement index
-        run: |
-          node scripts/build-official-supplement-index.mjs
-          git diff --exit-code -- data/official-supplement-index.json
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build and test with repository fixtures
-        run: npm test
-
-  reingest_jogmec_once:
-    if: github.event_name == 'pull_request' && github.head_ref == 'reingest/jogmec-full-history'
+  reingest:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'reingest/jogmec-full-history')
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -60,7 +23,7 @@ jobs:
       - name: Check out the JOGMEC reingest branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: reingest/jogmec-full-history
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -72,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply dedicated JOGMEC integration and live-layout regressions
+      - name: Apply JOGMEC integration and all verified live-layout regressions
         shell: bash
         run: |
           mkdir -p .audit
@@ -80,6 +43,7 @@ jobs:
           node scripts/patch-jogmec-live-layout.mjs 2>&1 | tee -a .audit/jogmec-integration.log
           node scripts/patch-jogmec-appendix.mjs 2>&1 | tee -a .audit/jogmec-integration.log
           node scripts/patch-jogmec-amount-punctuation.mjs 2>&1 | tee -a .audit/jogmec-integration.log
+          node scripts/patch-jogmec-unit-amount.mjs 2>&1 | tee -a .audit/jogmec-integration.log
 
       - name: Reingest every published JOGMEC competitive and discretionary contract PDF
         id: reingest
@@ -129,7 +93,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: jogmec-reingest-${{ github.run_id }}
+          name: jogmec-unit-rate-reingest-${{ github.run_id }}
           path: |
             .audit/jogmec-integration.log
             .audit/jogmec-reingest.log
@@ -137,7 +101,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Commit the verified JOGMEC source, data and ordinary CI
+      - name: Commit the verified source, data and ordinary CI
         if: steps.reingest.outputs.status == '0'
         shell: bash
         run: |
@@ -145,7 +109,10 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git fetch origin main
           git checkout origin/main -- .github/workflows/ci.yml
-          git rm scripts/apply-jogmec-full-history-integration.mjs scripts/patch-jogmec-*.mjs
+          git rm -f \
+            .github/workflows/jogmec-unit-rate-once.yml \
+            scripts/apply-jogmec-full-history-integration.mjs \
+            scripts/patch-jogmec-*.mjs
           git add \
             scripts/jogmec-official-supplement.mjs \
             scripts/build-official-supplement-index.mjs \
@@ -173,6 +140,6 @@ jobs:
           done
           exit 1
 
-      - name: Fail after preserving evidence when the live reingest is invalid
+      - name: Fail after preserving evidence when live reingest is invalid
         if: steps.reingest.outputs.status != '0'
         run: exit 1

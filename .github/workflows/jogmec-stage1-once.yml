@@ -1,0 +1,82 @@
+name: One-time JOGMEC result reingest stage 1
+
+on:
+  push:
+    branches:
+      - reingest/jogmec-full-history
+    paths:
+      - ".github/workflows/jogmec-stage1-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-jogmec-reingest
+  cancel-in-progress: false
+
+jobs:
+  reingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/jogmec-full-history
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Refresh the JOGMEC source inventory
+        run: |
+          mkdir -p .audit
+          node scripts/jogmec-inventory-20260826.mjs
+      - name: Parse high-confidence HTML, PDF and CSV result tables
+        run: node scripts/jogmec-reingest-stage1-20260826.mjs
+      - name: Validate parser behavior and generated accounting
+        run: |
+          node --test tests/jogmec-reingest-stage1.test.mjs tests/jogmec-official-supplement.test.mjs
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const inventory = JSON.parse(await readFile("data/official-supplement-jogmec-inventory.json", "utf8"));
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          if (inventory.id !== "jogmec" || data.id !== "jogmec") throw new Error("JOGMEC id mismatch");
+          if (!Array.isArray(data.records) || data.recordCount !== data.records.length) throw new Error("record accounting mismatch");
+          if (data.collectionStatus === "complete" && data.unparsedDocumentCount !== 0) throw new Error("complete with unparsed candidates");
+          if (data.records.some((row) => row.amount === 0 && /記載なし|非公表|単価|個社別/.test(row.amountStage))) {
+            throw new Error("unpublished or non-total amounts were converted to zero");
+          }
+          if (data.processedCandidateCount > data.resultCandidateCount) throw new Error("candidate accounting overflow");
+          console.log(JSON.stringify({
+            inventoryPages: inventory.crawledPageCount,
+            inventoryCandidates: inventory.candidateCount,
+            resultCandidates: data.resultCandidateCount,
+            parsedDocuments: data.parsedDocumentCount,
+            unparsedDocuments: data.unparsedDocumentCount,
+            newlyParsedRecords: data.newlyParsedRecordCount,
+            retainedRecords: data.recordCount,
+            collectionStatus: data.collectionStatus,
+          }));
+          NODE
+      - name: Commit the auditable stage-one result and remove temporary workflows
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            data/official-supplement-jogmec-inventory.json \
+            data/official-supplement-jogmec.json \
+            .audit/jogmec-inventory.json \
+            .audit/jogmec-reingest-stage1.json
+          test ! -e .github/workflows/jogmec-inventory-once.yml || git rm .github/workflows/jogmec-inventory-once.yml
+          git rm .github/workflows/jogmec-stage1-once.yml
+          git commit -m "chore(data): reingest structured JOGMEC result tables"
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/jogmec-full-history
+            if git push origin HEAD:reingest/jogmec-full-history; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1

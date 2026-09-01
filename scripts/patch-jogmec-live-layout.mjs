@@ -1,0 +1,164 @@
+import { readFile, writeFile } from "node:fs/promises";
+
+function replaceOnce(source, search, replacement, label) {
+  const index = source.indexOf(search);
+  if (index < 0) throw new Error(`${label}: replacement target not found`);
+  if (source.indexOf(search, index + search.length) >= 0) throw new Error(`${label}: replacement target is not unique`);
+  return `${source.slice(0, index)}${replacement}${source.slice(index + search.length)}`;
+}
+
+const parserPath = "scripts/jogmec-official-supplement.mjs";
+let parser = await readFile(parserPath, "utf8");
+parser = replaceOnce(parser, '    method: /一般競争入札及び指名競争入札の別/u,', '    method: /一般競争入札(?:及び)?/u,', "JOGMEC split competitive-method header");
+parser = replaceOnce(parser, '  let match = normalized.match(/^令和(元|\\d{1,2})年(\\d{1,2})月(\\d{1,2})日$/u);', '  let match = normalized.match(/令和(元|\\d{1,2})年(\\d{1,2})月(\\d{1,2})日/u);', "JOGMEC Reiwa date substring");
+parser = replaceOnce(parser, '    match = normalized.match(/^平成(元|\\d{1,2})年(\\d{1,2})月(\\d{1,2})日$/u);', '    match = normalized.match(/平成(元|\\d{1,2})年(\\d{1,2})月(\\d{1,2})日/u);', "JOGMEC Heisei date substring");
+parser = replaceOnce(
+  parser,
+  `function headerItem(items, pattern) {
+  const matches = items.filter((item) => pattern.test(compact(item.text)));
+  if (!matches.length) return null;
+  return matches.sort((left, right) => right.y - left.y || left.x - right.x)[0];
+}
+
+function buildSchema(page, document, previous = null) {`,
+  `function headerItem(items, pattern) {
+  const matches = items.filter((item) => pattern.test(compact(item.text)));
+  if (!matches.length) return null;
+  return matches.sort((left, right) => right.y - left.y || left.x - right.x)[0];
+}
+
+function rotateJogmecPage(page) {
+  return {
+    ...page,
+    items: page.items.map((item) => ({
+      ...item,
+      x: item.y,
+      y: 1 - item.x,
+      w: Math.max(item.h || 0, 0.002),
+      h: Math.max(item.w || 0, 0.002),
+    })),
+  };
+}
+
+function normalizeJogmecPage(page) {
+  const programHeader = headerItem(page.items, /物品等又は役務の名称/u);
+  const dateHeader = headerItem(page.items, /契約を締結した日/u);
+  const organizationHeader = headerItem(page.items, /契約の相手先の商号又は名称及び所在地/u);
+  const methodHeader = headerItem(page.items, /一般競争入札(?:及び)?|随意契約/u);
+  const classicQuarterTurn = Boolean(programHeader && dateHeader
+    && Math.abs(programHeader.x - dateHeader.x) < 0.04
+    && Math.abs(programHeader.y - dateHeader.y) > 0.10);
+  const clusteredQuarterTurn = Boolean(organizationHeader && methodHeader
+    && Math.abs(organizationHeader.x - methodHeader.x) < 0.03
+    && Math.abs(organizationHeader.y - methodHeader.y) > 0.15);
+  if (!classicQuarterTurn && !clusteredQuarterTurn) return page;
+  return rotateJogmecPage(page);
+}
+
+function buildSchema(page, document, previous = null) {`,
+  "JOGMEC quarter-turn coordinate normalization",
+);
+parser = replaceOnce(parser, '  if (!normalized || NO_AMOUNT_PATTERN.test(normalized)) {', '  if (!normalized || NO_AMOUNT_PATTERN.test(normalized) || /別紙参照/u.test(normalized)) {', "JOGMEC appendix-reference amount");
+parser = replaceOnce(parser, '      .filter((line) => line.date && line.y < schema.headerY - 0.003)', '      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)', "JOGMEC exclude document dates from row anchors");
+parser = replaceOnce(
+  parser,
+  `    const dateLines = groupLines(page.items.filter((item) => inBounds(item, schema.bounds.date)))
+      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
+      .sort((left, right) => right.y - left.y);`,
+  `    const dateCandidates = (items) => groupLines(items)
+      .map((line) => ({ ...line, date: japaneseDate(line.text) }))
+      .filter((line) => line.date && !/(?:作成|更新|<注>)/u.test(line.text) && line.y < schema.headerY - 0.003)
+      .sort((left, right) => right.y - left.y);
+    let dateLines = dateCandidates(page.items.filter((item) => inBounds(item, schema.bounds.date)));
+    if (!dateLines.length) dateLines = dateCandidates(page.items);`,
+  "JOGMEC shifted-date row anchors",
+);
+parser = replaceOnce(
+  parser,
+  `  for (const page of pages) {
+    schema = buildSchema(page, document, schema);`,
+  `  for (const rawPage of pages) {
+    let page = normalizeJogmecPage(rawPage);
+    schema = buildSchema(page, document, schema);
+    const invalidGeometry = schema.bounds.amount.right <= schema.bounds.amount.left
+      || schema.bounds.date.right <= schema.bounds.date.left
+      || schema.bounds.organization.right <= schema.bounds.organization.left;
+    if (invalidGeometry && page === rawPage) {
+      page = rotateJogmecPage(rawPage);
+      schema = buildSchema(page, document, null);
+      const recoveredGeometry = schema.bounds.amount.right > schema.bounds.amount.left
+        && schema.bounds.date.right > schema.bounds.date.left
+        && schema.bounds.organization.right > schema.bounds.organization.left;
+      if (!recoveredGeometry) throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} の列境界を回転補正後も確定できません\`);
+    }`,
+  "JOGMEC normalize each page",
+);
+parser = replaceOnce(parser, `      const anchor = dateLines[index];
+      const upper = index === 0`, `      const anchor = dateLines[index];
+      if (/(?:作成|更新|<注>)/u.test(anchor.text)) continue;
+      const upper = index === 0`, "JOGMEC document-date row guard");
+parser = replaceOnce(
+  parser,
+  `      if (!program || !organization) {
+        throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です\`);
+      }`,
+  `      if (!program || !organization) {
+        const rowText = clean(rowItems.map((item) => item.text).join(" "));
+        if (/^(?:<注>|注)/u.test(program) && /(?:作成|再就職|取引高|公表項目)/u.test(rowText)) continue;
+        const diagnostics = rowItems.map((item) => \`\${item.text}@\${item.x.toFixed(4)},\${item.y.toFixed(4)}\`).join(" | ");
+        throw new Error(\`JOGMEC: \${document.url} p\${page.pageNumber} row\${index + 1} の件名または契約相手先が空です (program=\${JSON.stringify(program)} organization=\${JSON.stringify(organizationCell)} bounds=\${JSON.stringify(schema.bounds)} items=\${diagnostics})\`);
+      }`,
+  "JOGMEC footer-note row guard",
+);
+await writeFile(parserPath, parser);
+
+const testPath = "tests/jogmec-official-supplement.test.mjs";
+let tests = await readFile(testPath, "utf8");
+tests = replaceOnce(tests, '      ? [item("一般競争入札及び指名競争入札の別", 0.67, 0.90, 0.12)]', '      ? [item("一般競争入札及び", 0.67, 0.90, 0.06), item("指名競争入札の別", 0.67, 0.88, 0.06)]', "JOGMEC split-header regression fixture");
+tests = replaceOnce(tests, '    item(date, 0.39, y, 0.08),', '    item(`${date} ${organization}`, 0.39, y, 0.08),', "JOGMEC joined date-row regression fixture");
+tests = replaceOnce(tests, '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),', '      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),\n      item("令和8年7月2日作成", 0.39, 0.05, 0.08),\n      item("<注>", 0.08, 0.05, 0.04),\n      item("公表項目及び再就職に係る注記", 0.08, 0.04, 0.20),', "JOGMEC footer note regression fixture");
+tests = replaceOnce(
+  tests,
+  `}
+
+function document(contractType) {`,
+  `}
+
+function shiftedDatePage(contractType) {
+  const page = positionedPage(contractType);
+  return { ...page, items: page.items.map((entry) => /^(?:令和|平成)/u.test(entry.text) && !/(?:作成|更新)/u.test(entry.text) ? { ...entry, x: 0.30 } : entry) };
+}
+
+function quarterTurnPage(contractType) {
+  const page = positionedPage(contractType);
+  return { ...page, items: page.items.map((entry) => ({ ...entry, x: 1 - entry.y, y: entry.x, w: entry.h, h: entry.w })) };
+}
+
+function document(contractType) {`,
+  "JOGMEC shifted-date regression fixture",
+);
+tests = replaceOnce(
+  tests,
+  `test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
+  `test("JOGMEC shifted date text falls back to full-line row anchors", () => {
+  const parsed = parseJogmecPositionedPages(document("competitive"), [shiftedDatePage("competitive")]);
+  assert.equal(parsed.totalRows, 4);
+  assert.equal(parsed.records.map((row) => row.date).join(","), "2026-04-01,2026-04-02,2026-04-03,2026-04-04");
+});
+
+test("JOGMEC quarter-turn PDF coordinates are normalized before row parsing", () => {
+  const parsed = parseJogmecPositionedPages(document("competitive"), [quarterTurnPage("competitive")]);
+  assert.equal(parsed.totalRows, 4);
+  assert.equal(parsed.records[0].organization, "株式会社アルファ");
+  assert.equal(parsed.records[0].program, "円建て契約");
+  assert.equal(parsed.records[0].amount, 12_345_678);
+});
+
+test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {`,
+  "JOGMEC shifted-date and quarter-turn parser tests",
+);
+tests = replaceOnce(tests, '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");', '  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");\n  assert.equal(classifyJogmecAmount("別紙参照", "competitive").amountStatus, "unavailable");', "JOGMEC appendix-reference regression");
+await writeFile(testPath, tests);
+
+console.log("Patched JOGMEC parser for rotated PDFs, invalid-geometry recovery, shifted date columns, footer-note guards, appendix references, split headers, and diagnostics.");

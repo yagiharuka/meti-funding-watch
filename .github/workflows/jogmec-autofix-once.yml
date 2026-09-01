@@ -1,66 +1,29 @@
-name: CI
+name: JOGMEC fail-closed full reingest
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
-  push:
-    branches: [main]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: jogmec-autofix-once-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Verify misreading catalog passage
-        run: node scripts/check-misreading-catalog-pr.mjs
-
-      - name: Verify repository hygiene
-        run: node scripts/check-repository-hygiene.mjs
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify committed official supplement index
-        run: |
-          node scripts/build-official-supplement-index.mjs
-          git diff --exit-code -- data/official-supplement-index.json
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build and test with repository fixtures
-        run: npm test
-
-  reingest_jogmec_once:
-    if: github.event_name == 'pull_request' && github.head_ref == 'reingest/jogmec-full-history'
+  reingest:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'reingest/jogmec-full-history')
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - name: Check out the JOGMEC reingest branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: reingest/jogmec-full-history
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -72,25 +35,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply dedicated JOGMEC integration and live-layout regressions
+      - name: Apply the verified JOGMEC integration and parser regressions
         shell: bash
         run: |
           mkdir -p .audit
           node scripts/apply-jogmec-full-history-integration.mjs 2>&1 | tee .audit/jogmec-integration.log
-          node scripts/patch-jogmec-live-layout.mjs 2>&1 | tee -a .audit/jogmec-integration.log
-          node scripts/patch-jogmec-appendix.mjs 2>&1 | tee -a .audit/jogmec-integration.log
-          node scripts/patch-jogmec-amount-punctuation.mjs 2>&1 | tee -a .audit/jogmec-integration.log
+          for patch in \
+            scripts/patch-jogmec-live-layout.mjs \
+            scripts/patch-jogmec-appendix.mjs \
+            scripts/patch-jogmec-amount-punctuation.mjs \
+            scripts/patch-jogmec-unit-amount.mjs \
+            scripts/patch-jogmec-variable-units.mjs
+          do
+            if [[ -f "$patch" ]]; then
+              node "$patch" 2>&1 | tee -a .audit/jogmec-integration.log
+            fi
+          done
 
-      - name: Reingest every published JOGMEC competitive and discretionary contract PDF
+      - name: Reingest all published JOGMEC result PDFs with fail-closed amount handling
         id: reingest
         shell: bash
         run: |
-          mkdir -p .audit
           set +e
-          node scripts/jogmec-official-supplement.mjs > .audit/jogmec-reingest.log 2>&1
-          status=$?
+          node scripts/jogmec-live-autofix.mjs 2>&1 | tee .audit/jogmec-reingest.log
+          status=${PIPESTATUS[0]}
           set -e
-          cat .audit/jogmec-reingest.log
           echo "status=$status" >> "$GITHUB_OUTPUT"
 
       - name: Build indexes and run the full repository suite
@@ -106,6 +75,7 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFile, writeFile } from "node:fs/promises";
           const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          const decisions = JSON.parse(await readFile(".audit/jogmec-autofix-decisions.json", "utf8"));
           const receipt = {
             generatedAt: new Date().toISOString(),
             collectionStatus: data.collectionStatus,
@@ -120,6 +90,7 @@ jobs:
             nonJpyAmountRowCount: data.nonJpyAmountRowCount,
             parseFailureCount: data.parseFailureCount,
             sourceListUrls: data.listUrls,
+            autoClassifiedAmountTexts: decisions,
           };
           await writeFile(".audit/jogmec-reingest.json", `${JSON.stringify(receipt, null, 2)}\n`);
           console.log(JSON.stringify(receipt));
@@ -129,15 +100,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: jogmec-reingest-${{ github.run_id }}
+          name: jogmec-fail-closed-reingest-${{ github.run_id }}
           path: |
             .audit/jogmec-integration.log
             .audit/jogmec-reingest.log
+            .audit/jogmec-autofix-*.log
+            .audit/jogmec-autofix-decisions.json
             .audit/jogmec-reingest.json
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Commit the verified JOGMEC source, data and ordinary CI
+      - name: Commit verified JOGMEC source, data and ordinary CI
         if: steps.reingest.outputs.status == '0'
         shell: bash
         run: |
@@ -145,7 +118,11 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git fetch origin main
           git checkout origin/main -- .github/workflows/ci.yml
-          git rm scripts/apply-jogmec-full-history-integration.mjs scripts/patch-jogmec-*.mjs
+          git rm -f \
+            .github/workflows/jogmec-*-once.yml \
+            scripts/apply-jogmec-full-history-integration.mjs \
+            scripts/patch-jogmec-*.mjs \
+            scripts/jogmec-live-autofix.mjs
           git add \
             scripts/jogmec-official-supplement.mjs \
             scripts/build-official-supplement-index.mjs \
@@ -173,6 +150,6 @@ jobs:
           done
           exit 1
 
-      - name: Fail after preserving evidence when the live reingest is invalid
+      - name: Fail after preserving evidence when live reingest is invalid
         if: steps.reingest.outputs.status != '0'
         run: exit 1
