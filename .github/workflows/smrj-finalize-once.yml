@@ -1,0 +1,120 @@
+name: Finalize SMRJ HQ full-history reingest
+
+on:
+  pull_request:
+    types: [synchronize, reopened, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+concurrency:
+  group: finalize-smrj-hq-full-history
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'reingest/smrj-hq-full-history'
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.probe.outputs.ready }}
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/smrj-hq-full-history
+          fetch-depth: 0
+      - name: Detect a committed, complete and audited reingest
+        id: probe
+        shell: bash
+        run: |
+          ready=false
+          if [[ -f data/official-supplement-smrj.json && -f .audit/smrj-hq-full-reingest.json && ! -f scripts/apply-smrj-full-integration.mjs && ! -f .github/workflows/smrj-full-reingest-once.yml ]]; then
+            if node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-smrj.json", "utf8"));
+          const audit = JSON.parse(await readFile(".audit/smrj-hq-full-reingest.json", "utf8"));
+          if (data.collectionStatus !== "complete") process.exit(1);
+          if (data.scope?.organizationUnit !== "本部") process.exit(1);
+          if (data.scope?.fiscalYearFrom !== 2015 || data.scope?.fiscalYearTo < 2026) process.exit(1);
+          if (!Array.isArray(data.records) || data.records.length <= 577) process.exit(1);
+          if (audit.recordCount !== data.records.length || audit.collectionStatus !== "complete") process.exit(1);
+          NODE
+            then ready=true; fi
+          fi
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "ready=$ready"
+
+  verify:
+    needs: readiness
+    if: needs.readiness.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/smrj-hq-full-history
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Rebuild every committed derivative and run the full test suite
+        run: npm test
+
+  merge_and_publish:
+    needs: [readiness, verify]
+    if: needs.readiness.outputs.ready == 'true' && needs.verify.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: 73
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/smrj-hq-full-history
+          fetch-depth: 0
+      - name: Remove this finalizer from the commit that will be merged
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/smrj-finalize-once.yml
+          git commit -m "ci: remove one-time SMRJ finalizer"
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/smrj-hq-full-history
+            if git push origin HEAD:reingest/smrj-hq-full-history; then
+              break
+            fi
+            if [[ "$attempt" -eq 3 ]]; then exit 1; fi
+          done
+          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Wait for ordinary CI on the final head
+        shell: bash
+        run: |
+          for attempt in $(seq 1 90); do
+            result=$(gh api "repos/$REPOSITORY/commits/$FINAL_SHA/check-runs" --jq '
+              [.check_runs[] | select(.name == "verify")]
+              | if length == 0 then "waiting"
+                elif any(.[]; .status != "completed") then "waiting"
+                elif all(.[]; .conclusion == "success") then "success"
+                else "failure" end')
+            echo "CI state: $result ($attempt/90)"
+            if [[ "$result" == "success" ]]; then exit 0; fi
+            if [[ "$result" == "failure" ]]; then exit 1; fi
+            sleep 10
+          done
+          echo "::error::Timed out waiting for final-head CI"
+          exit 1
+      - name: Squash merge the validated PR
+        shell: bash
+        run: gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --squash --delete-branch

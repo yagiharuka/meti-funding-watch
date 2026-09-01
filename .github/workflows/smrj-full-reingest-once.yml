@@ -1,0 +1,114 @@
+name: One-time SMRJ HQ full-history reingest
+
+on:
+  push:
+    branches:
+      - reingest/smrj-hq-full-history
+    paths:
+      - ".github/workflows/smrj-full-reingest-once.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: one-time-smrj-hq-full-history
+  cancel-in-progress: false
+
+jobs:
+  reingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out the reingest branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/smrj-hq-full-history
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Integrate the dedicated SMRJ source into both official indexes
+        run: node scripts/apply-smrj-full-integration.mjs
+
+      - name: Reingest every published HQ competitive and discretionary contract document
+        run: node scripts/smrj-official-supplement.mjs
+
+      - name: Rebuild the official indexes
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+
+      - name: Validate the complete HQ inventory and run the full repository suite
+        run: |
+          node --test tests/smrj-official-supplement.test.mjs tests/smrj-full-history-integration.test.mjs
+          npm test
+
+      - name: Write an auditable reingest summary
+        shell: bash
+        run: |
+          mkdir -p .audit
+          node --input-type=module <<'NODE' > .audit/smrj-hq-full-reingest.json
+          import { readFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-smrj.json", "utf8"));
+          const years = [...new Set(data.documents.map((row) => row.fiscalYear))].sort((a, b) => a - b);
+          const amountKnown = data.records.filter((row) => Number.isSafeInteger(row.amount)).length;
+          const amountUnavailable = data.records.filter((row) => row.amount === null).length;
+          console.log(JSON.stringify({
+            generatedAt: data.updatedAt,
+            collectionStatus: data.collectionStatus,
+            scope: data.scope,
+            documentCount: data.documents.length,
+            printedRowCount: data.totalPrintedRowCount,
+            recordCount: data.records.length,
+            amountKnown,
+            amountUnavailable,
+            duplicateCount: data.duplicateCount,
+            fiscalYears: years,
+          }, null, 2));
+          NODE
+          cat .audit/smrj-hq-full-reingest.json
+
+      - name: Restore ordinary CI, remove one-time machinery and commit validated data
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/ci.yml
+          git rm -f .github/workflows/smrj-full-reingest-once.yml scripts/apply-smrj-full-integration.mjs
+          git rm -f scripts/diagnose-smrj-hq.mjs 2>/dev/null || true
+          git add \
+            scripts/smrj-official-supplement.mjs \
+            scripts/build-official-supplement-index.mjs \
+            scripts/build-official-company-index.mjs \
+            pages-site/company-evidence-ui.ts \
+            data/official-supplement-smrj.json \
+            data/official-supplement-index.json \
+            public/data/official-company-index.json \
+            tests/smrj-official-supplement.test.mjs \
+            tests/smrj-full-history-integration.test.mjs \
+            tests/official-supplement.test.mjs \
+            tests/company-evidence-ui.test.mjs \
+            package.json \
+            .github/workflows/update-data.yml \
+            .github/workflows/refresh-official-data.yml \
+            .github/workflows/ci.yml \
+            .audit/smrj-hq-full-reingest.json \
+            docs/smrj-hq-reingest-plan.md
+          git commit -m "feat(data): reingest SMRJ HQ contracts from FY2015"
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/smrj-hq-full-history
+            if git push origin HEAD:reingest/smrj-hq-full-history; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1
