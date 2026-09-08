@@ -194,25 +194,27 @@ test("real company renderer shows same-corporation subsidy totals without a zero
     organizationSummaries: [{
       name: "テスト株式会社",
       corporateNumber: "1111111111111",
-      records: 2,
+      records: 3,
       amountUnknownCount: 0,
+      duplicateExcludedCount: 1,
       byStage: [
-        { stage: "contracted", records: 1, amount: 100, amountKnownCount: 1 },
-        { stage: "subsidy_published", records: 1, amount: 987654321, amountKnownCount: 1 },
+        { stage: "contracted", records: 1, amount: 100, amountKnownCount: 1, amountIncludedCount: 1, duplicateExcludedCount: 0 },
+        { stage: "subsidy_published", records: 2, amount: 987654321, amountKnownCount: 2, amountIncludedCount: 1, duplicateExcludedCount: 1 },
       ],
       byYear: [{
         fiscalYear: 2026,
-        contracted: { records: 1, amount: 100, amountKnownCount: 1 },
-        subsidy_published: { records: 1, amount: 987654321, amountKnownCount: 1 },
+        contracted: { records: 1, amount: 100, amountKnownCount: 1, amountIncludedCount: 1, duplicateExcludedCount: 0 },
+        subsidy_published: { records: 2, amount: 987654321, amountKnownCount: 2, amountIncludedCount: 1, duplicateExcludedCount: 1 },
         amountUnknownCount: 0,
       }],
       topPrograms: [
-        { stage: "contracted", program: "委託テスト", records: 1, amount: 100, amountKnownCount: 1 },
-        { stage: "subsidy_published", program: "補助テスト", records: 1, amount: 987654321, amountKnownCount: 1 },
+        { stage: "contracted", program: "委託テスト", records: 1, amount: 100, amountKnownCount: 1, amountIncludedCount: 1, duplicateExcludedCount: 0 },
+        { stage: "subsidy_published", program: "補助テスト", records: 2, amount: 987654321, amountKnownCount: 2, amountIncludedCount: 1, duplicateExcludedCount: 1 },
       ],
       detailRows: [
         { stage: "contracted", sourceAgency: "経済産業省", program: "委託テスト", date: "2026-04-01", amount: 100, sourceUrl: null, sourceSystem: "GビズINFO" },
         { stage: "subsidy_published", sourceAgency: "経済産業省", program: "補助テスト", date: "2026-04-02", amount: 200, sourceUrl: null, sourceSystem: "GビズINFO" },
+        { stage: "subsidy_published", sourceAgency: "経済産業省", program: "補助テスト", date: "2026-04-03", amount: 200, sourceUrl: null, sourceSystem: "GビズINFO" },
       ],
       detailTruncated: false,
     }],
@@ -224,16 +226,17 @@ test("real company renderer shows same-corporation subsidy totals without a zero
   assert.doesNotMatch(ui.innerHTML, /company-search-no-total/);
   assert.match(ui.innerHTML, /href="#data-reading-guide">↓ 読み方/);
   assert.doesNotMatch(ui.innerHTML, /合計しません|個別の掲載額は明細で確認/);
-  assert.match(ui.innerHTML, /<strong class="company-search-amount" title="￥987,654,321">9\.9億円<\/strong><small>※GビズINFO掲載額<\/small>/);
+  assert.match(ui.innerHTML, /<strong class="company-search-amount" title="￥987,654,321">9\.9億円<\/strong><small>※GビズINFO掲載額（重複候補除外後）／重複掲載とみなして除外 1件<\/small>/);
+  assert.match(ui.innerHTML, /重複掲載とみなして除外 1件（同一・近似事業名かつ掲載額差±0\.1%）/);
   assert.match(ui.innerHTML, /名称に「テスト株式会社」を含む別法人/);
   assert.match(ui.innerHTML, /テスト研究所株式会社/);
   assert.match(ui.innerHTML, /data-corp="2222222222222"/);
   assert.match(ui.innerHTML, /<th>認定日・受注日の年度<\/th>/);
-  assert.match(ui.innerHTML, /<th>補助金（件数／掲載額）<\/th>/);
-  assert.match(ui.innerHTML, /9\.9億円／掲載額/);
+  assert.match(ui.innerHTML, /<th>補助金（掲載行／重複候補除外後）<\/th>/);
+  assert.match(ui.innerHTML, /9\.9億円／掲載額／重複掲載とみなして除外 1件/);
   assert.match(ui.innerHTML, />事業別を見る<\/button>/);
   assert.doesNotMatch(ui.innerHTML, /金額の大きい事業を見る/);
-  assert.match(ui.innerHTML, /<strong>[^<]*200[^<]*<\/strong><small>※GビズINFO掲載額<\/small>/);
+  assert.match(ui.innerHTML, /<strong>[^<]*200[^<]*<\/strong><small>※GビズINFO掲載額（重複候補除外後）<\/small>/);
 
   const labels = visibleLabels(ui.innerHTML);
   for (const label of labels) {

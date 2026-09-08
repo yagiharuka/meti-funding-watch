@@ -1,4 +1,5 @@
 import { INTERNAL_PARTIAL_SEARCH_PREFIX, matchCompanyEntities, normalizeCompanySearchTerm } from "../scripts/company-search.mjs";
+import { classifySubsidyDuplicates, subsidyAggregationValue } from "../scripts/subsidy-deduplication.mjs";
 
 type Stage = "contracted" | "subsidy_published";
 type FundingRecord = { id: string; fiscalYear: number | null; date: string | null; organization: string; corporateNumber: string; sourceAgency: string; program: string; amount: number | null; amountRaw?: string; stage: Stage; sourceKey: string; sourceRowNumber: number; sourceSystem: string };
@@ -106,6 +107,7 @@ async function search(message: SearchMessage) {
   }
 
   let matching: FundingRecord[];
+  let duplicateContext: FundingRecord[];
   let alternativeOrganizations: Array<{ name: string; corporateNumber: string; records: number }> = [];
   let alternativeOrganizationCount = 0;
   if (query) {
@@ -123,19 +125,22 @@ async function search(message: SearchMessage) {
     const numbers = new Set(matchedEntities.map((entity) => entity.corporateNumber));
     const buckets = [...new Set(matchedEntities.map((entity) => entity.bucket))];
     const rows = (await Promise.all(buckets.map(loadCompanyBucket))).flat();
-    matching = rows.filter((row) => numbers.has(row.corporateNumber)
-      && (agency === "all" || row.sourceAgency === agency) && (stage === "all" || row.stage === stage)
+    duplicateContext = rows.filter((row) => numbers.has(row.corporateNumber));
+    matching = duplicateContext.filter((row) => (agency === "all" || row.sourceAgency === agency)
+      && (stage === "all" || row.stage === stage)
       && (year !== "unclassified" || row.fiscalYear === null) && (!/^\d{4}$/.test(year) || String(row.fiscalYear) === year));
   } else {
     matching = await loadFilterRecords({ agency, stage, year });
+    duplicateContext = matching;
   }
   matching = sortFundingRecords(matching);
   const totalRecords = matching.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const effectivePage = Math.min(page, totalPages);
   const offset = (effectivePage - 1) * pageSize;
-  const summary = summarizeFundingRecords(matching);
-  const organizationSummaries = query ? summarizeOrganizations(matching).slice(0, maxOrganizationSummaries) : [];
+  const duplicateClassification = classifySubsidyDuplicates(duplicateContext);
+  const summary = summarizeFundingRecords(matching, duplicateClassification);
+  const organizationSummaries = query ? summarizeOrganizations(matching, duplicateClassification).slice(0, maxOrganizationSummaries) : [];
   postMessage({ type: "result", requestId: message.requestId, result: {
     totalRecords, totalPages, page: effectivePage, pageSize, records: matching.slice(offset, offset + pageSize), summary,
     organizationSummaries, organizationSummariesTruncated: Boolean(query && summary.organizationCount > maxOrganizationSummaries),
@@ -233,55 +238,79 @@ async function loadVerifiedBytes(message: InitializeMessage, filename: string, m
   return bytes;
 }
 
-function summarizeOrganizations(rows: FundingRecord[]) {
+function summarizeOrganizations(rows: FundingRecord[], duplicateClassification: ReturnType<typeof classifySubsidyDuplicates>) {
   const groups = new Map<string, FundingRecord[]>();
   for (const row of rows) { const current = groups.get(row.corporateNumber); if (current) current.push(row); else groups.set(row.corporateNumber, [row]); }
-  return [...groups.values()].map(summarizeOrganization).sort((left, right) => right.records - left.records || left.name.localeCompare(right.name, "ja"));
+  return [...groups.values()].map((group) => summarizeOrganization(group, duplicateClassification)).sort((left, right) => right.records - left.records || left.name.localeCompare(right.name, "ja"));
 }
-function emptyYearStage() { return { records: 0, amount: 0, amountKnownCount: 0 }; }
-function summarizeOrganization(rows: FundingRecord[]) {
+function emptyAmountSummary() { return { records: 0, amount: 0, amountKnownCount: 0, amountIncludedCount: 0, duplicateExcludedCount: 0 }; }
+function summarizeOrganization(rows: FundingRecord[], duplicateClassification: ReturnType<typeof classifySubsidyDuplicates>) {
   const first = rows[0];
-  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number }>();
-  const years = new Map<string, { fiscalYear: number | null; contracted: ReturnType<typeof emptyYearStage>; subsidy_published: ReturnType<typeof emptyYearStage>; amountUnknownCount: number }>();
-  const programs = new Map<string, { stage: Stage; program: string; records: number; amount: number; amountKnownCount: number }>();
+  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
+  const years = new Map<string, { fiscalYear: number | null; contracted: ReturnType<typeof emptyAmountSummary>; subsidy_published: ReturnType<typeof emptyAmountSummary>; amountUnknownCount: number }>();
+  const programs = new Map<string, { stage: Stage; program: string; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
   let amountUnknownCount = 0;
+  let duplicateExcludedCount = 0;
   for (const row of rows) {
     if (row.amount === null) amountUnknownCount += 1;
-    const amount = row.amount ?? 0;
-    const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0 };
-    stageItem.records += 1; stageItem.amount += amount; if (row.amount !== null) stageItem.amountKnownCount += 1; stages.set(row.stage, stageItem);
+    const aggregation = subsidyAggregationValue(row, duplicateClassification);
+    if (aggregation.duplicateExcluded) duplicateExcludedCount += 1;
+    const stageItem = stages.get(row.stage) ?? { stage: row.stage, ...emptyAmountSummary() };
+    stageItem.records += 1; stageItem.amount += aggregation.amount; if (row.amount !== null) stageItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) stageItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) stageItem.duplicateExcludedCount += 1;
+    stages.set(row.stage, stageItem);
     const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear);
-    const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, contracted: emptyYearStage(), subsidy_published: emptyYearStage(), amountUnknownCount: 0 };
-    const yearStage = yearItem[row.stage]; yearStage.records += 1; yearStage.amount += amount; if (row.amount !== null) yearStage.amountKnownCount += 1; else yearItem.amountUnknownCount += 1; years.set(yearKey, yearItem);
-    const program = row.program.trim() || "活動名称・件名の記載なし"; const key = `${row.stage}\u0000${program}`;
-    const programItem = programs.get(key) ?? { stage: row.stage, program, records: 0, amount: 0, amountKnownCount: 0 };
-    programItem.records += 1; programItem.amount += amount; if (row.amount !== null) programItem.amountKnownCount += 1; programs.set(key, programItem);
+    const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, contracted: emptyAmountSummary(), subsidy_published: emptyAmountSummary(), amountUnknownCount: 0 };
+    const yearStage = yearItem[row.stage]; yearStage.records += 1; yearStage.amount += aggregation.amount;
+    if (row.amount !== null) yearStage.amountKnownCount += 1; else yearItem.amountUnknownCount += 1;
+    if (aggregation.amountIncluded) yearStage.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) yearStage.duplicateExcludedCount += 1;
+    years.set(yearKey, yearItem);
+    const program = aggregation.program.trim() || "活動名称・件名の記載なし"; const key = `${row.stage}\u0000${program}`;
+    const programItem = programs.get(key) ?? { stage: row.stage, program, ...emptyAmountSummary() };
+    programItem.records += 1; programItem.amount += aggregation.amount; if (row.amount !== null) programItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) programItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) programItem.duplicateExcludedCount += 1;
+    programs.set(key, programItem);
   }
-  return { name: first.organization, corporateNumber: first.corporateNumber, records: rows.length, amountUnknownCount,
+  return { name: first.organization, corporateNumber: first.corporateNumber, records: rows.length, amountUnknownCount, duplicateExcludedCount,
     byStage: [...stages.values()].sort((a, b) => a.stage.localeCompare(b.stage)),
     byYear: [...years.values()].sort((a, b) => (b.fiscalYear ?? -Infinity) - (a.fiscalYear ?? -Infinity)),
     topPrograms: [...programs.values()].sort((a, b) => b.amount - a.amount || b.records - a.records || a.program.localeCompare(b.program, "ja")).slice(0, 10),
     detailRows: rows.slice(0, detailRowsPerOrganization), detailTruncated: rows.length > detailRowsPerOrganization };
 }
 
-function summarizeFundingRecords(rows: FundingRecord[]) {
-  let amountKnownTotal = 0; let amountKnownCount = 0;
+function summarizeFundingRecords(rows: FundingRecord[], duplicateClassification: ReturnType<typeof classifySubsidyDuplicates>) {
+  let amountKnownTotal = 0; let amountKnownCount = 0; let amountIncludedCount = 0; let duplicateExcludedCount = 0;
   const organizations = new Map<string, { name: string; corporateNumber: string; records: number; amount: number }>();
-  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number }>();
-  const years = new Map<string, { fiscalYear: number | null; records: number; amount: number; amountKnownCount: number }>();
-  const programs = new Map<string, { program: string; records: number; amount: number; amountKnownCount: number }>();
+  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
+  const years = new Map<string, { fiscalYear: number | null; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
+  const programs = new Map<string, { program: string; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
   for (const row of rows) {
-    const amount = row.amount ?? 0; if (row.amount !== null) { amountKnownTotal += row.amount; amountKnownCount += 1; }
+    const aggregation = subsidyAggregationValue(row, duplicateClassification);
+    if (row.amount !== null) amountKnownCount += 1;
+    if (aggregation.amountIncluded) { amountKnownTotal += aggregation.amount; amountIncludedCount += 1; }
+    if (aggregation.duplicateExcluded) duplicateExcludedCount += 1;
     const organization = organizations.get(row.corporateNumber) ?? { name: row.organization, corporateNumber: row.corporateNumber, records: 0, amount: 0 };
-    organization.records += 1; organization.amount += amount; organizations.set(row.corporateNumber, organization);
-    const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0 };
-    stageItem.records += 1; stageItem.amount += amount; if (row.amount !== null) stageItem.amountKnownCount += 1; stages.set(row.stage, stageItem);
-    const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear); const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, records: 0, amount: 0, amountKnownCount: 0 };
-    yearItem.records += 1; yearItem.amount += amount; if (row.amount !== null) yearItem.amountKnownCount += 1; years.set(yearKey, yearItem);
-    const program = row.program.trim() || "活動名称・件名の記載なし"; const programItem = programs.get(program) ?? { program, records: 0, amount: 0, amountKnownCount: 0 };
-    programItem.records += 1; programItem.amount += amount; if (row.amount !== null) programItem.amountKnownCount += 1; programs.set(program, programItem);
+    organization.records += 1; organization.amount += aggregation.amount; organizations.set(row.corporateNumber, organization);
+    const stageItem = stages.get(row.stage) ?? { stage: row.stage, ...emptyAmountSummary() };
+    stageItem.records += 1; stageItem.amount += aggregation.amount; if (row.amount !== null) stageItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) stageItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) stageItem.duplicateExcludedCount += 1;
+    stages.set(row.stage, stageItem);
+    const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear); const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, ...emptyAmountSummary() };
+    yearItem.records += 1; yearItem.amount += aggregation.amount; if (row.amount !== null) yearItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) yearItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) yearItem.duplicateExcludedCount += 1;
+    years.set(yearKey, yearItem);
+    const program = aggregation.program.trim() || "活動名称・件名の記載なし"; const programItem = programs.get(program) ?? { program, ...emptyAmountSummary() };
+    programItem.records += 1; programItem.amount += aggregation.amount; if (row.amount !== null) programItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) programItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) programItem.duplicateExcludedCount += 1;
+    programs.set(program, programItem);
   }
-  return { amountKnownTotal, amountKnownCount, amountUnknownCount: rows.length - amountKnownCount, organizationCount: organizations.size,
+  return { amountKnownTotal, amountKnownCount, amountIncludedCount, duplicateExcludedCount, amountUnknownCount: rows.length - amountKnownCount, organizationCount: organizations.size,
     organizations: [...organizations.values()].sort((a, b) => b.amount - a.amount || b.records - a.records || a.name.localeCompare(b.name, "ja")).slice(0, 10),
     byStage: [...stages.values()].sort((a, b) => a.stage.localeCompare(b.stage)),
     byYear: [...years.values()].sort((a, b) => (b.fiscalYear ?? -Infinity) - (a.fiscalYear ?? -Infinity)).slice(0, 5),

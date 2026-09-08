@@ -1,6 +1,6 @@
 import { filterCompanyRecords } from "../scripts/company-search.mjs";
+import { classifySubsidyDuplicates, subsidyAggregationValue } from "../scripts/subsidy-deduplication.mjs";
 
-"use strict";
 const pageSize = 100;
 const detailRowsPerOrganization = 100;
 const maxOrganizationSummaries = 50;
@@ -102,9 +102,11 @@ function search(message) {
         const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
         const effectivePage = Math.min(page, totalPages);
         const offset = (effectivePage - 1) * pageSize;
-        const summary = summarizeFundingRecords(matching);
+        const duplicateContext = query ? filterCompanyRecords(records, { query }) : matching;
+        const duplicateClassification = classifySubsidyDuplicates(duplicateContext);
+        const summary = summarizeFundingRecords(matching, duplicateClassification);
         const organizationSummaries = query
-            ? summarizeOrganizations(matching).slice(0, maxOrganizationSummaries)
+            ? summarizeOrganizations(matching, duplicateClassification).slice(0, maxOrganizationSummaries)
             : [];
         postMessage({
             type: "result",
@@ -131,7 +133,7 @@ function search(message) {
         });
     }
 }
-function summarizeOrganizations(rows) {
+function summarizeOrganizations(rows, duplicateClassification) {
     const groups = new Map();
     for (const row of rows) {
         const current = groups.get(row.corporateNumber);
@@ -141,44 +143,55 @@ function summarizeOrganizations(rows) {
             groups.set(row.corporateNumber, [row]);
     }
     return [...groups.values()]
-        .map(summarizeOrganization)
+        .map((group) => summarizeOrganization(group, duplicateClassification))
         .sort((left, right) => right.records - left.records || left.name.localeCompare(right.name, "ja"));
 }
-function emptyYearStage() {
-    return { records: 0, amount: 0, amountKnownCount: 0 };
+function emptyAmountSummary() {
+    return { records: 0, amount: 0, amountKnownCount: 0, amountIncludedCount: 0, duplicateExcludedCount: 0 };
 }
-function summarizeOrganization(rows) {
+function summarizeOrganization(rows, duplicateClassification) {
     const first = rows[0];
     const stages = new Map();
     const years = new Map();
     const programs = new Map();
     let amountUnknownCount = 0;
+    let duplicateExcludedCount = 0;
     for (const row of rows) {
         if (row.amount === null)
             amountUnknownCount += 1;
-        const amount = row.amount ?? 0;
-        const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0 };
+        const aggregation = subsidyAggregationValue(row, duplicateClassification);
+        if (aggregation.duplicateExcluded)
+            duplicateExcludedCount += 1;
+        const stageItem = stages.get(row.stage) ?? { stage: row.stage, ...emptyAmountSummary() };
         stageItem.records += 1;
-        stageItem.amount += amount;
+        stageItem.amount += aggregation.amount;
         if (row.amount !== null)
             stageItem.amountKnownCount += 1;
+        if (aggregation.amountIncluded)
+            stageItem.amountIncludedCount += 1;
+        if (aggregation.duplicateExcluded)
+            stageItem.duplicateExcludedCount += 1;
         stages.set(row.stage, stageItem);
         const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear);
         const yearItem = years.get(yearKey) ?? {
             fiscalYear: row.fiscalYear,
-            contracted: emptyYearStage(),
-            subsidy_published: emptyYearStage(),
+            contracted: emptyAmountSummary(),
+            subsidy_published: emptyAmountSummary(),
             amountUnknownCount: 0,
         };
         const yearStage = yearItem[row.stage];
         yearStage.records += 1;
-        yearStage.amount += amount;
+        yearStage.amount += aggregation.amount;
         if (row.amount !== null)
             yearStage.amountKnownCount += 1;
         else
             yearItem.amountUnknownCount += 1;
+        if (aggregation.amountIncluded)
+            yearStage.amountIncludedCount += 1;
+        if (aggregation.duplicateExcluded)
+            yearStage.duplicateExcludedCount += 1;
         years.set(yearKey, yearItem);
-        const programName = row.program.trim() || "活動名称・件名の記載なし";
+        const programName = aggregation.program.trim() || "活動名称・件名の記載なし";
         const programKey = `${row.stage}\u0000${programName}`;
         const programItem = programs.get(programKey) ?? {
             stage: row.stage,
@@ -186,11 +199,17 @@ function summarizeOrganization(rows) {
             records: 0,
             amount: 0,
             amountKnownCount: 0,
+            amountIncludedCount: 0,
+            duplicateExcludedCount: 0,
         };
         programItem.records += 1;
-        programItem.amount += amount;
+        programItem.amount += aggregation.amount;
         if (row.amount !== null)
             programItem.amountKnownCount += 1;
+        if (aggregation.amountIncluded)
+            programItem.amountIncludedCount += 1;
+        if (aggregation.duplicateExcluded)
+            programItem.duplicateExcludedCount += 1;
         programs.set(programKey, programItem);
     }
     return {
@@ -198,6 +217,7 @@ function summarizeOrganization(rows) {
         corporateNumber: first.corporateNumber,
         records: rows.length,
         amountUnknownCount,
+        duplicateExcludedCount,
         byStage: [...stages.values()].sort((left, right) => left.stage.localeCompare(right.stage)),
         byYear: [...years.values()]
             .sort((left, right) => (right.fiscalYear ?? Number.NEGATIVE_INFINITY) - (left.fiscalYear ?? Number.NEGATIVE_INFINITY)),
@@ -208,19 +228,25 @@ function summarizeOrganization(rows) {
         detailTruncated: rows.length > detailRowsPerOrganization,
     };
 }
-function summarizeFundingRecords(rows) {
+function summarizeFundingRecords(rows, duplicateClassification) {
     let amountKnownTotal = 0;
     let amountKnownCount = 0;
+    let amountIncludedCount = 0;
+    let duplicateExcludedCount = 0;
     const organizations = new Map();
     const stages = new Map();
     const years = new Map();
     const programs = new Map();
     for (const row of rows) {
-        const amount = row.amount ?? 0;
-        if (row.amount !== null) {
-            amountKnownTotal += row.amount;
+        const aggregation = subsidyAggregationValue(row, duplicateClassification);
+        if (row.amount !== null)
             amountKnownCount += 1;
+        if (aggregation.amountIncluded) {
+            amountKnownTotal += aggregation.amount;
+            amountIncludedCount += 1;
         }
+        if (aggregation.duplicateExcluded)
+            duplicateExcludedCount += 1;
         const organization = organizations.get(row.corporateNumber) ?? {
             name: row.organization,
             corporateNumber: row.corporateNumber,
@@ -228,32 +254,46 @@ function summarizeFundingRecords(rows) {
             amount: 0,
         };
         organization.records += 1;
-        organization.amount += amount;
+        organization.amount += aggregation.amount;
         organizations.set(row.corporateNumber, organization);
-        const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0 };
+        const stageItem = stages.get(row.stage) ?? { stage: row.stage, ...emptyAmountSummary() };
         stageItem.records += 1;
-        stageItem.amount += amount;
+        stageItem.amount += aggregation.amount;
         if (row.amount !== null)
             stageItem.amountKnownCount += 1;
+        if (aggregation.amountIncluded)
+            stageItem.amountIncludedCount += 1;
+        if (aggregation.duplicateExcluded)
+            stageItem.duplicateExcludedCount += 1;
         stages.set(row.stage, stageItem);
         const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear);
-        const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, records: 0, amount: 0, amountKnownCount: 0 };
+        const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, ...emptyAmountSummary() };
         yearItem.records += 1;
-        yearItem.amount += amount;
+        yearItem.amount += aggregation.amount;
         if (row.amount !== null)
             yearItem.amountKnownCount += 1;
+        if (aggregation.amountIncluded)
+            yearItem.amountIncludedCount += 1;
+        if (aggregation.duplicateExcluded)
+            yearItem.duplicateExcludedCount += 1;
         years.set(yearKey, yearItem);
-        const programName = row.program.trim() || "活動名称・件名の記載なし";
-        const programItem = programs.get(programName) ?? { program: programName, records: 0, amount: 0, amountKnownCount: 0 };
+        const programName = aggregation.program.trim() || "活動名称・件名の記載なし";
+        const programItem = programs.get(programName) ?? { program: programName, ...emptyAmountSummary() };
         programItem.records += 1;
-        programItem.amount += amount;
+        programItem.amount += aggregation.amount;
         if (row.amount !== null)
             programItem.amountKnownCount += 1;
+        if (aggregation.amountIncluded)
+            programItem.amountIncludedCount += 1;
+        if (aggregation.duplicateExcluded)
+            programItem.duplicateExcludedCount += 1;
         programs.set(programName, programItem);
     }
     return {
         amountKnownTotal,
         amountKnownCount,
+        amountIncludedCount,
+        duplicateExcludedCount,
         amountUnknownCount: rows.length - amountKnownCount,
         organizationCount: organizations.size,
         organizations: [...organizations.values()]

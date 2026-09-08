@@ -5,6 +5,8 @@ type AmountSummary = {
   records: number;
   amount: number;
   amountKnownCount: number;
+  amountIncludedCount: number;
+  duplicateExcludedCount: number;
 };
 
 type StageSummary = AmountSummary & {
@@ -38,6 +40,7 @@ type OrganizationSummary = {
   corporateNumber: string;
   records: number;
   amountUnknownCount: number;
+  duplicateExcludedCount: number;
   byStage: StageSummary[];
   byYear: YearSummary[];
   topPrograms: ProgramSummary[];
@@ -66,20 +69,21 @@ let scheduledFrame = 0;
 const esc = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 const amount = (n: number) => n >= 1e8 ? `${short.format(n / 1e8)}億円` : n >= 1e4 ? `${short.format(n / 1e4)}万円` : yen.format(n);
 const label = (s: Stage) => s === "contracted" ? "調達・委託" : "補助金";
-const note = (s: Stage) => s === "contracted" ? "受注額" : "GビズINFO掲載額";
-const stage = (o: OrganizationSummary, s: Stage): AmountSummary => o.byStage.find((x) => x.stage === s) ?? { records: 0, amount: 0, amountKnownCount: 0 };
+const note = (s: Stage) => s === "contracted" ? "受注額" : "GビズINFO掲載額（重複候補除外後）";
+const stage = (o: OrganizationSummary, s: Stage): AmountSummary => o.byStage.find((x) => x.stage === s) ?? { records: 0, amount: 0, amountKnownCount: 0, amountIncludedCount: 0, duplicateExcludedCount: 0 };
 const date = (v: string | null) => v || "日付の記載なし";
+const duplicateNote = (x: AmountSummary) => x.duplicateExcludedCount ? `／重複掲載とみなして除外 ${x.duplicateExcludedCount}件` : "";
 
 function moneyCell(x: AmountSummary, s: Stage) {
-  return x.amountKnownCount ? `<strong title="${esc(yen.format(x.amount))}">${esc(amount(x.amount))}</strong><small>※${note(s)}</small>` : `<strong>—</strong><small>※${note(s)}</small>`;
+  return x.amountIncludedCount ? `<strong title="${esc(yen.format(x.amount))}">${esc(amount(x.amount))}</strong><small>※${note(s)}${duplicateNote(x)}</small>` : `<strong>—</strong><small>※${note(s)}${duplicateNote(x)}</small>`;
 }
 
 function yearTable(o: OrganizationSummary) {
-  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>認定日・受注日の年度</th><th>調達・委託（件数／受注額）</th><th>補助金（件数／掲載額）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountKnownCount ? esc(amount(y.subsidy_published.amount)) : "—"}／掲載額</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>認定日・受注日の年度</th><th>調達・委託（件数／受注額）</th><th>補助金（掲載行／重複候補除外後）</th><th>金額の記載なし</th></tr></thead><tbody>${o.byYear.map((y) => `<tr><td>${y.fiscalYear === null ? "年度不明" : `${y.fiscalYear}年度`}</td><td><strong>${y.contracted.records}件</strong><small>${y.contracted.amountKnownCount ? esc(amount(y.contracted.amount)) : "—"}／受注額</small></td><td><strong>${y.subsidy_published.records}件</strong><small>${y.subsidy_published.amountIncludedCount ? esc(amount(y.subsidy_published.amount)) : "—"}／掲載額${duplicateNote(y.subsidy_published)}</small></td><td>${y.amountUnknownCount}件</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function programTable(o: OrganizationSummary) {
-  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>区分</th><th>活動名称・件名</th><th>掲載行</th><th>掲載値</th><th>金額記載あり</th></tr></thead><tbody>${o.topPrograms.map((p) => `<tr><td><span class="stage-badge ${p.stage}">${label(p.stage)}</span></td><td><span class="program-name">${esc(p.program)}</span></td><td>${p.records}件</td><td>${moneyCell(p, p.stage)}</td><td>${p.amountKnownCount}件</td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="company-search-table-scroll"><table class="company-search-breakdown-table"><thead><tr><th>区分</th><th>活動名称・件名</th><th>掲載行</th><th>掲載値</th><th>集計対象／重複除外</th></tr></thead><tbody>${o.topPrograms.map((p) => `<tr><td><span class="stage-badge ${p.stage}">${label(p.stage)}</span></td><td><span class="program-name">${esc(p.program)}</span></td><td>${p.records}件</td><td>${moneyCell(p, p.stage)}</td><td>${p.amountIncludedCount}件${p.duplicateExcludedCount ? `／${p.duplicateExcludedCount}件` : ""}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function detailTable(o: OrganizationSummary) {
@@ -90,12 +94,13 @@ function detailTable(o: OrganizationSummary) {
 
 function fundingLine(o: OrganizationSummary, s: Stage) {
   const x = stage(o, s);
-  return `<div class="company-search-funding-line"><span class="company-search-funding-kind">${label(s)}</span><strong class="company-search-count">${x.records}件</strong><strong class="company-search-amount${x.amountKnownCount ? "" : " empty"}" title="${x.amountKnownCount ? esc(yen.format(x.amount)) : ""}">${x.amountKnownCount ? esc(amount(x.amount)) : "—"}</strong><small>※${note(s)}${x.records > x.amountKnownCount ? `／金額記載 ${x.amountKnownCount}件` : ""}</small></div>`;
+  return `<div class="company-search-funding-line"><span class="company-search-funding-kind">${label(s)}</span><strong class="company-search-count">${x.records}件</strong><strong class="company-search-amount${x.amountIncludedCount ? "" : " empty"}" title="${x.amountIncludedCount ? esc(yen.format(x.amount)) : ""}">${x.amountIncludedCount ? esc(amount(x.amount)) : "—"}</strong><small>※${note(s)}${x.records > x.amountKnownCount ? `／金額記載 ${x.amountKnownCount}件` : ""}${duplicateNote(x)}</small></div>`;
 }
 
 function card(o: OrganizationSummary, i: number) {
   const id = `${o.corporateNumber}-${i}`;
-  return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div><div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">事業別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
+  const dedup = o.duplicateExcludedCount ? `<p class="company-search-dedup-note">重複掲載とみなして除外 ${o.duplicateExcludedCount}件（同一・近似事業名かつ掲載額差±0.1%）。明細には全掲載行を残しています。</p>` : "";
+  return `<article class="company-search-organization-card"><header class="company-search-organization-header"><div><h4>${esc(o.name)}</h4><p>法人番号 <strong>${esc(o.corporateNumber)}</strong></p></div><span class="company-search-record-count">掲載 ${o.records}件</span></header><div class="company-search-funding-summary">${fundingLine(o, "contracted")}${fundingLine(o, "subsidy_published")}<div class="company-search-funding-line company-search-unknown-line"><span class="company-search-funding-kind">金額の記載なし</span><strong class="company-search-count">${o.amountUnknownCount}件</strong><span class="company-search-amount empty">—</span><small>金額欄が空欄の掲載行</small></div></div>${dedup}<div class="company-search-disclosure-controls"><button type="button" class="company-search-disclosure-button" data-fold="y-${id}" data-open="年度別を閉じる">年度別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="p-${id}" data-open="事業別を閉じる">事業別を見る</button><button type="button" class="company-search-disclosure-button" data-fold="d-${id}" data-open="明細を閉じる">明細を見る</button></div><div class="company-search-fold" id="y-${id}" hidden>${yearTable(o)}</div><div class="company-search-fold" id="p-${id}" hidden>${programTable(o)}</div><div class="company-search-fold" id="d-${id}" hidden>${detailTable(o)}</div></article>`;
 }
 
 function alternativeDisclosure(result: CompanySearchResult, query: string) {

@@ -6,6 +6,7 @@ import ViewTabs from "@/app/ViewTabs";
 import CombinedCompanyResults from "@/app/CombinedCompanyResults";
 import HomeProgramSearch from "@/app/HomeProgramSearch";
 import { filterCompanyRecords } from "@/scripts/company-search.mjs";
+import { classifySubsidyDuplicates, subsidyAggregationValue } from "@/scripts/subsidy-deduplication.mjs";
 import {
   FUNDING_QUERY_MAX_LENGTH,
   sanitizeFundingSearchPage,
@@ -116,12 +117,14 @@ type DataRelease = {
 type FundingSearchSummary = {
   amountKnownTotal: number;
   amountKnownCount: number;
+  amountIncludedCount: number;
+  duplicateExcludedCount: number;
   amountUnknownCount: number;
   organizationCount: number;
   organizations: Array<{ name: string; corporateNumber: string; records: number; amount: number }>;
-  byStage: Array<{ stage: Stage; records: number; amount: number; amountKnownCount: number }>;
-  byYear: Array<{ fiscalYear: number | null; records: number; amount: number; amountKnownCount: number }>;
-  topPrograms: Array<{ program: string; records: number; amount: number; amountKnownCount: number }>;
+  byStage: Array<{ stage: Stage; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>;
+  byYear: Array<{ fiscalYear: number | null; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>;
+  topPrograms: Array<{ program: string; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>;
 };
 
 type FundingSearchResult = {
@@ -418,46 +421,61 @@ function initialSearchParam(name: string, fallback: string) {
   return new URLSearchParams(window.location.search).get(name) ?? fallback;
 }
 
-function summarizeFundingRecords(rows: FundingRecord[]): FundingSearchSummary {
+function summarizeFundingRecords(
+  rows: FundingRecord[],
+  duplicateClassification = classifySubsidyDuplicates(rows),
+): FundingSearchSummary {
   let amountKnownTotal = 0;
   let amountKnownCount = 0;
+  let amountIncludedCount = 0;
+  let duplicateExcludedCount = 0;
   const organizations = new Map<string, { name: string; corporateNumber: string; records: number; amount: number }>();
-  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number }>();
-  const years = new Map<string, { fiscalYear: number | null; records: number; amount: number; amountKnownCount: number }>();
-  const programs = new Map<string, { program: string; records: number; amount: number; amountKnownCount: number }>();
+  const stages = new Map<Stage, { stage: Stage; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
+  const years = new Map<string, { fiscalYear: number | null; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
+  const programs = new Map<string, { program: string; records: number; amount: number; amountKnownCount: number; amountIncludedCount: number; duplicateExcludedCount: number }>();
 
   for (const row of rows) {
-    const amount = row.amount ?? 0;
-    if (row.amount !== null) {
-      amountKnownTotal += row.amount;
-      amountKnownCount += 1;
+    const aggregation = subsidyAggregationValue(row, duplicateClassification);
+    if (row.amount !== null) amountKnownCount += 1;
+    if (aggregation.amountIncluded) {
+      amountKnownTotal += aggregation.amount;
+      amountIncludedCount += 1;
     }
+    if (aggregation.duplicateExcluded) duplicateExcludedCount += 1;
     const organization = organizations.get(row.corporateNumber) ?? { name: row.organization, corporateNumber: row.corporateNumber, records: 0, amount: 0 };
     organization.records += 1;
-    organization.amount += amount;
+    organization.amount += aggregation.amount;
     organizations.set(row.corporateNumber, organization);
-    const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0 };
+    const stageItem = stages.get(row.stage) ?? { stage: row.stage, records: 0, amount: 0, amountKnownCount: 0, amountIncludedCount: 0, duplicateExcludedCount: 0 };
     stageItem.records += 1;
-    stageItem.amount += amount;
+    stageItem.amount += aggregation.amount;
     if (row.amount !== null) stageItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) stageItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) stageItem.duplicateExcludedCount += 1;
     stages.set(row.stage, stageItem);
     const yearKey = row.fiscalYear === null ? "unclassified" : String(row.fiscalYear);
-    const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, records: 0, amount: 0, amountKnownCount: 0 };
+    const yearItem = years.get(yearKey) ?? { fiscalYear: row.fiscalYear, records: 0, amount: 0, amountKnownCount: 0, amountIncludedCount: 0, duplicateExcludedCount: 0 };
     yearItem.records += 1;
-    yearItem.amount += amount;
+    yearItem.amount += aggregation.amount;
     if (row.amount !== null) yearItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) yearItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) yearItem.duplicateExcludedCount += 1;
     years.set(yearKey, yearItem);
-    const programName = row.program.trim() || "活動名称・件名の記載なし";
-    const programItem = programs.get(programName) ?? { program: programName, records: 0, amount: 0, amountKnownCount: 0 };
+    const programName = aggregation.program.trim() || "活動名称・件名の記載なし";
+    const programItem = programs.get(programName) ?? { program: programName, records: 0, amount: 0, amountKnownCount: 0, amountIncludedCount: 0, duplicateExcludedCount: 0 };
     programItem.records += 1;
-    programItem.amount += amount;
+    programItem.amount += aggregation.amount;
     if (row.amount !== null) programItem.amountKnownCount += 1;
+    if (aggregation.amountIncluded) programItem.amountIncludedCount += 1;
+    if (aggregation.duplicateExcluded) programItem.duplicateExcludedCount += 1;
     programs.set(programName, programItem);
   }
 
   return {
     amountKnownTotal,
     amountKnownCount,
+    amountIncludedCount,
+    duplicateExcludedCount,
     amountUnknownCount: rows.length - amountKnownCount,
     organizationCount: organizations.size,
     organizations: [...organizations.values()].sort((left, right) => right.amount - left.amount || right.records - left.records || left.name.localeCompare(right.name, "ja")).slice(0, 10),
@@ -801,7 +819,10 @@ export default function Home() {
     }));
     setSearchTotal(totalRecords);
     setSearchTotalPages(totalPages);
-    setSearchSummary(summarizeFundingRecords(matching));
+    const duplicateContext = debouncedQuery.trim()
+      ? filterCompanyRecords(fallbackRecordsRef.current, { query: debouncedQuery }) as FundingRecord[]
+      : matching;
+    setSearchSummary(summarizeFundingRecords(matching, classifySubsidyDuplicates(duplicateContext)));
     setSearchAlternatives([]);
     setSearchAlternativeCount(0);
     setSearchError(null);
@@ -1108,7 +1129,7 @@ export default function Home() {
             </table>
             <table>
               <thead><tr><th>情報種別</th><th>掲載行</th><th>掲載値合計</th></tr></thead>
-              <tbody>{searchSummary.byStage.map((item) => <tr key={item.stage}><td><span className={`stage-badge ${item.stage}`}>{stageLabels[item.stage]}</span></td><td>{item.records.toLocaleString("ja-JP")}行</td><td className="amount">{yen.format(item.amount)}<small>金額記載 {item.amountKnownCount.toLocaleString("ja-JP")}行</small></td></tr>)}</tbody>
+              <tbody>{searchSummary.byStage.map((item) => <tr key={item.stage}><td><span className={`stage-badge ${item.stage}`}>{stageLabels[item.stage]}</span></td><td>{item.records.toLocaleString("ja-JP")}行</td><td className="amount">{item.amountIncludedCount ? yen.format(item.amount) : "—"}<small>集計対象 {item.amountIncludedCount.toLocaleString("ja-JP")}行{item.duplicateExcludedCount > 0 && `／重複掲載とみなして除外 ${item.duplicateExcludedCount.toLocaleString("ja-JP")}行`}</small></td></tr>)}</tbody>
             </table>
             <table>
               <thead><tr><th>直近5年度</th><th>掲載行</th><th>金額記載あり</th></tr></thead>

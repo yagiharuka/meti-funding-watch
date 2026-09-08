@@ -219,11 +219,12 @@ test("Pages build contains the stable company-search mount and current zero-resu
 });
 
 
-test("same-corporation subsidy amounts are visible in the company summary", async () => {
+test("same-corporation subsidy amounts are deduplicated and the excluded count is visible", async () => {
   const source = await readFile(new URL("../pages-site/company-search-ui.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source, /合計しません/);
   assert.doesNotMatch(source, /個別の掲載額は明細で確認/);
-  assert.match(source, /補助金（件数／掲載額）/);
-  assert.match(source, /y\.subsidy_published\.amountKnownCount/);
-  assert.match(source, /x\.amountKnownCount \? esc\(amount\(x\.amount\)\) : "—"/);
+  assert.match(source, /補助金（掲載行／重複候補除外後）/);
+  assert.match(source, /y\.subsidy_published\.amountIncludedCount/);
+  assert.match(source, /重複掲載とみなして除外/);
+  assert.match(source, /掲載額差±0\.1%/);
 });

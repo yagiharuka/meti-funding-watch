@@ -1,3 +1,5 @@
+import { classifySubsidyDuplicates, subsidyAggregationValue } from "./subsidy-deduplication.mjs";
+
 const CORPORATE_DESIGNATORS = [
   "株式会社",
   "有限会社",
@@ -174,22 +176,36 @@ export function summarizeCompanyIdentityCoverage(rows) {
 export function summarizeCompanyRows(rows) {
   let amountKnownCount = 0;
   let amountUnknownCount = 0;
+  let amountIncludedCount = 0;
+  let duplicateExcludedCount = 0;
   const byStage = new Map();
+  const duplicateClassification = classifySubsidyDuplicates(rows);
 
   for (const row of rows) {
     if (row.amount === null) amountUnknownCount += 1;
     else amountKnownCount += 1;
+    const aggregation = subsidyAggregationValue(row, duplicateClassification);
 
     const item = byStage.get(row.stage) ?? {
       stage: row.stage,
       records: 0,
       amount: 0,
       amountKnownCount: 0,
+      amountIncludedCount: 0,
+      duplicateExcludedCount: 0,
     };
     item.records += 1;
     if (row.amount !== null) {
-      item.amount += row.amount;
       item.amountKnownCount += 1;
+    }
+    item.amount += aggregation.amount;
+    if (aggregation.amountIncluded) {
+      item.amountIncludedCount += 1;
+      amountIncludedCount += 1;
+    }
+    if (aggregation.duplicateExcluded) {
+      item.duplicateExcludedCount += 1;
+      duplicateExcludedCount += 1;
     }
     byStage.set(row.stage, item);
   }
@@ -198,6 +214,8 @@ export function summarizeCompanyRows(rows) {
     records: rows.length,
     amountKnownCount,
     amountUnknownCount,
+    amountIncludedCount,
+    duplicateExcludedCount,
     byStage: [...byStage.values()].sort((left, right) => left.stage.localeCompare(right.stage)),
   };
 }

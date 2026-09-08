@@ -28,8 +28,9 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   assert.doesNotMatch(company, /合計しません/);
   assert.doesNotMatch(company, /個別の掲載額は明細で確認/);
   assert.match(company, /認定日・受注日の年度/);
-  assert.match(company, /補助金（件数／掲載額）/);
-  assert.match(company, /subsidy_published\.amountKnownCount/);
+  assert.match(company, /補助金（掲載行／重複候補除外後）/);
+  assert.match(company, /subsidy_published\.amountIncludedCount/);
+  assert.match(company, /重複掲載とみなして除外/);
   assert.match(company, /事業別を見る/);
   assert.match(company, /href="#data-reading-guide">↓ 読み方/);
   assert.doesNotMatch(company, /subsidySemanticsNote|subsidy-semantics-note/);
@@ -38,7 +39,8 @@ test("subsidy guardrail contracts are anchored to the real render sources", asyn
   // Explanatory semantics live in the one folded guide below the cross-series results.
   assert.match(guide, /id="data-reading-guide"/);
   assert.match(guide, /このデータの読み方/);
-  assert.match(guide, /同一補助金の交付決定・確定等が別行/);
+  assert.match(guide, /同一または近似する事業名かつ掲載額差が±0\.1%以内/);
+  assert.match(guide, /明細には元の全掲載行を残します/);
   assert.match(guide, /掲載法人自身の収益・最終受益額を示すものではありません/);
   assert.match(guide, /別レビューシート年度に再掲/);
   assert.match(guide, /相互に合算しません/);
