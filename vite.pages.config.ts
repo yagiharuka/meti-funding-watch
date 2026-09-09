@@ -7,6 +7,8 @@ import { defineConfig } from "vite";
 import { REVIEW_SCHEMA_VERSION, migrateLegacyPayment } from "./scripts/review-data-model.mjs";
 import { buildGbizCompanySearchArtifacts } from "./scripts/build-company-search-artifacts.mjs";
 
+import { buildFundingRelationArtifacts } from "./scripts/build-funding-relations.mjs";
+
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const pagesOutDir = fileURLToPath(new URL("./dist-pages", import.meta.url));
 
@@ -162,6 +164,7 @@ export default defineConfig({
           outputDirectory: new URL("./dist-pages/data/", import.meta.url),
         });
         await copyReviewData(dataDirectory);
+        await buildFundingRelationArtifacts({ outputDirectory: new URL("./dist-pages/data/explorer/", import.meta.url) });
         const reviewCompanyIndex = await readFile(new URL("./data/review-company-index.json", import.meta.url), "utf8");
         const parsedReviewCompanyIndex = JSON.parse(reviewCompanyIndex) as { schemaVersion?: number; recipients?: unknown[] };
         if (parsedReviewCompanyIndex.schemaVersion !== 1 || !Array.isArray(parsedReviewCompanyIndex.recipients)) {

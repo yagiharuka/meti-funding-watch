@@ -1,19 +1,22 @@
 import { StrictMode } from "react";
+import { useSourceView } from "@/scripts/funding-explorer-query.mjs";
 import { createRoot } from "react-dom/client";
 
 import Home from "@/app/page";
+import FundingExplorer from "@/app/FundingExplorer";
+import "./funding-explorer.css";
 import SiteNotice from "@/app/SiteNotice";
 import "@/app/globals.css";
-import "./funding-search-bridge";
+
 import "./company-search-experience.css";
 import "./company-search-alternatives.css";
 import "./company-evidence-ui.css";
 import "./subsidy-semantics-ui.css";
 import "./data-reading-guide.css";
 import "./site-balance-and-suggestions.css";
-import "./company-search-ui";
-import "./company-evidence-ui";
-import "./subsidy-semantics-ui";
+
+
+
 
 // GitHub Pages production shell. DOM-balancing copy is installed after React's
 // first paint so it always sees the rendered filter notes and other targets.
@@ -23,13 +26,25 @@ if (!root) {
   throw new Error("Application root was not found");
 }
 
-createRoot(root).render(
+// Preserve source bookmarks while new visits start from relationships.
+const sourceView = useSourceView(window.location.search, window.location.hash);
+async function render() {
+if (sourceView) {
+  await import("./funding-search-bridge");
+  await import("./company-search-ui");
+  await import("./company-evidence-ui");
+  await import("./subsidy-semantics-ui");
+}
+createRoot(root!).render(
   <StrictMode>
     <SiteNotice />
-    <Home />
+    {sourceView ? <Home /> : <FundingExplorer />}
   </StrictMode>,
 );
 
-requestAnimationFrame(() => {
+if (sourceView) requestAnimationFrame(() => {
   void import("./site-balance-and-suggestions");
 });
+
+}
+void render();

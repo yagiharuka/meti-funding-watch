@@ -14,7 +14,7 @@ const normalize = (value = "") => String(value)
 const groups = new Map();
 for (const row of rows) {
   if (!row.organization) continue;
-  const corporateNumber = /^\d{13}$/.test(String(row.corporateNumber ?? "")) ? String(row.corporateNumber) : "";
+  const corporateNumber = /^\d{13}$/.test(String(row.corporateNumber ?? "")) && !/^(\d)\1{12}$/.test(String(row.corporateNumber)) ? String(row.corporateNumber) : "";
   const key = corporateNumber || `name:${normalize(row.organization)}`;
   let group = groups.get(key);
   if (!group) {

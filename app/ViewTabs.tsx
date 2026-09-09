@@ -13,6 +13,7 @@ export default function ViewTabs({ active }: ViewTabsProps) {
     <nav className="search-page-nav" aria-label="検索ページ">
       <span className="search-page-nav-label">検索方法</span>
       <div className="search-page-nav-links">
+        <a href={active === "gbiz" ? "?view=explore" : "../?view=explore"}><span>企業と事業をつなぐ</span><strong>資金のつながりを調べる</strong></a>
         <a className={active === "gbiz" ? "active" : undefined} href={href("gbiz")} aria-current={active === "gbiz" ? "page" : undefined}>
           <span>企業名・事業名で</span><strong>かんたん検索</strong>
         </a>

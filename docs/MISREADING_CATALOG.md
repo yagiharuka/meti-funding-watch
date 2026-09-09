@@ -60,6 +60,11 @@
 | M-027 | 検索・名寄せ | 企業名の部分一致候補＝資本関係・取引関係などの「関連会社」 | 中 | GビズINFO企業名候補 | 見出しを「企業名の部分一致候補」とし、名称の文字列一致だけで表示しており関連会社を示すものではないとその場で明記する。候補は法人番号ごとに分離し、件数も「GビズINFO掲載行」と表示する | `pages-site/site-balance-and-suggestions.ts`, `pages-site/site-balance-and-suggestions.css` | `tests/company-search-alternatives.test.mjs` | MITIGATED |
 | M-028 | 0件・欠落 | 「GビズINFO欠落補足」として収録した公式行が、実際にはGビズINFOにも同一案件として存在する | 高 | 企業検索の公式補足（欠落補足を宣言するソース） | 欠落を収録条件にするソースは `gbizAbsenceRequired: true` を宣言し、その全レコードを法人番号・年度・正規化した案件名でGビズINFO同年度と年度不明収録に照合する。法人番号等がなく検証不能な行、または同一案件候補がある更新はfail-closedで公開しない | `scripts/official-gbiz-gap-audit.mjs`, `scripts/rieti-official-supplement.mjs`, `data/official-supplement-rieti.json` | `tests/official-supplement.test.mjs` | MITIGATED |
 
+| M-029 | 系列間比較 | 横断検索の同名事業候補＝原資料で確認した同一案件 | 高 | 企業・事業の横断検索 | レビュー内の事業ID対応だけを確定関係にし、他系列との名称一致は候補に分け、候補を合算しない | `scripts/funding-relations.mjs`, `app/FundingExplorer.tsx` | `tests/funding-relations.test.mjs` | MITIGATED |
+| M-030 | 受取主体・資金経路 | 公開経路の終端＝最終受益者、経路のない掲載元＝支払元 | 高 | 横断検索の関係明細 | 原資料の公開経路だけを保持し、終端を最終受益者と呼ばない。GビズINFOの公表組織から経路を作らない | `scripts/funding-relations.mjs`, `app/FundingExplorer.tsx` | `tests/funding-relations.test.mjs` | MITIGATED |
+| M-031 | 金額・集計 | 同名・同額の掲載を束ねた表示＝重複確定、各掲載額を合計できる | 高 | 横断検索の企業明細 | 同名・同額候補は原行を残した確認用のまとまりとし、年度を跨いで自動削除・合計しない | `scripts/funding-relations.mjs`, `app/FundingExplorer.tsx` | `tests/funding-relations.test.mjs` | MITIGATED |
+| M-032 | 0件・欠落 | 事業の収録支出先一覧＝全受取先、金額判明行数＝金額カバー率 | 高 | 横断検索の事業詳細 | 収録行数・金額記載・経路記載を別々に数え、全体との差額や網羅率は算出しない | `scripts/funding-relations.mjs`, `app/FundingExplorer.tsx` | `tests/funding-relations.test.mjs` | MITIGATED |
+
 ## OPEN項目
 
 `OPEN` は修正漏れではなく、次の監査・修正対象を明示するための状態です。現在の未対策は次の3件です。

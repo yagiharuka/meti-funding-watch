@@ -25,6 +25,7 @@ on:
       - "data/funding-data.json"
       - "data/funding-summary.json"
       - "data/pages/**"
+      - "data/funding/**"
       - "data/review-cache/**"
       - "tests/**"
       - "package.json"

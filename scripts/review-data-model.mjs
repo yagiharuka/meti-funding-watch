@@ -145,7 +145,7 @@ export function migrateLegacyPayment(row, legacyIndex) {
 
 export function buildReviewGraphs(rows) {
   const graphByProject = new Map();
-  for (const { row } of rows) {
+  for (const { row, rowNumber } of rows) {
     if (!isMetiReviewRow(row)) continue;
     const projectNumber = cleanCell(row["予算事業ID"]);
     const target = cleanCell(row["支出先の支出先ブロック"]);
@@ -157,7 +157,7 @@ export function buildReviewGraphs(rows) {
     const fromName = cleanCell(row["支出元の支出先ブロック名"]);
     const targetName = cleanCell(row["支出先の支出先ブロック名"]);
     const government = cleanCell(row["担当組織からの支出"]).toUpperCase() === "TRUE";
-    graph.edges.push({ from, target, government });
+    graph.edges.push({ from, target, government, sourceRowNumber: rowNumber ?? null });
     const parents = graph.parents.get(target) ?? [];
     parents.push(government ? null : from || null);
     graph.parents.set(target, [...new Set(parents)]);

@@ -191,7 +191,11 @@ const commitSha = process.env.RELEASE_COMMIT_SHA?.trim()
   })).stdout.trim();
 if (!/^[0-9a-f]{40}$/i.test(commitSha)) throw new Error("公開releaseのcommit SHAが不正です");
 
+const explorerManifestText = await readFile(new URL("explorer/manifest.json", dataDirectory), "utf8");
+const explorerManifest = JSON.parse(explorerManifestText);
+if (explorerManifest.schemaVersion !== 2 || explorerManifest.counts.gbiz !== ids.length) throw new Error("横断検索の元データ件数が一致しません");
 const release = {
+  explorer: { manifestSha256: sha256(explorerManifestText), counts: explorerManifest.counts },
   schemaVersion: 1,
   commitSha,
   generatedAt: manifest.generatedAt,

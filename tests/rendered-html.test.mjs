@@ -21,6 +21,7 @@ test("builds Gbiz and review artifacts with an embedded reconciliation page", as
   assert.ok(dataEntries.every((name) =>
     name === "manifest.json"
     || name === "review"
+    || name === "explorer"
     || name === "review-company-index.json"
     || name === "official-company-index.json"
     || name === "official-supplement-index.json"

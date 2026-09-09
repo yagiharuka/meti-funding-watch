@@ -189,6 +189,7 @@ async function loadReviewSheetYear(reviewSheetYear) {
     if (budgetYear < reviewSheetYear && execution !== null && (project.executionFiscalYear === null || budgetYear > project.executionFiscalYear)) { project.executionFiscalYear = budgetYear; project.execution = execution; project.executionRate = executionRate; }
   }
   const graphByProject = buildReviewGraphs(csvObjectRows(byKind.flows));
+  for (const [id, program] of programById) program.disclosedFlows = graphByProject.get(id)?.edges ?? [];
   const result = createReviewPayments({
     reviewSheetYear,
     rows: csvObjectRows(byKind.payments),

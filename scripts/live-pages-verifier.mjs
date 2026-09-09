@@ -81,6 +81,23 @@ export async function verifyLivePages({
   if (sha256(Buffer.from(`${[...ids].sort().join("\n")}\n`)) !== release.idSetSha256) {
     throw new Error("公開明細のID集合が一致しません");
   }
+  if (release.explorer) {
+    const explorerBytes = await read("data/explorer/manifest.json");
+    if (sha256(explorerBytes) !== release.explorer.manifestSha256) throw new Error("横断検索manifestの世代が一致しません");
+    const explorer = parseJson(explorerBytes, "explorer manifest");
+    if (explorer.schemaVersion !== 2) throw new Error("資金経路のスキーマが一致しません");
+    const verifyExplorerFile = async filename => {
+      if (!/^[a-zA-Z0-9-]+\.json$/.test(filename) || !explorer.files[filename]) throw new Error("横断検索の参照先が不正です");
+      const bytes = await read(`data/explorer/${filename}`);
+      if (sha256(bytes) !== explorer.files[filename].sha256 || bytes.byteLength !== explorer.files[filename].bytes) throw new Error("横断検索の公開データが一致しません");
+      return parseJson(bytes, filename);
+    };
+    const [entities, programs] = await Promise.all([verifyExplorerFile(explorer.entitiesFile), verifyExplorerFile(explorer.programsFile)]);
+    if (entities.length !== explorer.counts.entities || programs.length !== explorer.counts.programs) throw new Error("横断検索の件数が一致しません");
+    const sampleEntity = entities.find(e => e.corporateNumber && e.programIds.length) || entities[0];
+    const sampleProgram = programs.find(p => p.coverage.routeKnown > 0) || programs[0];
+    await Promise.all([verifyExplorerFile(sampleEntity.file), verifyExplorerFile(sampleProgram.file)]);
+  }
   return { release, status, recordCount: ids.length };
 }
 

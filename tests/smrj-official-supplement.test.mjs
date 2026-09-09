@@ -150,32 +150,23 @@ test("SMRJ positioned parser publishes totals, retains joint recipients, and kee
   assert.equal(unit.amountStatus, "non_total");
 });
 
-test("committed SMRJ HQ supplement accounts for every discovered PDF and printed row", async () => {
-  const data = JSON.parse(await readFile("data/official-supplement-smrj.json", "utf8"));
-  assert.equal(data.schemaVersion, 1);
-  assert.equal(data.id, "smrj");
-  assert.equal(data.collectionStatus, "complete");
-  assert.equal(data.minFiscalYear, 2015);
-  assert.ok(data.maxFiscalYear >= 2026);
-  assert.equal(data.documentCount, data.parsedDocumentCount);
-  assert.ok(data.documentCount >= 158);
-  assert.equal(data.parseFailureCount, 0);
-  assert.equal(data.records.length, data.totalRows);
-  assert.equal(
-    data.publishedRowCount + data.amountUnavailableRowCount + data.nonTotalAmountRowCount,
-    data.totalRows,
-  );
-  assert.ok(data.totalRows > 1_000, "a full headquarters history must not collapse back to the former sample");
-  assert.ok(data.records.some((row) => row.fiscalYear === 2015));
-  assert.ok(data.records.some((row) => row.fiscalYear === 2026));
-  assert.ok(data.records.some((row) => row.contractType === "competitive"));
-  assert.ok(data.records.some((row) => row.contractType === "discretionary"));
-  assert.ok(data.records.some((row) => Array.isArray(row.organizations) && row.organizations.length > 1));
-  assert.ok(data.records.some((row) => row.amount === null && row.amountStage === "契約金額の記載なし"));
-  assert.ok(data.records.some((row) => row.amount === null && row.amountStage === "単価・変動額（契約総額の記載なし）"));
-  for (const document of data.documents) {
-    assert.equal(document.totalRows, document.publishedRows + document.unavailableRows + document.nonTotalRows, document.url);
-    assert.match(document.sha256, /^[0-9a-f]{64}$/u);
-    assert.ok(document.pageCount >= 1);
+test("published SMRJ records preserve the registered partial corpus and its coverage limit", async () => {
+  const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+  const seed = seeds.sources.find(s => s.id === "smrj");
+  const history = JSON.parse(await readFile("data/official-central-history.json", "utf8"));
+  const committed = [...seed.records, ...history.records.filter(r => r.sourceId === "smrj")];
+  assert.equal(seed.records.length, 14);
+  assert.equal(committed.length, 591);
+  assert.match(seed.coverageNote, /網羅データではない/);
+  const index = JSON.parse(await readFile("public/data/official-company-index.json", "utf8"));
+  const published = index.records.filter(r => r.sourceId === "smrj");
+  assert.equal(published.length, committed.length);
+  const byKey = new Map(published.map(r => [r.sourceKey, r]));
+  for (const r of committed) {
+    const actual = byKey.get(r.sourceKey || r.id);
+    assert.ok(actual, r.id);
+    assert.equal(actual.amount, r.amount, r.id);
+    assert.equal(actual.corporateNumber, r.corporateNumber, r.id);
+    assert.equal(actual.sourceUrl, r.sourceUrl, r.id);
   }
 });
