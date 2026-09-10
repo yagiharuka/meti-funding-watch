@@ -1,0 +1,107 @@
+name: One-time integrate dedicated JOGMEC supplement
+
+on:
+  push:
+    branches:
+      - reingest/jogmec-full-history
+    paths:
+      - ".github/workflows/jogmec-integrate-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-jogmec-integration
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/jogmec-full-history
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Regenerate JOGMEC inventory and structured records
+        run: |
+          mkdir -p .audit
+          node scripts/jogmec-inventory-20260826.mjs
+          node scripts/jogmec-reingest-stage1-20260826.mjs
+      - name: Apply dedicated index and monthly-refresh integration
+        run: node scripts/apply-jogmec-stage1-integration-20260826.mjs
+      - name: Rebuild official indexes and run all tests
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+          npm test
+      - name: Validate partial-coverage and amount semantics
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          const supplement = JSON.parse(await readFile("data/official-supplement-index.json", "utf8"));
+          const company = JSON.parse(await readFile("public/data/official-company-index.json", "utf8"));
+          const supplementRows = supplement.records.filter((row) => row.sourceId === "jogmec");
+          const companyRows = company.records.filter((row) => row.sourceId === "jogmec");
+          if (data.recordCount !== data.records.length) throw new Error("dedicated record accounting mismatch");
+          if (supplementRows.length !== data.records.length) throw new Error(`supplement count mismatch: ${supplementRows.length}/${data.records.length}`);
+          if (companyRows.length !== data.records.length) throw new Error(`company count mismatch: ${companyRows.length}/${data.records.length}`);
+          if (data.collectionStatus === "complete" && data.unparsedDocumentCount !== 0) throw new Error("complete with remaining candidates");
+          for (const row of data.records) {
+            if (row.amount === 0 && /記載なし|非公表|単価|個社別/u.test(row.amountStage)) throw new Error(`zero-filled unpublished amount: ${row.id}`);
+          }
+          console.log(JSON.stringify({
+            collectionStatus: data.collectionStatus,
+            resultCandidateCount: data.resultCandidateCount,
+            parsedDocumentCount: data.parsedDocumentCount,
+            unparsedDocumentCount: data.unparsedDocumentCount,
+            newlyParsedRecordCount: data.newlyParsedRecordCount,
+            recordCount: data.recordCount,
+            minFiscalYear: data.minFiscalYear,
+            maxFiscalYear: data.maxFiscalYear,
+          }));
+          NODE
+      - name: Commit verified integration and restore ordinary workflow set
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/ci.yml
+          test ! -e .github/workflows/jogmec-inventory-once.yml || git rm .github/workflows/jogmec-inventory-once.yml
+          test ! -e .github/workflows/jogmec-stage1-once.yml || git rm .github/workflows/jogmec-stage1-once.yml
+          git rm .github/workflows/jogmec-integrate-once.yml
+          git rm scripts/apply-jogmec-stage1-integration-20260826.mjs
+          git add \
+            scripts/jogmec-inventory-20260826.mjs \
+            scripts/jogmec-reingest-stage1-20260826.mjs \
+            scripts/build-official-supplement-index.mjs \
+            scripts/build-official-company-index.mjs \
+            .github/workflows/refresh-official-data.yml \
+            tests/jogmec-reingest-stage1.test.mjs \
+            tests/official-supplement.test.mjs \
+            tests/company-evidence-ui.test.mjs \
+            data/official-supplement-jogmec-inventory.json \
+            data/official-supplement-jogmec.json \
+            data/official-supplement-index.json \
+            public/data/official-company-index.json \
+            .audit/jogmec-inventory.json \
+            .audit/jogmec-reingest-stage1.json \
+            .github/workflows/ci.yml
+          git commit -m "feat(data): integrate structured JOGMEC official results"
+          git reset --hard HEAD
+          git clean -fd
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/jogmec-full-history
+            if git push origin HEAD:reingest/jogmec-full-history; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1

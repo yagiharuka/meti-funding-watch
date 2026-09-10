@@ -2,162 +2,148 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  JOGMEC_RESULTS_URL,
-  mergeJogmecRecords,
+  JOGMEC_BIDDING_RESULTS_URL,
+  JOGMEC_VOLUNTARY_RESULTS_URL,
+  classifyJogmecAmount,
+  mergeJogmecWithPrevious,
   parseJogmecListingHtml,
-  parseJogmecTableItems,
+  parseJogmecPositionedPages,
 } from "../scripts/jogmec-official-supplement.mjs";
 
-const DOCUMENT = {
-  url: "https://www.jogmec.go.jp/content/300802221.pdf",
-  slug: "300802221",
-  label: "5月 (PDF : 141KB)",
-  fiscalYear: 2026,
-  calendarYear: 2026,
-  month: 5,
-  appendix: false,
-};
-
-function item(str, x, y) {
-  return { str, transform: [1, 0, 0, 1, x, y] };
+function fiscalMonths(fiscalYear, count = 12) {
+  return [
+    ...Array.from({ length: 9 }, (_, index) => ({ year: fiscalYear, month: index + 4 })),
+    ...Array.from({ length: 3 }, (_, index) => ({ year: fiscalYear + 1, month: index + 1 })),
+  ].slice(0, count);
 }
 
-function tableItems() {
+function listingHtml(contractType, { omit = null } = {}) {
+  const parts = ["<html><body>"];
+  for (let fiscalYear = 2023; fiscalYear <= 2026; fiscalYear += 1) {
+    parts.push(`<h2>${fiscalYear}年度</h2>`);
+    const months = fiscalMonths(fiscalYear, fiscalYear === 2026 ? 3 : 12);
+    for (const { year, month } of months) {
+      const key = `${contractType}-${fiscalYear}-${month}`;
+      if (key !== omit) parts.push(`<a href="/content/${contractType}-${year}-${month}.pdf">${month}月 (PDF : 100KB)</a>`);
+      if (contractType === "competitive" && month === 4) {
+        parts.push(`<a href="/content/${contractType}-${year}-${month}-appendix.pdf">4月別紙 (PDF : 80KB)</a>`);
+      }
+    }
+  }
+  parts.push("</body></html>");
+  return parts.join("\n");
+}
+
+function item(text, x, y, w = 0.04) {
+  return { text, x, y, w, h: 0.02 };
+}
+
+function positionedPage(contractType) {
   const headers = [
-    item("物品等又は役務の名称", 10, 500),
-    item("契約担当役の氏名及び所在地", 110, 500),
-    item("契約を締結した日", 210, 500),
-    item("契約の相手先の商号又は名称及び所在地", 310, 500),
-    item("一般競争入札及び指名競争入札の別", 450, 500),
-    item("予定価格", 570, 500),
-    item("契約価格", 650, 500),
-    item("落札率", 730, 500),
+    item("物品等又は役務の名称", 0.08, 0.90, 0.12),
+    item("契約担当役の氏名及び所在地", 0.24, 0.90, 0.12),
+    item("契約を締結した日", 0.39, 0.90, 0.08),
+    item("契約の相手先の商号又は名称及び所在地", 0.50, 0.90, 0.15),
+    ...(contractType === "competitive"
+      ? [item("一般競争入札及び指名競争入札の別", 0.67, 0.90, 0.12)]
+      : [item("随意契約の根拠", 0.68, 0.90, 0.08)]),
+    item("予定価格", 0.78, 0.90, 0.05),
+    item(contractType === "competitive" ? "契約価格" : "契約金額", 0.85, 0.90, 0.05),
+    item("落札率", 0.92, 0.90, 0.04),
   ];
-  const first = [
-    item("令和8年度国際海底機構開発規則等に関する対応支援業務", 10, 440),
-    item("金属環境・海洋・石炭本部長", 110, 440),
-    item("令和8年5月29日", 210, 440),
-    item("イー・アンド・イーソリューションズ株式会社 東京都千代田区外神田四丁目14番1号", 310, 440),
-    item("一般競争入札（総合評価落札方式）", 450, 440),
-    item("¥22,723,436", 570, 440),
-    item("¥22,682,889", 650, 440),
-    item("99.82%", 730, 440),
+  const row = (y, date, program, organization, amount) => [
+    item(program, 0.08, y, 0.12),
+    item("理事", 0.24, y, 0.04),
+    item(date, 0.39, y, 0.08),
+    item(`${organization} 東京都千代田区丸の内1-1-1`, 0.50, y, 0.15),
+    ...(contractType === "competitive" ? [item("一般競争入札", 0.67, y, 0.08)] : [item("第32条", 0.68, y, 0.05)]),
+    item("-", 0.78, y, 0.03),
+    item(amount, 0.85, y, 0.06),
+    item("-", 0.92, y, 0.03),
   ];
-  const second = [
-    item("海外事務所等におけるファイアウォールの導入及び運用管理業務", 10, 340),
-    item("理事", 110, 340),
-    item("令和8年4月28日", 210, 340),
-    item("株式会社インターネットイニシアティブ 東京都千代田区富士見二丁目10番2号", 310, 340),
-    item("一般競争入札", 450, 340),
-    item("-", 570, 340),
-    item("-", 650, 340),
-    item("-", 730, 340),
-  ];
-  const third = [
-    item("石油・天然ガスレビューの校正・校閲業務", 10, 240),
-    item("エネルギー事業本部長", 110, 240),
-    item("令和8年4月1日", 210, 240),
-    item("株式会社文化工房 東京都港区六本木五丁目10番31号", 310, 240),
-    item("一般競争入札", 450, 240),
-    item("-", 570, 240),
-    item("2640/1頁", 650, 240),
-    item("-", 730, 240),
-  ];
-  return [...headers, ...first, ...second, ...third];
+  return {
+    pageNumber: 1,
+    items: [
+      ...headers,
+      ...row(0.76, "令和8年4月1日", "円建て契約", "株式会社アルファ", "¥12,345,678"),
+      ...row(0.58, "令和8年4月2日", "非公表契約", "株式会社ベータ", "-"),
+      ...row(0.40, "令和8年4月3日", "単価契約", "株式会社ガンマ", "2640/1頁"),
+      ...row(0.22, "令和8年4月4日", "外貨契約", "Global Delta Ltd", "US$20,775.00"),
+    ],
+  };
 }
 
-test("JOGMEC listing parser keeps regular and appendix monthly PDFs in the current fiscal year", () => {
-  const html = `
-    <h2>2026年度</h2>
-    <ul>
-      <li><a href="/content/300803009.pdf?x=1">6月 (PDF : 122KB)</a></li>
-      <li><a href="/content/300802221.pdf">5月 (PDF : 141KB)</a></li>
-      <li><a href="/content/300802052.pdf">4月 (PDF : 233KB)</a></li>
-      <li><a href="/content/300802053.pdf">4月別紙 (PDF : 81KB)</a></li>
-    </ul>
-    <h2>2025年度</h2>
-    <a href="/content/old.pdf">3月 (PDF : 81KB)</a>
-  `;
-  const documents = parseJogmecListingHtml(html, JOGMEC_RESULTS_URL, { fiscalYear: 2026 });
-  assert.equal(documents.length, 4);
-  assert.deepEqual(documents.map((document) => [document.month, document.appendix]), [
-    [4, false],
-    [4, true],
-    [5, false],
-    [6, false],
-  ]);
-  assert.equal(documents.every((document) => document.calendarYear === 2026), true);
-  assert.equal(documents[2].url, "https://www.jogmec.go.jp/content/300802221.pdf");
-});
+function document(contractType) {
+  return {
+    url: `https://www.jogmec.go.jp/content/${contractType}.pdf`,
+    sourcePageUrl: contractType === "competitive" ? JOGMEC_BIDDING_RESULTS_URL : JOGMEC_VOLUNTARY_RESULTS_URL,
+    fiscalYear: 2026,
+    contractType,
+  };
+}
 
-test("JOGMEC listing parser fails closed when the current fiscal-year section disappears", () => {
-  const html = `<h2>2025年度</h2><a href="/content/old.pdf">3月 (PDF : 81KB)</a>`;
+test("JOGMEC listing parser inventories FY2023 onward for competitive and discretionary contracts", () => {
+  const competitive = parseJogmecListingHtml(listingHtml("competitive"), JOGMEC_BIDDING_RESULTS_URL, "competitive");
+  const discretionary = parseJogmecListingHtml(listingHtml("discretionary"), JOGMEC_VOLUNTARY_RESULTS_URL, "discretionary");
+  assert.equal(competitive.length, 43);
+  assert.equal(discretionary.length, 39);
+  assert.equal(competitive.filter((row) => row.appendix).length, 4);
+  assert.deepEqual([...new Set(competitive.map((row) => row.fiscalYear))], [2023, 2024, 2025, 2026]);
+  assert.deepEqual(competitive.filter((row) => row.fiscalYear === 2026 && !row.appendix).map((row) => row.month), [4, 5, 6]);
   assert.throws(
-    () => parseJogmecListingHtml(html, JOGMEC_RESULTS_URL, { fiscalYear: 2026 }),
-    /2026年度見出しがありません/,
+    () => parseJogmecListingHtml(listingHtml("discretionary", { omit: "discretionary-2024-8" }), JOGMEC_VOLUNTARY_RESULTS_URL, "discretionary"),
+    /12か月分ではありません/,
   );
 });
 
-test("JOGMEC positioned parser keeps contract price, but not unpublished or unit-only prices", () => {
-  const parsed = parseJogmecTableItems(tableItems(), DOCUMENT);
-  assert.equal(parsed.rowCount, 3);
-  assert.deepEqual(parsed.noAmountOrdinals, [2]);
-  assert.deepEqual(parsed.unitAmountOrdinals, [3]);
-  assert.equal(parsed.records.length, 1);
-  assert.deepEqual(parsed.records[0], {
-    id: "jogmec-300802221-p1-1",
-    organization: "イー・アンド・イーソリューションズ株式会社",
-    corporateNumber: "",
-    fiscalYear: 2026,
-    date: "2026-05-29",
-    program: "令和8年度国際海底機構開発規則等に関する対応支援業務",
-    theme: "",
-    phase: "",
-    supportYears: "",
-    category: "contract_result",
+test("JOGMEC amount classifier separates JPY totals, unavailable, unit, and foreign-currency values", () => {
+  assert.deepEqual(classifyJogmecAmount("¥12,345,678", "competitive"), {
+    amount: 12_345_678,
+    amountStatus: "published",
     amountStage: "契約価格（税抜）",
-    amount: 22_682_889,
-    sourceUrl: DOCUMENT.url,
-    sourcePageUrl: JOGMEC_RESULTS_URL,
-    sourceKey: "jogmec-300802221-p1-1",
+    publishedText: "¥12,345,678",
   });
+  assert.equal(classifyJogmecAmount("-", "discretionary").amountStatus, "unavailable");
+  assert.equal(classifyJogmecAmount("2640/1頁", "competitive").amountStatus, "non_total");
+  assert.equal(classifyJogmecAmount("US$20,775.00", "discretionary").amountStatus, "non_jpy");
+  assert.equal(classifyJogmecAmount("€74,910.00", "discretionary").amountStatus, "non_jpy");
 });
 
-test("JOGMEC does not duplicate the already verified bid-result row for the same case", () => {
-  const previous = [{
-    id: "jogmec-2026-isa-rules-support",
-    organization: "イー・アンド・イーソリューションズ株式会社",
-    corporateNumber: "4010001104241",
+for (const contractType of ["competitive", "discretionary"]) {
+  test(`JOGMEC positioned parser accounts for every ${contractType} row without fabricating yen amounts`, () => {
+    const parsed = parseJogmecPositionedPages(document(contractType), [positionedPage(contractType)]);
+    assert.equal(parsed.totalRows, 4);
+    assert.equal(parsed.publishedRows, 1);
+    assert.equal(parsed.unavailableRows, 1);
+    assert.equal(parsed.nonTotalRows, 1);
+    assert.equal(parsed.nonJpyRows, 1);
+    assert.equal(parsed.records.length, 4);
+    assert.equal(parsed.records[0].organization, "株式会社アルファ");
+    assert.equal(parsed.records[0].amount, 12_345_678);
+    assert.equal(parsed.records[1].amount, null);
+    assert.equal(parsed.records[2].amountStage, "単価・変動額（契約総額の記載なし）");
+    assert.equal(parsed.records[3].amountStage, "外貨建て金額（円換算なし）");
+    assert.equal(parsed.records.every((row) => row.contractType === contractType), true);
+  });
+}
+
+test("JOGMEC merge preserves a verified corporate number while using the monthly contract row", () => {
+  const current = parseJogmecPositionedPages(document("competitive"), [positionedPage("competitive")]).records;
+  const prior = [{
+    id: "jogmec-verified-alpha",
+    organization: "株式会社アルファ",
+    corporateNumber: "1010000000001",
     fiscalYear: 2026,
-    date: "2026-05-15",
-    program: "令和8年度国際海底機構開発規則等に関する対応支援業務",
-    theme: "",
-    phase: "",
-    supportYears: "",
+    date: "2026-03-20",
+    program: "円建て契約",
     category: "bid_result",
     amountStage: "落札金額（税抜）",
-    amount: 22_682_889,
-    sourceUrl: "https://www.jogmec.go.jp/content/300801182.pdf",
-    sourcePageUrl: "https://www.jogmec.go.jp/bid/bid_00091.html",
-    sourceKey: "jogmec-2026-isa-rules-support",
+    amount: 12_345_678,
   }];
-  const current = parseJogmecTableItems(tableItems(), DOCUMENT).records;
-  const merged = mergeJogmecRecords(previous, current);
-  assert.equal(merged.length, 1);
-  assert.equal(merged[0].category, "bid_result");
-  assert.equal(merged[0].date, "2026-05-15");
-});
-
-test("JOGMEC adds a distinct monthly contract result", () => {
-  const current = parseJogmecTableItems(tableItems(), DOCUMENT).records;
-  const merged = mergeJogmecRecords([], current);
-  assert.equal(merged.length, 1);
-  assert.equal(merged[0].amountStage, "契約価格（税抜）");
-});
-
-test("JOGMEC fails closed when the published column order changes", () => {
-  const items = tableItems();
-  const methodHeader = items.find((entry) => entry.str === "一般競争入札及び指名競争入札の別");
-  methodHeader.transform[4] = 200;
-  assert.throws(() => parseJogmecTableItems(items, DOCUMENT), /列順が変わりました/);
+  const merged = mergeJogmecWithPrevious(current, prior);
+  const alpha = merged.find((row) => row.organization === "株式会社アルファ");
+  assert.equal(alpha.id, "jogmec-verified-alpha");
+  assert.equal(alpha.corporateNumber, "1010000000001");
+  assert.equal(alpha.category, "contract_result");
+  assert.equal(merged.length, 4);
 });

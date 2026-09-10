@@ -1,0 +1,117 @@
+name: One-time JOGMEC positioned PDF reingest
+
+on:
+  push:
+    branches:
+      - reingest/jogmec-full-history
+    paths:
+      - ".github/workflows/jogmec-stage3-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-jogmec-stage3
+  cancel-in-progress: false
+
+jobs:
+  reingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/jogmec-full-history
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Ensure spreadsheet support and add positioned-PDF fallback
+        shell: bash
+        run: |
+          if ! grep -q 'jogmec-xlsx-reader-20260826' scripts/jogmec-reingest-stage1-20260826.mjs; then
+            node scripts/patch-jogmec-stage2-20260826.mjs
+          fi
+          node scripts/patch-jogmec-stage3-20260826.mjs
+      - name: Regenerate inventory and strict records
+        run: |
+          mkdir -p .audit
+          node scripts/jogmec-inventory-20260826.mjs
+          node scripts/jogmec-reingest-stage1-20260826.mjs
+          node --test tests/jogmec-reingest-stage1.test.mjs
+      - name: Sync index-compatible rows without zero-filling
+        run: node scripts/sync-jogmec-stage1-to-seeds-20260826.mjs
+      - name: Rebuild indexes and run all tests
+        run: |
+          node scripts/build-official-supplement-index.mjs
+          node scripts/build-official-company-index.mjs
+          npm test
+      - name: Verify positioned-PDF and publication accounting
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec.json", "utf8"));
+          const seeds = JSON.parse(await readFile("data/official-supplement-seeds.json", "utf8"));
+          const source = seeds.sources.find((entry) => entry.id === "jogmec");
+          if (!source) throw new Error("JOGMEC seed missing");
+          const positioned = data.records.filter((row) => String(row.parseMethod ?? "").startsWith("pdf_positioned_"));
+          if (source.records.length < data.priorRecordCount) throw new Error("published rows regressed");
+          if (data.recordCount !== data.records.length) throw new Error("dedicated record accounting mismatch");
+          for (const row of data.records) {
+            if (row.amount === 0 && /記載なし|非公表|単価|個社別/u.test(row.amountStage)) throw new Error(`zero-filled row: ${row.id}`);
+          }
+          console.log(JSON.stringify({
+            collectionStatus: data.collectionStatus,
+            resultCandidateCount: data.resultCandidateCount,
+            parsedDocumentCount: data.parsedDocumentCount,
+            unparsedDocumentCount: data.unparsedDocumentCount,
+            positionedPdfRecordCount: positioned.length,
+            newlyParsedRecordCount: data.newlyParsedRecordCount,
+            retainedRecordCount: data.recordCount,
+            publishedRecordCount: source.records.length,
+            auditOnlyNullContractCount: source.indexExcludedNullContractCount,
+          }));
+          NODE
+      - name: Commit verified stage-three result and remove temporary files
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          for path in \
+            .github/workflows/jogmec-inventory-once.yml \
+            .github/workflows/jogmec-stage1-once.yml \
+            .github/workflows/jogmec-integrate-once.yml \
+            .github/workflows/jogmec-sync-stage1-once.yml \
+            .github/workflows/jogmec-stage2-once.yml; do
+            test ! -e "$path" || git rm "$path"
+          done
+          git rm .github/workflows/jogmec-stage3-once.yml
+          test ! -e scripts/apply-jogmec-stage1-integration-20260826.mjs || git rm scripts/apply-jogmec-stage1-integration-20260826.mjs
+          test ! -e scripts/patch-jogmec-stage2-20260826.mjs || git rm scripts/patch-jogmec-stage2-20260826.mjs
+          git rm scripts/patch-jogmec-stage3-20260826.mjs
+          git add \
+            scripts/jogmec-inventory-20260826.mjs \
+            scripts/jogmec-reingest-stage1-20260826.mjs \
+            scripts/jogmec-xlsx-reader-20260826.mjs \
+            scripts/sync-jogmec-stage1-to-seeds-20260826.mjs \
+            tests/jogmec-reingest-stage1.test.mjs \
+            data/official-supplement-jogmec-inventory.json \
+            data/official-supplement-jogmec.json \
+            data/official-supplement-seeds.json \
+            data/official-supplement-index.json \
+            public/data/official-company-index.json \
+            .audit/jogmec-inventory.json \
+            .audit/jogmec-reingest-stage1.json
+          git commit -m "feat(data): parse JOGMEC positioned PDF result tables"
+          git reset --hard HEAD
+          git clean -fd
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/jogmec-full-history
+            if git push origin HEAD:reingest/jogmec-full-history; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1

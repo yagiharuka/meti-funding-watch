@@ -1,0 +1,66 @@
+name: One-time JOGMEC official result inventory
+
+on:
+  push:
+    branches:
+      - reingest/jogmec-full-history
+    paths:
+      - ".github/workflows/jogmec-inventory-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-jogmec-inventory
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: reingest/jogmec-full-history
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Crawl and inventory JOGMEC official result sources
+        run: |
+          mkdir -p .audit
+          node scripts/jogmec-inventory-20260826.mjs
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const data = JSON.parse(await readFile("data/official-supplement-jogmec-inventory.json", "utf8"));
+          if (data.collectionStatus !== "inventory_only") throw new Error(`unexpected status: ${data.collectionStatus}`);
+          if (data.crawledPageCount < 5) throw new Error(`too few pages: ${data.crawledPageCount}`);
+          if (data.resultCandidateCount < 1) throw new Error("no result candidates");
+          if (!Array.isArray(data.candidates) || data.candidateCount !== data.candidates.length) throw new Error("candidate accounting mismatch");
+          console.log(JSON.stringify({
+            pages: data.crawledPageCount,
+            candidates: data.candidateCount,
+            results: data.resultCandidateCount,
+            documents: data.documentCandidateCount,
+            failures: data.fetchFailureCount,
+            years: data.inferredYears,
+          }));
+          NODE
+      - name: Commit inventory and remove the one-time workflow
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/official-supplement-jogmec-inventory.json .audit/jogmec-inventory.json
+          git rm .github/workflows/jogmec-inventory-once.yml
+          git commit -m "chore(data): inventory JOGMEC official result sources"
+          for attempt in 1 2 3; do
+            git pull --rebase origin reingest/jogmec-full-history
+            if git push origin HEAD:reingest/jogmec-full-history; then
+              exit 0
+            fi
+            echo "Push raced; retrying ($attempt/3)."
+          done
+          exit 1
