@@ -24,6 +24,7 @@ function snapshot() { return window.location.search; }
 function href(values: Record<string, string>) { const params = new URLSearchParams({ view: 'explore', ...values }); return `?${params}`; }
 function navigate(values: Record<string, string>) { window.history.pushState(null, '', href(values)); window.dispatchEvent(new Event(stateEvent)); }
 const fileCache = new Map<string, Promise<unknown>>();
+const emptyObservations: Observation[] = [];
 async function verifiedJson<T>(filename: string, manifest: Manifest): Promise<T> {
   const receipt = manifest.files[filename];
   if (!receipt || !/^[a-zA-Z0-9-]+\.json$/.test(filename)) throw new Error('参照先を確認できません');
@@ -46,7 +47,8 @@ export default function FundingExplorer() {
   const entityId = params.get('company') || '';
   const programId = params.get('program') || '';
   const term = params.get('term') || '';
-  const mode = ['program', 'flow'].includes(params.get('mode') || '') ? params.get('mode')! : programId ? 'program' : 'company';
+  const requestedMode = params.get('mode');
+  const mode = requestedMode === 'program' || requestedMode === 'flow' ? requestedMode : programId ? 'program' : 'company';
   const focusEntity = params.get('focus') || '';
   const block = params.get('block') || '';
   const [draft, setDraft] = useState(term);
@@ -65,11 +67,15 @@ export default function FundingExplorer() {
   const [amountKind, setAmountKind] = useState('all');
   const [focusOnly, setFocusOnly] = useState(false);
   const selectedKey = `${entityId}|${programId}`;
-  useEffect(() => { setDraft(term); }, [term]);
-  useEffect(() => { setLimit(30); setSource('all'); setYearBasis('all'); setYear('all'); setAmountKind('all'); setFocusOnly(false); }, [selectedKey, term, mode]);
+  const navigationKey = JSON.stringify([selectedKey, term, mode]);
+  const [previousNavigation, setPreviousNavigation] = useState(navigationKey);
+  if (previousNavigation !== navigationKey) {
+    setPreviousNavigation(navigationKey);
+    setDraft(term); setLimit(30); setSource('all'); setYearBasis('all');
+    setYear('all'); setAmountKind('all'); setFocusOnly(false); setDetailError('');
+  }
   useEffect(() => {
     let active = true;
-    setError('');
     (async () => {
       const response = await fetch('data/explorer/manifest.json', { cache: 'no-store' });
       if (!response.ok) throw new Error('企業・事業の索引を読み込めませんでした');
@@ -77,7 +83,7 @@ export default function FundingExplorer() {
       if (m.schemaVersion !== 2 || !m.files || !m.counts) throw new Error('索引の形式を確認できません');
       const [es, ps] = await Promise.all([verifiedJson<Entity[]>(m.entitiesFile, m), verifiedJson<Program[]>(m.programsFile, m)]);
       if (!Array.isArray(es) || !Array.isArray(ps) || es.length !== m.counts.entities || ps.length !== m.counts.programs) throw new Error('索引の件数が一致しません');
-      if (active) { setEntities(es); setPrograms(ps); setManifest(m); }
+      if (active) { setError(''); setEntities(es); setPrograms(ps); setManifest(m); }
     })().catch(e => { if (active) setError(e instanceof Error ? e.message : '読み込みに失敗しました'); });
     return () => { active = false; };
   }, [retry]);
@@ -87,7 +93,6 @@ export default function FundingExplorer() {
   const program = programsById.get(programId);
   useEffect(() => {
     let active = true;
-    setDetailError('');
     if (!manifest || (!entity && !program)) return;
     const selected = program || entity!;
     verifiedJson<Detail & { schemaVersion: number; program?: Program }>(selected.file, manifest).then(d => {
@@ -95,20 +100,22 @@ export default function FundingExplorer() {
       if (active) {
         const observations = program ? d.observations : d.observations.filter(o => o.entityId === entity!.id);
         if (observations.length !== (program ? program.coverage.rows : entity!.count)) throw new Error('明細件数が索引と一致しません');
-        setDetail({ observations, candidates: d.candidates, facts: d.facts, graph: d.graph }); setDetailKey(selectedKey);
+        setDetailError(''); setDetail({ observations, candidates: d.candidates, facts: d.facts, graph: d.graph }); setDetailKey(selectedKey);
       }
     }).catch(e => { if (active) setDetailError(e instanceof Error ? e.message : '明細を取得できません'); });
     return () => { active = false; };
   }, [manifest, entity, program, selectedKey, retry]);
   const indexedEntities = useMemo(() => createEntitySearch(entities), [entities]);
+  const companyMode = mode === 'company';
+  const flowMode = mode === 'flow';
   const hits = useMemo(() => {
     const q = normalize(term); if (!q) return [];
     const terms = term.trim().split(/[\s　]+/).map(normalize);
-    if (mode !== 'company') return programs.filter(p => (mode !== 'flow' || p.flowEdges > 0) && terms.every(t => normalize(`${p.name} ${p.projectNumber} ${p.organization}`).includes(t))).sort((a, b) => b.sheetYear - a.sheetYear || a.name.localeCompare(b.name, 'ja'));
+    if (!companyMode) return programs.filter(p => (!flowMode || p.flowEdges > 0) && terms.every(t => normalize(`${p.name} ${p.projectNumber} ${p.organization}`).includes(t))).sort((a, b) => b.sheetYear - a.sheetYear || a.name.localeCompare(b.name, 'ja'));
     return searchEntities(indexedEntities, term) as Entity[];
-  }, [term, mode, programs, indexedEntities]);
+  }, [term, companyMode, flowMode, programs, indexedEntities]);
   const currentDetail = detailKey === selectedKey ? detail : null;
-  const observations = currentDetail?.observations ?? [];
+  const observations = currentDetail?.observations ?? emptyObservations;
   const years = [...new Set(observations.map(o => yearBasis === 'sheet' ? o.sheetYear : o.dateYear).filter((y): y is number => y !== null))].sort((a, b) => b - a);
   const factsById = useMemo(() => new Map((currentDetail?.facts || []).map(f => [f.id, f])), [currentDetail]);
   const filtered = useMemo(() => (filterEvidence(observations, { source, yearBasis, year }) as Observation[]).filter(o => (!block || o.block === block) && (!focusOnly || o.entityId === focusEntity) && (amountKind === 'all' || factsById.get(o.factId)?.amountStage === amountKind)), [observations, source, yearBasis, year, block, focusOnly, focusEntity, amountKind, factsById]);
@@ -145,7 +152,7 @@ export default function FundingExplorer() {
       </form><p className="fx-search-note">公表資料で確認できた関係を表示します。金額の種類と根拠は各明細で確認できます。</p>
     </section>
     <section className="fx-results" aria-live="polite" aria-busy={!manifest || Boolean(selected && !currentDetail && !detailError)}>
-      {error && <div className="fx-error" role="alert"><p>{error}</p><button onClick={() => setRetry(retry + 1)}>もう一度読み込む</button></div>}
+      {error && <div className="fx-error" role="alert"><p>{error}</p><button onClick={() => { setError(''); setDetailError(''); setRetry(retry + 1); }}>もう一度読み込む</button></div>}
       {!manifest && !error && <p>企業・事業の索引を読み込んでいます…</p>}
       {manifest && selected && !entity && !program && <p>この識別子に対応する企業・事業は、現在の収録データでは確認できません。検索し直してください。</p>}
       {manifest && !selected && !term && <div className="fx-start"><h2>知りたい企業や事業を選んでください</h2><div className="fx-examples"><button onClick={() => navigate({ mode: 'company', term: '日本電気' })}>日本電気</button><button onClick={() => navigate({ mode: 'program', term: 'GX' })}>GXの事業</button><button onClick={() => navigate({ mode: 'company', term: 'キャッシュレス推進協議会' })}>キャッシュレス推進協議会</button></div><p>企業の関係事業、事業の支出先、各明細の根拠を続けて確認できます。</p><p className="fx-meta">収録根拠：GビズINFO {count(manifest.counts.gbiz)}行 ／ レビュー {count(manifest.counts.review)}行 ／ 機関公表資料 {count(manifest.counts.official)}行</p></div>}
@@ -160,7 +167,7 @@ export default function FundingExplorer() {
           {block && <button className="fx-more" onClick={() => navigate({ program: program.id, ...(focusEntity ? { focus: focusEntity } : {}) })}>全ブロックの支出先を表示</button>}
         </section>}
         {entity && <section className="fx-related"><h3>原資料で対応を確認できる事業</h3>{relatedPrograms.length ? <ul>{relatedPrograms.map(p => <li key={p.id}>{programLink(p)}<span>{p.sheetYear}年度シート · 支出先一覧へ</span></li>)}</ul> : <p>収録レビューシートの事業との対応は未確認です。掲載された事業・件名は下の明細で確認できます。</p>}</section>}
-        {detailError && <div className="fx-error" role="alert"><p>{detailError}</p><button onClick={() => setRetry(retry + 1)}>明細を再読み込み</button></div>}
+        {detailError && <div className="fx-error" role="alert"><p>{detailError}</p><button onClick={() => { setError(''); setDetailError(''); setRetry(retry + 1); }}>明細を再読み込み</button></div>}
         {!currentDetail && !detailError && <p>対応する明細を読み込んでいます…</p>}
         {currentDetail && <><div className="fx-detail-heading"><h3>{program ? 'この事業の支出先と根拠' : '掲載された事業・案件と根拠'}</h3><span>{count(filtered.length)}掲載行</span></div><div className="fx-filters">{focusEntity && <label className="fx-focus-toggle"><input type="checkbox" checked={focusOnly} onChange={e => setFocusOnly(e.target.checked)} />選択した企業だけ</label>}<label>金額の種類<select value={amountKind} onChange={e => { setAmountKind(e.target.value); setLimit(30); }}><option value="all">すべて</option>{Object.entries(stageLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>資料<select value={source} onChange={e => { setSource(e.target.value); setLimit(30); }}><option value="all">すべて</option>{Object.entries(sourceLabels).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</select></label><label>年度の種類<select value={yearBasis} onChange={e => { setYearBasis(e.target.value); setYear('all'); setLimit(30); }}><option value="all">年度で絞らない</option><option value="sheet">レビューシート年度</option><option value="event">GビズINFOの日付年度</option><option value="published">機関公表資料の年度</option></select></label>{yearBasis !== 'all' && <label>年度<select value={year} onChange={e => { setYear(e.target.value); setLimit(30); }}><option value="all">すべて</option>{years.map(y => <option key={y} value={y}>{y}年度</option>)}{yearBasis !== 'sheet' && <option value="unknown">年度不明</option>}</select></label>}</div><p className="fx-meta">掲載行ごとに金額を表示します。レビューシート年度は、個別の支払年度とは異なります。</p>
           <div className="fx-evidence-list">{evidenceGroups.slice(0, limit).map(group => group.length === 1 ? evidence(group[0]) : <details className="fx-candidates" key={group[0].id}><summary><span>同名・同額の掲載 {group.length}行</span><strong>{group[0].title}</strong><span>{yen(group[0].amount)} · 各掲載行の金額</span></summary><p>再掲か別案件かは未確認です。原行を残しており、削除・合算していません。</p>{group.map(evidence)}</details>)}</div>{!filtered.length && <p>この条件に該当する掲載行はありません。</p>}{evidenceGroups.length > limit && <button className="fx-more" onClick={() => setLimit(limit + 30)}>さらに30件表示</button>}

@@ -42,9 +42,10 @@ export async function buildFundingRelationArtifacts({ outputDirectory }) {
     const observations = p.observationIds.map(id => byObservation.get(id));
     const candidates = p.candidateIds.map(id => byObservation.get(id));
     const filename = await save(`program-${p.id}`, { schemaVersion: 2, program: p, observations, candidates, graph: p.graph, facts: [...new Set(observations.map(o => o.factId))].map(id => factsById.get(id)) });
-    const { observationIds, candidateIds, graph, disclosedFlows, ...summary } = p;
-    summary.flowEdges = graph.edges.length;
-    programIndex.push({ ...summary, candidateCount: candidateIds.length, file: filename });
+    const summary = { ...p };
+    delete summary.observationIds; delete summary.candidateIds; delete summary.graph; delete summary.disclosedFlows;
+    summary.flowEdges = p.graph.edges.length;
+    programIndex.push({ ...summary, candidateCount: p.candidateIds.length, file: filename });
   }
   const entityIndex = model.entities.map(e => ({
     id: e.id, name: e.name, corporateNumber: e.corporateNumber,

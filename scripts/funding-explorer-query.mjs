@@ -46,7 +46,7 @@ export function groupEvidence(observations) {
   }
   return [...groups.values()].sort((a, b) => (b[0].sheetYear ?? b[0].dateYear ?? 0) - (a[0].sheetYear ?? a[0].dateYear ?? 0));
 }
-export function useSourceView(search, hash) {
+export function shouldUseSourceView(search, hash) {
   const params = new URLSearchParams(search);
   return params.get('view') === 'source' || (params.get('view') !== 'explore' &&
     (['q', 'target', 'agency', 'year', 'stage'].some(key => params.has(key)) || ['#records', '#sources'].includes(hash)));

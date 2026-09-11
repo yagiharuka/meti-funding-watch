@@ -144,7 +144,7 @@ test("SMRJ merge still fails closed when multiple non-total rows share the same 
   };
   const current = ["変更A", "変更B"].map((program, index) => ({
     ...prior,
-    id: `current-non-total-${index}`,
+    id: "current-non-total-" + index,
     program,
     amount: null,
     amountStatus: "non_total",

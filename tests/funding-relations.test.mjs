@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { buildFundingRelations, duplicateCandidates } from '../scripts/funding-relations.mjs';
-import { createEntitySearch, searchEntities, entityCandidatePositions, filterEvidence, groupEvidence, useSourceView } from '../scripts/funding-explorer-query.mjs';
+import { createEntitySearch, searchEntities, entityCandidatePositions, filterEvidence, groupEvidence, shouldUseSourceView } from '../scripts/funding-explorer-query.mjs';
 const cn = '1234567890123';
 const program = { id: 'rs-2025-1', name: 'GX分野のディープテック・スタートアップ支援事業', projectNumber: '1', reviewSheetYear: 2025, budgetFiscalYear: 2025, executionFiscalYear: 2024, initialBudget: 1000, execution: 900, sourceUrl: 'https://example.com/review' };
 const base = { id: '1', organization: '株式会社テスト', corporateNumber: cn, program: program.name, amount: 100, sourceUrl: 'https://example.com/evidence', fiscalYear: 2024, stage: 'subsidy_published' };
@@ -45,10 +45,10 @@ test('unresolved references, duplicate evidence and cross-program parents stop p
   assert.throws(() => buildFundingRelations({ payments: [{ ...payment, parentPaymentIds: ['absent'] }], programs: [program] }), /Invalid disclosed parent/);
 });
 test('existing source bookmarks retain their intended view', () => {
-  assert.equal(useSourceView('', ''), false);
-  assert.equal(useSourceView('?q=日本電気', ''), true);
-  assert.equal(useSourceView('?view=explore&company=cn:1234567890123', '#records'), false);
-  assert.equal(useSourceView('?view=source', ''), true);
+  assert.equal(shouldUseSourceView('', ''), false);
+  assert.equal(shouldUseSourceView('?q=日本電気', ''), true);
+  assert.equal(shouldUseSourceView('?view=explore&company=cn:1234567890123', '#records'), false);
+  assert.equal(shouldUseSourceView('?view=source', ''), true);
 });
 
 test('real data: NEC is isolated, GX recipients are linked, cashless candidates conserve evidence', async () => {

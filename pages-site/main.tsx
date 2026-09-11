@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { useSourceView } from "@/scripts/funding-explorer-query.mjs";
+import { shouldUseSourceView } from "@/scripts/funding-explorer-query.mjs";
 import { createRoot } from "react-dom/client";
 
 import Home from "@/app/page";
@@ -27,7 +27,7 @@ if (!root) {
 }
 
 // Preserve source bookmarks while new visits start from relationships.
-const sourceView = useSourceView(window.location.search, window.location.hash);
+const sourceView = shouldUseSourceView(window.location.search, window.location.hash);
 async function render() {
 if (sourceView) {
   await import("./funding-search-bridge");
