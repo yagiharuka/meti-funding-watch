@@ -1,10 +1,10 @@
-# 公式資料は主系列より更新頻度が低いため月次で再取得する。
-# 毎月2日05:30 JST（前日20:30 UTC）に実行し、手動実行も残す。
+# 2026-10-13: 定期取得は一時停止。必要時の手動実行を残す。
 name: Refresh official funding data
 
 on:
-  schedule:
-    - cron: "30 20 1 * *"
+  # Automatic data refresh paused on 2026-10-13; run manually when needed.
+  # schedule:
+  #   - cron: "30 20 1 * *"
   workflow_dispatch:
 
 permissions:
