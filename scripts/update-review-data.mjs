@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { strToU8, unzipSync, zipSync } from "fflate";
+import { discoverPublishedReviewSheetYears, REVIEW_CSV_INDEX_URL } from "./review-csv-discovery.mjs";
 
 import {
   AMOUNT_STATUSES,
@@ -19,8 +20,7 @@ import {
 } from "./review-data-model.mjs";
 
 const SOURCE = {
-  indexUrl: "https://rssystem.go.jp/download-csv",
-  fiscalYearsUrl: "https://rssystem.go.jp/api/projects/fiscal-years/",
+  indexUrl: REVIEW_CSV_INDEX_URL,
   filesBaseUrl: "https://rssystem.go.jp/files/",
 };
 const options = parseArguments(process.argv.slice(2));
@@ -128,12 +128,7 @@ async function discoverReviewSheetYears() {
   }
   let discoveryError = null;
   try {
-    const response = await fetchChecked(SOURCE.fiscalYearsUrl, { accept: "application/json" });
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("json")) throw new Error(`年度一覧がJSONではありません（${contentType || "content-type不明"}）`);
-    const years = [...new Set(collectFiscalYears(await response.json()))].filter((year) => year >= 2024).sort((a, b) => a - b);
-    if (!years.length) throw new Error("年度一覧に2024年度以降がありません");
-    return years;
+    return await discoverPublishedReviewSheetYears({ previousYears: previous?.manifest.reviewSheetYears ?? [] });
   } catch (error) {
     discoveryError = error instanceof Error ? error.message : String(error);
   }
@@ -338,7 +333,6 @@ function parseArguments(args) {
   }
   return parsed;
 }
-function collectFiscalYears(value) { if (Array.isArray(value)) return value.flatMap(collectFiscalYears); if (value && typeof value === "object") return Object.values(value).flatMap(collectFiscalYears); const year = Number(value); return Number.isInteger(year) ? [year] : []; }
 async function fetchChecked(url, extraHeaders = {}) { const response = await fetch(url, { headers: { "user-agent": "meti-funding-watch/0.1 (+public-data-research)", ...extraHeaders }, signal: AbortSignal.timeout(3 * 60_000) }); if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`); return response; }
 async function fetchReviewArchive(url, label) {
   let lastError;

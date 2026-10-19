@@ -2,9 +2,9 @@ name: Refresh Gbiz funding data
 
 on:
   workflow_dispatch:
-  # Automatic data refresh paused on 2026-10-13; run manually when needed.
-  # schedule:
-  #   - cron: "0 21 * * 1"
+  # Main-series refresh resumed on 2026-10-20 (JST).
+  schedule:
+    - cron: "0 21 * * 1"
 
 permissions:
   contents: write
