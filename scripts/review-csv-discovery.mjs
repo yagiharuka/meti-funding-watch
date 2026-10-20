@@ -2,6 +2,9 @@ export const REVIEW_CSV_INDEX_URL = "https://rssystem.go.jp/download-csv";
 
 const MAX_MODULE_SCRIPTS = 4;
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
+// Keep three attempts, but do not exhaust them inside a short CDN error-cache
+// window. Re-read the index each time so an obsolete asset URL is not retained.
+const RETRY_DELAYS_MS = [12_000, 24_000];
 const CSV_CAPTION_KEY = /\bbudgetAndExecutionCaption\s*:\s*[\w$]+\(\s*["']ps-download-csv-(20\d{2})-page-caption-budget-and-execution["']/;
 
 // The project-search API includes years whose bulk CSVs have not been published.
@@ -9,6 +12,7 @@ const CSV_CAPTION_KEY = /\bbudgetAndExecutionCaption\s*:\s*[\w$]+\(\s*["']ps-dow
 export async function discoverPublishedReviewSheetYears({
   fetchResponse = fetch,
   sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  onRetry = (message) => console.warn(message),
   previousYears = [],
 } = {}) {
   let lastError;
@@ -33,7 +37,11 @@ export async function discoverPublishedReviewSheetYears({
     } catch (error) {
       lastError = error;
     }
-    if (attempt < 3) await sleep(attempt * 1_500);
+    if (attempt < 3) {
+      const delay = RETRY_DELAYS_MS[attempt - 1];
+      onRetry(`公式CSV配布情報の取得を再試行します（${attempt}/3、${delay / 1_000}秒後）: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+      await sleep(delay);
+    }
   }
   throw lastError;
 }
@@ -119,12 +127,22 @@ async function fetchOfficialText(url, type, fetchResponse) {
     redirect: "error",
     signal: AbortSignal.timeout(3 * 60_000),
   });
-  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  const diagnostic = responseDiagnostic(url, type, response);
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${diagnostic}`);
   const contentType = response.headers.get("content-type") ?? "";
   const expectedType = type === "html" ? /^(?:text\/html|application\/xhtml\+xml)(?:;|$)/i : /^(?:text|application)\/(?:x-)?javascript(?:;|$)/i;
-  if (!expectedType.test(contentType)) throw new Error(`公式CSV配布情報の形式が不正です（${contentType || "content-type不明"}）`);
-  if (Number(response.headers.get("content-length")) > MAX_SOURCE_BYTES) throw new Error("公式CSV配布情報が取得上限サイズを超えています");
+  if (!expectedType.test(contentType)) throw new Error(`公式CSV配布情報の形式が不正です: ${diagnostic}`);
+  if (Number(response.headers.get("content-length")) > MAX_SOURCE_BYTES) throw new Error(`公式CSV配布情報が取得上限サイズを超えています: ${diagnostic}`);
   const text = await response.text();
-  if (Buffer.byteLength(text) > MAX_SOURCE_BYTES) throw new Error("公式CSV配布情報が取得上限サイズを超えています");
+  if (Buffer.byteLength(text) > MAX_SOURCE_BYTES) throw new Error(`公式CSV配布情報が取得上限サイズを超えています: ${diagnostic}`);
   return text;
+}
+
+function responseDiagnostic(url, expectedType, response) {
+  // Never log response bodies, cookies, or request credentials.
+  const headers = Object.fromEntries(
+    ["content-type", "x-cache", "age", "last-modified", "etag"].map((name) =>
+      [name, response.headers.get(name)?.slice(0, 180) ?? null]),
+  );
+  return JSON.stringify({ url: url.slice(0, 1_024), expectedType, status: response.status, headers });
 }
