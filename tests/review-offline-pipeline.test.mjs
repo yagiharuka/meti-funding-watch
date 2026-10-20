@@ -60,24 +60,92 @@ test("only discovers bounded same-origin hashed module URLs and safe year links"
 test("retries transient HTML instead of JavaScript and validates the official catalog", async () => {
   const calls = [];
   const sleeps = [];
+  const diagnostics = [];
   let scriptAttempts = 0;
   const years = await discoverPublishedReviewSheetYears({
     previousYears: [2024, 2025],
     sleep: async (milliseconds) => { sleeps.push(milliseconds); },
+    onRetry: (message) => { diagnostics.push(message); },
     fetchResponse: async (url, options) => {
       calls.push(url);
       assert.equal(options.redirect, "error");
       assert.equal(options.headers["cache-control"], "no-cache");
       if (url === REVIEW_CSV_INDEX_URL) return sourceResponse(catalogPage, "text/html");
       scriptAttempts += 1;
-      return scriptAttempts === 1
+      return scriptAttempts < 3
         ? sourceResponse("<html>temporary upstream fallback</html>", "text/html")
         : sourceResponse(csvCatalog([2024, 2025]), "application/javascript; charset=utf-8");
     },
   });
   assert.deepEqual(years, [2024, 2025]);
-  assert.equal(calls.length, 4);
-  assert.deepEqual(sleeps, [1500]);
+  assert.equal(calls.length, 6);
+  assert.deepEqual(sleeps, [12_000, 24_000]);
+  assert.equal(diagnostics.length, 2);
+  assert.match(diagnostics[0], /https:\/\/rssystem\.go\.jp\/assets\/main-build123\.js/);
+  assert.match(diagnostics[0], /"expectedType":"javascript"/);
+  assert.match(diagnostics[0], /"content-type":"text\/html"/);
+});
+
+test("waits beyond a short cached HTML fallback and re-discovers the current module", async () => {
+  let elapsed = 0;
+  const calls = [];
+  const years = await discoverPublishedReviewSheetYears({
+    previousYears: [2024, 2025],
+    sleep: async (milliseconds) => { elapsed += milliseconds; },
+    onRetry: () => {},
+    fetchResponse: async (url) => {
+      calls.push(url);
+      if (url === REVIEW_CSV_INDEX_URL) {
+        return sourceResponse(elapsed < 10_000 ? catalogPage : catalogPage.replace("build123", "build456"), "text/html");
+      }
+      if (url.endsWith("/main-build123.js")) {
+        return sourceResponse("<html>cached SPA fallback</html>", "text/html");
+      }
+      assert.equal(url, "https://rssystem.go.jp/assets/main-build456.js");
+      return sourceResponse(csvCatalog([2024, 2025]), "text/javascript");
+    },
+  });
+  assert.deepEqual(years, [2024, 2025]);
+  assert.deepEqual(calls, [
+    REVIEW_CSV_INDEX_URL, "https://rssystem.go.jp/assets/main-build123.js",
+    REVIEW_CSV_INDEX_URL, "https://rssystem.go.jp/assets/main-build456.js",
+  ]);
+  assert.equal(elapsed, 12_000);
+});
+
+test("persistent HTML at a module URL stays a failure with bounded safe diagnostics", async () => {
+  const sleeps = [];
+  const diagnostics = [];
+  const longModulePage = catalogPage.replace("build123", "b".repeat(2_000));
+  let requests = 0;
+  await assert.rejects(discoverPublishedReviewSheetYears({
+    previousYears: [2024, 2025],
+    sleep: async (milliseconds) => { sleeps.push(milliseconds); },
+    onRetry: (message) => { diagnostics.push(message); },
+    fetchResponse: async (url) => {
+      requests += 1;
+      if (url === REVIEW_CSV_INDEX_URL) return sourceResponse(longModulePage, "text/html");
+      return new Response(`<html>do not log this body ${csvCatalog([2024, 2025])}</html>`, {
+        headers: {
+          "content-type": `text/html; ${"t".repeat(1_000)}`, "x-cache": "Error from cloudfront", age: "3",
+          "last-modified": "Fri, 02 Oct 2026 03:06:54 GMT", etag: "x".repeat(1_000),
+          "set-cookie": "do not log this cookie",
+        },
+      });
+    },
+  }), (error) => {
+    assert.match(error.message, /公式CSV配布情報の形式が不正/);
+    assert.match(error.message, /"status":200/);
+    assert.match(error.message, /"x-cache":"Error from cloudfront"/);
+    assert.match(error.message, /"age":"3"/);
+    assert.doesNotMatch(error.message, /do not log|set-cookie|x{181}|t{181}|b{1025}/);
+    assert.ok(error.message.length < 2_000);
+    return true;
+  });
+  assert.equal(requests, 6);
+  assert.deepEqual(sleeps, [12_000, 24_000]);
+  assert.equal(diagnostics.length, 2);
+  assert.ok(diagnostics.every((message) => message.length < 2_100));
 });
 
 test("fails closed after bounded retries on unknown catalogs, missing years, and HTTP failures", async () => {
@@ -90,6 +158,7 @@ test("fails closed after bounded retries on unknown catalogs, missing years, and
     await assert.rejects(discoverPublishedReviewSheetYears({
       previousYears: scenario.previousYears,
       sleep: async () => {},
+      onRetry: () => {},
       fetchResponse: async () => { attempts += 1; return scenario.response(); },
     }), scenario.pattern);
     assert.equal(attempts, 3);
@@ -192,12 +261,15 @@ test("strict live discovery and advertised ZIP failures leave every prior cache 
     const originalFiles = await snapshotFiles(output);
     for (const scenario of [
       { name: "unrecognized HTML catalog", html: "<html>upstream fallback</html>", pattern: /年度一覧を取得できません/ },
+      { name: "persistent HTML instead of JavaScript", html: catalogPage, pattern: /公式CSV配布情報の形式が不正.*main-build123\.js/ },
       { name: "previously published year disappears", html: '<a href="/download-csv/2024">2024</a>', pattern: /前回収録年度が欠落/ },
       { name: "advertised year has no valid ZIP", html: '<a href="/download-csv/2025">2025</a>', pattern: /前回値は公開用データへ置き換えません/ },
     ]) {
       await t.test(scenario.name, async () => {
         const preload = join(temporary, "mock-fetch.mjs");
-        await writeFile(preload, `globalThis.fetch = async (url) => new Response(url === ${JSON.stringify(REVIEW_CSV_INDEX_URL)} ? ${JSON.stringify(scenario.html)} : "<html>not a ZIP</html>", { headers: { "content-type": "text/html" } });\n`);
+        await writeFile(preload, `const originalSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = (callback, _delay, ...args) => originalSetTimeout(callback, 0, ...args);
+globalThis.fetch = async (url) => new Response(url === ${JSON.stringify(REVIEW_CSV_INDEX_URL)} ? ${JSON.stringify(scenario.html)} : "<html>not a ZIP</html>", { headers: { "content-type": "text/html" } });\n`);
         await assert.rejects(execFileAsync(process.execPath, [
           "--import", preload, "scripts/update-review-data.mjs", "--output-dir", output,
           "--now", "2026-10-19T14:00:00.000Z", "--require-fresh",
